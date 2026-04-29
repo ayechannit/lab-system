@@ -1,0 +1,11 @@
+/** Image URLs from Stitch (MedLab Smart ) mockups — same assets as `modern_login_screen` / `modern_sign_up_screen`. */
+
+export const authImages = {
+  loginHero:
+    'https://lh3.googleusercontent.com/aida-public/AB6AXuBoK7GDLlxKfvwoJezYSjqaiTHmIxdOZisNxpOqM3LWIgiUhEPT5jN5X8GPnwuiVfSaj3oBF9Ls6ku3ppLEpNWBRwcXI40b8sqCPynJEwQpuYdw-muxuPGfng0xouWU26yRwk7ILREO_ZFL2Vj2wD0J025zfi9-SvihA0XamLnjcfRXcK7PuJOrIRVhtxazrRWbMvY7y-sxfLCX-dfr1jBnh6P6UdprvjLxtWEu-Q5ClgTwyqbEwoCvaN9vpuNpC0pRsbd3EoCChJg',
+  signUpHero:
+    'https://lh3.googleusercontent.com/aida-public/AB6AXuAynz0QQD10hZTNwWkwcu3hrMVtuMlianTwqPT7Hb-TU0QoLTUCntB41KtqX50jwZTOushKRLrzvPmghbN2lR7TBjXACINOoSItInxo07Rw6Lloqr29N6kEJt9xAfb6AgyypnunSdpujVdpMDA6UBgpLyX7TNvP60ADuw-cm_LHE8wE1-QQcp8Ct5FTczfd9wGLmy6QvyHN8Grs9JFcqt7wkll5kmjQ79ijE0GfEb95H0f3Z2ydNE6la57h1i0ehu-2vp7Ld9Z7LDE',
+  iso: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDwUCq81gPRmSlIstbB7COSz2NjrPhRPNswN3dFAFq9nZ2UhYkAFRPYDf1dV1vIAgmOG6ugWjhoM0Y45U_yj_dObAnhEniHQHqNDKN4LI466b-FBNh8ADNMo9RBzULIATXOKrxpHaUjAjRm0GDqwTsO0aWx6muwqet3rHgVHMVLaV_orM_ZFcnkEDrgexY61lfQuPFZd6gYZcko7YoNPbDiYIf-BiPOdv3vuiTTYF3nV41eGQeRCqdwYcT9f1_o8-Z0ZRnNqKQT77E',
+  hipaa:
+    'https://lh3.googleusercontent.com/aida-public/AB6AXuAlpiwCk2BLlS-000ng3A3zkq9Ta87Dgo_Yqfxh5wSVear-b1gTGlKSCCCUJ7tDVtVZ620zG7c_rbu1lRuKbbuaWIVsSQh8_TYZ1uAspx641I-tz6Es5VCvQ16X0Sjq3ePkHnD_kYTZmuWjfjlYdP4cMTtZuicL_ZSYLPgjEDpGvD0CYAmgjyLjL0QlAHRi8GFctTAH06Kr3QBXabe_ykiscMNBtDHBSvhLymBmQ92aFm-YLZsQJKsAhceNQVPn1APiQOH_cdqvEvM',
+} as const

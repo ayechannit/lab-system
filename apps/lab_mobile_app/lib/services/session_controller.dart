@@ -1,0 +1,162 @@
+import 'package:flutter/foundation.dart';
+
+import '../models/app_user.dart';
+import '../models/lab_order.dart';
+import '../models/lab_result.dart';
+import '../models/loyalty.dart';
+import '../models/rating.dart';
+import '../models/user_role.dart';
+import 'lab_user_api.dart';
+
+class SessionController extends ChangeNotifier {
+  SessionController({required LabUserApi api}) : _api = api;
+
+  final LabUserApi _api;
+  AppUser? _user;
+  final List<LabOrderRequest> _orders = <LabOrderRequest>[];
+  LabOrderSummary? _trackingOrder;
+  LabResultReport? _latestResult;
+  AiAnalysisResult? _aiAnalysis;
+  LoyaltySnapshot _loyalty = const LoyaltySnapshot(balance: 0, entries: <LoyaltyEntry>[]);
+  bool _busy = false;
+
+  AppUser? get user => _user;
+  bool get isLoggedIn => _user != null;
+  bool get busy => _busy;
+  List<LabOrderRequest> get orders => List.unmodifiable(_orders);
+  LabOrderSummary? get trackingOrder => _trackingOrder;
+  LabResultReport? get latestResult => _latestResult;
+  AiAnalysisResult? get aiAnalysis => _aiAnalysis;
+  LoyaltySnapshot get loyalty => _loyalty;
+  String get homeRoute => switch (_user?.role) {
+        UserRole.doctor => '/home-doctor',
+        UserRole.clinic => '/home-clinic',
+        UserRole.patient => '/home-patient',
+        null => '/login',
+      };
+
+  Future<void> login({
+    required String email,
+    required String password,
+    UserRole? roleHint,
+  }) async {
+    _setBusy(true);
+    _user = await _api.login(LoginRequest(email: email, password: password, roleHint: roleHint));
+    await _hydrateUserData();
+    _setBusy(false);
+  }
+
+  Future<void> register({
+    required String name,
+    required String phone,
+    required String email,
+    required String password,
+    required UserRole role,
+  }) async {
+    _setBusy(true);
+    _user = await _api.register(
+      RegisterRequest(
+        name: name,
+        phone: phone,
+        email: email,
+        password: password,
+        role: role,
+      ),
+    );
+    await _hydrateUserData();
+    _setBusy(false);
+  }
+
+  void logout() {
+    _user = null;
+    _orders.clear();
+    _trackingOrder = null;
+    _latestResult = null;
+    _aiAnalysis = null;
+    _loyalty = const LoyaltySnapshot(balance: 0, entries: <LoyaltyEntry>[]);
+    notifyListeners();
+  }
+
+  Future<void> updateProfile({String? name, String? phone, String? email}) async {
+    final u = _user;
+    if (u == null) return;
+    await _api.updateProfile(
+      userId: u.id,
+      name: name,
+      phone: phone,
+      email: email,
+    );
+    _user = u.copyWith(name: name, phone: phone, email: email);
+    notifyListeners();
+  }
+
+  Future<void> submitLabOrder(LabOrderRequest order) async {
+    final u = _user;
+    if (u == null) return;
+    _setBusy(true);
+    _orders.insert(0, order);
+    _trackingOrder = await _api.createOrder(userId: u.id, request: order);
+    _latestResult = await _api.getLatestResult(u.id);
+    _loyalty = await _api.getLoyaltySnapshot(u.id);
+    _setBusy(false);
+  }
+
+  Future<void> refreshTracking() async {
+    final u = _user;
+    if (u == null) return;
+    _trackingOrder = await _api.getTrackingOrder(u.id);
+    notifyListeners();
+  }
+
+  Future<void> runAiAnalysis() async {
+    final u = _user;
+    final orderId = _latestResult?.orderId;
+    if (u == null || orderId == null) return;
+    _setBusy(true);
+    _aiAnalysis = await _api.runAiAnalysis(userId: u.id, orderId: orderId);
+    _setBusy(false);
+  }
+
+  Future<void> submitRating({
+    required int stars,
+    required String remark,
+  }) async {
+    final u = _user;
+    final orderId = _latestResult?.orderId ?? _trackingOrder?.id;
+    if (u == null || orderId == null) return;
+    _setBusy(true);
+    await _api.submitRating(
+      userId: u.id,
+      rating: RatingDraft(
+        orderId: orderId,
+        stars: stars,
+        remark: remark,
+        createdAt: DateTime.now(),
+      ),
+    );
+    _loyalty = await _api.getLoyaltySnapshot(u.id);
+    _setBusy(false);
+  }
+
+  Future<void> _hydrateUserData() async {
+    final u = _user;
+    if (u == null) return;
+    _trackingOrder = await _api.getTrackingOrder(u.id);
+    _latestResult = await _api.getLatestResult(u.id);
+    _loyalty = await _api.getLoyaltySnapshot(u.id);
+    if (_latestResult != null) {
+      _aiAnalysis = await _api.getAiAnalysis(
+        userId: u.id,
+        orderId: _latestResult!.orderId,
+      );
+    } else {
+      _aiAnalysis = null;
+    }
+    notifyListeners();
+  }
+
+  void _setBusy(bool value) {
+    _busy = value;
+    notifyListeners();
+  }
+}

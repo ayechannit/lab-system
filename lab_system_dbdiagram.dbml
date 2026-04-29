@@ -1,0 +1,357 @@
+// Lab System - Database Schema
+
+// =====================
+// USER APP TABLES
+// =====================
+
+Table users {
+  id uuid [pk]
+  name varchar [not null]
+  email varchar [unique, not null]
+  phone varchar [not null]
+  password_hash varchar [not null]
+  role user_role [not null, note: 'clinic | doctor | patient']
+  address text
+  latitude float
+  longitude float
+  total_points int [default: 0]
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+}
+
+Enum user_role {
+  clinic
+  doctor
+  patient
+}
+
+// =====================
+// LAB STAFF TABLES
+// =====================
+
+Table lab_staff {
+  id uuid [pk]
+  name varchar [not null]
+  email varchar [unique, not null]
+  password_hash varchar [not null]
+  role staff_role [not null, note: 'admin | lab_technician | reception | manager']
+  is_active boolean [default: true]
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+}
+
+Enum staff_role {
+  admin
+  lab_technician
+  reception
+  manager
+}
+
+// =====================
+// LAB TEST CATALOG
+// =====================
+
+Table lab_test_catalog {
+  id uuid [pk]
+  test_name varchar [not null]
+  test_code varchar [unique, not null]
+  description text
+  base_price_mmk decimal [not null]
+  category varchar
+  is_active boolean [default: true]
+  created_at timestamp [default: `now()`]
+}
+
+// =====================
+// ORDERS & SCHEDULING
+// =====================
+
+Table lab_orders {
+  id uuid [pk]
+  user_id uuid [not null, ref: > users.id]
+  description text
+  priority order_priority [not null, note: 'urgent | elective']
+  patient_name varchar [not null]
+  patient_age int [not null]
+  patient_phone varchar [not null]
+  address text [not null]
+  latitude float
+  longitude float
+  status order_status [not null, default: 'pending']
+  original_price_mmk decimal [not null]
+  discount_percent decimal [default: 0]
+  final_price_mmk decimal [not null]
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+}
+
+Table lab_order_items {
+  id uuid [pk]
+  order_id uuid [not null, ref: > lab_orders.id]
+  test_id uuid [not null, ref: > lab_test_catalog.id]
+  quantity int [not null, default: 1]
+  unit_price_mmk decimal [not null]
+  subtotal_mmk decimal [not null]
+  created_at timestamp [default: `now()`]
+
+  indexes {
+    (order_id, test_id) [unique]
+  }
+}
+
+Enum order_priority {
+  urgent
+  elective
+}
+
+Enum order_status {
+  pending
+  scheduled
+  collecting
+  running
+  completed
+  delivered
+}
+
+Table order_schedules {
+  id uuid [pk]
+  order_id uuid [unique, not null, ref: - lab_orders.id]
+  collecting_person varchar
+  collection_time timestamp
+  running_time timestamp
+  report_out_time timestamp
+  accepted_by_user boolean [default: false]
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+}
+
+Table order_status_logs {
+  id uuid [pk]
+  order_id uuid [not null, ref: > lab_orders.id]
+  changed_by uuid [not null, ref: > lab_staff.id]
+  old_status order_status
+  new_status order_status [not null]
+  note text
+  created_at timestamp [default: `now()`]
+}
+
+// =====================
+// PAYMENTS
+// =====================
+
+Table payments {
+  id uuid [pk]
+  order_id uuid [unique, not null, ref: - lab_orders.id]
+  amount_mmk decimal [not null]
+  status payment_status [not null, default: 'pending']
+  method payment_method
+  reference_no varchar
+  verified_by uuid [ref: > lab_staff.id]
+  paid_at timestamp
+  verified_at timestamp
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+}
+
+Enum payment_status {
+  pending
+  received
+  verified
+  failed
+}
+
+Enum payment_method {
+  cash
+  bank_transfer
+  mobile_pay
+}
+
+// =====================
+// LAB RESULTS
+// =====================
+
+Table lab_results {
+  id uuid [pk]
+  order_id uuid [unique, not null, ref: - lab_orders.id]
+  result_summary text
+  pdf_url varchar
+  uploaded_by uuid [ref: > lab_staff.id]
+  quality_checked boolean [default: false]
+  sent_to_user_at timestamp
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+}
+
+// =====================
+// AI INTEGRATIONS
+// =====================
+
+Table ai_quality_checks {
+  id uuid [pk]
+  result_id uuid [unique, not null, ref: - lab_results.id]
+  verdict ai_verdict [not null]
+  analysis_detail text
+  raw_ai_response json
+  checked_at timestamp [default: `now()`]
+}
+
+Enum ai_verdict {
+  pass
+  warning
+  fail
+}
+
+Table ai_result_analyses {
+  id uuid [pk]
+  order_id uuid [not null, ref: > lab_orders.id]
+  requested_by uuid [not null, ref: > users.id]
+  analysis_summary text
+  raw_ai_response json
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+}
+
+// =====================
+// QR CODES
+// =====================
+
+Table qr_codes {
+  id uuid [pk]
+  order_id uuid [unique, not null, ref: - lab_orders.id]
+  qr_data varchar [not null]
+  qr_image_url varchar
+  generated_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+}
+
+// =====================
+// RATINGS & REVIEWS
+// =====================
+
+Table ratings {
+  id uuid [pk]
+  order_id uuid [not null, ref: > lab_orders.id]
+  user_id uuid [not null, ref: > users.id]
+  score int [not null, note: '1 to 5']
+  remark text
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+}
+
+// =====================
+// POINTS & DISCOUNTS
+// =====================
+
+Table points_rules {
+  id uuid [pk]
+  spend_amount_mmk decimal [not null, note: 'e.g. 100000']
+  points_awarded int [not null, note: 'e.g. 10']
+  is_active boolean [default: true]
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+}
+
+Table user_points {
+  id uuid [pk]
+  user_id uuid [not null, ref: > users.id]
+  order_id uuid [ref: > lab_orders.id]
+  rule_id uuid [ref: > points_rules.id]
+  points_earned int [not null]
+  description text
+  created_at timestamp [default: `now()`]
+}
+
+Table role_discounts {
+  id uuid [pk]
+  role user_role [unique, not null]
+  discount_percent decimal [not null]
+  is_active boolean [default: true]
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+}
+
+// =====================
+// COLLECTION ROUTES (AI)
+// =====================
+
+Table collection_routes {
+  id uuid [pk]
+  planned_by uuid [not null, ref: > lab_staff.id]
+  route_date date [not null]
+  ai_optimized_route json
+  raw_ai_response json
+  status route_status [not null, default: 'draft']
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+}
+
+Enum route_status {
+  draft
+  active
+  completed
+}
+
+Table route_stops {
+  id uuid [pk]
+  route_id uuid [not null, ref: > collection_routes.id]
+  order_id uuid [not null, ref: > lab_orders.id]
+  stop_order int [not null]
+  latitude float [not null]
+  longitude float [not null]
+  address text
+  status stop_status [not null, default: 'pending']
+  collected_at timestamp
+
+  indexes {
+    (route_id, stop_order) [unique]
+    (route_id, order_id) [unique]
+  }
+}
+
+Enum stop_status {
+  pending
+  collected
+  skipped
+}
+
+// =====================
+// NOTIFICATIONS
+// =====================
+
+Table notifications {
+  id uuid [pk]
+  recipient_type notification_recipient_type [not null, note: 'user | staff']
+  user_id uuid [ref: > users.id]
+  staff_id uuid [ref: > lab_staff.id]
+  order_id uuid [ref: > lab_orders.id]
+  title varchar [not null]
+  body text
+  is_read boolean [default: false]
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+}
+
+Enum notification_recipient_type {
+  user
+  staff
+}
+
+// =====================
+// THEMING & BRANDING
+// =====================
+
+Table theme_settings {
+  id uuid [pk]
+  mode theme_mode [not null, default: 'light']
+  primary_color varchar
+  secondary_color varchar
+  logo_url varchar
+  custom_colors json
+  updated_at timestamp [default: `now()`]
+}
+
+Enum theme_mode {
+  light
+  dark
+  custom
+}
