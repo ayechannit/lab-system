@@ -15,6 +15,7 @@ Table users {
   latitude float
   longitude float
   total_points int [default: 0]
+  is_deleted boolean [default: false]
   created_at timestamp [default: `now()`]
   updated_at timestamp [default: `now()`]
 }
@@ -36,6 +37,7 @@ Table lab_staff {
   password_hash varchar [not null]
   role staff_role [not null, note: 'admin | lab_technician | reception | manager']
   is_active boolean [default: true]
+  is_deleted boolean [default: false]
   created_at timestamp [default: `now()`]
   updated_at timestamp [default: `now()`]
 }
@@ -59,6 +61,7 @@ Table lab_test_catalog {
   base_price_mmk decimal [not null]
   category varchar
   is_active boolean [default: true]
+  is_deleted boolean [default: false]
   created_at timestamp [default: `now()`]
 }
 
@@ -81,6 +84,7 @@ Table lab_orders {
   original_price_mmk decimal [not null]
   discount_percent decimal [default: 0]
   final_price_mmk decimal [not null]
+  is_deleted boolean [default: false]
   created_at timestamp [default: `now()`]
   updated_at timestamp [default: `now()`]
 }
@@ -141,7 +145,7 @@ Table order_status_logs {
 
 Table payments {
   id uuid [pk]
-  order_id uuid [unique, not null, ref: - lab_orders.id]
+  order_id uuid [not null, ref: > lab_orders.id]
   amount_mmk decimal [not null]
   status payment_status [not null, default: 'pending']
   method payment_method
@@ -247,6 +251,7 @@ Table points_rules {
   spend_amount_mmk decimal [not null, note: 'e.g. 100000']
   points_awarded int [not null, note: 'e.g. 10']
   is_active boolean [default: true]
+  is_deleted boolean [default: false]
   created_at timestamp [default: `now()`]
   updated_at timestamp [default: `now()`]
 }
@@ -261,13 +266,19 @@ Table user_points {
   created_at timestamp [default: `now()`]
 }
 
-Table role_discounts {
+Table test_specific_discounts {
   id uuid [pk]
-  role user_role [unique, not null]
+  test_id uuid [not null, ref: > lab_test_catalog.id]
+  role user_role [not null]
   discount_percent decimal [not null]
   is_active boolean [default: true]
+  is_deleted boolean [default: false]
   created_at timestamp [default: `now()`]
   updated_at timestamp [default: `now()`]
+
+  indexes {
+    (test_id, role) [unique]
+  }
 }
 
 // =====================
