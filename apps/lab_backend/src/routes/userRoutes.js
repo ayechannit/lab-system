@@ -62,6 +62,35 @@ const { userSchema } = require('../utils/validators');
  *   get:
  *     summary: Get all users
  *     tags: [Users]
+ *     parameters:
+ *       - in: query
+ *         name: role
+ *         schema:
+ *           type: string
+ *           enum: [clinic, doctor, patient]
+ *         description: Filter users by role
+ *       - in: query
+ *         name: name
+ *         schema:
+ *           type: string
+ *         description: Search by partial name
+ *       - in: query
+ *         name: phone
+ *         schema:
+ *           type: string
+ *         description: Search by partial phone number
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *         description: Page number for pagination
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *         description: Number of items per page for pagination
  *     responses:
  *       200:
  *         description: List of all users

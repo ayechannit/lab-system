@@ -2,7 +2,7 @@ const Staff = require('../models/staffModel');
 
 const getAllStaff = async (req, res) => {
   try {
-    const staff = await Staff.getAll();
+    const staff = await Staff.getAll(req.query);
     res.json(staff);
   } catch (error) {
     res.status(500).json({ error: error.message });

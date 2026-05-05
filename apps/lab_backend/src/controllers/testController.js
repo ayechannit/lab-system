@@ -2,12 +2,12 @@ const LabTest = require('../models/testModel');
 
 const getAllTests = async (req, res) => {
   try {
-    const { role } = req.query;
+    const { role, ...filters } = req.query;
     let tests;
     if (role) {
-      tests = await LabTest.getAllWithDiscounts(role);
+      tests = await LabTest.getAllWithDiscounts(role, filters);
     } else {
-      tests = await LabTest.getAll();
+      tests = await LabTest.getAll(req.query);
     }
     res.json(tests);
   } catch (error) {

@@ -1,9 +1,36 @@
 const { sql, poolPromise } = require('../config/db');
 
 class User {
-  static async getAll() {
+  static async getAll(filters = {}) {
     const pool = await poolPromise;
-    const result = await pool.request().query('SELECT * FROM users WHERE is_deleted = 0');
+    const request = pool.request();
+    let query = 'SELECT * FROM users WHERE is_deleted = 0';
+
+    if (filters.role) {
+      query += ' AND role = @role';
+      request.input('role', sql.VarChar, filters.role);
+    }
+    if (filters.name) {
+      query += ' AND name LIKE @name';
+      request.input('name', sql.VarChar, `%${filters.name}%`);
+    }
+    if (filters.phone) {
+      query += ' AND phone LIKE @phone';
+      request.input('phone', sql.VarChar, `%${filters.phone}%`);
+    }
+
+    query += ' ORDER BY created_at DESC';
+
+    if (filters.page && filters.limit) {
+      const page = parseInt(filters.page, 10);
+      const limit = parseInt(filters.limit, 10);
+      const offset = (page - 1) * limit;
+      query += ' OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY';
+      request.input('offset', sql.Int, offset);
+      request.input('limit', sql.Int, limit);
+    }
+
+    const result = await request.query(query);
     return result.recordset;
   }
 

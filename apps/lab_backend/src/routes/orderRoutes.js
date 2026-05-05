@@ -110,6 +110,36 @@ const { orderSchema, orderStatusUpdateSchema } = require('../utils/validators');
  *   get:
  *     summary: Get all orders
  *     tags: [Orders]
+ *     parameters:
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [pending, scheduled, collecting, running, completed, delivered]
+ *         description: Filter orders by status
+ *       - in: query
+ *         name: priority
+ *         schema:
+ *           type: string
+ *           enum: [urgent, elective]
+ *         description: Filter orders by priority
+ *       - in: query
+ *         name: patient_name
+ *         schema:
+ *           type: string
+ *         description: Search by partial patient name
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *         description: Page number for pagination
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *         description: Number of items per page for pagination
  *     responses:
  *       200:
  *         description: List of all orders

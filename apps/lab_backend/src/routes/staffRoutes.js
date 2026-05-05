@@ -53,6 +53,35 @@ const { staffSchema } = require('../utils/validators');
  *   get:
  *     summary: Get all staff members
  *     tags: [Staff]
+ *     parameters:
+ *       - in: query
+ *         name: role
+ *         schema:
+ *           type: string
+ *           enum: [admin, lab_technician, reception, manager]
+ *         description: Filter staff by role
+ *       - in: query
+ *         name: name
+ *         schema:
+ *           type: string
+ *         description: Search by partial name
+ *       - in: query
+ *         name: is_active
+ *         schema:
+ *           type: boolean
+ *         description: Filter by active status
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *         description: Page number for pagination
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *         description: Number of items per page for pagination
  *     responses:
  *       200:
  *         description: List of all staff

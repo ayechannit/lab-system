@@ -2,7 +2,7 @@ const Discount = require('../models/discountModel');
 
 const getAllDiscounts = async (req, res) => {
   try {
-    const discounts = await Discount.getAll();
+    const discounts = await Discount.getAll(req.query);
     res.json(discounts);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -13,6 +13,17 @@ const getDiscountsByTestId = async (req, res) => {
   try {
     const discounts = await Discount.getByTestId(req.params.test_id);
     res.json(discounts);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+const getDiscountByTestIdAndRole = async (req, res) => {
+  try {
+    const { test_id, role } = req.params;
+    const discount = await Discount.getByTestIdAndRole(test_id, role);
+    if (!discount) return res.status(404).json({ message: 'Discount not found for this test and role' });
+    res.json(discount);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -40,6 +51,7 @@ const deleteDiscount = async (req, res) => {
 module.exports = {
   getAllDiscounts,
   getDiscountsByTestId,
+  getDiscountByTestIdAndRole,
   upsertDiscount,
   deleteDiscount,
 };

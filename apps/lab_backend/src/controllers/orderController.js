@@ -1,7 +1,7 @@
 const Order = require('../models/orderModel');
 
 const getAllOrders = async (req, res) => {
-  const orders = await Order.getAll();
+  const orders = await Order.getAll(req.query);
   res.json(orders);
 };
 

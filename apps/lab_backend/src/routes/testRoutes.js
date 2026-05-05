@@ -61,6 +61,38 @@ const { testSchema } = require('../utils/validators');
  *           type: string
  *           enum: [clinic, doctor, patient]
  *         description: User role to calculate specific discounts
+ *       - in: query
+ *         name: category
+ *         schema:
+ *           type: string
+ *         description: Filter by test category
+ *       - in: query
+ *         name: is_active
+ *         schema:
+ *           type: boolean
+ *         description: Filter by active status
+ *       - in: query
+ *         name: test_name
+ *         schema:
+ *           type: string
+ *         description: Search by partial test name
+ *       - in: query
+ *         name: test_code
+ *         schema:
+ *           type: string
+ *         description: Search by partial test code
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *         description: Page number for pagination
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *         description: Number of items per page for pagination
  *     responses:
  *       200:
  *         description: The list of tests
