@@ -196,3 +196,37 @@ CREATE INDEX IX_Staff_Active ON lab_staff(is_active) WHERE is_deleted = 0;
 
 -- 3. Covering Indexes for Discount Lookups
 CREATE INDEX IX_SpecificDiscounts_Lookup ON test_specific_discounts(role, is_active, is_deleted) INCLUDE (test_id, discount_percent);
+
+
+
+
+ALTER TABLE lab_orders 
+ADD report_delivery_method VARCHAR(20) NOT NULL;
+
+
+ALTER TABLE lab_order_items 
+ADD result_file_url VARCHAR(500) NULL;
+
+
+
+CREATE TABLE order_ratings (
+    id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+    order_id UNIQUEIDENTIFIER NOT NULL,
+    user_id UNIQUEIDENTIFIER NOT NULL,
+    rating INT NOT NULL CHECK (rating >= 1 AND rating <= 5),
+    remark TEXT NULL,
+    created_at DATETIME DEFAULT GETDATE(),
+    CONSTRAINT FK_Rating_Order FOREIGN KEY (order_id) REFERENCES lab_orders(id),
+    CONSTRAINT FK_Rating_User FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+CREATE UNIQUE INDEX IX_Order_Rating ON order_ratings(order_id);
+
+
+CREATE TABLE point_settings (
+    id INT PRIMARY KEY IDENTITY(1,1),
+    name NVARCHAR(255) NULL,
+    start_date DATETIME NULL,
+    end_date DATETIME NULL,
+    is_deleted BIT NOT NULL DEFAULT 0
+);

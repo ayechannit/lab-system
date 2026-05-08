@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const orderController = require('../controllers/orderController');
 const validate = require('../middlewares/validate');
+const upload = require('../middlewares/upload');
 const { orderSchema, orderStatusUpdateSchema } = require('../utils/validators');
 
 /**
@@ -26,6 +27,12 @@ const { orderSchema, orderStatusUpdateSchema } = require('../utils/validators');
  *           type: number
  *         subtotal_mmk:
  *           type: number
+ *         result_file_url:
+ *           type: string
+ *           description: URL or S3 key for the uploaded result PDF
+ *         download_url:
+ *           type: string
+ *           description: Full URL to download the result PDF (added dynamically in responses)
  *     Order:
  *       type: object
  *       required:
@@ -35,6 +42,7 @@ const { orderSchema, orderStatusUpdateSchema } = require('../utils/validators');
  *         - patient_age
  *         - patient_phone
  *         - address
+ *         - report_delivery_method
  *         - original_price_mmk
  *         - final_price_mmk
  *         - items
@@ -65,6 +73,9 @@ const { orderSchema, orderStatusUpdateSchema } = require('../utils/validators');
  *         status:
  *           type: string
  *           enum: [pending, scheduled, collecting, running, completed, delivered]
+ *         report_delivery_method:
+ *           type: string
+ *           enum: [hard_copy, soft_copy, both]
  *         original_price_mmk:
  *           type: number
  *         discount_percent:
@@ -249,10 +260,115 @@ const { orderSchema, orderStatusUpdateSchema } = require('../utils/validators');
  *         description: Order not found
  */
 
+/**
+ * @swagger
+ * /api/orders/{id}/tests/{testId}/qrcode:
+ *   get:
+ *     summary: Generate a QR code for a specific test in an order
+ *     tags: [Orders]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: The order ID
+ *       - in: path
+ *         name: testId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: The test ID
+ *     responses:
+ *       200:
+ *         description: QR code generated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 qrCodeImage:
+ *                   type: string
+ *                   description: Base64 data URL of the QR code image
+ *                 details:
+ *                   type: object
+ *                   properties:
+ *                     patient_name:
+ *                       type: string
+ *                     patient_age:
+ *                       type: integer
+ *                     patient_phone:
+ *                       type: string
+ *                     address:
+ *                       type: string
+ *                     test_name:
+ *                       type: string
+ *                     test_code:
+ *                       type: string
+ *       404:
+ *         description: Order or test not found
+ */
+
+/**
+ * @swagger
+ * /api/orders/{id}/tests/{testId}/upload-result:
+ *   post:
+ *     summary: Upload a PDF result for a specific test in an order
+ *     tags: [Orders]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: The order ID
+ *       - in: path
+ *         name: testId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: The test ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *                 description: The PDF file to upload (Max 5MB by default)
+ *     responses:
+ *       200:
+ *         description: File uploaded successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 fileUrl:
+ *                   type: string
+ *                 downloadUrl:
+ *                   type: string
+ *       400:
+ *         description: Invalid file format or missing file
+ *       404:
+ *         description: Order or test not found
+ */
+
 router.get('/', orderController.getAllOrders);
 router.get('/:id', orderController.getOrderById);
 router.post('/', validate(orderSchema), orderController.createOrder);
 router.put('/:id/status', validate(orderStatusUpdateSchema), orderController.updateOrderStatus);
 router.delete('/:id', orderController.deleteOrder);
+router.get('/:id/tests/:testId/qrcode', orderController.generateQrCode);
+router.post('/:id/tests/:testId/upload-result', upload.single('file'), orderController.uploadTestResult);
 
 module.exports = router;

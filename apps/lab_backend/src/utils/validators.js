@@ -54,6 +54,7 @@ const orderSchema = Joi.object({
   latitude: Joi.number().allow(null),
   longitude: Joi.number().allow(null),
   status: Joi.string().valid('pending', 'scheduled', 'collecting', 'running', 'completed', 'delivered'),
+  report_delivery_method: Joi.string().valid('hard_copy', 'soft_copy', 'both').required(),
   original_price_mmk: Joi.number().required(),
   discount_percent: Joi.number().min(0).max(100),
   final_price_mmk: Joi.number().required(),
@@ -83,6 +84,22 @@ const paymentSchema = Joi.object({
   reference_no: Joi.string().allow('', null)
 });
 
+const ratingSchema = Joi.object({
+  order_id: Joi.string().guid({ version: 'uuidv4' }).required(),
+  user_id: Joi.string().guid({ version: 'uuidv4' }).required(),
+  rating: Joi.number().integer().min(1).max(5).required(),
+  remark: Joi.string().allow('', null)
+});
+
+const pointSettingSchema = Joi.object({
+  name: Joi.string().required().max(255),
+  spend_amount_mmk: Joi.number().required().min(1),
+  points_reward: Joi.number().integer().required().min(1),
+  start_date: Joi.date().allow(null),
+  end_date: Joi.date().allow(null),
+  is_active: Joi.boolean()
+});
+
 module.exports = {
   staffSchema,
   userSchema,
@@ -91,5 +108,7 @@ module.exports = {
   orderSchema,
   orderStatusUpdateSchema,
   scheduleSchema,
-  paymentSchema
+  paymentSchema,
+  ratingSchema,
+  pointSettingSchema
 };

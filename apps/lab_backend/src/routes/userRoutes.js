@@ -115,6 +115,7 @@ const { userSchema } = require('../utils/validators');
  *         schema:
  *           type: string
  *           format: uuid
+ *         description: The unique identifier of the user
  *     responses:
  *       200:
  *         description: User details
@@ -162,6 +163,7 @@ const { userSchema } = require('../utils/validators');
  *         schema:
  *           type: string
  *           format: uuid
+ *         description: The unique identifier of the user
  *     requestBody:
  *       required: true
  *       content:
@@ -192,6 +194,7 @@ const { userSchema } = require('../utils/validators');
  *         schema:
  *           type: string
  *           format: uuid
+ *         description: The unique identifier of the user
  *     responses:
  *       200:
  *         description: User deleted
@@ -199,8 +202,56 @@ const { userSchema } = require('../utils/validators');
  *         description: User not found
  */
 
+/**
+ * @swagger
+ * /api/users/{id}/orders:
+ *   get:
+ *     summary: Get all orders for a specific user
+ *     tags: [Users]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: The unique identifier of the user
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [pending, scheduled, collecting, running, completed, delivered]
+ *         description: Filter user's orders by status
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *         description: Page number for pagination
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *         description: Number of items per page for pagination
+ *     responses:
+ *       200:
+ *         description: List of user's orders
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Order'
+ *       404:
+ *         description: User not found
+ */
+
 router.get('/', userController.getAllUsers);
+
+router.get('/:id/orders', userController.getOrdersByUser);
 router.get('/:id', userController.getUserById);
+
 router.post('/', validate(userSchema), userController.createUser);
 router.put('/:id', validate(userSchema), userController.updateUser);
 router.delete('/:id', userController.deleteUser);

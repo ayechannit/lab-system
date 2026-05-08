@@ -9,6 +9,8 @@ const discountRoutes = require('./routes/discountRoutes');
 const orderRoutes = require('./routes/orderRoutes');
 const scheduleRoutes = require('./routes/scheduleRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
+const ratingRoutes = require('./routes/ratingRoutes');
+const pointSettingRoutes = require('./routes/pointSettingRoutes');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpecs = require('./config/swagger');
 const errorHandler = require('./middlewares/errorHandler');
@@ -23,6 +25,10 @@ app.use(express.json());
 // Swagger Documentation
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs));
 
+// Serve static files from uploads directory (for local development)
+const path = require('path');
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+
 // Routes
 app.use('/api/health', healthRoutes);
 app.use('/api/staff', staffRoutes);
@@ -32,6 +38,8 @@ app.use('/api/discounts', discountRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/schedules', scheduleRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/ratings', ratingRoutes);
+app.use('/api/point-settings', pointSettingRoutes);
 
 // Base route
 app.get('/', (req, res) => {

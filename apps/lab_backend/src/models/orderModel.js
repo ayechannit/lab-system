@@ -10,6 +10,10 @@ class Order {
       query += ' AND status = @status';
       request.input('status', sql.VarChar, filters.status);
     }
+    if (filters.user_id) {
+      query += ' AND user_id = @user_id';
+      request.input('user_id', sql.UniqueIdentifier, filters.user_id);
+    }
     if (filters.priority) {
       query += ' AND priority = @priority';
       request.input('priority', sql.VarChar, filters.priority);
@@ -81,16 +85,17 @@ class Order {
         .input('latitude', sql.Float, data.latitude)
         .input('longitude', sql.Float, data.longitude)
         .input('status', sql.VarChar, data.status || 'pending')
+        .input('report_delivery_method', sql.VarChar, data.report_delivery_method)
         .input('original_price_mmk', sql.Decimal(18, 2), data.original_price_mmk)
         .input('discount_percent', sql.Decimal(5, 2), data.discount_percent || 0)
         .input('final_price_mmk', sql.Decimal(18, 2), data.final_price_mmk)
         .query(`
           INSERT INTO lab_orders (id, user_id, description, priority, patient_name, patient_age, patient_phone, 
-                                 address, latitude, longitude, status, original_price_mmk, 
+                                 address, latitude, longitude, status, report_delivery_method, original_price_mmk, 
                                  discount_percent, final_price_mmk, is_deleted)
           OUTPUT INSERTED.*
           VALUES (NEWID(), @user_id, @description, @priority, @patient_name, @patient_age, @patient_phone, 
-                  @address, @latitude, @longitude, @status, @original_price_mmk, 
+                  @address, @latitude, @longitude, @status, @report_delivery_method, @original_price_mmk, 
                   @discount_percent, @final_price_mmk, 0)
         `);
 
@@ -171,6 +176,37 @@ class Order {
       .input('id', sql.UniqueIdentifier, id)
       .query('UPDATE lab_orders SET is_deleted = 1, updated_at = GETDATE() WHERE id = @id');
     return result.rowsAffected[0] > 0;
+  }
+
+  static async uploadResult(orderId, testId, fileUrl) {
+    const pool = await poolPromise;
+    const result = await pool.request()
+      .input('order_id', sql.UniqueIdentifier, orderId)
+      .input('test_id', sql.UniqueIdentifier, testId)
+      .input('result_file_url', sql.VarChar, fileUrl)
+      .query(`
+        UPDATE lab_order_items 
+        SET result_file_url = @result_file_url
+        WHERE order_id = @order_id AND test_id = @test_id
+      `);
+    return result.rowsAffected[0] > 0;
+  }
+
+  static async getQrDetails(orderId, testId) {
+    const pool = await poolPromise;
+    const result = await pool.request()
+      .input('order_id', sql.UniqueIdentifier, orderId)
+      .input('test_id', sql.UniqueIdentifier, testId)
+      .query(`
+        SELECT 
+          o.patient_name, o.patient_age, o.patient_phone, o.address,
+          t.test_name, t.test_code
+        FROM lab_orders o
+        JOIN lab_order_items oi ON o.id = oi.order_id
+        JOIN lab_test_catalog t ON oi.test_id = t.id
+        WHERE o.id = @order_id AND t.id = @test_id AND o.is_deleted = 0 AND t.is_deleted = 0
+      `);
+    return result.recordset[0];
   }
 }
 

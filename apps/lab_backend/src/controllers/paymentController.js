@@ -1,4 +1,7 @@
 const Payment = require('../models/paymentModel');
+const Order = require('../models/orderModel');
+const PointSetting = require('../models/pointSettingModel');
+const User = require('../models/userModel');
 
 const getPaymentByOrderId = async (req, res) => {
   const payments = await Payment.getByOrderId(req.params.order_id);
@@ -16,10 +19,41 @@ const createPayment = async (req, res) => {
 };
 
 const verifyPayment = async (req, res) => {
-  const { staff_id } = req.body;
-  const payment = await Payment.verify(req.params.id, staff_id);
-  if (!payment) return res.status(404).json({ message: 'Payment not found' });
-  res.json(payment);
+  try {
+    const { staff_id } = req.body;
+    const payment = await Payment.verify(req.params.id, staff_id);
+    if (!payment) return res.status(404).json({ message: 'Payment not found' });
+
+    // Handle Points Calculation when verified
+    if (payment.status === 'verified') {
+      const activeRules = await PointSetting.getActiveRules();
+      
+      if (activeRules && activeRules.length > 0) {
+        let remainingAmount = payment.amount_mmk;
+        let pointsEarned = 0;
+
+        // Apply cascading tiers (highest spend rules first as returned by getActiveRules)
+        for (const rule of activeRules) {
+          if (remainingAmount >= rule.spend_amount_mmk) {
+            const multiple = Math.floor(remainingAmount / rule.spend_amount_mmk);
+            pointsEarned += multiple * rule.points_reward;
+            remainingAmount -= multiple * rule.spend_amount_mmk;
+          }
+        }
+
+        if (pointsEarned > 0) {
+          const order = await Order.getById(payment.order_id);
+          if (order && order.user_id) {
+            await User.addPoints(order.user_id, pointsEarned);
+          }
+        }
+      }
+    }
+
+    res.json(payment);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 };
 
 module.exports = {

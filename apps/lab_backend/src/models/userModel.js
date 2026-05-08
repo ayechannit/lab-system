@@ -84,6 +84,20 @@ class User {
     return result.recordset[0];
   }
 
+  static async addPoints(id, pointsToAdd) {
+    const pool = await poolPromise;
+    const result = await pool.request()
+      .input('id', sql.UniqueIdentifier, id)
+      .input('points', sql.Int, pointsToAdd)
+      .query(`
+        UPDATE users 
+        SET total_points = total_points + @points, updated_at = GETDATE()
+        OUTPUT INSERTED.*
+        WHERE id = @id AND is_deleted = 0
+      `);
+    return result.recordset[0];
+  }
+
   static async delete(id) {
     const pool = await poolPromise;
     const result = await pool.request()

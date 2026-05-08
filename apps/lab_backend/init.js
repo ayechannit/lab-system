@@ -1,0 +1,1899 @@
+
+window.onload = function() {
+  // Build a system
+  var url = window.location.search.match(/url=([^&]+)/);
+  if (url && url.length > 1) {
+    url = decodeURIComponent(url[1]);
+  } else {
+    url = window.location.origin;
+  }
+  var options = {
+  "swaggerDoc": {
+    "openapi": "3.0.0",
+    "info": {
+      "title": "Lab System API",
+      "version": "1.0.0",
+      "description": "API documentation for the Lab System backend"
+    },
+    "servers": [
+      {
+        "url": "http://localhost:3000",
+        "description": "Development server"
+      }
+    ],
+    "paths": {
+      "/api/discounts": {
+        "get": {
+          "summary": "Get all test-specific discounts",
+          "tags": [
+            "Discounts"
+          ],
+          "parameters": [
+            {
+              "in": "query",
+              "name": "role",
+              "schema": {
+                "type": "string",
+                "enum": [
+                  "clinic",
+                  "doctor",
+                  "patient"
+                ]
+              },
+              "description": "Filter discounts by role"
+            },
+            {
+              "in": "query",
+              "name": "is_active",
+              "schema": {
+                "type": "boolean"
+              },
+              "description": "Filter by active status"
+            },
+            {
+              "in": "query",
+              "name": "test_name",
+              "schema": {
+                "type": "string"
+              },
+              "description": "Search by partial test name"
+            },
+            {
+              "in": "query",
+              "name": "test_code",
+              "schema": {
+                "type": "string"
+              },
+              "description": "Search by partial test code"
+            },
+            {
+              "in": "query",
+              "name": "page",
+              "schema": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "description": "Page number for pagination"
+            },
+            {
+              "in": "query",
+              "name": "limit",
+              "schema": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "description": "Number of items per page for pagination"
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "List of all discounts",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/Discount"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "post": {
+          "summary": "Create or update a discount",
+          "description": "Supports 'all' role to bulk update clinic, doctor, and patient roles.",
+          "tags": [
+            "Discounts"
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Discount"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "The created/updated discount(s)",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/Discount"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/discounts/{test_id}": {
+        "get": {
+          "summary": "Get all discounts for a specific test",
+          "tags": [
+            "Discounts"
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "test_id",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "List of discounts for the test",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/Discount"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/discounts/{test_id}/{role}": {
+        "get": {
+          "summary": "Get a discount for a specific test and role",
+          "tags": [
+            "Discounts"
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "test_id",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              }
+            },
+            {
+              "in": "path",
+              "name": "role",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "enum": [
+                  "clinic",
+                  "doctor",
+                  "patient"
+                ]
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Discount detail including pricing",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Discount"
+                  }
+                }
+              }
+            },
+            "404": {
+              "description": "Discount not found"
+            }
+          }
+        }
+      },
+      "/api/discounts/{id}": {
+        "delete": {
+          "summary": "Soft delete a specific discount entry",
+          "tags": [
+            "Discounts"
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Discount deleted"
+            },
+            "404": {
+              "description": "Discount not found"
+            }
+          }
+        }
+      },
+      "/api/orders": {
+        "get": {
+          "summary": "Get all orders",
+          "tags": [
+            "Orders"
+          ],
+          "parameters": [
+            {
+              "in": "query",
+              "name": "status",
+              "schema": {
+                "type": "string",
+                "enum": [
+                  "pending",
+                  "scheduled",
+                  "collecting",
+                  "running",
+                  "completed",
+                  "delivered"
+                ]
+              },
+              "description": "Filter orders by status"
+            },
+            {
+              "in": "query",
+              "name": "priority",
+              "schema": {
+                "type": "string",
+                "enum": [
+                  "urgent",
+                  "elective"
+                ]
+              },
+              "description": "Filter orders by priority"
+            },
+            {
+              "in": "query",
+              "name": "patient_name",
+              "schema": {
+                "type": "string"
+              },
+              "description": "Search by partial patient name"
+            },
+            {
+              "in": "query",
+              "name": "page",
+              "schema": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "description": "Page number for pagination"
+            },
+            {
+              "in": "query",
+              "name": "limit",
+              "schema": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "description": "Number of items per page for pagination"
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "List of all orders",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/Order"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "post": {
+          "summary": "Create a new order with items",
+          "tags": [
+            "Orders"
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Order"
+                }
+              }
+            }
+          },
+          "responses": {
+            "201": {
+              "description": "Order created",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Order"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/orders/{id}": {
+        "get": {
+          "summary": "Get order details including items, schedule and payment",
+          "tags": [
+            "Orders"
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Full order details",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Order"
+                  }
+                }
+              }
+            },
+            "404": {
+              "description": "Order not found"
+            }
+          }
+        },
+        "delete": {
+          "summary": "Soft delete an order",
+          "tags": [
+            "Orders"
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Order deleted"
+            },
+            "404": {
+              "description": "Order not found"
+            }
+          }
+        }
+      },
+      "/api/orders/{id}/status": {
+        "put": {
+          "summary": "Update order status and log the change",
+          "tags": [
+            "Orders"
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "pending",
+                        "scheduled",
+                        "collecting",
+                        "running",
+                        "completed",
+                        "delivered"
+                      ]
+                    },
+                    "staff_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "note": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Status updated"
+            }
+          }
+        }
+      },
+      "/api/orders/{id}/tests/{testId}/qrcode": {
+        "get": {
+          "summary": "Generate a QR code for a specific test in an order",
+          "tags": [
+            "Orders"
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "description": "The order ID"
+            },
+            {
+              "in": "path",
+              "name": "testId",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "description": "The test ID"
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "QR code generated successfully",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "properties": {
+                      "qrCodeImage": {
+                        "type": "string",
+                        "description": "Base64 data URL of the QR code image"
+                      },
+                      "details": {
+                        "type": "object",
+                        "properties": {
+                          "patient_name": {
+                            "type": "string"
+                          },
+                          "patient_age": {
+                            "type": "integer"
+                          },
+                          "patient_phone": {
+                            "type": "string"
+                          },
+                          "address": {
+                            "type": "string"
+                          },
+                          "test_name": {
+                            "type": "string"
+                          },
+                          "test_code": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "404": {
+              "description": "Order or test not found"
+            }
+          }
+        }
+      },
+      "/api/payments/{order_id}": {
+        "get": {
+          "summary": "Get payment summary and history for a specific order",
+          "tags": [
+            "Payments"
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "order_id",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Payment summary (balance) and history",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "properties": {
+                      "summary": {
+                        "type": "object",
+                        "properties": {
+                          "total_price": {
+                            "type": "number"
+                          },
+                          "total_paid": {
+                            "type": "number"
+                          },
+                          "balance": {
+                            "type": "number"
+                          }
+                        }
+                      },
+                      "history": {
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/components/schemas/Payment"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "404": {
+              "description": "Payment not found"
+            }
+          }
+        }
+      },
+      "/api/payments": {
+        "post": {
+          "summary": "Record a new payment (Full or Partial/Reserve)",
+          "tags": [
+            "Payments"
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Payment"
+                }
+              }
+            }
+          },
+          "responses": {
+            "201": {
+              "description": "Payment recorded",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Payment"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/payments/{id}/verify": {
+        "put": {
+          "summary": "Verify a payment (Staff action)",
+          "tags": [
+            "Payments"
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "staff_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Payment verified",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Payment"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/schedules/{order_id}": {
+        "get": {
+          "summary": "Get schedule for a specific order",
+          "tags": [
+            "Schedules"
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "order_id",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Schedule details",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Schedule"
+                  }
+                }
+              }
+            },
+            "404": {
+              "description": "Schedule not found"
+            }
+          }
+        }
+      },
+      "/api/schedules": {
+        "post": {
+          "summary": "Create or update a schedule",
+          "tags": [
+            "Schedules"
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Schedule"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Schedule updated/created",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Schedule"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/staff": {
+        "get": {
+          "summary": "Get all staff members",
+          "tags": [
+            "Staff"
+          ],
+          "parameters": [
+            {
+              "in": "query",
+              "name": "role",
+              "schema": {
+                "type": "string",
+                "enum": [
+                  "admin",
+                  "lab_technician",
+                  "reception",
+                  "manager"
+                ]
+              },
+              "description": "Filter staff by role"
+            },
+            {
+              "in": "query",
+              "name": "name",
+              "schema": {
+                "type": "string"
+              },
+              "description": "Search by partial name"
+            },
+            {
+              "in": "query",
+              "name": "is_active",
+              "schema": {
+                "type": "boolean"
+              },
+              "description": "Filter by active status"
+            },
+            {
+              "in": "query",
+              "name": "page",
+              "schema": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "description": "Page number for pagination"
+            },
+            {
+              "in": "query",
+              "name": "limit",
+              "schema": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "description": "Number of items per page for pagination"
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "List of all staff",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/Staff"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "post": {
+          "summary": "Create a new staff member",
+          "tags": [
+            "Staff"
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Staff"
+                }
+              }
+            }
+          },
+          "responses": {
+            "201": {
+              "description": "Staff created",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Staff"
+                  }
+                }
+              }
+            },
+            "400": {
+              "description": "Validation error"
+            }
+          }
+        }
+      },
+      "/api/staff/{id}": {
+        "get": {
+          "summary": "Get staff member by id",
+          "tags": [
+            "Staff"
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Staff details",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Staff"
+                  }
+                }
+              }
+            },
+            "404": {
+              "description": "Staff not found"
+            }
+          }
+        },
+        "put": {
+          "summary": "Update staff member details",
+          "tags": [
+            "Staff"
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Staff"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Staff updated",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Staff"
+                  }
+                }
+              }
+            },
+            "404": {
+              "description": "Staff not found"
+            }
+          }
+        },
+        "delete": {
+          "summary": "Soft delete a staff member",
+          "tags": [
+            "Staff"
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Staff member deleted"
+            },
+            "404": {
+              "description": "Staff not found"
+            }
+          }
+        }
+      },
+      "/api/tests": {
+        "get": {
+          "summary": "Returns the list of all lab tests",
+          "tags": [
+            "Tests"
+          ],
+          "parameters": [
+            {
+              "in": "query",
+              "name": "role",
+              "schema": {
+                "type": "string",
+                "enum": [
+                  "clinic",
+                  "doctor",
+                  "patient"
+                ]
+              },
+              "description": "User role to calculate specific discounts"
+            },
+            {
+              "in": "query",
+              "name": "category",
+              "schema": {
+                "type": "string"
+              },
+              "description": "Filter by test category"
+            },
+            {
+              "in": "query",
+              "name": "is_active",
+              "schema": {
+                "type": "boolean"
+              },
+              "description": "Filter by active status"
+            },
+            {
+              "in": "query",
+              "name": "test_name",
+              "schema": {
+                "type": "string"
+              },
+              "description": "Search by partial test name"
+            },
+            {
+              "in": "query",
+              "name": "test_code",
+              "schema": {
+                "type": "string"
+              },
+              "description": "Search by partial test code"
+            },
+            {
+              "in": "query",
+              "name": "page",
+              "schema": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "description": "Page number for pagination"
+            },
+            {
+              "in": "query",
+              "name": "limit",
+              "schema": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "description": "Number of items per page for pagination"
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "The list of tests",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/LabTest"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "post": {
+          "summary": "Create a new lab test",
+          "tags": [
+            "Tests"
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LabTest"
+                }
+              }
+            }
+          },
+          "responses": {
+            "201": {
+              "description": "The test was successfully created",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/LabTest"
+                  }
+                }
+              }
+            },
+            "400": {
+              "description": "Validation error"
+            }
+          }
+        }
+      },
+      "/api/tests/{id}": {
+        "get": {
+          "summary": "Get a test by id",
+          "tags": [
+            "Tests"
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "The test description by id",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/LabTest"
+                  }
+                }
+              }
+            },
+            "404": {
+              "description": "Test not found"
+            }
+          }
+        },
+        "put": {
+          "summary": "Update an existing test",
+          "tags": [
+            "Tests"
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LabTest"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "The test was updated",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/LabTest"
+                  }
+                }
+              }
+            },
+            "404": {
+              "description": "Test not found"
+            }
+          }
+        },
+        "delete": {
+          "summary": "Soft delete a test",
+          "tags": [
+            "Tests"
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Test deleted"
+            },
+            "404": {
+              "description": "Test not found"
+            }
+          }
+        }
+      },
+      "/api/users": {
+        "get": {
+          "summary": "Get all users",
+          "tags": [
+            "Users"
+          ],
+          "parameters": [
+            {
+              "in": "query",
+              "name": "role",
+              "schema": {
+                "type": "string",
+                "enum": [
+                  "clinic",
+                  "doctor",
+                  "patient"
+                ]
+              },
+              "description": "Filter users by role"
+            },
+            {
+              "in": "query",
+              "name": "name",
+              "schema": {
+                "type": "string"
+              },
+              "description": "Search by partial name"
+            },
+            {
+              "in": "query",
+              "name": "phone",
+              "schema": {
+                "type": "string"
+              },
+              "description": "Search by partial phone number"
+            },
+            {
+              "in": "query",
+              "name": "page",
+              "schema": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "description": "Page number for pagination"
+            },
+            {
+              "in": "query",
+              "name": "limit",
+              "schema": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "description": "Number of items per page for pagination"
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "List of all users",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/User"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "post": {
+          "summary": "Create a new user",
+          "tags": [
+            "Users"
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "responses": {
+            "201": {
+              "description": "User created",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/User"
+                  }
+                }
+              }
+            },
+            "400": {
+              "description": "Validation error"
+            }
+          }
+        }
+      },
+      "/api/users/{id}": {
+        "get": {
+          "summary": "Get user by id",
+          "tags": [
+            "Users"
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "User details",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/User"
+                  }
+                }
+              }
+            },
+            "404": {
+              "description": "User not found"
+            }
+          }
+        },
+        "put": {
+          "summary": "Update user details",
+          "tags": [
+            "Users"
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "User updated",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/User"
+                  }
+                }
+              }
+            },
+            "404": {
+              "description": "User not found"
+            }
+          }
+        },
+        "delete": {
+          "summary": "Soft delete a user",
+          "tags": [
+            "Users"
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "User deleted"
+            },
+            "404": {
+              "description": "User not found"
+            }
+          }
+        }
+      }
+    },
+    "components": {
+      "schemas": {
+        "Discount": {
+          "type": "object",
+          "required": [
+            "test_id",
+            "role",
+            "discount_percent"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "test_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "role": {
+              "type": "string",
+              "enum": [
+                "clinic",
+                "doctor",
+                "patient",
+                "all"
+              ]
+            },
+            "discount_percent": {
+              "type": "number"
+            },
+            "is_active": {
+              "type": "boolean"
+            },
+            "is_deleted": {
+              "type": "boolean"
+            },
+            "test_name": {
+              "type": "string"
+            },
+            "test_code": {
+              "type": "string"
+            },
+            "original_price": {
+              "type": "number"
+            },
+            "after_discount_price": {
+              "type": "number"
+            },
+            "created_at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "updated_at": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        },
+        "OrderItem": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "order_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "test_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "quantity": {
+              "type": "integer"
+            },
+            "unit_price_mmk": {
+              "type": "number"
+            },
+            "subtotal_mmk": {
+              "type": "number"
+            },
+            "result_file_url": {
+              "type": "string",
+              "description": "URL or S3 key for the uploaded result PDF"
+            },
+            "download_url": {
+              "type": "string",
+              "description": "Full URL to download the result PDF (added dynamically in responses)"
+            }
+          }
+        },
+        "Order": {
+          "type": "object",
+          "required": [
+            "user_id",
+            "priority",
+            "patient_name",
+            "patient_age",
+            "patient_phone",
+            "address",
+            "report_delivery_method",
+            "original_price_mmk",
+            "final_price_mmk",
+            "items"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "user_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": {
+              "type": "string"
+            },
+            "priority": {
+              "type": "string",
+              "enum": [
+                "urgent",
+                "elective"
+              ]
+            },
+            "patient_name": {
+              "type": "string"
+            },
+            "patient_age": {
+              "type": "integer"
+            },
+            "patient_phone": {
+              "type": "string"
+            },
+            "address": {
+              "type": "string"
+            },
+            "latitude": {
+              "type": "number"
+            },
+            "longitude": {
+              "type": "number"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "pending",
+                "scheduled",
+                "collecting",
+                "running",
+                "completed",
+                "delivered"
+              ]
+            },
+            "report_delivery_method": {
+              "type": "string",
+              "enum": [
+                "hard_copy",
+                "soft_copy",
+                "both"
+              ]
+            },
+            "original_price_mmk": {
+              "type": "number"
+            },
+            "discount_percent": {
+              "type": "number"
+            },
+            "final_price_mmk": {
+              "type": "number"
+            },
+            "is_deleted": {
+              "type": "boolean"
+            },
+            "created_at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "updated_at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "total_paid_mmk": {
+              "type": "number",
+              "description": "Sum of all received/verified payments"
+            },
+            "balance_mmk": {
+              "type": "number",
+              "description": "Remaining amount to pay"
+            },
+            "items": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/OrderItem"
+              }
+            },
+            "schedule": {
+              "$ref": "#/components/schemas/Schedule"
+            },
+            "payments": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/Payment"
+              }
+            }
+          }
+        },
+        "Payment": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "order_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "amount_mmk": {
+              "type": "number"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "pending",
+                "received",
+                "verified",
+                "failed"
+              ]
+            },
+            "method": {
+              "type": "string",
+              "enum": [
+                "cash",
+                "bank_transfer",
+                "mobile_pay"
+              ]
+            },
+            "reference_no": {
+              "type": "string"
+            },
+            "verified_by": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "paid_at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "verified_at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "created_at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "updated_at": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        },
+        "Schedule": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "order_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "collecting_person": {
+              "type": "string"
+            },
+            "collection_time": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "running_time": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "report_out_time": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "accepted_by_user": {
+              "type": "boolean"
+            },
+            "created_at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "updated_at": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        },
+        "Staff": {
+          "type": "object",
+          "required": [
+            "name",
+            "email",
+            "password_hash",
+            "role"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "name": {
+              "type": "string"
+            },
+            "email": {
+              "type": "string"
+            },
+            "password_hash": {
+              "type": "string"
+            },
+            "role": {
+              "type": "string",
+              "enum": [
+                "admin",
+                "lab_technician",
+                "reception",
+                "manager"
+              ]
+            },
+            "is_active": {
+              "type": "boolean"
+            },
+            "is_deleted": {
+              "type": "boolean"
+            },
+            "created_at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "updated_at": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        },
+        "LabTest": {
+          "type": "object",
+          "required": [
+            "test_name",
+            "test_code",
+            "base_price_mmk"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "test_name": {
+              "type": "string"
+            },
+            "test_code": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "base_price_mmk": {
+              "type": "number"
+            },
+            "category": {
+              "type": "string"
+            },
+            "is_active": {
+              "type": "boolean"
+            },
+            "is_deleted": {
+              "type": "boolean"
+            },
+            "discount_percent": {
+              "type": "number"
+            },
+            "discounted_price_mmk": {
+              "type": "number"
+            },
+            "created_at": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        },
+        "User": {
+          "type": "object",
+          "required": [
+            "name",
+            "email",
+            "phone",
+            "password_hash",
+            "role"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "name": {
+              "type": "string"
+            },
+            "email": {
+              "type": "string"
+            },
+            "phone": {
+              "type": "string"
+            },
+            "password_hash": {
+              "type": "string"
+            },
+            "role": {
+              "type": "string",
+              "enum": [
+                "clinic",
+                "doctor",
+                "patient"
+              ]
+            },
+            "address": {
+              "type": "string"
+            },
+            "latitude": {
+              "type": "number"
+            },
+            "longitude": {
+              "type": "number"
+            },
+            "total_points": {
+              "type": "integer"
+            },
+            "is_deleted": {
+              "type": "boolean"
+            },
+            "created_at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "updated_at": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        }
+      }
+    },
+    "tags": [
+      {
+        "name": "Discounts",
+        "description": "Test-specific role-based discount management"
+      },
+      {
+        "name": "Orders",
+        "description": "Lab order management"
+      },
+      {
+        "name": "Payments",
+        "description": "Payment processing and verification (Supports partial/reserve payments)"
+      },
+      {
+        "name": "Schedules",
+        "description": "Order scheduling and collection tracking"
+      },
+      {
+        "name": "Staff",
+        "description": "Lab staff management"
+      },
+      {
+        "name": "Tests",
+        "description": "Lab test catalog management"
+      },
+      {
+        "name": "Users",
+        "description": "User management (Clinics, Doctors, Patients)"
+      }
+    ]
+  },
+  "customOptions": {}
+};
+  url = options.swaggerUrl || url
+  var urls = options.swaggerUrls
+  var customOptions = options.customOptions
+  var spec1 = options.swaggerDoc
+  var swaggerOptions = {
+    spec: spec1,
+    url: url,
+    urls: urls,
+    dom_id: '#swagger-ui',
+    deepLinking: true,
+    presets: [
+      SwaggerUIBundle.presets.apis,
+      SwaggerUIStandalonePreset
+    ],
+    plugins: [
+      SwaggerUIBundle.plugins.DownloadUrl
+    ],
+    layout: "StandaloneLayout"
+  }
+  for (var attrname in customOptions) {
+    swaggerOptions[attrname] = customOptions[attrname];
+  }
+  var ui = SwaggerUIBundle(swaggerOptions)
+
+  if (customOptions.oauth) {
+    ui.initOAuth(customOptions.oauth)
+  }
+
+  if (customOptions.preauthorizeApiKey) {
+    const key = customOptions.preauthorizeApiKey.authDefinitionKey;
+    const value = customOptions.preauthorizeApiKey.apiKeyValue;
+    if (!!key && !!value) {
+      const pid = setInterval(() => {
+        const authorized = ui.preauthorizeApiKey(key, value);
+        if(!!authorized) clearInterval(pid);
+      }, 500)
+
+    }
+  }
+
+  if (customOptions.authAction) {
+    ui.authActions.authorize(customOptions.authAction)
+  }
+
+  window.ui = ui
+}
