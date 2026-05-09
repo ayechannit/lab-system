@@ -1,49 +1,39 @@
 import { useEffect, useMemo, useState } from 'react'
 import { ConfirmDialog } from '../components/common/ConfirmDialog'
-import { DiscountFormModal } from '../components/discounts/DiscountFormModal'
+import { UserFormModal } from '../components/users/UserFormModal'
 import { PageHeader } from '../components/common/PageHeader'
 import { TableActionMenu } from '../components/common/TableActionMenu'
-import type { LabTestCatalogRow } from '../mock-data/types'
+import type { EndUserRole, UserListRow } from '../mock-data/types'
 import { isApiMode } from '../services/apiBase'
-import {
-  deleteDiscountById,
-  fetchAllDiscounts,
-  type TestDiscountListRow,
-} from '../services/discountService'
-import { fetchLabTestsList } from '../services/labTestCatalogService'
+import { deleteUser, fetchUserList } from '../services/userService'
 import '../components/common/ui.css'
 
-const colSpan = 6
-
-function roleLabel(role: string): string {
-  const map: Record<string, string> = {
+function roleLabel(r: EndUserRole): string {
+  const map: Record<EndUserRole, string> = {
     clinic: 'Clinic',
     doctor: 'Doctor',
     patient: 'Patient',
-    all: 'All',
   }
-  return map[role] ?? role
+  return map[r]
 }
 
-export function DiscountManagementPage() {
+export function UserManagementPage() {
   const hasApi = isApiMode()
-  const [rows, setRows] = useState<TestDiscountListRow[]>([])
-  const [tests, setTests] = useState<LabTestCatalogRow[]>([])
+  const [rows, setRows] = useState<UserListRow[]>([])
   const [loading, setLoading] = useState(hasApi)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [refreshTick, setRefreshTick] = useState(0)
 
   const [formOpen, setFormOpen] = useState(false)
   const [formMode, setFormMode] = useState<'create' | 'edit'>('create')
-  const [editInitial, setEditInitial] = useState<TestDiscountListRow | null>(null)
+  const [editInitial, setEditInitial] = useState<UserListRow | null>(null)
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
-  const [deleteTarget, setDeleteTarget] = useState<TestDiscountListRow | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<UserListRow | null>(null)
 
   useEffect(() => {
     if (!hasApi) {
       setLoading(false)
       setRows([])
-      setTests([])
       return
     }
     let cancelled = false
@@ -51,13 +41,10 @@ export function DiscountManagementPage() {
     setLoadError(null)
     void (async () => {
       try {
-        const [discountList, catalog] = await Promise.all([fetchAllDiscounts(), fetchLabTestsList()])
-        if (!cancelled) {
-          setRows(discountList)
-          setTests(catalog.filter((t) => t.is_active && !t.is_deleted))
-        }
+        const list = await fetchUserList()
+        if (!cancelled) setRows(list)
       } catch (e) {
-        if (!cancelled) setLoadError(e instanceof Error ? e.message : 'Failed to load discounts')
+        if (!cancelled) setLoadError(e instanceof Error ? e.message : 'Failed to load users')
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -67,13 +54,10 @@ export function DiscountManagementPage() {
     }
   }, [hasApi, refreshTick])
 
-  const sorted = useMemo(() => {
-    return [...rows].sort((a, b) => {
-      const na = (a.test_name ?? a.test_id).localeCompare(b.test_name ?? b.test_id)
-      if (na !== 0) return na
-      return a.role.localeCompare(b.role)
-    })
-  }, [rows])
+  const sorted = useMemo(
+    () => [...rows].sort((a, b) => a.name.localeCompare(b.name)),
+    [rows],
+  )
 
   function openCreate() {
     setFormMode('create')
@@ -81,7 +65,7 @@ export function DiscountManagementPage() {
     setFormOpen(true)
   }
 
-  function openEdit(row: TestDiscountListRow) {
+  function openEdit(row: UserListRow) {
     setFormMode('edit')
     setEditInitial(row)
     setFormOpen(true)
@@ -97,22 +81,25 @@ export function DiscountManagementPage() {
     const row = deleteTarget
     setDeleteTarget(null)
     try {
-      await deleteDiscountById(row.id)
+      await deleteUser(row.id)
       setRefreshTick((t) => t + 1)
     } catch (e) {
       window.alert(e instanceof Error ? e.message : 'Delete failed')
     }
   }
 
+  const colSpan = 8
+
   return (
     <div className="stack">
-      <PageHeader title="Test discounts" />
+      <PageHeader title="Users" />
 
       {!hasApi ? (
         <div className="card" style={{ borderColor: '#dfe5f0', background: '#f8fafc' }}>
           <p style={{ margin: 0, fontSize: '0.9rem' }}>
             Set <code>VITE_API_BASE_URL</code> in <code>apps/lab_admin_web</code> (e.g.{' '}
-            <code>http://localhost:3000</code>) and restart the dev server. Discounts load from the backend only.
+            <code>http://localhost:3000</code>) and restart the dev server. Data is loaded only from the
+            backend.
           </p>
         </div>
       ) : null}
@@ -129,24 +116,29 @@ export function DiscountManagementPage() {
             display: 'flex',
             flexWrap: 'wrap',
             alignItems: 'center',
-            justifyContent: 'flex-end',
+            justifyContent: 'space-between',
             gap: '0.75rem',
             marginBottom: '0.75rem',
           }}
         >
+          <h3 className="card-title" style={{ margin: 0 }}>
+            Users
+          </h3>
           <button type="button" className="btn btn-primary" onClick={openCreate} disabled={loading || !hasApi}>
-            Add discount
+            Add user
           </button>
         </div>
         <div className="table-wrap">
           <table className="data-table">
             <thead>
               <tr>
-                <th>Test</th>
-                <th>Code</th>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Phone</th>
                 <th>Role</th>
-                <th>Discount (%)</th>
-                <th>Active</th>
+                <th>Address</th>
+                <th>Lat / Lng</th>
+                <th>Points</th>
                 <th className="action-col">Actions</th>
               </tr>
             </thead>
@@ -160,25 +152,21 @@ export function DiscountManagementPage() {
               ) : sorted.length === 0 ? (
                 <tr>
                   <td colSpan={colSpan} className="data-table__state">
-                    No discount rows yet.
+                    No users yet.
                   </td>
                 </tr>
               ) : (
                 sorted.map((r) => (
                   <tr key={r.id}>
-                    <td>{r.test_name ?? '—'}</td>
-                    <td>
-                      <code>{r.test_code ?? '—'}</code>
-                    </td>
+                    <td>{r.name}</td>
+                    <td>{r.email}</td>
+                    <td style={{ whiteSpace: 'nowrap' }}>{r.phone || '—'}</td>
                     <td>{roleLabel(r.role)}</td>
-                    <td>{r.discount_percent}</td>
-                    <td>
-                      {r.is_active ? (
-                        <span className="badge badge--success">Yes</span>
-                      ) : (
-                        <span className="badge badge--neutral">No</span>
-                      )}
+                    <td style={{ maxWidth: 180, whiteSpace: 'normal' }}>{r.address || '—'}</td>
+                    <td style={{ fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
+                      {r.latitude}, {r.longitude}
                     </td>
+                    <td>{r.total_points.toLocaleString()}</td>
                     <td className="action-cell">
                       <TableActionMenu
                         open={openMenuId === r.id}
@@ -205,10 +193,10 @@ export function DiscountManagementPage() {
 
       <ConfirmDialog
         open={deleteTarget !== null}
-        title="Remove discount?"
+        title="Remove user?"
         message={
           deleteTarget
-            ? `Soft-delete this ${roleLabel(deleteTarget.role)} discount for "${deleteTarget.test_name ?? deleteTarget.test_id}"?`
+            ? `Soft-delete "${deleteTarget.name}"? They will be marked deleted in the database.`
             : ''
         }
         confirmLabel="Remove"
@@ -218,11 +206,11 @@ export function DiscountManagementPage() {
         onCancel={() => setDeleteTarget(null)}
       />
 
-      <DiscountFormModal
+      <UserFormModal
         open={formOpen && hasApi}
         mode={formMode}
         initial={editInitial}
-        tests={tests}
+        existingRows={rows}
         onClose={closeForm}
         onSuccess={() => setRefreshTick((t) => t + 1)}
       />

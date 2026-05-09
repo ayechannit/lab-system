@@ -1,4 +1,4 @@
-import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useMockAuth } from '../hooks/MockAuthContext'
 import './admin-layout.css'
 
@@ -10,6 +10,9 @@ type NavItem = {
 
 const nav: NavItem[] = [
   { to: '/orders', label: 'Orders' },
+  { to: '/lab-tests', label: 'Lab tests' },
+  { to: '/staff', label: 'Staff' },
+  { to: '/users', label: 'Users' },
   { to: '/collections', label: 'Collection' },
   { to: '/results', label: 'Lab results' },
   { to: '/ratings', label: 'Ratings & feedback' },
@@ -18,9 +21,19 @@ const nav: NavItem[] = [
   { to: '/reports', label: 'Reports' },
 ]
 
+function headerTitleForPath(pathname: string): string {
+  const path = pathname.replace(/\/$/, '') || '/'
+  const match = nav.find((item) => item.to === path)
+  if (match) return match.label
+  if (path === '/') return nav[0].label
+  return 'Healthcare lab admin'
+}
+
 export function AdminLayout() {
   const { signOut } = useMockAuth()
   const navigate = useNavigate()
+  const { pathname } = useLocation()
+  const headerTitle = headerTitleForPath(pathname)
 
   return (
     <div className="admin-shell">
@@ -52,7 +65,7 @@ export function AdminLayout() {
       <div className="admin-main">
         <header className="admin-header">
           <div className="admin-header-left">
-            <h1 className="page-title">Healthcare lab admin</h1>
+            <h1 className="page-title">{headerTitle}</h1>
           </div>
           <div className="admin-header-right">
             <button

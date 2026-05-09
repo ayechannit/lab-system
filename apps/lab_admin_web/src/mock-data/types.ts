@@ -1,5 +1,43 @@
 export type StaffRole = 'admin' | 'lab_technician' | 'reception' | 'manager'
 
+/**
+ * `lab_staff` row as returned by the staff API (snake_case JSON).
+ * Passwords are hashed on the server; this UI never persists real passwords in localStorage.
+ */
+export interface StaffListRow {
+  id: string
+  name: string
+  email: string
+  password_hash: string
+  role: StaffRole
+  is_active: boolean
+  is_deleted: boolean
+  created_at: string
+  updated_at: string
+}
+
+/** `users.role` in the core schema (clinic / doctor / patient apps). */
+export type EndUserRole = 'clinic' | 'doctor' | 'patient'
+
+/**
+ * App user row as returned by the users API (`users` table, snake_case JSON).
+ */
+export interface UserListRow {
+  id: string
+  name: string
+  email: string
+  phone: string
+  password_hash: string
+  role: EndUserRole
+  address: string
+  latitude: number
+  longitude: number
+  total_points: number
+  is_deleted: boolean
+  created_at: string
+  updated_at: string
+}
+
 export type OrderStatus =
   | 'pending'
   | 'collection'
@@ -47,15 +85,6 @@ export interface FeedbackRow {
   date: string
 }
 
-export type DiscountAppliesTo = 'doctor' | 'clinic' | 'patient' | 'reception'
-
-export interface DiscountRule {
-  id: string
-  label: string
-  percent: number
-  appliesTo: DiscountAppliesTo
-}
-
 export interface PointsRule {
   mmkSpend: number
   pointsEarned: number
@@ -66,4 +95,24 @@ export interface UserPointsRow {
   name: string
   role: string
   points: number
+}
+
+/**
+ * Lab test catalog row as returned by the API (snake_case JSON).
+ * `discounted_price_mmk` is typically derived from `base_price_mmk` and `discount_percent`.
+ * `updated_at` is included when the backend sends it (optional in payloads that only have `created_at`).
+ */
+export interface LabTestCatalogRow {
+  id: string
+  test_name: string
+  test_code: string
+  description: string
+  base_price_mmk: number
+  category: string
+  is_active: boolean
+  is_deleted: boolean
+  discount_percent: number
+  discounted_price_mmk: number
+  created_at: string
+  updated_at?: string
 }
