@@ -246,10 +246,13 @@ Table ratings {
 // POINTS & DISCOUNTS
 // =====================
 
-Table points_rules {
+Table point_settings {
   id uuid [pk]
+  name varchar [not null]
   spend_amount_mmk decimal [not null, note: 'e.g. 100000']
-  points_awarded int [not null, note: 'e.g. 10']
+  points_reward int [not null, note: 'e.g. 10']
+  start_date timestamp
+  end_date timestamp
   is_active boolean [default: true]
   is_deleted boolean [default: false]
   created_at timestamp [default: `now()`]
@@ -260,7 +263,7 @@ Table user_points {
   id uuid [pk]
   user_id uuid [not null, ref: > users.id]
   order_id uuid [ref: > lab_orders.id]
-  rule_id uuid [ref: > points_rules.id]
+  rule_id uuid [ref: > point_settings.id]
   points_earned int [not null]
   description text
   created_at timestamp [default: `now()`]

@@ -1,8 +1,11 @@
 const express = require('express');
 const router = express.Router();
+const { authMiddleware } = require('../middlewares/authMiddleware');
 const testController = require('../controllers/testController');
 const validate = require('../middlewares/validate');
 const { testSchema } = require('../utils/validators');
+
+router.use(authMiddleware);
 
 /**
  * @swagger

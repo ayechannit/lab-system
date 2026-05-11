@@ -31,7 +31,7 @@ const getDiscountByTestIdAndRole = async (req, res) => {
 
 const upsertDiscount = async (req, res) => {
   try {
-    const result = await Discount.upsert(req.body);
+    const result = await Discount.upsert(req.body, req.user?.id);
     res.json(result);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -40,7 +40,7 @@ const upsertDiscount = async (req, res) => {
 
 const deleteDiscount = async (req, res) => {
   try {
-    const success = await Discount.delete(req.params.id);
+    const success = await Discount.delete(req.params.id, req.user?.id);
     if (!success) return res.status(404).json({ message: 'Discount not found' });
     res.json({ message: 'Discount deleted successfully' });
   } catch (error) {

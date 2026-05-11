@@ -7,7 +7,7 @@ const getScheduleByOrderId = async (req, res) => {
 };
 
 const upsertSchedule = async (req, res) => {
-  const schedule = await Schedule.upsert(req.body);
+  const schedule = await Schedule.upsert(req.body, req.user?.id);
   res.json(schedule);
 };
 

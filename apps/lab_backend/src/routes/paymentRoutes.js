@@ -1,8 +1,11 @@
 const express = require('express');
 const router = express.Router();
+const { authMiddleware } = require('../middlewares/authMiddleware');
 const paymentController = require('../controllers/paymentController');
 const validate = require('../middlewares/validate');
 const { paymentSchema } = require('../utils/validators');
+
+router.use(authMiddleware);
 
 /**
  * @swagger

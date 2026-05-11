@@ -5,7 +5,7 @@ class Discount {
    * Upsert a discount for a specific test and role.
    * If role is 'all', it applies to clinic, doctor, and patient.
    */
-  static async upsert(data) {
+  static async upsert(data, updatedBy = null) {
     const pool = await poolPromise;
     const roles = data.role === 'all' ? ['clinic', 'doctor', 'patient'] : [data.role];
     const results = [];
@@ -16,19 +16,21 @@ class Discount {
         .input('role', sql.VarChar, role)
         .input('discount_percent', sql.Decimal(5, 2), data.discount_percent)
         .input('is_active', sql.Bit, data.is_active !== undefined ? data.is_active : 1)
+        .input('updated_user', sql.UniqueIdentifier, updatedBy)
         .query(`
           IF EXISTS (SELECT 1 FROM test_specific_discounts WHERE test_id = @test_id AND role = @role)
           BEGIN
               UPDATE test_specific_discounts 
-              SET discount_percent = @discount_percent, is_active = @is_active, is_deleted = 0, updated_at = GETDATE()
+              SET discount_percent = @discount_percent, is_active = @is_active, is_deleted = 0, 
+                  updated_user = @updated_user, updated_at = GETDATE()
               OUTPUT INSERTED.*
               WHERE test_id = @test_id AND role = @role
           END
           ELSE
           BEGIN
-              INSERT INTO test_specific_discounts (id, test_id, role, discount_percent, is_active, is_deleted)
+              INSERT INTO test_specific_discounts (id, test_id, role, discount_percent, is_active, is_deleted, created_user, updated_user)
               OUTPUT INSERTED.*
-              VALUES (NEWID(), @test_id, @role, @discount_percent, @is_active, 0)
+              VALUES (NEWID(), @test_id, @role, @discount_percent, @is_active, 0, @updated_user, @updated_user)
           END
         `);
       results.push(result.recordset[0]);
@@ -43,7 +45,8 @@ class Discount {
       .input('role', sql.VarChar, role)
       .query(`
         SELECT sd.*, t.test_name, t.test_code, t.base_price_mmk as original_price,
-               (t.base_price_mmk * (1 - sd.discount_percent / 100)) as after_discount_price
+               (t.base_price_mmk * (1 - sd.discount_percent / 100)) as after_discount_price,
+               sd.created_user, sd.updated_user
         FROM test_specific_discounts sd
         JOIN lab_test_catalog t ON sd.test_id = t.id
         WHERE sd.test_id = @test_id AND sd.role = @role AND sd.is_deleted = 0 AND t.is_deleted = 0
@@ -57,7 +60,8 @@ class Discount {
       .input('test_id', sql.UniqueIdentifier, test_id)
       .query(`
         SELECT sd.*, t.test_name, t.test_code, t.base_price_mmk as original_price,
-               (t.base_price_mmk * (1 - sd.discount_percent / 100)) as after_discount_price
+               (t.base_price_mmk * (1 - sd.discount_percent / 100)) as after_discount_price,
+               sd.created_user, sd.updated_user
         FROM test_specific_discounts sd
         JOIN lab_test_catalog t ON sd.test_id = t.id
         WHERE sd.test_id = @test_id AND sd.is_deleted = 0 AND t.is_deleted = 0
@@ -71,7 +75,8 @@ class Discount {
 
     let query = `
       SELECT sd.*, t.test_name, t.test_code, t.base_price_mmk as original_price,
-             (t.base_price_mmk * (1 - sd.discount_percent / 100)) as after_discount_price
+             (t.base_price_mmk * (1 - sd.discount_percent / 100)) as after_discount_price,
+             sd.created_user, sd.updated_user
       FROM test_specific_discounts sd
       JOIN lab_test_catalog t ON sd.test_id = t.id
       WHERE sd.is_deleted = 0 AND t.is_deleted = 0
@@ -113,11 +118,12 @@ class Discount {
     return result.recordset;
   }
 
-  static async delete(id) {
+  static async delete(id, updatedBy = null) {
     const pool = await poolPromise;
     const result = await pool.request()
       .input('id', sql.UniqueIdentifier, id)
-      .query('UPDATE test_specific_discounts SET is_deleted = 1, updated_at = GETDATE() WHERE id = @id');
+      .input('updated_user', sql.UniqueIdentifier, updatedBy)
+      .query('UPDATE test_specific_discounts SET is_deleted = 1, updated_user = @updated_user, updated_at = GETDATE() WHERE id = @id');
     return result.rowsAffected[0] > 0;
   }
 }
