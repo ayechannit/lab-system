@@ -5,7 +5,7 @@ class Payment {
     const pool = await poolPromise;
     const result = await pool.request()
       .input('order_id', sql.UniqueIdentifier, orderId)
-      .query('SELECT * FROM payments WHERE order_id = @order_id ORDER BY created_at ASC');
+      .query('SELECT *, created_user, updated_user FROM payments WHERE order_id = @order_id ORDER BY created_at ASC');
     return result.recordset;
   }
 
@@ -29,7 +29,7 @@ class Payment {
     return result.recordset[0];
   }
 
-  static async create(data) {
+  static async create(data, createdBy = null) {
     const pool = await poolPromise;
     const result = await pool.request()
       .input('order_id', sql.UniqueIdentifier, data.order_id)
@@ -37,22 +37,25 @@ class Payment {
       .input('status', sql.VarChar, data.status || 'received') // Defaulting to received per user suggestion
       .input('method', sql.VarChar, data.method)
       .input('reference_no', sql.VarChar, data.reference_no)
+      .input('created_user', sql.UniqueIdentifier, createdBy)
       .query(`
-        INSERT INTO payments (id, order_id, amount_mmk, status, method, reference_no, paid_at)
+        INSERT INTO payments (id, order_id, amount_mmk, status, method, reference_no, paid_at, created_user, updated_user)
         OUTPUT INSERTED.*
-        VALUES (NEWID(), @order_id, @amount_mmk, @status, @method, @reference_no, GETDATE())
+        VALUES (NEWID(), @order_id, @amount_mmk, @status, @method, @reference_no, GETDATE(), @created_user, @created_user)
       `);
     return result.recordset[0];
   }
 
-  static async verify(id, staffId) {
+  static async verify(id, staffId, updatedBy = null) {
     const pool = await poolPromise;
     const result = await pool.request()
       .input('id', sql.UniqueIdentifier, id)
       .input('verified_by', sql.UniqueIdentifier, staffId)
+      .input('updated_user', sql.UniqueIdentifier, updatedBy || staffId)
       .query(`
         UPDATE payments 
-        SET status = 'verified', verified_by = @verified_by, verified_at = GETDATE(), updated_at = GETDATE()
+        SET status = 'verified', verified_by = @verified_by, verified_at = GETDATE(), 
+            updated_user = @updated_user, updated_at = GETDATE()
         OUTPUT INSERTED.*
         WHERE id = @id
       `);

@@ -55,10 +55,11 @@ const orderSchema = Joi.object({
   longitude: Joi.number().allow(null),
   status: Joi.string().valid('pending', 'scheduled', 'collecting', 'running', 'completed', 'delivered'),
   report_delivery_method: Joi.string().valid('hard_copy', 'soft_copy', 'both').required(),
-  original_price_mmk: Joi.number().required(),
-  discount_percent: Joi.number().min(0).max(100),
-  final_price_mmk: Joi.number().required(),
-  items: Joi.array().items(orderItemSchema).min(1).required()
+  original_price_mmk: Joi.number().default(0),
+  discount_percent: Joi.number().min(0).max(100).default(0),
+  final_price_mmk: Joi.number().default(0),
+  prescription_url: Joi.string().allow('', null),
+  items: Joi.array().items(orderItemSchema).min(1).optional()
 });
 
 const orderStatusUpdateSchema = Joi.object({

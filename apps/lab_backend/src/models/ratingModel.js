@@ -1,7 +1,7 @@
 const { sql, poolPromise } = require('../config/db');
 
 class Rating {
-  static async create(data) {
+  static async create(data, createdBy = null) {
     const pool = await poolPromise;
     
     // Check if order already has a rating
@@ -18,10 +18,11 @@ class Rating {
       .input('user_id', sql.UniqueIdentifier, data.user_id)
       .input('rating', sql.Int, data.rating)
       .input('remark', sql.Text, data.remark)
+      .input('created_user', sql.UniqueIdentifier, createdBy)
       .query(`
-        INSERT INTO order_ratings (id, order_id, user_id, rating, remark)
+        INSERT INTO order_ratings (id, order_id, user_id, rating, remark, created_user, updated_user)
         OUTPUT INSERTED.*
-        VALUES (NEWID(), @order_id, @user_id, @rating, @remark)
+        VALUES (NEWID(), @order_id, @user_id, @rating, @remark, @created_user, @created_user)
       `);
       
     return result.recordset[0];

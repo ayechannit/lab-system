@@ -1,9 +1,12 @@
 const express = require('express');
 const router = express.Router();
+const { authMiddleware } = require('../middlewares/authMiddleware');
 const orderController = require('../controllers/orderController');
 const validate = require('../middlewares/validate');
 const upload = require('../middlewares/upload');
 const { orderSchema, orderStatusUpdateSchema } = require('../utils/validators');
+
+router.use(authMiddleware);
 
 /**
  * @swagger
@@ -43,9 +46,6 @@ const { orderSchema, orderStatusUpdateSchema } = require('../utils/validators');
  *         - patient_phone
  *         - address
  *         - report_delivery_method
- *         - original_price_mmk
- *         - final_price_mmk
- *         - items
  *       properties:
  *         id:
  *           type: string
@@ -82,6 +82,10 @@ const { orderSchema, orderStatusUpdateSchema } = require('../utils/validators');
  *           type: number
  *         final_price_mmk:
  *           type: number
+ *         prescription_url:
+ *           type: string
+ *         is_tests_assigned:
+ *           type: boolean
  *         is_deleted:
  *           type: boolean
  *         created_at:
@@ -140,6 +144,11 @@ const { orderSchema, orderStatusUpdateSchema } = require('../utils/validators');
  *           type: string
  *         description: Search by partial patient name
  *       - in: query
+ *         name: is_tests_assigned
+ *         schema:
+ *           type: boolean
+ *         description: Filter by whether tests have been assigned (useful for triage)
+ *       - in: query
  *         name: page
  *         schema:
  *           type: integer
@@ -190,17 +199,87 @@ const { orderSchema, orderStatusUpdateSchema } = require('../utils/validators');
  * @swagger
  * /api/orders:
  *   post:
- *     summary: Create a new order with items
+ *     summary: Create a new order (with optional prescription upload and items)
  *     tags: [Orders]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               user_id:
+ *                 type: string
+ *                 format: uuid
+ *               priority:
+ *                 type: string
+ *                 enum: [urgent, elective]
+ *               patient_name:
+ *                 type: string
+ *               patient_age:
+ *                 type: integer
+ *               patient_phone:
+ *                 type: string
+ *               address:
+ *                 type: string
+ *               report_delivery_method:
+ *                 type: string
+ *                 enum: [hard_copy, soft_copy, both]
+ *               prescription:
+ *                 type: string
+ *                 format: binary
+ *                 description: Image or PDF of the prescription
+ *               items:
+ *                 type: string
+ *                 description: JSON stringified array of OrderItem objects (optional if uploading prescription)
+ *               original_price_mmk:
+ *                 type: number
+ *               discount_percent:
+ *                 type: number
+ *               final_price_mmk:
+ *                 type: number
+ *     responses:
+ *       201:
+ *         description: Order created
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Order'
+ */
+
+/**
+ * @swagger
+ * /api/orders/{id}/items:
+ *   post:
+ *     summary: Add items (tests) to an existing order and update totals
+ *     tags: [Orders]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/Order'
+ *             type: object
+ *             properties:
+ *               items:
+ *                 type: array
+ *                 items:
+ *                   $ref: '#/components/schemas/OrderItem'
+ *               original_price_mmk:
+ *                 type: number
+ *               discount_percent:
+ *                 type: number
+ *               final_price_mmk:
+ *                 type: number
  *     responses:
- *       201:
- *         description: Order created
+ *       200:
+ *         description: Order updated with new items
  *         content:
  *           application/json:
  *             schema:
@@ -365,7 +444,8 @@ const { orderSchema, orderStatusUpdateSchema } = require('../utils/validators');
 
 router.get('/', orderController.getAllOrders);
 router.get('/:id', orderController.getOrderById);
-router.post('/', validate(orderSchema), orderController.createOrder);
+router.post('/', upload.single('prescription'), orderController.createOrder);
+router.post('/:id/items', orderController.addOrderItems);
 router.put('/:id/status', validate(orderStatusUpdateSchema), orderController.updateOrderStatus);
 router.delete('/:id', orderController.deleteOrder);
 router.get('/:id/tests/:testId/qrcode', orderController.generateQrCode);

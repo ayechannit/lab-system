@@ -1,10 +1,11 @@
 const { sql, poolPromise } = require('../config/db');
+const bcrypt = require('bcryptjs');
 
 class Staff {
   static async getAll(filters = {}) {
     const pool = await poolPromise;
     const request = pool.request();
-    let query = 'SELECT id, name, email, role, is_active, created_at, updated_at FROM lab_staff WHERE is_deleted = 0';
+    let query = 'SELECT id, name, email, role, is_active, created_user, updated_user, created_at, updated_at FROM lab_staff WHERE is_deleted = 0';
 
     if (filters.role) {
       query += ' AND role = @role';
@@ -38,49 +39,73 @@ class Staff {
     const pool = await poolPromise;
     const result = await pool.request()
       .input('id', sql.UniqueIdentifier, id)
-      .query('SELECT * FROM lab_staff WHERE id = @id AND is_deleted = 0');
+      .query('SELECT id, name, email, role, is_active, created_user, updated_user, created_at, updated_at FROM lab_staff WHERE id = @id AND is_deleted = 0');
     return result.recordset[0];
   }
 
-  static async create(data) {
+  static async getByEmail(email) {
     const pool = await poolPromise;
+    const result = await pool.request()
+      .input('email', sql.VarChar, email)
+      .query('SELECT * FROM lab_staff WHERE email = @email AND is_deleted = 0');
+    return result.recordset[0];
+  }
+
+  static async create(data, createdBy = null) {
+    const pool = await poolPromise;
+    const hashedPassword = await bcrypt.hash(data.password_hash || data.password, 10);
     const result = await pool.request()
       .input('name', sql.VarChar, data.name)
       .input('email', sql.VarChar, data.email)
-      .input('password_hash', sql.VarChar, data.password_hash)
+      .input('password_hash', sql.VarChar, hashedPassword)
       .input('role', sql.VarChar, data.role)
+      .input('created_user', sql.UniqueIdentifier, createdBy)
       .query(`
-        INSERT INTO lab_staff (id, name, email, password_hash, role, is_active, is_deleted)
-        OUTPUT INSERTED.*
-        VALUES (NEWID(), @name, @email, @password_hash, @role, 1, 0)
+        INSERT INTO lab_staff (id, name, email, password_hash, role, is_active, created_user, updated_user, is_deleted)
+        OUTPUT INSERTED.id, INSERTED.name, INSERTED.email, INSERTED.role, INSERTED.is_active, INSERTED.created_user, INSERTED.updated_user, INSERTED.created_at, INSERTED.updated_at
+        VALUES (NEWID(), @name, @email, @password_hash, @role, 1, @created_user, @created_user, 0)
       `);
     return result.recordset[0];
   }
 
-  static async update(id, data) {
+  static async update(id, data, updatedBy = null) {
     const pool = await poolPromise;
-    const result = await pool.request()
+    
+    let passwordFragment = '';
+    const request = pool.request()
       .input('id', sql.UniqueIdentifier, id)
       .input('name', sql.VarChar, data.name)
       .input('email', sql.VarChar, data.email)
       .input('role', sql.VarChar, data.role)
       .input('is_active', sql.Bit, data.is_active)
-      .query(`
-        UPDATE lab_staff
-        SET name = @name, email = @email, role = @role, is_active = @is_active, updated_at = GETDATE()
-        OUTPUT INSERTED.*
-        WHERE id = @id AND is_deleted = 0
-      `);
+      .input('updated_user', sql.UniqueIdentifier, updatedBy);
+
+    const newPassword = data.password || data.password_hash;
+    if (newPassword) {
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      passwordFragment = ', password_hash = @password_hash';
+      request.input('password_hash', sql.VarChar, hashedPassword);
+    }
+
+    const result = await request.query(`
+      UPDATE lab_staff
+      SET name = @name, email = @email, role = @role, is_active = @is_active, updated_user = @updated_user, updated_at = GETDATE()
+          ${passwordFragment}
+      OUTPUT INSERTED.id, INSERTED.name, INSERTED.email, INSERTED.role, INSERTED.is_active, INSERTED.created_user, INSERTED.updated_user, INSERTED.created_at, INSERTED.updated_at
+      WHERE id = @id AND is_deleted = 0
+    `);
     return result.recordset[0];
   }
 
-  static async delete(id) {
+  static async delete(id, updatedBy = null) {
     const pool = await poolPromise;
     const result = await pool.request()
       .input('id', sql.UniqueIdentifier, id)
-      .query('UPDATE lab_staff SET is_deleted = 1, updated_at = GETDATE() WHERE id = @id');
+      .input('updated_user', sql.UniqueIdentifier, updatedBy)
+      .query('UPDATE lab_staff SET is_deleted = 1, updated_user = @updated_user, updated_at = GETDATE() WHERE id = @id');
     return result.rowsAffected[0] > 0;
   }
 }
 
 module.exports = Staff;
+

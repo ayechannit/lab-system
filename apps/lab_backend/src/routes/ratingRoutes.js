@@ -1,8 +1,11 @@
 const express = require('express');
 const router = express.Router();
+const { authMiddleware } = require('../middlewares/authMiddleware');
 const ratingController = require('../controllers/ratingController');
 const validate = require('../middlewares/validate');
 const { ratingSchema } = require('../utils/validators');
+
+router.use(authMiddleware);
 
 /**
  * @swagger

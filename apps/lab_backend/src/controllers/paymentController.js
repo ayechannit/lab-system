@@ -14,14 +14,14 @@ const getPaymentByOrderId = async (req, res) => {
 };
 
 const createPayment = async (req, res) => {
-  const payment = await Payment.create(req.body);
+  const payment = await Payment.create(req.body, req.user?.id);
   res.status(201).json(payment);
 };
 
 const verifyPayment = async (req, res) => {
   try {
     const { staff_id } = req.body;
-    const payment = await Payment.verify(req.params.id, staff_id);
+    const payment = await Payment.verify(req.params.id, staff_id, req.user?.id);
     if (!payment) return res.status(404).json({ message: 'Payment not found' });
 
     // Handle Points Calculation when verified
@@ -44,7 +44,7 @@ const verifyPayment = async (req, res) => {
         if (pointsEarned > 0) {
           const order = await Order.getById(payment.order_id);
           if (order && order.user_id) {
-            await User.addPoints(order.user_id, pointsEarned);
+            await User.addPoints(order.user_id, pointsEarned, req.user?.id);
           }
         }
       }

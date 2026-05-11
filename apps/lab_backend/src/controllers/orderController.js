@@ -20,23 +20,73 @@ const getOrderById = async (req, res) => {
     }
   }
 
+  if (order.prescription_url) {
+    order.prescription_download_url = await StorageService.getFileUrl(order.prescription_url);
+  }
+
   res.json(order);
 };
 
 const createOrder = async (req, res) => {
-  const order = await Order.create(req.body);
-  res.status(201).json(order);
+  try {
+    const orderData = { ...req.body };
+    
+    // Parse items if it's a string (from multipart/form-data)
+    if (typeof orderData.items === 'string') {
+      try {
+        orderData.items = JSON.parse(orderData.items);
+      } catch (e) {
+        return res.status(400).json({ message: 'Invalid items format' });
+      }
+    }
+
+    if (req.file) {
+      const fileUrl = await StorageService.uploadFile(req.file);
+      orderData.prescription_url = fileUrl;
+    }
+
+    const order = await Order.create(orderData, req.user?.id);
+    res.status(201).json(order);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+const addOrderItems = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { items, original_price_mmk, discount_percent, final_price_mmk } = req.body;
+
+    if (!items || items.length === 0) {
+      return res.status(400).json({ message: 'Items array is required' });
+    }
+
+    const totals = {
+      original_price_mmk: original_price_mmk || 0,
+      discount_percent: discount_percent || 0,
+      final_price_mmk: final_price_mmk || 0
+    };
+
+    const updatedOrder = await Order.addItemsAndUpdateTotals(id, items, totals, req.user?.id);
+    if (!updatedOrder) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+    
+    res.json(updatedOrder);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 };
 
 const updateOrderStatus = async (req, res) => {
   const { status, staff_id, note } = req.body;
-  const order = await Order.updateStatus(req.params.id, status, staff_id, note);
+  const order = await Order.updateStatus(req.params.id, status, staff_id || req.user?.id, note, req.user?.id);
   if (!order) return res.status(404).json({ message: 'Order not found' });
   res.json(order);
 };
 
 const deleteOrder = async (req, res) => {
-  const success = await Order.delete(req.params.id);
+  const success = await Order.delete(req.params.id, req.user?.id);
   if (!success) return res.status(404).json({ message: 'Order not found' });
   res.json({ message: 'Order deleted successfully' });
 };
@@ -74,7 +124,7 @@ const uploadTestResult = async (req, res) => {
     }
 
     const fileUrl = await StorageService.uploadFile(req.file);
-    const success = await Order.uploadResult(id, testId, fileUrl);
+    const success = await Order.uploadResult(id, testId, fileUrl, req.user?.id);
 
     if (!success) {
       return res.status(404).json({ message: 'Test not found in this order' });
@@ -96,6 +146,7 @@ module.exports = {
   getAllOrders,
   getOrderById,
   createOrder,
+  addOrderItems,
   updateOrderStatus,
   deleteOrder,
   generateQrCode,

@@ -14,7 +14,7 @@ const createRating = async (req, res) => {
       return res.status(403).json({ message: 'You can only rate your own orders' });
     }
 
-    const rating = await Rating.create(req.body);
+    const rating = await Rating.create(req.body, req.user?.id);
     res.status(201).json(rating);
   } catch (error) {
     res.status(400).json({ message: error.message });

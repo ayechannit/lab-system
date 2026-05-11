@@ -1,8 +1,11 @@
 const express = require('express');
 const router = express.Router();
+const { authMiddleware } = require('../middlewares/authMiddleware');
 const pointSettingController = require('../controllers/pointSettingController');
 const validate = require('../middlewares/validate');
 const { pointSettingSchema } = require('../utils/validators');
+
+router.use(authMiddleware);
 
 /**
  * @swagger
