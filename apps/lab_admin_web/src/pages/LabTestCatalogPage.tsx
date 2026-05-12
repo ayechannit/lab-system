@@ -1,58 +1,46 @@
 import { useEffect, useMemo, useState } from 'react'
 import { ConfirmDialog } from '../components/common/ConfirmDialog'
-import { DiscountFormModal } from '../components/discounts/DiscountFormModal'
+import { LabTestFormModal } from '../components/lab-tests/LabTestFormModal'
 import { PageHeader } from '../components/common/PageHeader'
 import { TableActionMenu } from '../components/common/TableActionMenu'
 import type { LabTestCatalogRow } from '../model/types'
 import { isApiMode } from '../services/apiBase'
-import {
-  deleteDiscountById,
-  fetchAllDiscounts,
-  type FetchDiscountsParams,
-  type TestDiscountListRow,
-} from '../services/discountService'
-import { fetchLabTestsList } from '../services/labTestCatalogService'
+import { deleteLabTest, fetchLabTestsList, type FetchLabTestsQueryParams } from '../services/labTestCatalogService'
 import '../components/common/ui.css'
 
 const colSpan = 8
 
-const ROLE_FILTER_OPTIONS: { value: '' | 'clinic' | 'doctor' | 'patient'; label: string }[] = [
-  { value: '', label: 'All roles' },
-  { value: 'clinic', label: 'Clinic' },
-  { value: 'doctor', label: 'Doctor' },
-  { value: 'patient', label: 'Patient' },
+const STATUS_FILTER_OPTIONS: { value: 'all' | 'active' | 'inactive'; label: string }[] = [
+  { value: 'all', label: 'All statuses' },
+  { value: 'active', label: 'Active only' },
+  { value: 'inactive', label: 'Inactive only' },
 ]
 
-function roleLabel(role: string): string {
-  const map: Record<string, string> = {
-    clinic: 'Clinic',
-    doctor: 'Doctor',
-    patient: 'Patient',
-    all: 'All',
-  }
-  return map[role] ?? role
-}
-
-export function DiscountManagementPage() {
+export function LabTestCatalogPage() {
   const hasApi = isApiMode()
-  const [rows, setRows] = useState<TestDiscountListRow[]>([])
-  const [tests, setTests] = useState<LabTestCatalogRow[]>([])
+  const [rows, setRows] = useState<LabTestCatalogRow[]>([])
   const [loading, setLoading] = useState(hasApi)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [refreshTick, setRefreshTick] = useState(0)
-  const [roleFilter, setRoleFilter] = useState<'' | 'clinic' | 'doctor' | 'patient'>('')
+  const [activeFilter, setActiveFilter] = useState<'all' | 'active' | 'inactive'>('all')
+  const [searchText, setSearchText] = useState('')
+  const [searchApplied, setSearchApplied] = useState('')
 
   const [formOpen, setFormOpen] = useState(false)
   const [formMode, setFormMode] = useState<'create' | 'edit'>('create')
-  const [editInitial, setEditInitial] = useState<TestDiscountListRow | null>(null)
+  const [editInitial, setEditInitial] = useState<LabTestCatalogRow | null>(null)
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
-  const [deleteTarget, setDeleteTarget] = useState<TestDiscountListRow | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<LabTestCatalogRow | null>(null)
+
+  useEffect(() => {
+    const handle = window.setTimeout(() => setSearchApplied(searchText.trim()), 350)
+    return () => window.clearTimeout(handle)
+  }, [searchText])
 
   useEffect(() => {
     if (!hasApi) {
       setLoading(false)
       setRows([])
-      setTests([])
       return
     }
     let cancelled = false
@@ -60,18 +48,14 @@ export function DiscountManagementPage() {
     setLoadError(null)
     void (async () => {
       try {
-        const listParams: FetchDiscountsParams | undefined =
-          roleFilter === '' ? undefined : { role: roleFilter }
-        const [discountList, catalog] = await Promise.all([
-          fetchAllDiscounts(listParams),
-          fetchLabTestsList(),
-        ])
-        if (!cancelled) {
-          setRows(discountList)
-          setTests(catalog.filter((t) => t.is_active && !t.is_deleted))
-        }
+        const query: FetchLabTestsQueryParams = {}
+        if (searchApplied) query.test_name = searchApplied
+        if (activeFilter === 'active') query.is_active = true
+        if (activeFilter === 'inactive') query.is_active = false
+        const list = await fetchLabTestsList(query)
+        if (!cancelled) setRows(list)
       } catch (e) {
-        if (!cancelled) setLoadError(e instanceof Error ? e.message : 'Failed to load discounts')
+        if (!cancelled) setLoadError(e instanceof Error ? e.message : 'Failed to load catalog')
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -79,15 +63,12 @@ export function DiscountManagementPage() {
     return () => {
       cancelled = true
     }
-  }, [hasApi, refreshTick, roleFilter])
+  }, [hasApi, refreshTick, activeFilter, searchApplied])
 
-  const sorted = useMemo(() => {
-    return [...rows].sort((a, b) => {
-      const na = (a.test_name ?? a.test_id).localeCompare(b.test_name ?? b.test_id)
-      if (na !== 0) return na
-      return a.role.localeCompare(b.role)
-    })
-  }, [rows])
+  const sorted = useMemo(
+    () => [...rows].sort((a, b) => a.test_name.localeCompare(b.test_name)),
+    [rows],
+  )
 
   function openCreate() {
     setFormMode('create')
@@ -95,7 +76,7 @@ export function DiscountManagementPage() {
     setFormOpen(true)
   }
 
-  function openEdit(row: TestDiscountListRow) {
+  function openEdit(row: LabTestCatalogRow) {
     setFormMode('edit')
     setEditInitial(row)
     setFormOpen(true)
@@ -111,7 +92,7 @@ export function DiscountManagementPage() {
     const row = deleteTarget
     setDeleteTarget(null)
     try {
-      await deleteDiscountById(row.id)
+      await deleteLabTest(row.id)
       setRefreshTick((t) => t + 1)
     } catch (e) {
       window.alert(e instanceof Error ? e.message : 'Delete failed')
@@ -119,28 +100,34 @@ export function DiscountManagementPage() {
   }
 
   const emptyMessage =
-    roleFilter !== ''
+    searchApplied.trim() !== ''
       ? {
-          title: 'No discounts for this role',
-          body: 'Switch to "All roles" to see every rule, or add a discount for this audience.',
+          title: 'No matching tests',
+          body: 'Try a different search term or clear the filter to see more results.',
         }
-      : {
-          title: 'No discount rules yet',
-          body: 'Set percentage reductions per test and role. Prices on the Lab tests page reflect the role you select there.',
-        }
+      : activeFilter !== 'all'
+        ? {
+            title: 'Nothing in this filter',
+            body: 'Change the status filter or set it to “All statuses”.',
+          }
+        : {
+            title: 'No tests in the catalog yet',
+            body: 'Create a lab test to start building your catalog.',
+          }
 
   return (
     <div className="stack">
       <PageHeader
-        title="Test discounts"
-        description="Per-test, per-role percentages off catalog prices. Use the Lab tests page to preview published pricing for clinic, doctor, or patient."
+        title="Test catalog"
+        description="List and manage tests from GET /api/tests. Discount % and after-discount MMK come from each test’s embedded discounts array; edit rules on the Discounts page."
       />
 
       {!hasApi ? (
         <div className="card" style={{ borderColor: '#dfe5f0', background: '#f8fafc' }}>
           <p style={{ margin: 0, fontSize: '0.9rem' }}>
             Set <code>VITE_API_BASE_URL</code> in <code>apps/lab_admin_web</code> (e.g.{' '}
-            <code>http://localhost:3000</code>) and restart the dev server. Discounts load from the backend only.
+            <code>http://localhost:3000</code>) and restart the dev server. The catalog is loaded only from the
+            backend.
           </p>
         </div>
       ) : null}
@@ -155,23 +142,34 @@ export function DiscountManagementPage() {
         <div className="catalog-card__toolbar">
           <div className="catalog-card__filters">
             <div className="field">
-              <label htmlFor="discount-role-filter">Role</label>
+              <label htmlFor="lab-catalog-status">Status</label>
               <select
-                id="discount-role-filter"
+                id="lab-catalog-status"
                 className="select-chevron-left"
-                value={roleFilter}
-                onChange={(e) =>
-                  setRoleFilter(e.target.value as '' | 'clinic' | 'doctor' | 'patient')
-                }
+                value={activeFilter}
+                onChange={(e) => setActiveFilter(e.target.value as 'all' | 'active' | 'inactive')}
                 disabled={loading || !hasApi}
-                aria-label="Filter discounts by role"
+                aria-label="Filter by active flag"
               >
-                {ROLE_FILTER_OPTIONS.map((o) => (
-                  <option key={o.value || 'all'} value={o.value}>
+                {STATUS_FILTER_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>
                     {o.label}
                   </option>
                 ))}
               </select>
+            </div>
+            <div className="field">
+              <label htmlFor="lab-catalog-search">Search by name</label>
+              <input
+                id="lab-catalog-search"
+                type="search"
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+                placeholder="Search tests…"
+                disabled={loading || !hasApi}
+                autoComplete="off"
+                aria-label="Filter by test name"
+              />
             </div>
           </div>
           <div className="catalog-card__actions">
@@ -184,24 +182,25 @@ export function DiscountManagementPage() {
               Refresh
             </button>
             <button type="button" className="btn btn-primary" onClick={openCreate} disabled={loading || !hasApi}>
-              Add discount
+              Create lab test
             </button>
           </div>
         </div>
-        <p className="catalog-mode-hint">
-          Rules apply to active catalog tests only. Editing here updates how discounted prices appear for each role.
-        </p>
         <div className="table-wrap">
-          <table className="data-table data-table--discounts">
+          <table className="data-table data-table--catalog">
             <thead>
               <tr>
-                <th>Test</th>
+                <th>Name</th>
                 <th>Code</th>
-                <th>Role</th>
                 <th className="col-num">Base (MMK)</th>
-                <th className="col-num">Discount (%)</th>
-                <th className="col-num">After discount</th>
-                <th>Active</th>
+                <th className="col-num" title="Highest discount_percent among this test’s configured role discounts">
+                  Disc. %
+                </th>
+                <th className="col-num" title="Base price after that discount">
+                  After (MMK)
+                </th>
+                <th>Status</th>
+                <th>Category</th>
                 <th className="action-col">Actions</th>
               </tr>
             </thead>
@@ -209,7 +208,7 @@ export function DiscountManagementPage() {
               {loading ? (
                 <tr>
                   <td colSpan={colSpan} className="data-table__state">
-                    Loading discounts…
+                    Loading catalog…
                   </td>
                 </tr>
               ) : sorted.length === 0 ? (
@@ -217,13 +216,13 @@ export function DiscountManagementPage() {
                   <td colSpan={colSpan} className="data-table__state">
                     <div className="data-table__empty-panel">
                       <div className="data-table__empty-icon" aria-hidden>
-                        <span className="material-symbols-outlined">percent</span>
+                        <span className="material-symbols-outlined">science</span>
                       </div>
                       <p className="data-table__empty-title">{emptyMessage.title}</p>
                       <p className="data-table__empty-text">{emptyMessage.body}</p>
-                      {hasApi ? (
+                      {hasApi && !searchApplied.trim() && activeFilter === 'all' ? (
                         <button type="button" className="btn btn-primary" onClick={openCreate}>
-                          Add discount
+                          Create lab test
                         </button>
                       ) : null}
                     </div>
@@ -232,27 +231,21 @@ export function DiscountManagementPage() {
               ) : (
                 sorted.map((r) => (
                   <tr key={r.id}>
-                    <td>{r.test_name ?? '—'}</td>
+                    <td title={r.description?.trim() ? r.description : undefined}>{r.test_name}</td>
                     <td>
-                      <code>{r.test_code ?? '—'}</code>
+                      <code>{r.test_code}</code>
                     </td>
-                    <td>{roleLabel(r.role)}</td>
-                    <td className="col-num">
-                      {r.original_price !== undefined ? r.original_price.toLocaleString() : '—'}
-                    </td>
-                    <td className="col-num">{r.discount_percent}</td>
-                    <td className="col-num">
-                      {r.after_discount_price !== undefined
-                        ? r.after_discount_price.toLocaleString()
-                        : '—'}
-                    </td>
+                    <td className="col-num">{r.base_price_mmk.toLocaleString()}</td>
+                    <td className="col-num">{r.discount_percent}%</td>
+                    <td className="col-num">{r.discounted_price_mmk.toLocaleString()}</td>
                     <td>
                       {r.is_active ? (
-                        <span className="badge badge--success">Yes</span>
+                        <span className="badge badge--success">Active</span>
                       ) : (
-                        <span className="badge badge--neutral">No</span>
+                        <span className="badge badge--neutral">Inactive</span>
                       )}
                     </td>
+                    <td>{r.category || '—'}</td>
                     <td className="action-cell">
                       <TableActionMenu
                         open={openMenuId === r.id}
@@ -279,10 +272,10 @@ export function DiscountManagementPage() {
 
       <ConfirmDialog
         open={deleteTarget !== null}
-        title="Delete discount?"
+        title="Delete lab test?"
         message={
           deleteTarget
-            ? `Delete this ${roleLabel(deleteTarget.role)} discount for "${deleteTarget.test_name ?? deleteTarget.test_id}"?`
+            ? `Delete "${deleteTarget.test_name}"?`
             : ''
         }
         confirmLabel="Delete"
@@ -292,11 +285,11 @@ export function DiscountManagementPage() {
         onCancel={() => setDeleteTarget(null)}
       />
 
-      <DiscountFormModal
+      <LabTestFormModal
         open={formOpen && hasApi}
         mode={formMode}
         initial={editInitial}
-        tests={tests}
+        existingRows={rows}
         onClose={closeForm}
         onSuccess={() => setRefreshTick((t) => t + 1)}
       />

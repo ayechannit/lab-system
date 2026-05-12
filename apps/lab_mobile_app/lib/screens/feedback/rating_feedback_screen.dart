@@ -199,13 +199,12 @@ class _RatingFeedbackScreenState extends State<RatingFeedbackScreen> {
           border: Border.all(color: const Color(0x66E1E2EC)),
         ),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
-            _NavItem(icon: Icons.grid_view_rounded, label: 'HOME', onTap: () => context.go('/home')),
-            _NavItem(icon: Icons.biotech_outlined, label: 'ORDERS', onTap: () => context.push('/order-lab-test')),
-            _NavItem(icon: Icons.assignment_outlined, label: 'RESULTS', active: true, onTap: () {}),
-            _NavItem(icon: Icons.military_tech_outlined, label: 'POINTS', onTap: () => context.push('/loyalty')),
-            _NavItem(icon: Icons.person_outline, label: 'PROFILE', onTap: () => context.push('/profile')),
+            Expanded(child: _NavItem(icon: Icons.grid_view_rounded, label: 'HOME', onTap: () => context.go('/home'))),
+            Expanded(child: _NavItem(icon: Icons.biotech_outlined, label: 'ORDERS', onTap: () => context.push('/order-lab-test'))),
+            Expanded(child: _NavItem(icon: Icons.assignment_outlined, label: 'RESULTS', active: true, onTap: () {})),
+            Expanded(child: _NavItem(icon: Icons.military_tech_outlined, label: 'POINTS', onTap: () => context.push('/loyalty'))),
+            Expanded(child: _NavItem(icon: Icons.person_outline, label: 'PROFILE', onTap: () => context.push('/profile'))),
           ],
         ),
       ),
@@ -265,18 +264,25 @@ class _NavItem extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 6),
           child: Column(
             mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Icon(icon, size: 20, color: fg),
               const SizedBox(height: 2),
-              Text(
-                label,
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: fg,
-                      fontWeight: active ? FontWeight.w700 : FontWeight.w600,
-                    ),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: fg,
+                        fontWeight: active ? FontWeight.w700 : FontWeight.w600,
+                      ),
+                ),
               ),
             ],
           ),

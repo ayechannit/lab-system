@@ -135,12 +135,17 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                     Icon(Icons.verified_user_outlined,
                         size: 18, color: AppColors.onSurfaceVariant.withValues(alpha: 0.75)),
                     const SizedBox(width: 6),
-                    Text(
-                      'CLINICALLY VALIDATED PLATFORM',
-                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                            color: AppColors.onSurfaceVariant.withValues(alpha: 0.75),
-                            letterSpacing: 1.0,
-                          ),
+                    Expanded(
+                      child: Text(
+                        'CLINICALLY VALIDATED PLATFORM',
+                        textAlign: TextAlign.center,
+                        maxLines: 2,
+                        softWrap: true,
+                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                              color: AppColors.onSurfaceVariant.withValues(alpha: 0.75),
+                              letterSpacing: 0.8,
+                            ),
+                      ),
                     ),
                   ],
                 ),
