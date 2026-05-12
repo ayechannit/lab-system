@@ -5,6 +5,8 @@ import '../../app/session_scope.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/common/app_brand_mark.dart';
 import '../../widgets/common/quick_action_button.dart';
+import '../../widgets/navigation/lab_main_bottom_nav.dart';
+import '../../widgets/results/lab_result_insight_cards.dart';
 
 class HomeDashboardScreen extends StatelessWidget {
   const HomeDashboardScreen({super.key});
@@ -26,7 +28,12 @@ class HomeDashboardScreen extends StatelessWidget {
         ),
       );
     }
+    final latestReport = session.latestResult;
+    final hasReportPayload = (latestReport?.lines.isNotEmpty ?? false) ||
+        (latestReport?.resultPdfUrl ?? '').isNotEmpty;
+
     return Scaffold(
+      backgroundColor: AppColors.surface,
       appBar: AppBar(
         automaticallyImplyLeading: false,
         titleSpacing: 16,
@@ -114,36 +121,55 @@ class HomeDashboardScreen extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(99),
-                        child: Container(
-                          height: 6,
-                          color: const Color(0xFFE7E8F2),
-                          alignment: Alignment.centerLeft,
-                          child: FractionallySizedBox(
-                            widthFactor: 0.6,
-                            child: Container(color: AppColors.primaryLight),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Text(
-                      '60 % to Gold',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: AppColors.onSurfaceVariant,
-                          ),
-                    ),
-                  ],
-                ),
               ],
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 20),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'RESULTS & INSIGHTS',
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                            color: AppColors.onSurfaceVariant,
+                            letterSpacing: 1.0,
+                          ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Latest lab report',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Sample ID: ${latestReport?.sampleId ?? 'Pending'}',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.onSurfaceVariant),
+                    ),
+                    if (!hasReportPayload) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        'Results are not available yet.',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.onSurfaceVariant),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              TextButton(
+                onPressed: () => context.push('/lab-results'),
+                child: const Text('Full report'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          LabResultInsightCards(report: latestReport),
+          const SizedBox(height: 18),
           GridView.count(
             crossAxisCount: 2,
             shrinkWrap: true,
@@ -182,148 +208,9 @@ class HomeDashboardScreen extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 14),
-          Container(
-            padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              gradient: const LinearGradient(
-                colors: [Color(0xFF082457), Color(0xFF0B4BB3)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Book a Home Collection',
-                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600,
-                            ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Professional lab at your doorstep.',
-                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.white70),
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  width: 64,
-                  height: 64,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.white.withValues(alpha: 0.14),
-                  ),
-                  child: const Icon(Icons.add_home_work_outlined, color: Colors.white),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 8),
         ],
       ),
-      bottomNavigationBar: Container(
-        margin: const EdgeInsets.fromLTRB(14, 0, 14, 14),
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: const Color(0x66E1E2EC)),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: _NavItem(icon: Icons.grid_view_rounded, label: 'HOME', active: true, onTap: () {}),
-            ),
-            Expanded(
-              child: _NavItem(
-                icon: Icons.biotech_outlined,
-                label: 'ORDERS',
-                onTap: () => context.push('/order-lab-test'),
-              ),
-            ),
-            Expanded(
-              child: _NavItem(
-                icon: Icons.assignment_outlined,
-                label: 'RESULTS',
-                onTap: () => context.push('/lab-results'),
-              ),
-            ),
-            Expanded(
-              child: _NavItem(
-                icon: Icons.military_tech_outlined,
-                label: 'POINTS',
-                onTap: () => context.push('/loyalty'),
-              ),
-            ),
-            Expanded(
-              child: _NavItem(
-                icon: Icons.person_outline,
-                label: 'PROFILE',
-                onTap: () => context.push('/profile'),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _NavItem extends StatelessWidget {
-  const _NavItem({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-    this.active = false,
-  });
-
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-  final bool active;
-
-  @override
-  Widget build(BuildContext context) {
-    final fg = active ? AppColors.primary : AppColors.outline;
-    return Material(
-      color: active ? const Color(0xFFEAF1FF) : Colors.transparent,
-      borderRadius: BorderRadius.circular(12),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 6),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Icon(icon, size: 20, color: fg),
-              const SizedBox(height: 2),
-              FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: fg,
-                        fontWeight: active ? FontWeight.w700 : FontWeight.w600,
-                      ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+      bottomNavigationBar: const LabMainBottomNav(current: LabMainTab.home),
     );
   }
 }

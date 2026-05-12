@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../app/session_scope.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/common/app_brand_mark.dart';
+import '../../widgets/navigation/lab_main_bottom_nav.dart';
 
 class ClinicDashboardScreen extends StatelessWidget {
   const ClinicDashboardScreen({super.key});
@@ -12,6 +13,7 @@ class ClinicDashboardScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final user = SessionScope.of(context).user;
     return Scaffold(
+      backgroundColor: AppColors.surface,
       appBar: AppBar(
         automaticallyImplyLeading: false,
         title: Row(
@@ -38,6 +40,7 @@ class ClinicDashboardScreen extends StatelessWidget {
           _card(context, 'Review Rewards Rules', 'See points awarded by lab API rules', '/loyalty'),
         ],
       ),
+      bottomNavigationBar: const LabMainBottomNav(current: LabMainTab.home),
     );
   }
 

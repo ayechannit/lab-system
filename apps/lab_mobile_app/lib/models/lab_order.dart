@@ -53,6 +53,9 @@ class LabOrderRequest {
     required this.timeSlot,
     required this.address,
     required this.createdAt,
+    this.reportDeliveryMethod = 'soft_copy',
+    this.catalogTestId,
+    this.catalogLinePriceMmk = 0,
   });
 
   final String testName;
@@ -68,6 +71,15 @@ class LabOrderRequest {
   final String timeSlot;
   final LabAddress address;
   final DateTime createdAt;
+
+  /// Backend: `hard_copy` | `soft_copy` | `both`
+  final String reportDeliveryMethod;
+
+  /// When set, REST orders send a catalog line item (`test_id` UUID).
+  final String? catalogTestId;
+
+  /// Unit / line total in MMK for the selected catalog test (REST).
+  final int catalogLinePriceMmk;
 }
 
 class UpcomingTest {
@@ -96,6 +108,8 @@ class LabOrderSummary {
     this.collectorName,
     this.runningAt,
     this.reportOutAt,
+    this.scheduleAcceptedByUser = true,
+    this.backendStatus,
   });
 
   final String id;
@@ -113,5 +127,38 @@ class LabOrderSummary {
   final DateTime? runningAt;
   final DateTime? reportOutAt;
 
+  /// From lab schedule: user has confirmed proposed collection times.
+  final bool scheduleAcceptedByUser;
+
+  /// Raw API status when using REST (`pending`, `scheduled`, …).
+  final String? backendStatus;
+
   bool get isReportReady => reportOutAt != null;
+
+  bool get canConfirmSchedule =>
+      !scheduleAcceptedByUser &&
+      (collectionAcceptedAt != null || collectorName != null || runningAt != null);
+
+  LabOrderSummary copyWith({
+    bool? scheduleAcceptedByUser,
+  }) {
+    return LabOrderSummary(
+      id: id,
+      userId: userId,
+      patientName: patientName,
+      testType: testType,
+      description: description,
+      priority: priority,
+      address: address,
+      createdAt: createdAt,
+      timeline: timeline,
+      createdAtLabel: createdAtLabel,
+      collectionAcceptedAt: collectionAcceptedAt,
+      collectorName: collectorName,
+      runningAt: runningAt,
+      reportOutAt: reportOutAt,
+      scheduleAcceptedByUser: scheduleAcceptedByUser ?? this.scheduleAcceptedByUser,
+      backendStatus: backendStatus,
+    );
+  }
 }

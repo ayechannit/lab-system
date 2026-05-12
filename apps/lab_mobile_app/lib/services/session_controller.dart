@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../models/app_user.dart';
 import '../models/lab_order.dart';
 import '../models/lab_result.dart';
+import '../models/lab_test_pick.dart';
 import '../models/loyalty.dart';
 import '../models/rating.dart';
 import '../models/user_role.dart';
@@ -38,10 +39,9 @@ class SessionController extends ChangeNotifier {
   Future<void> login({
     required String email,
     required String password,
-    UserRole? roleHint,
   }) async {
     _setBusy(true);
-    _user = await _api.login(LoginRequest(email: email, password: password, roleHint: roleHint));
+    _user = await _api.login(LoginRequest(email: email, password: password));
     await _hydrateUserData();
     _setBusy(false);
   }
@@ -52,6 +52,9 @@ class SessionController extends ChangeNotifier {
     required String email,
     required String password,
     required UserRole role,
+    String address = '',
+    double latitude = 0,
+    double longitude = 0,
   }) async {
     _setBusy(true);
     _user = await _api.register(
@@ -61,6 +64,9 @@ class SessionController extends ChangeNotifier {
         email: email,
         password: password,
         role: role,
+        address: address,
+        latitude: latitude,
+        longitude: longitude,
       ),
     );
     await _hydrateUserData();
@@ -68,6 +74,7 @@ class SessionController extends ChangeNotifier {
   }
 
   void logout() {
+    _api.clearAuth();
     _user = null;
     _orders.clear();
     _trackingOrder = null;
@@ -94,11 +101,40 @@ class SessionController extends ChangeNotifier {
     final u = _user;
     if (u == null) return;
     _setBusy(true);
-    _orders.insert(0, order);
-    _trackingOrder = await _api.createOrder(userId: u.id, request: order);
-    _latestResult = await _api.getLatestResult(u.id);
-    _loyalty = await _api.getLoyaltySnapshot(u.id);
-    _setBusy(false);
+    try {
+      _trackingOrder = await _api.createOrder(userId: u.id, request: order);
+      _orders.insert(0, order);
+      _latestResult = await _api.getLatestResult(u.id);
+      _loyalty = await _api.getLoyaltySnapshot(u.id);
+      if (_latestResult != null) {
+        _aiAnalysis = await _api.getAiAnalysis(
+          userId: u.id,
+          orderId: _latestResult!.orderId,
+        );
+      } else {
+        _aiAnalysis = null;
+      }
+      notifyListeners();
+    } finally {
+      _setBusy(false);
+    }
+  }
+
+  Future<List<LabTestPick>> fetchActiveLabTests() => _api.listActiveLabTests();
+
+  Future<void> acceptProposedSchedule() async {
+    final u = _user;
+    final o = _trackingOrder;
+    if (u == null || o == null) return;
+    _setBusy(true);
+    try {
+      await _api.acceptSchedule(userId: u.id, orderId: o.id);
+      await refreshTracking();
+      _latestResult = await _api.getLatestResult(u.id);
+      notifyListeners();
+    } finally {
+      _setBusy(false);
+    }
   }
 
   Future<void> refreshTracking() async {

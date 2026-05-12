@@ -92,14 +92,6 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                     ],
                   ),
                 ),
-                const SizedBox(height: 6),
-                Text(
-                  'SMART HEALTHCARE LAB SERVICES',
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        color: AppColors.onSurfaceVariant,
-                        letterSpacing: 1.1,
-                      ),
-                ),
                 const Spacer(flex: 4),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(99),
@@ -129,25 +121,12 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                   ),
                 ),
                 const SizedBox(height: 16),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.verified_user_outlined,
-                        size: 18, color: AppColors.onSurfaceVariant.withValues(alpha: 0.75)),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        'CLINICALLY VALIDATED PLATFORM',
-                        textAlign: TextAlign.center,
-                        maxLines: 2,
-                        softWrap: true,
-                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                              color: AppColors.onSurfaceVariant.withValues(alpha: 0.75),
-                              letterSpacing: 0.8,
-                            ),
+                Text(
+                  'Loading…',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AppColors.onSurfaceVariant.withValues(alpha: 0.85),
                       ),
-                    ),
-                  ],
                 ),
                 const SizedBox(height: 12),
               ],

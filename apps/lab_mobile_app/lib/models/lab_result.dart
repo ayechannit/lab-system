@@ -24,12 +24,16 @@ class LabResultReport {
     required this.sampleId,
     required this.releasedAt,
     required this.lines,
+    this.resultPdfUrl,
   });
 
   final String orderId;
   final String sampleId;
   final DateTime releasedAt;
   final List<LabResultLine> lines;
+
+  /// Signed or public URL from API (`download_url` on an order item).
+  final String? resultPdfUrl;
 }
 
 class AiAnalysisResult {

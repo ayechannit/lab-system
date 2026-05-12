@@ -51,7 +51,11 @@ GoRouter createAppRouter(SessionController session) {
     routes: [
       GoRoute(path: '/splash', builder: (_, __) => const SplashScreen()),
       GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
-      GoRoute(path: '/register', builder: (_, __) => const RegisterScreen()),
+      GoRoute(path: '/register', builder: (context, state) {
+        final extra = state.extra;
+        final role = extra is UserRole ? extra : null;
+        return RegisterScreen(initialRole: role);
+      }),
       GoRoute(path: '/role-select', builder: (_, __) => const RoleSelectionScreen()),
       GoRoute(path: '/home', builder: (_, __) => const HomeDashboardScreen()),
       GoRoute(path: '/home-patient', builder: (_, __) => const HomeDashboardScreen()),

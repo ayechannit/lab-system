@@ -7,28 +7,43 @@ import '../../theme/app_colors.dart';
 import '../../widgets/common/app_brand_mark.dart';
 
 class RegisterScreen extends StatefulWidget {
-  const RegisterScreen({super.key});
+  const RegisterScreen({super.key, this.initialRole});
+
+  /// When set (e.g. from role selection), pre-selects the signup role.
+  final UserRole? initialRole;
 
   @override
   State<RegisterScreen> createState() => _RegisterScreenState();
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
+  static const int _minPasswordLength = 8;
+
   final _name = TextEditingController();
   final _phone = TextEditingController();
   final _email = TextEditingController();
+  final _address = TextEditingController();
   final _password = TextEditingController();
+  final _confirmPassword = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   bool _obscurePassword = true;
   bool _agreeTerms = false;
-  String _selectedRole = 'Patient';
+  late String _selectedRole;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedRole = (widget.initialRole ?? UserRole.patient).label;
+  }
 
   @override
   void dispose() {
     _name.dispose();
     _phone.dispose();
     _email.dispose();
+    _address.dispose();
     _password.dispose();
+    _confirmPassword.dispose();
     super.dispose();
   }
 
@@ -52,7 +67,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'Create your account to access digital health\nservices',
+                  'Create an account on the lab server. Use at least 8 characters for your password '
+                  'and the same fields as the web signup (name, email, phone, optional address).',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: AppColors.onSurfaceVariant),
                 ),
@@ -111,7 +127,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         child: TextFormField(
                           controller: _name,
                           decoration: const InputDecoration(
-                            hintText: 'John Doe',
                             prefixIcon: Icon(Icons.person_outline),
                             border: InputBorder.none,
                             enabledBorder: InputBorder.none,
@@ -123,12 +138,33 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         ),
                       ),
                       const SizedBox(height: 12),
-                      _RegisterLabel(text: 'Phone Number'),
+                      _RegisterLabel(text: 'Email'),
+                      _RegisterInputShell(
+                        child: TextFormField(
+                          controller: _email,
+                          decoration: const InputDecoration(
+                            prefixIcon: Icon(Icons.mail_outline),
+                            border: InputBorder.none,
+                            enabledBorder: InputBorder.none,
+                            focusedBorder: InputBorder.none,
+                            filled: false,
+                          ),
+                          keyboardType: TextInputType.emailAddress,
+                          validator: (v) {
+                            final t = (v ?? '').trim();
+                            if (t.isEmpty) return 'Required';
+                            if (!t.contains('@')) return 'Enter a valid email';
+                            return null;
+                          },
+                          textInputAction: TextInputAction.next,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      _RegisterLabel(text: 'Phone'),
                       _RegisterInputShell(
                         child: TextFormField(
                           controller: _phone,
                           decoration: const InputDecoration(
-                            hintText: '+1 (555) 000-0000',
                             prefixIcon: Icon(Icons.call_outlined),
                             border: InputBorder.none,
                             enabledBorder: InputBorder.none,
@@ -141,20 +177,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         ),
                       ),
                       const SizedBox(height: 12),
-                      _RegisterLabel(text: 'Email Address'),
+                      _RegisterLabel(text: 'Address (optional)'),
                       _RegisterInputShell(
                         child: TextFormField(
-                          controller: _email,
+                          controller: _address,
                           decoration: const InputDecoration(
-                            hintText: 'name@example.com',
-                            prefixIcon: Icon(Icons.mail_outline),
+                            prefixIcon: Icon(Icons.home_outlined),
                             border: InputBorder.none,
                             enabledBorder: InputBorder.none,
                             focusedBorder: InputBorder.none,
                             filled: false,
                           ),
-                          keyboardType: TextInputType.emailAddress,
-                          validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+                          maxLines: 2,
                           textInputAction: TextInputAction.next,
                         ),
                       ),
@@ -165,7 +199,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           controller: _password,
                           obscureText: _obscurePassword,
                           decoration: InputDecoration(
-                            hintText: '••••••••',
+                            hintText: 'At least $_minPasswordLength characters',
                             prefixIcon: const Icon(Icons.lock_outline),
                             suffixIcon: IconButton(
                               onPressed: () {
@@ -184,7 +218,33 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             focusedBorder: InputBorder.none,
                             filled: false,
                           ),
-                          validator: (v) => (v == null || v.length < 4) ? 'Min 4 characters' : null,
+                          validator: (v) {
+                            if (v == null || v.length < _minPasswordLength) {
+                              return 'Min $_minPasswordLength characters';
+                            }
+                            return null;
+                          },
+                          textInputAction: TextInputAction.next,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      _RegisterLabel(text: 'Confirm password'),
+                      _RegisterInputShell(
+                        child: TextFormField(
+                          controller: _confirmPassword,
+                          obscureText: true,
+                          decoration: const InputDecoration(
+                            hintText: 'Re-enter password',
+                            prefixIcon: Icon(Icons.lock_outline),
+                            border: InputBorder.none,
+                            enabledBorder: InputBorder.none,
+                            focusedBorder: InputBorder.none,
+                            filled: false,
+                          ),
+                          validator: (v) {
+                            if (v != _password.text) return 'Passwords do not match';
+                            return null;
+                          },
                           textInputAction: TextInputAction.done,
                         ),
                       ),
@@ -237,15 +297,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               );
                               return;
                             }
-                            await session.register(
-                              name: _name.text.trim(),
-                              phone: _phone.text.trim(),
-                              email: _email.text.trim(),
-                              password: _password.text,
-                              role: _selectedRole.toUserRole(),
-                            );
-                            if (!context.mounted) return;
-                            context.go(session.homeRoute);
+                            try {
+                              await session.register(
+                                name: _name.text.trim(),
+                                phone: _phone.text.trim(),
+                                email: _email.text.trim(),
+                                password: _password.text,
+                                role: _selectedRole.toUserRole(),
+                                address: _address.text.trim(),
+                              );
+                              if (!context.mounted) return;
+                              context.go(session.homeRoute);
+                            } catch (e) {
+                              if (!context.mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('$e')),
+                              );
+                            }
                           },
                           iconAlignment: IconAlignment.end,
                           icon: const Icon(Icons.arrow_forward, size: 20),

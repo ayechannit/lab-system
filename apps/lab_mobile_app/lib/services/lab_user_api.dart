@@ -1,6 +1,7 @@
 import '../models/app_user.dart';
 import '../models/lab_order.dart';
 import '../models/lab_result.dart';
+import '../models/lab_test_pick.dart';
 import '../models/loyalty.dart';
 import '../models/rating.dart';
 import '../models/user_role.dart';
@@ -12,6 +13,9 @@ class RegisterRequest {
     required this.email,
     required this.password,
     required this.role,
+    this.address = '',
+    this.latitude = 0,
+    this.longitude = 0,
   });
 
   final String name;
@@ -19,18 +23,21 @@ class RegisterRequest {
   final String email;
   final String password;
   final UserRole role;
+
+  /// Home / clinic address line (admin web signup sends the same to `POST /api/users`).
+  final String address;
+  final double latitude;
+  final double longitude;
 }
 
 class LoginRequest {
   const LoginRequest({
     required this.email,
     required this.password,
-    this.roleHint,
   });
 
   final String email;
   final String password;
-  final UserRole? roleHint;
 }
 
 /// Contract-first API for user app features.
@@ -43,6 +50,7 @@ abstract class LabUserApi {
     String? phone,
     String? email,
   });
+  Future<List<LabTestPick>> listActiveLabTests();
   Future<LabOrderSummary> createOrder({
     required String userId,
     required LabOrderRequest request,
@@ -62,4 +70,13 @@ abstract class LabUserApi {
     required RatingDraft rating,
   });
   Future<LoyaltySnapshot> getLoyaltySnapshot(String userId);
+
+  /// Confirm the lab-proposed collection schedule (quotation: scheduling from lab).
+  Future<void> acceptSchedule({
+    required String userId,
+    required String orderId,
+  });
+
+  /// Clear credentials after logout (REST client clears bearer token).
+  void clearAuth();
 }
