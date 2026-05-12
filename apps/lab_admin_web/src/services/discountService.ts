@@ -34,6 +34,10 @@ export type DiscountUpsertBody = {
   is_active: boolean
 }
 
+export type DiscountBulkUpsertBody = {
+  discounts: DiscountUpsertBody[]
+}
+
 function toQuery(params?: FetchDiscountsParams): string {
   if (!params) return ''
   const q = new URLSearchParams()
@@ -75,6 +79,16 @@ export async function fetchAllDiscounts(params?: FetchDiscountsParams): Promise<
 
 export async function upsertTestDiscount(body: DiscountUpsertBody): Promise<unknown> {
   const res = await apiFetch('/api/discounts', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
+  if (!res.ok) throw new Error(await readApiErrorBody(res))
+  return res.json()
+}
+
+/** `POST /api/discounts/bulk` — upsert many test/role rows in one request. */
+export async function bulkUpsertTestDiscounts(body: DiscountBulkUpsertBody): Promise<unknown> {
+  const res = await apiFetch('/api/discounts/bulk', {
     method: 'POST',
     body: JSON.stringify(body),
   })
