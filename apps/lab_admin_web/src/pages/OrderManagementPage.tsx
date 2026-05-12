@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { ConfirmDialog } from '../components/common/ConfirmDialog'
 import { PageHeader } from '../components/common/PageHeader'
 import { TableActionMenu } from '../components/common/TableActionMenu'
-import { OrderQrModal } from '../components/orders/OrderQrModal'
 import { formatCoordPair, LocationMapPicker } from '../components/users/LocationMapPicker'
 import type { EndUserRole, LabTestCatalogRow, StaffListRow, UserListRow } from '../model/types'
 import { isApiMode } from '../services/apiBase'
@@ -96,7 +95,6 @@ export function OrderManagementPage() {
   const [detailOrder, setDetailOrder] = useState<ApiOrderDetail | null>(null)
   const [detailLoading, setDetailLoading] = useState(false)
   const [detailError, setDetailError] = useState<string | null>(null)
-  const [qrOrder, setQrOrder] = useState<ApiOrderListRow | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<ApiOrderListRow | null>(null)
 
   const [createOpen, setCreateOpen] = useState(false)
@@ -228,17 +226,6 @@ export function OrderManagementPage() {
     const safeDiscount = Math.max(0, Math.min(100, resolvedCreateDiscountPercent))
     return Math.round(original * (1 - safeDiscount / 100) * 100) / 100
   }, [createOriginalPrice, resolvedCreateDiscountPercent])
-
-  const qrTestLabel = useMemo(() => {
-    if (!qrOrder) return ''
-    const detail = detailOrder && detailOrder.id === qrOrder.id ? detailOrder : null
-    if (detail && detail.items.length > 0) {
-      const first = detail.items[0]
-      const t = first.test_id ? testMap.get(first.test_id) : undefined
-      if (t) return t.test_name
-    }
-    return 'Lab test'
-  }, [qrOrder, detailOrder, testMap])
 
   function openCreateOrder() {
     const firstUser = users[0]
@@ -393,7 +380,10 @@ export function OrderManagementPage() {
 
   return (
     <div className="stack">
-      <PageHeader title="Order management" />
+      <PageHeader
+        title="Order management"
+        description="Create and track lab orders from request through delivery: patient details, pricing, status, and next steps."
+      />
 
       {!hasApi ? (
         <div className="card" style={{ borderColor: '#dfe5f0', background: '#f8fafc' }}>
@@ -477,10 +467,6 @@ export function OrderManagementPage() {
                         {
                           label: 'Update status',
                           onSelect: () => openStatusUpdate(o),
-                        },
-                        {
-                          label: 'QR',
-                          onSelect: () => setQrOrder(o),
                         },
                         {
                           label: 'Delete',
@@ -579,11 +565,6 @@ export function OrderManagementPage() {
                 <textarea id="om-address" value={createAddress} onChange={(e) => setCreateAddress(e.target.value)} disabled={createSubmitting} />
               </div>
               <div className="user-form-modal__location-card">
-                <p className="user-form-modal__section-label">Map</p>
-                <p className="user-form-modal__map-hint">
-                  Typing the address geocodes the pin (debounced). Clicking the map or using your location updates
-                  the address from the pin (reverse geocoding).
-                </p>
                 <LocationMapPicker
                   latitude={createLatitude}
                   longitude={createLongitude}
@@ -599,9 +580,6 @@ export function OrderManagementPage() {
                 />
                 <p className="user-form-modal__coords" aria-live="polite">
                   {formatCoordPair(createLatitude, createLongitude)}
-                  {createLatitude === 0 && createLongitude === 0 ? (
-                    <span className="user-form-modal__coords-hint"> — optional (left unset if you do not pick)</span>
-                  ) : null}
                 </p>
                 {createGeocodeHint ? <p className="user-form-modal__geocode-hint">{createGeocodeHint}</p> : null}
               </div>
@@ -799,9 +777,6 @@ export function OrderManagementPage() {
                 )}
               </div>
               <div className="row-actions" style={{ justifyContent: 'flex-end', marginTop: '1rem' }}>
-                <button type="button" className="btn btn-secondary" onClick={() => setQrOrder(rows.find((r) => r.id === detailOrder.id) ?? null)}>
-                  QR
-                </button>
                 <button type="button" className="btn btn-primary" onClick={() => setDetailOrder(null)}>
                   Close
                 </button>
@@ -826,14 +801,6 @@ export function OrderManagementPage() {
         onCancel={() => setDeleteTarget(null)}
       />
 
-      {qrOrder ? (
-        <OrderQrModal
-          orderId={qrOrder.id}
-          patientName={qrOrder.patient_name}
-          testType={qrTestLabel}
-          onClose={() => setQrOrder(null)}
-        />
-      ) : null}
     </div>
   )
 }

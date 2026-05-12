@@ -192,10 +192,6 @@ export function LocationMapPicker({
         >
           {geoLoading ? 'Getting location…' : 'Use my location'}
         </button>
-        <span style={{ fontSize: '0.8rem', color: 'var(--muted)' }}>
-          Click the map or use your device location — the address field updates when a pin is placed (HTTPS or
-          localhost).
-        </span>
         {reverseHint ? (
           <span style={{ fontSize: '0.8rem', color: 'var(--muted)', flexBasis: '100%' }} aria-live="polite">
             {reverseHint}

@@ -550,11 +550,6 @@ a.btn {
   overflow: visible;
 }
 
-.modal-card--qr {
-  max-width: min(100vw - 2rem, 420px);
-  padding: 1.1rem 1.1rem 1rem;
-}
-
 .modal-card--confirm {
   max-width: min(100vw - 2rem, 420px);
   padding: 1.2rem 1.35rem 1.2rem;
@@ -763,23 +758,11 @@ a.btn {
   font-weight: 600;
 }
 
-.user-form-modal__coords-hint {
-  font-weight: 400;
-  color: var(--muted);
-}
-
 .user-form-modal__geocode-hint {
   margin: 0.35rem 0 0;
   font-size: 0.8125rem;
   color: var(--muted);
   line-height: 1.4;
-}
-
-.user-form-modal__map-hint {
-  margin: 0 0 0.55rem;
-  font-size: 0.8125rem;
-  color: var(--muted);
-  line-height: 1.45;
 }
 
 .user-form-modal__address textarea {
@@ -1406,92 +1389,6 @@ a.btn {
 .order-modal-sub {
   margin-top: 0.6rem;
   margin-bottom: 0.85rem;
-}
-
-.qr-wrap {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 0.25rem;
-  background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
-  border-radius: 14px;
-  border: 1px solid #dfe5f0;
-  overflow: visible;
-}
-
-/* Fixed pixel box so flex parents never shrink the SVG into a blurry strip */
-.qr-frame {
-  flex: 0 0 auto;
-  width: 256px;
-  height: 256px;
-  padding: 16px;
-  box-sizing: content-box;
-  background: #ffffff;
-  line-height: 0;
-}
-
-.qr-frame--img {
-  width: 280px;
-  height: 280px;
-  padding: 10px;
-}
-
-.qr-img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  image-rendering: crisp-edges;
-  border-radius: 8px;
-}
-
-.qr-meta {
-  margin-top: 0.85rem;
-  border: 1px solid var(--border);
-  background: #f8fafc;
-  border-radius: 10px;
-  padding: 0.65rem 0.75rem;
-}
-
-.qr-meta-title {
-  margin: 0;
-  font-size: 0.75rem;
-  color: var(--muted);
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.qr-payload {
-  display: block;
-  margin-top: 0.35rem;
-  font-size: 0.82rem;
-  color: var(--heading);
-  background: #fff;
-  border: 1px dashed #d8deea;
-  border-radius: 8px;
-  padding: 0.35rem 0.45rem;
-  word-break: break-all;
-}
-
-.qr-meta-note {
-  margin: 0.5rem 0 0;
-  font-size: 0.78rem;
-  color: var(--muted);
-  line-height: 1.45;
-}
-
-.qr-actions {
-  margin-top: 1rem;
-  justify-content: flex-end;
-}
-
-@media (max-width: 380px) {
-  .qr-frame,
-  .qr-frame--img {
-    transform: scale(0.88);
-    transform-origin: center center;
-  }
 }
 
 .ai-panel {

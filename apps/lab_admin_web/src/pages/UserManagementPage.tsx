@@ -92,7 +92,10 @@ export function UserManagementPage() {
 
   return (
     <div className="stack">
-      <PageHeader title="Users" />
+      <PageHeader
+        title="Users"
+        description="Manage patient and partner accounts: contact details, location, and loyalty balance."
+      />
 
       {!hasApi ? (
         <div className="card" style={{ borderColor: '#dfe5f0', background: '#f8fafc' }}>

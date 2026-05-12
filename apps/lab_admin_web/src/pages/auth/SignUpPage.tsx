@@ -98,7 +98,7 @@ export function SignUpPage() {
       return
     }
     if (!roleKey) {
-      setFormError('Select account type: clinic, doctor, or patient.')
+      setFormError('Please select an account type.')
       return
     }
     if (password.length < MIN_PASSWORD_LENGTH) {
@@ -159,7 +159,6 @@ export function SignUpPage() {
               <span className="material-symbols-outlined">person_add</span>
             </div>
             <h1 className="auth-title">Create Account</h1>
-            <p className="auth-subtitle">Same location flow as Users: type an address, pick the map, or use your device.</p>
 
             <form className="auth-stack" style={{ marginTop: '2rem' }} onSubmit={handleSubmit}>
               <div className="auth-grid-2">
@@ -228,7 +227,7 @@ export function SignUpPage() {
                       value={roleKey}
                       onChange={(e) => setRoleKey((e.target.value || '') as '' | EndUserRole)}
                     >
-                      <option value="">Select clinic, doctor, or patient</option>
+                      <option value="">Select account type</option>
                       <option value="clinic">Clinic</option>
                       <option value="doctor">Doctor</option>
                       <option value="patient">Patient</option>
@@ -264,11 +263,6 @@ export function SignUpPage() {
 
               <div className="user-form-modal__stack user-form-modal__stack--map-only" style={{ marginTop: '0.25rem' }}>
                 <div className="user-form-modal__location-card">
-                  <p className="user-form-modal__section-label">Map</p>
-                  <p className="user-form-modal__map-hint">
-                    Typing the address moves the pin (debounced). Click the map or use your location — the address field
-                    updates from the pin when reverse geocoding succeeds (HTTPS or localhost).
-                  </p>
                   <LocationMapPicker
                     latitude={latitude}
                     longitude={longitude}
@@ -284,9 +278,6 @@ export function SignUpPage() {
                   />
                   <p className="user-form-modal__coords" aria-live="polite">
                     {formatCoordPair(latitude, longitude)}
-                    {latitude === 0 && longitude === 0 ? (
-                      <span className="user-form-modal__coords-hint"> — not placed (saved as 0, 0)</span>
-                    ) : null}
                   </p>
                   {geocodeHint ? <p className="user-form-modal__geocode-hint">{geocodeHint}</p> : null}
                 </div>

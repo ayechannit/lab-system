@@ -74,7 +74,7 @@ export function SampleCollectionPage() {
     <div className="stack">
       <PageHeader
         title="Collection & routing"
-        description="Pick orders that are pending, scheduled, or out for collection. Plan a stop order from live addresses on your lab API."
+        description="Choose orders that need a sample pickup, then arrange an efficient route using each patient’s address on the map."
       />
 
       {!hasApi ? (

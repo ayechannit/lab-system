@@ -62,7 +62,7 @@ export function RatingsFeedbackPage() {
     <div className="stack">
       <PageHeader
         title="Ratings & feedback"
-        description="Monitor star ratings and written remarks from patients and clinics after results are delivered."
+        description="Read star ratings and comments from patients and partners after they receive care or results."
       />
       {!hasApi ? (
         <div className="card" style={{ borderColor: '#dfe5f0', background: '#f8fafc' }}>

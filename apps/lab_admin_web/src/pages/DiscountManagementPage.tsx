@@ -126,14 +126,14 @@ export function DiscountManagementPage() {
         }
       : {
           title: 'No discount rules yet',
-          body: 'Set percentage reductions per test and role. Prices on the Lab tests page reflect the role you select there.',
+          body: 'Add a rule for each test and customer type. The Lab tests list shows base price and example prices when discounts apply.',
         }
 
   return (
     <div className="stack">
       <PageHeader
         title="Test discounts"
-        description="Per-test, per-role percentages off catalog prices. Use the Lab tests page to preview published pricing for clinic, doctor, or patient."
+        description="Choose how much each type of customer saves on specific tests. Changes here affect the prices people see when discounts apply."
       />
 
       {!hasApi ? (

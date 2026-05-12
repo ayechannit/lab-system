@@ -91,7 +91,10 @@ export function StaffManagementPage() {
 
   return (
     <div className="stack">
-      <PageHeader title="Lab staff" />
+      <PageHeader
+        title="Lab staff"
+        description="Add and maintain people who work in the lab—roles control what they can do in the system."
+      />
 
       {!hasApi ? (
         <div className="card" style={{ borderColor: '#dfe5f0', background: '#f8fafc' }}>

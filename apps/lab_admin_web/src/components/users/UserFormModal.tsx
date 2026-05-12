@@ -377,11 +377,6 @@ export function UserFormModal({
 
               <div className="user-form-modal__stack user-form-modal__stack--map-only">
                 <div className="user-form-modal__location-card">
-                  <p className="user-form-modal__section-label">Map</p>
-                  <p className="user-form-modal__map-hint">
-                    Typing the address moves the pin (debounced). Clicking the map or using your location fills the
-                    address from the pin.
-                  </p>
                   <LocationMapPicker
                     latitude={latitude}
                     longitude={longitude}
@@ -397,9 +392,6 @@ export function UserFormModal({
                   />
                   <p className="user-form-modal__coords" aria-live="polite">
                     {formatCoordPair(latitude, longitude)}
-                    {latitude === 0 && longitude === 0 ? (
-                      <span className="user-form-modal__coords-hint"> — not placed (saved as 0, 0)</span>
-                    ) : null}
                   </p>
                   {geocodeHint ? <p className="user-form-modal__geocode-hint">{geocodeHint}</p> : null}
                 </div>

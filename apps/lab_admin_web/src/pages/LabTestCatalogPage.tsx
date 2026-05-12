@@ -119,7 +119,7 @@ export function LabTestCatalogPage() {
     <div className="stack">
       <PageHeader
         title="Test catalog"
-        description="List and manage tests from GET /api/tests. Discount % and after-discount MMK come from each test’s embedded discounts array; edit rules on the Discounts page."
+        description="Browse and edit the tests you offer: names, codes, prices, and whether each test is available. Discount columns show example prices when a discount applies; set those rules on the Discounts page."
       />
 
       {!hasApi ? (

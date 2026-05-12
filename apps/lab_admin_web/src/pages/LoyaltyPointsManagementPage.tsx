@@ -144,7 +144,7 @@ export function LoyaltyPointsManagementPage() {
     <div className="stack">
       <PageHeader
         title="Loyalty points"
-        description="Configure how many points members earn per MMK spent, manage rule schedules, and review live balances from user accounts."
+        description="Control how members earn points from spending, manage active promotions, and check point balances for your customers."
       />
 
       {!hasApi ? (

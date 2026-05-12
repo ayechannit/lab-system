@@ -156,7 +156,7 @@ export function LabResultManagementPage() {
     <div className="stack">
       <PageHeader
         title="Lab result management"
-        description="Select a live order, enter QC values, upload PDF results per line item, and run a local numeric sanity check before release."
+        description="Open an order, record quality checks, attach result files for each test, and review values before you mark results ready for the patient."
       />
 
       {!hasApi ? (

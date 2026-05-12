@@ -129,7 +129,7 @@ export function ReportsAnalyticsPage() {
     <div className="stack">
       <PageHeader
         title="Reports & analytics"
-        description="Charts are built from live orders and user records returned by your lab API."
+        description="See trends in orders and customers at a glance—counts and summaries update from your latest data."
       />
 
       {!hasApi ? (
