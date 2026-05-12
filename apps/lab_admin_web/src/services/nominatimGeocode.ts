@@ -32,3 +32,31 @@ export async function nominatimSearch(query: string, signal?: AbortSignal): Prom
 
   return { lat, lng }
 }
+
+/** Reverse geocoding: coordinates → single-line address (`display_name`). */
+export async function nominatimReverse(
+  lat: number,
+  lng: number,
+  signal?: AbortSignal,
+): Promise<string | null> {
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null
+
+  const url = new URL('https://nominatim.openstreetmap.org/reverse')
+  url.searchParams.set('format', 'json')
+  url.searchParams.set('lat', String(lat))
+  url.searchParams.set('lon', String(lng))
+
+  const res = await fetch(url.toString(), {
+    signal,
+    headers: {
+      Accept: 'application/json',
+      'Accept-Language': 'en',
+    },
+  })
+
+  if (!res.ok) return null
+
+  const data = (await res.json()) as { display_name?: string }
+  const line = typeof data.display_name === 'string' ? data.display_name.trim() : ''
+  return line || null
+}

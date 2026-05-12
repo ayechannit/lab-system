@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { useMockAuth } from '../hooks/MockAuthContext'
+import { useAuth } from '../hooks/AuthContext'
 import './admin-layout.css'
 
 type NavItem = {
@@ -30,7 +30,7 @@ function headerTitleForPath(pathname: string): string {
 }
 
 export function AdminLayout() {
-  const { signOut } = useMockAuth()
+  const { signOut } = useAuth()
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const headerTitle = headerTitleForPath(pathname)

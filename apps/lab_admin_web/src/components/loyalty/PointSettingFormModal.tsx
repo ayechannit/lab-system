@@ -40,11 +40,13 @@ export function PointSettingFormModal({
   onSuccess,
 }: PointSettingFormModalProps) {
   const titleId = useId()
+  const activeFieldId = useId()
   const [name, setName] = useState(() => (initial ? initial.name : 'Default tier'))
   const [spendMmk, setSpendMmk] = useState<number | ''>(() => (initial ? initial.spend_amount_mmk : 100_000))
   const [pointsReward, setPointsReward] = useState<number | ''>(() => (initial ? initial.points_reward : 10))
   const [startLocal, setStartLocal] = useState(() => toDatetimeLocalValue(initial?.start_date ?? null))
   const [endLocal, setEndLocal] = useState(() => toDatetimeLocalValue(initial?.end_date ?? null))
+  const [isActive, setIsActive] = useState(() => initial?.is_active ?? true)
   const [formError, setFormError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
@@ -98,6 +100,7 @@ export function PointSettingFormModal({
       points_reward: pts,
       start_date: startIso,
       end_date: endIso,
+      is_active: isActive,
     }
     setSubmitting(true)
     try {
@@ -190,26 +193,47 @@ export function PointSettingFormModal({
                   disabled={submitting}
                 />
               </div>
-              <div className="field">
-                <label htmlFor="ps-start">Start (optional)</label>
-                <input
-                  id="ps-start"
-                  type="datetime-local"
-                  value={startLocal}
-                  onChange={(e) => setStartLocal(e.target.value)}
-                  disabled={submitting}
-                />
+              <div className="discount-form-modal__pair">
+                <div className="field">
+                  <label htmlFor="ps-start">Start (optional)</label>
+                  <input
+                    id="ps-start"
+                    type="datetime-local"
+                    value={startLocal}
+                    onChange={(e) => setStartLocal(e.target.value)}
+                    disabled={submitting}
+                  />
+                </div>
+                <div className="field">
+                  <label htmlFor="ps-end">End (optional)</label>
+                  <input
+                    id="ps-end"
+                    type="datetime-local"
+                    value={endLocal}
+                    onChange={(e) => setEndLocal(e.target.value)}
+                    disabled={submitting}
+                  />
+                </div>
               </div>
-              <div className="field">
-                <label htmlFor="ps-end">End (optional)</label>
-                <input
-                  id="ps-end"
-                  type="datetime-local"
-                  value={endLocal}
-                  onChange={(e) => setEndLocal(e.target.value)}
-                  disabled={submitting}
-                />
-              </div>
+              <label htmlFor={activeFieldId} className="form-switch">
+                <span className="form-switch__control">
+                  <input
+                    id={activeFieldId}
+                    type="checkbox"
+                    className="form-switch__input"
+                    checked={isActive}
+                    onChange={(e) => setIsActive(e.target.checked)}
+                    disabled={submitting}
+                  />
+                  <span className="form-switch__track" aria-hidden="true" />
+                </span>
+                <span className="form-switch__text">
+                  <span className="form-switch__title">{isActive ? 'Rule is active' : 'Rule is inactive'}</span>
+                  <span className="form-switch__desc">
+                    When inactive, the rule stays in the list but does not award points on orders.
+                  </span>
+                </span>
+              </label>
             </div>
           </div>
 

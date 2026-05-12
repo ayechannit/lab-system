@@ -126,6 +126,97 @@
   color: var(--muted);
 }
 
+/* Lab test catalog: toolbar, empty state, column rhythm */
+.catalog-card__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem 1.25rem;
+  margin-bottom: 0.65rem;
+}
+
+.catalog-card__filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(11.5rem, 1fr));
+  gap: 0.75rem 1rem;
+  flex: 1 1 min(100%, 380px);
+  align-items: flex-end;
+}
+
+.catalog-card__filters .field {
+  margin-bottom: 0;
+  min-width: 0;
+}
+
+.catalog-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.catalog-mode-hint {
+  margin: 0 0 0.85rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: 10px;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--muted);
+  background: linear-gradient(180deg, rgba(0, 61, 155, 0.05) 0%, rgba(0, 61, 155, 0.02) 100%);
+  border: 1px solid rgba(0, 61, 155, 0.1);
+}
+
+.data-table__empty-panel {
+  padding: 2.25rem 1.5rem 2.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.data-table__empty-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: rgba(0, 61, 155, 0.08);
+  color: var(--primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.data-table__empty-icon .material-symbols-outlined {
+  font-size: 1.5rem;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+.data-table__empty-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--heading);
+}
+
+.data-table__empty-text {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--muted);
+  max-width: 24rem;
+  line-height: 1.45;
+}
+
+.data-table--catalog .col-num,
+.data-table--discounts .col-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.data-table--catalog .col-num code,
+.data-table--discounts .col-num code {
+  font-variant-numeric: tabular-nums;
+}
+
 .discount-cell {
   width: 1%;
   white-space: nowrap;
@@ -320,6 +411,18 @@ a.btn {
   border: 1px solid var(--border);
   font: inherit;
   background: #fff;
+}
+
+.field input[type='checkbox'],
+.field input[type='radio'] {
+  width: auto;
+  max-width: none;
+  flex-shrink: 0;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  accent-color: var(--primary);
 }
 
 .field textarea {
@@ -758,6 +861,115 @@ a.btn {
   display: flex;
   flex-direction: column;
   gap: 0.85rem;
+}
+
+.discount-form-modal__pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+@media (max-width: 480px) {
+  .discount-form-modal__pair {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Accessible toggle (checkbox + track) for modals */
+.form-switch {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+  margin: 0;
+  padding: 0.85rem 1rem;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: linear-gradient(180deg, #fafbfd 0%, #f5f7fb 100%);
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.form-switch:has(.form-switch__input:disabled) {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.form-switch__control {
+  position: relative;
+  width: 2.75rem;
+  height: 1.5rem;
+  flex-shrink: 0;
+  margin-top: 0.12rem;
+}
+
+.form-switch__input {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.form-switch:has(.form-switch__input:disabled) .form-switch__input {
+  cursor: not-allowed;
+}
+
+.form-switch__track {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 999px;
+  background: #c5cad4;
+  transition: background 0.2s ease;
+  pointer-events: none;
+}
+
+.form-switch__input:checked + .form-switch__track {
+  background: var(--primary);
+}
+
+.form-switch__input:focus-visible + .form-switch__track {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.form-switch__track::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.22);
+  transition: transform 0.2s ease;
+}
+
+.form-switch__input:checked + .form-switch__track::after {
+  transform: translateX(1.2rem);
+}
+
+.form-switch__text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.form-switch__title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--heading);
+}
+
+.form-switch__desc {
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: var(--muted);
 }
 
 .discount-form-modal__footer {

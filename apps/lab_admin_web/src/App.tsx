@@ -1,6 +1,5 @@
 import { BrowserRouter, HashRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom'
-import { OrderLabProvider } from './context/OrderLabContext'
-import { useMockAuth } from './hooks/MockAuthContext'
+import { useAuth } from './hooks/AuthContext'
 import { AdminLayout } from './layout/AdminLayout'
 import { LoginPage } from './pages/auth/LoginPage'
 import { SignUpPage } from './pages/auth/SignUpPage'
@@ -16,17 +15,16 @@ import { StaffManagementPage } from './pages/StaffManagementPage'
 import { UserManagementPage } from './pages/UserManagementPage'
 
 function RequireAuth() {
-  const { signedIn } = useMockAuth()
+  const { signedIn, initializing } = useAuth()
+  if (initializing) {
+    return (
+      <div style={{ padding: '2rem', fontFamily: 'system-ui', color: '#334155' }}>
+        Loading session…
+      </div>
+    )
+  }
   if (!signedIn) return <Navigate to="/login" replace />
   return <Outlet />
-}
-
-function AdminShell() {
-  return (
-    <OrderLabProvider>
-      <AdminLayout />
-    </OrderLabProvider>
-  )
 }
 
 export default function App() {
@@ -38,7 +36,7 @@ export default function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignUpPage />} />
         <Route element={<RequireAuth />}>
-          <Route path="/" element={<AdminShell />}>
+          <Route path="/" element={<AdminLayout />}>
             <Route index element={<Navigate to="orders" replace />} />
             <Route path="orders" element={<OrderManagementPage />} />
             <Route path="lab-tests" element={<LabTestCatalogPage />} />

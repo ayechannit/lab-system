@@ -1,149 +1,263 @@
-import { useEffect, useMemo, useState, type ChangeEventHandler } from 'react'
+import { useEffect, useMemo, useState, type ChangeEventHandler, type FormEvent } from 'react'
 import { PageHeader } from '../components/common/PageHeader'
-import { useOrderLab } from '../context/OrderLabContext'
+import { isApiMode } from '../services/apiBase'
+import {
+  fetchOrderById,
+  fetchOrders,
+  uploadOrderTestResult,
+  type ApiOrderDetail,
+  type ApiOrderListRow,
+} from '../services/orderService'
 import { reviewLabResultsNumeric } from '../services/aiDemo'
 import '../components/common/ui.css'
 
-const valueDefaults: Record<string, { hb: string; wbc: string; plt: string }> = {
-  LAB1021: { hb: '10.2', wbc: '7500', plt: '240000' },
-  LAB1022: { hb: '13.1', wbc: '8200', plt: '265000' },
-  LAB1023: { hb: '14.0', wbc: '7100', plt: '230000' },
-  LAB1024: { hb: '12.4', wbc: '6900', plt: '210000' },
-}
-
 export function LabResultManagementPage() {
-  const { orders, patchOrder } = useOrderLab()
-  const [orderId, setOrderId] = useState(orders[0]?.orderId ?? '')
-  const [hb, setHb] = useState('10.2')
-  const [wbc, setWbc] = useState('7500')
-  const [plt, setPlt] = useState('240000')
+  const hasApi = isApiMode()
+  const [orders, setOrders] = useState<ApiOrderListRow[]>([])
+  const [listLoading, setListLoading] = useState(hasApi)
+  const [listError, setListError] = useState<string | null>(null)
+  const [orderId, setOrderId] = useState('')
+  const [detail, setDetail] = useState<ApiOrderDetail | null>(null)
+  const [detailLoading, setDetailLoading] = useState(false)
+  const [detailError, setDetailError] = useState<string | null>(null)
 
-  const order = useMemo(() => orders.find((o) => o.orderId === orderId) ?? null, [orders, orderId])
+  const [hb, setHb] = useState('')
+  const [wbc, setWbc] = useState('')
+  const [plt, setPlt] = useState('')
+  const [aiResult, setAiResult] = useState<{ passed: boolean; notes: string } | null>(null)
+  const [uploadBusy, setUploadBusy] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
+  const [localPdfName, setLocalPdfName] = useState<string | null>(null)
 
   useEffect(() => {
-    const d = valueDefaults[orderId]
-    if (d) {
-      setHb(d.hb)
-      setWbc(d.wbc)
-      setPlt(d.plt)
+    if (!hasApi) {
+      setOrders([])
+      setListLoading(false)
+      return
     }
-  }, [orderId])
+    let cancelled = false
+    setListLoading(true)
+    setListError(null)
+    void (async () => {
+      try {
+        const list = await fetchOrders()
+        if (!cancelled) {
+          setOrders(list)
+          setOrderId((prev) => prev || list[0]?.id || '')
+        }
+      } catch (e) {
+        if (!cancelled) setListError(e instanceof Error ? e.message : 'Failed to load orders')
+      } finally {
+        if (!cancelled) setListLoading(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [hasApi])
+
+  useEffect(() => {
+    if (!hasApi || !orderId) {
+      setDetail(null)
+      setAiResult(null)
+      setLocalPdfName(null)
+      return
+    }
+    let cancelled = false
+    setDetailLoading(true)
+    setDetailError(null)
+    void (async () => {
+      try {
+        const d = await fetchOrderById(orderId)
+        if (!cancelled) {
+          if (!d) {
+            setDetail(null)
+            setDetailError('Order not found.')
+          } else {
+            setDetail(d)
+            setDetailError(null)
+          }
+          setAiResult(null)
+          setLocalPdfName(null)
+        }
+      } catch (e) {
+        if (!cancelled) setDetailError(e instanceof Error ? e.message : 'Failed to load order')
+      } finally {
+        if (!cancelled) setDetailLoading(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [hasApi, orderId])
+
+  const firstTestItem = useMemo(() => detail?.items?.[0] ?? null, [detail])
 
   const runAi = () => {
-    if (!order) return
     const res = reviewLabResultsNumeric({
       hemoglobin: Number.parseFloat(hb) || 0,
       wbc: Number.parseFloat(wbc) || 0,
       platelet: Number.parseFloat(plt) || 0,
     })
-    patchOrder(order.orderId, {
-      aiReviewPassed: res.passed,
-      aiReviewNotes: res.notes.join(' '),
-    })
+    setAiResult({ passed: res.passed, notes: res.notes.join(' ') })
   }
 
   const onPdf: ChangeEventHandler<HTMLInputElement> = (e) => {
-    if (!order) return
     const f = e.target.files?.[0]
-    patchOrder(order.orderId, {
-      resultPdfFileName: f ? f.name : null,
-      resultSentToUserApp: false,
-    })
+    setLocalPdfName(f ? f.name : null)
+    setUploadError(null)
+  }
+
+  async function submitUpload(ev: FormEvent) {
+    ev.preventDefault()
+    if (!detail || !firstTestItem) return
+    const input = (ev.target as HTMLFormElement).querySelector('input[type=file]') as HTMLInputElement | null
+    const file = input?.files?.[0]
+    if (!file) {
+      setUploadError('Choose a PDF first.')
+      return
+    }
+    setUploadBusy(true)
+    setUploadError(null)
+    try {
+      await uploadOrderTestResult(detail.id, firstTestItem.test_id, file)
+      const next = await fetchOrderById(detail.id)
+      setDetail(next)
+      setLocalPdfName(null)
+      if (input) input.value = ''
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : 'Upload failed')
+    } finally {
+      setUploadBusy(false)
+    }
   }
 
   const sendToUser = () => {
-    if (!order) return
-    if (order.paymentStatus !== 'paid') {
-      window.alert('Payment must be fully received before sending results to the user app.')
+    if (!detail) return
+    if (detail.status !== 'completed') {
+      window.alert('Set the order status to completed in Order management when the lab run is finished.')
       return
     }
-    if (order.status !== 'completed') {
-      window.alert('Mark this order as completed before releasing results to the user app.')
+    const hasServerFile = detail.items.some((it) => Boolean(it.download_url || it.result_file_url))
+    if (!hasServerFile) {
+      window.alert('Upload a result file for at least one test line item so it exists on the server.')
       return
     }
-    if (!order.resultPdfFileName) {
-      window.alert('Attach a PDF report before sending to the user app (demo guard).')
-      return
-    }
-    if (order.aiReviewPassed === null) {
-      window.alert('Run the AI quality check before sending (demo guard).')
-      return
-    }
-    if (order.aiReviewPassed === false) {
-      const ok = window.confirm(
-        'AI flagged issues on this result. Send to user app anyway? (demo — normally blocked).',
-      )
+    if (aiResult && !aiResult.passed) {
+      const ok = window.confirm('AI flagged issues on the numeric check. Continue anyway?')
       if (!ok) return
     }
-    patchOrder(order.orderId, { resultSentToUserApp: true, reportOutTime: new Date().toISOString().slice(0, 16) })
-    window.alert(`Result for ${order.orderId} pushed to user app (demo).`)
+    window.alert(
+      'Uploaded files are stored on the server; patient apps typically load them via your mobile/backend integration. Confirm your release process with operations.',
+    )
   }
 
   return (
     <div className="stack">
       <PageHeader
         title="Lab result management"
-        description="Enter analytes, attach the signed PDF, run AI pre-release review, then deliver to the patient / doctor / clinic app."
+        description="Select a live order, enter QC values, upload PDF results per line item, and run a local numeric sanity check before release."
       />
+
+      {!hasApi ? (
+        <div className="card" style={{ borderColor: '#dfe5f0', background: '#f8fafc' }}>
+          <p style={{ margin: 0, fontSize: '0.9rem' }}>
+            Set <code>VITE_API_BASE_URL</code> and sign in to load orders.
+          </p>
+        </div>
+      ) : null}
+
+      {listError ? (
+        <div className="card" style={{ borderColor: '#f0c4c4', background: '#fff8f8' }}>
+          <p style={{ margin: 0, color: '#ba1a1a', fontSize: '0.9rem' }}>{listError}</p>
+        </div>
+      ) : null}
+
       <div className="card">
         <h3 className="card-title">Select order</h3>
-        <div className="field" style={{ maxWidth: 360 }}>
-          <label htmlFor="oid">Order ID</label>
+        <div className="field" style={{ maxWidth: 480 }}>
+          <label htmlFor="oid">Order</label>
           <select
             id="oid"
             className="select-chevron-left"
             value={orderId}
             onChange={(e) => setOrderId(e.target.value)}
+            disabled={listLoading || !hasApi}
           >
-            {orders.map((o) => (
-              <option key={o.orderId} value={o.orderId}>
-                {o.orderId} — {o.patientName} ({o.status})
-              </option>
-            ))}
+            {orders.length === 0 ? (
+              <option value="">No orders</option>
+            ) : (
+              orders.map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.patient_name} — {o.status} ({o.id.slice(0, 8)}…)
+                </option>
+              ))
+            )}
           </select>
         </div>
+        {detailError ? (
+          <p style={{ margin: '0.75rem 0 0', color: '#b91c1c', fontSize: '0.875rem' }}>{detailError}</p>
+        ) : null}
       </div>
 
-      {order ? (
+      {detailLoading ? (
         <div className="card">
-          <h3 className="card-title">Result entry · {order.orderId}</h3>
+          <p style={{ margin: 0 }}>Loading order detail…</p>
+        </div>
+      ) : null}
+
+      {detail && !detailLoading ? (
+        <div className="card">
+          <h3 className="card-title">Result entry · {detail.id}</h3>
+          <p style={{ margin: '0 0 1rem', fontSize: '0.875rem', color: 'var(--muted)' }}>
+            Status: <strong>{detail.status}</strong> · Final: {detail.final_price_mmk.toLocaleString()} MMK
+          </p>
           <div className="form-grid" style={{ maxWidth: 'none', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
             <div className="field">
               <label htmlFor="hb">Hemoglobin</label>
-              <input id="hb" value={hb} onChange={(e) => setHb(e.target.value)} />
+              <input id="hb" value={hb} onChange={(e) => setHb(e.target.value)} placeholder="e.g. 13.2" />
             </div>
             <div className="field">
               <label htmlFor="wbc">WBC</label>
-              <input id="wbc" value={wbc} onChange={(e) => setWbc(e.target.value)} />
+              <input id="wbc" value={wbc} onChange={(e) => setWbc(e.target.value)} placeholder="e.g. 7200" />
             </div>
             <div className="field">
               <label htmlFor="plt">Platelet</label>
-              <input id="plt" value={plt} onChange={(e) => setPlt(e.target.value)} />
+              <input id="plt" value={plt} onChange={(e) => setPlt(e.target.value)} placeholder="e.g. 240000" />
             </div>
             <div className="field" style={{ gridColumn: '1 / -1' }}>
-              <label htmlFor="pdf">Attach PDF report</label>
-              <div className="file-upload-row">
+              <label htmlFor="pdf">Attach PDF report (first line item: {firstTestItem?.test_id ?? '—'})</label>
+              <form className="file-upload-row" onSubmit={(e) => void submitUpload(e)}>
                 <input
                   id="pdf"
                   className="file-upload-input"
                   type="file"
                   accept=".pdf,application/pdf"
                   onChange={onPdf}
+                  disabled={uploadBusy || !firstTestItem}
                 />
                 <label htmlFor="pdf" className="file-upload-btn">
                   Choose PDF
                 </label>
                 <span className="file-upload-name">
-                  {order.resultPdfFileName ? order.resultPdfFileName : 'No file selected'}
+                  {firstTestItem?.download_url ? 'File on server' : localPdfName ?? 'No file selected'}
                 </span>
-              </div>
-              {order.resultPdfFileName ? (
+                <button type="submit" className="btn btn-secondary" disabled={uploadBusy || !firstTestItem}>
+                  {uploadBusy ? 'Uploading…' : 'Upload to server'}
+                </button>
+              </form>
+              {uploadError ? (
+                <p style={{ margin: '0.35rem 0 0', fontSize: '0.85rem', color: '#b91c1c' }}>{uploadError}</p>
+              ) : null}
+              {firstTestItem?.download_url ? (
                 <p style={{ margin: '0.35rem 0 0', fontSize: '0.85rem', color: 'var(--accent-green)' }}>
-                  Attached: {order.resultPdfFileName}
+                  <a href={firstTestItem.download_url} target="_blank" rel="noreferrer">
+                    Open uploaded file
+                  </a>
                 </p>
               ) : (
                 <p style={{ margin: '0.35rem 0 0', fontSize: '0.85rem', color: 'var(--muted)' }}>
-                  No PDF attached yet.
+                  Upload stores the file against the first test line on this order.
                 </p>
               )}
             </div>
@@ -151,32 +265,26 @@ export function LabResultManagementPage() {
 
           <div className="row-actions" style={{ marginTop: '1rem' }}>
             <button type="button" className="btn btn-secondary" onClick={runAi}>
-              Run AI result check
+              Run numeric sanity check
             </button>
             <button type="button" className="btn btn-primary" onClick={sendToUser}>
-              Send PDF + results to user app
+              Release checklist
             </button>
           </div>
 
-          {order.aiReviewPassed !== null ? (
+          {aiResult ? (
             <div
-              className={`ai-panel ${order.aiReviewPassed ? 'ai-panel--ok' : 'ai-panel--warn'}`}
+              className={`ai-panel ${aiResult.passed ? 'ai-panel--ok' : 'ai-panel--warn'}`}
               style={{ marginTop: '1rem' }}
             >
-              <strong>{order.aiReviewPassed ? 'AI: OK to release (demo thresholds)' : 'AI: Review required'}</strong>
-              {order.aiReviewNotes ? <p style={{ margin: '0.35rem 0 0' }}>{order.aiReviewNotes}</p> : null}
+              <strong>{aiResult.passed ? 'Numeric check: within demo thresholds' : 'Numeric check: review'}</strong>
+              {aiResult.notes ? <p style={{ margin: '0.35rem 0 0' }}>{aiResult.notes}</p> : null}
             </div>
           ) : (
             <p style={{ marginTop: '0.75rem', fontSize: '0.85rem', color: 'var(--muted)' }}>
-              AI check not run yet for this order.
+              Run the numeric check after entering values.
             </p>
           )}
-
-          {order.resultSentToUserApp ? (
-            <p style={{ marginTop: '0.75rem', fontSize: '0.85rem', color: 'var(--accent-green)', fontWeight: 600 }}>
-              Already marked as sent to user app.
-            </p>
-          ) : null}
         </div>
       ) : null}
     </div>

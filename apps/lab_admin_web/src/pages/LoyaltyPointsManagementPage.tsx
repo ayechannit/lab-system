@@ -3,7 +3,7 @@ import { ConfirmDialog } from '../components/common/ConfirmDialog'
 import { PageHeader } from '../components/common/PageHeader'
 import { TableActionMenu } from '../components/common/TableActionMenu'
 import { PointSettingFormModal } from '../components/loyalty/PointSettingFormModal'
-import type { EndUserRole, UserListRow } from '../mock-data/types'
+import type { EndUserRole, UserListRow } from '../model/types'
 import { isApiMode } from '../services/apiBase'
 import {
   deletePointSetting,
@@ -206,8 +206,8 @@ export function LoyaltyPointsManagementPage() {
             </h3>
             <p style={{ margin: 0, color: 'var(--muted)', fontSize: '0.875rem', maxWidth: 520 }}>
               Each rule defines how many points are granted when spend reaches the MMK threshold. Optional
-              start and end dates limit seasonal campaigns. Whether a rule is active is determined on the
-              server and shown here for reference.
+              start and end dates limit seasonal campaigns. Inactive rules are listed here but do not award
+              points until you turn them on again.
             </p>
           </div>
           <button
@@ -401,7 +401,7 @@ export function LoyaltyPointsManagementPage() {
         title="Delete earn rule?"
         message={
           deleteRule
-            ? `Remove “${deleteRule.name}” (${deleteRule.spend_amount_mmk.toLocaleString()} MMK → ${deleteRule.points_reward} pts)? This cannot be undone.`
+            ? `Delete “${deleteRule.name}” (${deleteRule.spend_amount_mmk.toLocaleString()} MMK → ${deleteRule.points_reward} pts)? This cannot be undone.`
             : ''
         }
         confirmLabel={deleting ? 'Deleting…' : 'Delete'}

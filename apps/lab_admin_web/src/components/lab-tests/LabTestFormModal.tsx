@@ -1,18 +1,7 @@
-import { type FormEvent, useEffect, useId, useMemo, useState } from 'react'
+import { type FormEvent, useEffect, useId, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { discountedPriceMmk } from '../../mock-data/labTestCatalogApi'
-import type { LabTestCatalogRow } from '../../mock-data/types'
-import {
-  fetchDiscountsForTest,
-  type TestDiscountRow,
-  upsertTestDiscount,
-} from '../../services/discountService'
-import {
-  createLabTest,
-  updateLabTest,
-  type CatalogPricingRole,
-  type LabTestWriteBody,
-} from '../../services/labTestCatalogService'
+import type { LabTestCatalogRow } from '../../model/types'
+import { createLabTest, updateLabTest, type LabTestWriteBody } from '../../services/labTestCatalogService'
 import '../common/ui.css'
 
 function suggestCodeFromName(name: string): string {
@@ -35,19 +24,6 @@ function uniqueCode(base: string, existing: LabTestCatalogRow[]): string {
   return `${upper}_${n}`
 }
 
-const PRICING_ROLE_OPTIONS: { value: CatalogPricingRole; label: string }[] = [
-  { value: 'clinic', label: 'Clinic' },
-  { value: 'doctor', label: 'Doctor' },
-  { value: 'patient', label: 'Patient' },
-]
-
-function discountPercentForRoleFromRows(rows: TestDiscountRow[], role: CatalogPricingRole): number {
-  const row = rows.find((r) => r.role === role && r.is_active && !r.is_deleted)
-  if (!row) return 0
-  const n = Number(row.discount_percent)
-  return Number.isFinite(n) ? Math.max(0, Math.min(100, Math.round(n * 100) / 100)) : 0
-}
-
 type LabTestFormModalProps = {
   open: boolean
   mode: 'create' | 'edit'
@@ -66,13 +42,13 @@ export function LabTestFormModal({
   onSuccess,
 }: LabTestFormModalProps) {
   const titleId = useId()
+  const catalogActiveId = useId()
   const [testName, setTestName] = useState('')
   const [description, setDescription] = useState('')
   const [basePriceMmk, setBasePriceMmk] = useState<number | ''>('')
   const [testCode, setTestCode] = useState('')
   const [category, setCategory] = useState('')
-  const [pricingRole, setPricingRole] = useState<CatalogPricingRole>('clinic')
-  const [discountRows, setDiscountRows] = useState<TestDiscountRow[]>([])
+  const [isActive, setIsActive] = useState(true)
   const [formError, setFormError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
@@ -82,34 +58,18 @@ export function LabTestFormModal({
     setSubmitting(false)
     if (mode === 'edit' && initial) {
       setTestName(initial.test_name)
-      setDescription(initial.description)
+      setDescription(initial.description ?? '')
       setBasePriceMmk(initial.base_price_mmk)
       setTestCode(initial.test_code)
-      setCategory(initial.category)
+      setCategory(initial.category ?? '')
+      setIsActive(initial.is_active)
     } else {
       setTestName('')
       setDescription('')
       setBasePriceMmk(0)
       setTestCode('')
       setCategory('')
-    }
-    setPricingRole('clinic')
-    setDiscountRows([])
-  }, [open, mode, initial])
-
-  useEffect(() => {
-    if (!open || mode !== 'edit' || !initial) return
-    let cancelled = false
-    void (async () => {
-      try {
-        const rows = await fetchDiscountsForTest(initial.id)
-        if (!cancelled) setDiscountRows(Array.isArray(rows) ? rows : [])
-      } catch {
-        if (!cancelled) setDiscountRows([])
-      }
-    })()
-    return () => {
-      cancelled = true
+      setIsActive(true)
     }
   }, [open, mode, initial])
 
@@ -130,24 +90,6 @@ export function LabTestFormModal({
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [open, onClose, submitting])
-
-  const discountPercentDisplay = useMemo(
-    () => discountPercentForRoleFromRows(discountRows, pricingRole),
-    [discountRows, pricingRole],
-  )
-
-  const previewAfterDiscount = useMemo(() => {
-    const price =
-      basePriceMmk === ''
-        ? 0
-        : typeof basePriceMmk === 'number'
-          ? basePriceMmk
-          : Number.parseFloat(String(basePriceMmk))
-    if (!Number.isFinite(price) || price < 0) return null
-    const base = Math.round(price * 100) / 100
-    const d = discountPercentDisplay
-    return discountedPriceMmk(base, d)
-  }, [basePriceMmk, discountPercentDisplay])
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -172,33 +114,23 @@ export function LabTestFormModal({
 
     const base = Math.round(price * 100) / 100
 
-    const discN = discountPercentDisplay
-
     const body: LabTestWriteBody = {
       test_name: name,
       test_code: code,
       description: description.trim() || null,
       base_price_mmk: base,
       category: category.trim() || null,
-      is_active: mode === 'edit' && initial ? initial.is_active : true,
+      is_active: isActive,
     }
     setSubmitting(true)
     try {
-      let testId: string
       if (mode === 'create') {
-        const row = await createLabTest(body)
-        testId = row.id
+        await createLabTest(body)
       } else if (initial) {
         await updateLabTest(initial.id, body)
-        testId = initial.id
       } else {
         return
       }
-      await upsertTestDiscount(
-        mode === 'create'
-          ? { test_id: testId, role: 'all', discount_percent: 0, is_active: true }
-          : { test_id: testId, role: pricingRole, discount_percent: discN, is_active: true },
-      )
       onSuccess()
       onClose()
     } catch (err) {
@@ -271,6 +203,26 @@ export function LabTestFormModal({
                   />
                 </div>
 
+                <label htmlFor={catalogActiveId} className="form-switch">
+                  <span className="form-switch__control">
+                    <input
+                      id={catalogActiveId}
+                      type="checkbox"
+                      className="form-switch__input"
+                      checked={isActive}
+                      onChange={(e) => setIsActive(e.target.checked)}
+                      disabled={submitting}
+                    />
+                    <span className="form-switch__track" aria-hidden="true" />
+                  </span>
+                  <span className="form-switch__text">
+                    <span className="form-switch__title">{isActive ? 'Test is active' : 'Test is inactive'}</span>
+                    <span className="form-switch__desc">
+                      Inactive tests stay in the catalog for admin but are hidden from published role pricing.
+                    </span>
+                  </span>
+                </label>
+
                 <div className="lab-test-modal__codes-stack">
                   <div className="field">
                     <label htmlFor="ltf-code">Test code (optional)</label>
@@ -315,62 +267,6 @@ export function LabTestFormModal({
                       disabled={submitting}
                     />
                   </div>
-                  <div className="field">
-                    <label htmlFor="ltf-role">Role</label>
-                    <select
-                      id="ltf-role"
-                      className="select-chevron-left"
-                      value={pricingRole}
-                      onChange={(e) => setPricingRole(e.target.value as CatalogPricingRole)}
-                      disabled={submitting}
-                      aria-describedby="ltf-role-hint"
-                    >
-                      {PRICING_ROLE_OPTIONS.map((o) => (
-                        <option key={o.value} value={o.value}>
-                          {o.label}
-                        </option>
-                      ))}
-                    </select>
-                    <p
-                      id="ltf-role-hint"
-                      style={{ margin: '0.35rem 0 0', fontSize: '0.8rem', color: 'var(--muted)' }}
-                    >
-                      {mode === 'create'
-                        ? 'Discount % is 0 for new tests. After save, set amounts per role under Discounts or edit this test.'
-                        : 'Discount % is read-only and follows the role you select (from saved discounts).'}
-                    </p>
-                  </div>
-                  <div className="field">
-                    <label htmlFor="ltf-discount">Discount %</label>
-                    <input
-                      id="ltf-discount"
-                      type="number"
-                      className="lab-test-modal__input-computed"
-                      min={0}
-                      max={100}
-                      step={0.5}
-                      readOnly
-                      value={discountPercentDisplay}
-                      placeholder="0"
-                      disabled
-                      aria-readonly="true"
-                      aria-live="polite"
-                    />
-                  </div>
-                </div>
-
-                <div className="field">
-                  <label htmlFor="ltf-after">Price after discount (preview)</label>
-                  <input
-                    id="ltf-after"
-                    type="text"
-                    readOnly
-                    disabled
-                    value={previewAfterDiscount !== null ? previewAfterDiscount.toLocaleString() : ''}
-                    placeholder="—"
-                    aria-live="polite"
-                    autoComplete="off"
-                  />
                 </div>
               </div>
             </div>

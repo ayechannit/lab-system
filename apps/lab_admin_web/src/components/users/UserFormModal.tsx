@@ -1,6 +1,6 @@
 import { type FormEvent, useEffect, useId, useState } from 'react'
 import { createPortal } from 'react-dom'
-import type { EndUserRole, UserListRow } from '../../mock-data/types'
+import type { EndUserRole, UserListRow } from '../../model/types'
 import { nominatimSearch } from '../../services/nominatimGeocode'
 import { createUser, updateUser, type UserCreateBody, type UserUpdateBody } from '../../services/userService'
 import { formatCoordPair, LocationMapPicker } from './LocationMapPicker'
@@ -379,8 +379,8 @@ export function UserFormModal({
                 <div className="user-form-modal__location-card">
                   <p className="user-form-modal__section-label">Map</p>
                   <p className="user-form-modal__map-hint">
-                    Address text is geocoded automatically (debounced). You can also click the map to place the
-                    pin.
+                    Typing the address moves the pin (debounced). Clicking the map or using your location fills the
+                    address from the pin.
                   </p>
                   <LocationMapPicker
                     latitude={latitude}
@@ -389,6 +389,10 @@ export function UserFormModal({
                     onPick={(lat, lng) => {
                       setLatitude(lat)
                       setLongitude(lng)
+                    }}
+                    onAddressFromMap={(addr) => {
+                      setAddress(addr)
+                      setGeocodeHint(null)
                     }}
                   />
                   <p className="user-form-modal__coords" aria-live="polite">

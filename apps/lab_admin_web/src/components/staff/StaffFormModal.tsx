@@ -1,6 +1,6 @@
 import { type FormEvent, useEffect, useId, useState } from 'react'
 import { createPortal } from 'react-dom'
-import type { StaffListRow, StaffRole } from '../../mock-data/types'
+import type { StaffListRow, StaffRole } from '../../model/types'
 import {
   createStaff as createStaffApi,
   updateStaff as updateStaffApi,
@@ -36,9 +36,11 @@ export function StaffFormModal({
   onSuccess,
 }: StaffFormModalProps) {
   const titleId = useId()
+  const staffActiveId = useId()
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [role, setRole] = useState<StaffRole>('admin')
+  const [isActive, setIsActive] = useState(true)
   /** Sent as `password_hash` (plain in this admin build — hash in production). */
   const [password, setPassword] = useState('')
   const [formError, setFormError] = useState<string | null>(null)
@@ -53,10 +55,12 @@ export function StaffFormModal({
       setName(initial.name)
       setEmail(initial.email)
       setRole(initial.role)
+      setIsActive(initial.is_active)
     } else {
       setName('')
       setEmail('')
       setRole('admin')
+      setIsActive(true)
     }
   }, [open, mode, initial])
 
@@ -119,8 +123,6 @@ export function StaffFormModal({
       }
     }
 
-    const is_active = mode === 'edit' && initial ? initial.is_active : true
-
     setSubmitting(true)
     try {
       if (mode === 'create') {
@@ -128,7 +130,7 @@ export function StaffFormModal({
           name: n,
           email: em,
           role,
-          is_active,
+          is_active: isActive,
           password_hash: password.trim(),
         }
         await createStaffApi(body)
@@ -137,7 +139,7 @@ export function StaffFormModal({
           name: n,
           email: em,
           role,
-          is_active,
+          is_active: isActive,
         }
         const nextPassword = password.trim()
         if (nextPassword !== '') body.password_hash = nextPassword
@@ -226,6 +228,25 @@ export function StaffFormModal({
               ))}
             </select>
           </div>
+          <label htmlFor={staffActiveId} className="form-switch">
+            <span className="form-switch__control">
+              <input
+                id={staffActiveId}
+                type="checkbox"
+                className="form-switch__input"
+                checked={isActive}
+                onChange={(e) => setIsActive(e.target.checked)}
+                disabled={submitting}
+              />
+              <span className="form-switch__track" aria-hidden="true" />
+            </span>
+            <span className="form-switch__text">
+              <span className="form-switch__title">{isActive ? 'Account is active' : 'Account is inactive'}</span>
+              <span className="form-switch__desc">
+                Inactive staff cannot sign in until this is turned on again.
+              </span>
+            </span>
+          </label>
           {mode === 'create' ? (
             <div className="field">
               <label htmlFor="sf-pw">Initial password (min. {MIN_INITIAL_PASSWORD_LENGTH} characters)</label>

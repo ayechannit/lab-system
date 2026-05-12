@@ -3,7 +3,7 @@ import { ConfirmDialog } from '../components/common/ConfirmDialog'
 import { UserFormModal } from '../components/users/UserFormModal'
 import { PageHeader } from '../components/common/PageHeader'
 import { TableActionMenu } from '../components/common/TableActionMenu'
-import type { EndUserRole, UserListRow } from '../mock-data/types'
+import type { EndUserRole, UserListRow } from '../model/types'
 import { isApiMode } from '../services/apiBase'
 import { deleteUser, fetchUserList } from '../services/userService'
 import '../components/common/ui.css'
@@ -193,13 +193,13 @@ export function UserManagementPage() {
 
       <ConfirmDialog
         open={deleteTarget !== null}
-        title="Remove user?"
+        title="Delete user?"
         message={
           deleteTarget
-            ? `Soft-delete "${deleteTarget.name}"? They will be marked deleted in the database.`
+            ? `Delete "${deleteTarget.name}"?`
             : ''
         }
-        confirmLabel="Remove"
+        confirmLabel="Delete"
         cancelLabel="Cancel"
         danger
         onConfirm={() => void confirmDelete()}

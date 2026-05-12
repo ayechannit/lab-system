@@ -4,8 +4,9 @@ import { PageHeader } from '../components/common/PageHeader'
 import { TableActionMenu } from '../components/common/TableActionMenu'
 import { OrderQrModal } from '../components/orders/OrderQrModal'
 import { formatCoordPair, LocationMapPicker } from '../components/users/LocationMapPicker'
-import type { LabTestCatalogRow, StaffListRow, UserListRow } from '../mock-data/types'
+import type { EndUserRole, LabTestCatalogRow, StaffListRow, UserListRow } from '../model/types'
 import { isApiMode } from '../services/apiBase'
+import { fetchAllDiscounts, type TestDiscountListRow } from '../services/discountService'
 import { fetchLabTestsList } from '../services/labTestCatalogService'
 import {
   createOrder,
@@ -65,12 +66,28 @@ function coordsForOrderApi(lat: number | '', lng: number | ''): { latitude: numb
   return { latitude: la, longitude: ln }
 }
 
+/** Active test discount for an end-user role; prefers a specific role row over `all`. */
+function activeDiscountPercentForOrder(
+  discounts: TestDiscountListRow[],
+  testId: string,
+  userRole: EndUserRole | undefined,
+): number {
+  if (!testId || !userRole) return 0
+  const active = discounts.filter((d) => d.test_id === testId && !d.is_deleted && d.is_active)
+  const roleRow = active.find((d) => d.role === userRole)
+  if (roleRow) return Math.max(0, Math.min(100, roleRow.discount_percent))
+  const allRow = active.find((d) => d.role === 'all')
+  if (allRow) return Math.max(0, Math.min(100, allRow.discount_percent))
+  return 0
+}
+
 export function OrderManagementPage() {
   const hasApi = isApiMode()
   const [rows, setRows] = useState<ApiOrderListRow[]>([])
   const [users, setUsers] = useState<UserListRow[]>([])
   const [staff, setStaff] = useState<StaffListRow[]>([])
   const [tests, setTests] = useState<LabTestCatalogRow[]>([])
+  const [testDiscounts, setTestDiscounts] = useState<TestDiscountListRow[]>([])
   const [loading, setLoading] = useState(hasApi)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [refreshTick, setRefreshTick] = useState(0)
@@ -95,7 +112,6 @@ export function OrderManagementPage() {
   const [createTestId, setCreateTestId] = useState('')
   const [createQuantity, setCreateQuantity] = useState<number>(1)
   const [createOriginalPrice, setCreateOriginalPrice] = useState<number | ''>('')
-  const [createDiscountPercent, setCreateDiscountPercent] = useState<number | ''>(0)
   const [createLatitude, setCreateLatitude] = useState<number | ''>(0)
   const [createLongitude, setCreateLongitude] = useState<number | ''>(0)
   const [createGeocodeHint, setCreateGeocodeHint] = useState<string | null>(null)
@@ -114,6 +130,7 @@ export function OrderManagementPage() {
       setUsers([])
       setStaff([])
       setTests([])
+      setTestDiscounts([])
       setLoading(false)
       return
     }
@@ -122,17 +139,19 @@ export function OrderManagementPage() {
     setLoadError(null)
     void (async () => {
       try {
-        const [ordersRes, usersRes, staffRes, testsRes] = await Promise.all([
+        const [ordersRes, usersRes, staffRes, testsRes, discountsRes] = await Promise.all([
           fetchOrders(),
           fetchUserList(),
           fetchStaffList(),
           fetchLabTestsList(),
+          fetchAllDiscounts(),
         ])
         if (cancelled) return
         setRows(ordersRes)
         setUsers(usersRes.filter((u) => !u.is_deleted))
         setStaff(staffRes.filter((s) => !s.is_deleted))
         setTests(testsRes.filter((t) => t.is_active && !t.is_deleted))
+        setTestDiscounts(discountsRes)
       } catch (e) {
         if (!cancelled) setLoadError(e instanceof Error ? e.message : 'Failed to load orders')
       } finally {
@@ -185,18 +204,30 @@ export function OrderManagementPage() {
   const userMap = useMemo(() => new Map(users.map((u) => [u.id, u])), [users])
   const testMap = useMemo(() => new Map(tests.map((t) => [t.id, t])), [tests])
 
+  const createOrderUser = useMemo(
+    () => (createUserId ? userMap.get(createUserId) : undefined),
+    [createUserId, userMap],
+  )
+  const resolvedCreateDiscountPercent = useMemo(
+    () => activeDiscountPercentForOrder(testDiscounts, createTestId, createOrderUser?.role),
+    [testDiscounts, createTestId, createOrderUser?.role],
+  )
+
   const sorted = useMemo(
     () => [...rows].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()),
     [rows],
   )
 
+  function bumpOrderViews() {
+    setRefreshTick((t) => t + 1)
+  }
+
   const createFinalPrice = useMemo(() => {
     const original = typeof createOriginalPrice === 'number' ? createOriginalPrice : Number(createOriginalPrice)
-    const discount = typeof createDiscountPercent === 'number' ? createDiscountPercent : Number(createDiscountPercent)
     if (!Number.isFinite(original) || original < 0) return 0
-    const safeDiscount = Number.isFinite(discount) ? Math.max(0, Math.min(100, discount)) : 0
+    const safeDiscount = Math.max(0, Math.min(100, resolvedCreateDiscountPercent))
     return Math.round(original * (1 - safeDiscount / 100) * 100) / 100
-  }, [createOriginalPrice, createDiscountPercent])
+  }, [createOriginalPrice, resolvedCreateDiscountPercent])
 
   const qrTestLabel = useMemo(() => {
     if (!qrOrder) return ''
@@ -222,7 +253,6 @@ export function OrderManagementPage() {
     setCreateTestId(firstTest?.id ?? '')
     setCreateQuantity(1)
     setCreateOriginalPrice(firstTest?.base_price_mmk ?? '')
-    setCreateDiscountPercent(0)
     setCreateLatitude(firstUser ? firstUser.latitude : 0)
     setCreateLongitude(firstUser ? firstUser.longitude : 0)
     setCreateGeocodeHint(null)
@@ -270,11 +300,7 @@ export function OrderManagementPage() {
     const original =
       typeof createOriginalPrice === 'number' ? createOriginalPrice : Number.parseFloat(String(createOriginalPrice))
     if (!Number.isFinite(original) || original < 0) return setCreateError('Enter valid original price.')
-    const discount =
-      typeof createDiscountPercent === 'number'
-        ? createDiscountPercent
-        : Number.parseFloat(String(createDiscountPercent))
-    const safeDiscount = Number.isFinite(discount) ? Math.max(0, Math.min(100, discount)) : 0
+    const safeDiscount = Math.max(0, Math.min(100, resolvedCreateDiscountPercent))
     const unit = Math.round(original * 100) / 100
     const subtotal = Math.round(unit * qty * 100) / 100
     const { latitude: latApi, longitude: lngApi } = coordsForOrderApi(createLatitude, createLongitude)
@@ -297,7 +323,7 @@ export function OrderManagementPage() {
         items: [{ test_id: createTestId, quantity: qty, unit_price_mmk: unit, subtotal_mmk: subtotal }],
       })
       setCreateOpen(false)
-      setRefreshTick((t) => t + 1)
+      bumpOrderViews()
     } catch (e) {
       setCreateError(e instanceof Error ? e.message : 'Create failed')
     } finally {
@@ -345,7 +371,7 @@ export function OrderManagementPage() {
         note: statusNote.trim() || null,
       })
       setStatusOpen(false)
-      setRefreshTick((t) => t + 1)
+      bumpOrderViews()
     } catch (e) {
       setStatusError(e instanceof Error ? e.message : 'Status update failed')
     } finally {
@@ -359,7 +385,7 @@ export function OrderManagementPage() {
     setDeleteTarget(null)
     try {
       await deleteOrder(row.id)
-      setRefreshTick((t) => t + 1)
+      bumpOrderViews()
     } catch (e) {
       window.alert(e instanceof Error ? e.message : 'Delete failed')
     }
@@ -555,7 +581,8 @@ export function OrderManagementPage() {
               <div className="user-form-modal__location-card">
                 <p className="user-form-modal__section-label">Map</p>
                 <p className="user-form-modal__map-hint">
-                  Address is geocoded automatically (debounced). You can also click the map to place the pin.
+                  Typing the address geocodes the pin (debounced). Clicking the map or using your location updates
+                  the address from the pin (reverse geocoding).
                 </p>
                 <LocationMapPicker
                   latitude={createLatitude}
@@ -564,6 +591,10 @@ export function OrderManagementPage() {
                   onPick={(lat, lng) => {
                     setCreateLatitude(lat)
                     setCreateLongitude(lng)
+                  }}
+                  onAddressFromMap={(addr) => {
+                    setCreateAddress(addr)
+                    setCreateGeocodeHint(null)
                   }}
                 />
                 <p className="user-form-modal__coords" aria-live="polite">
@@ -589,7 +620,19 @@ export function OrderManagementPage() {
                 </div>
                 <div className="field">
                   <label htmlFor="om-disc">Discount %</label>
-                  <input id="om-disc" type="number" min={0} max={100} step={0.5} value={createDiscountPercent === '' ? '' : createDiscountPercent} onChange={(e) => setCreateDiscountPercent(e.target.value === '' ? '' : Number(e.target.value))} disabled={createSubmitting} />
+                  <input
+                    id="om-disc"
+                    type="number"
+                    readOnly
+                    disabled
+                    value={resolvedCreateDiscountPercent}
+                    title="Discount comes from test-specific pricing for the selected user’s role (Discounts admin)."
+                    className="lab-test-modal__input-computed"
+                  />
+                  <p style={{ margin: '0.35rem 0 0', fontSize: '0.78rem', color: 'var(--muted)' }}>
+                    From catalog discount for <strong>{createOrderUser?.role ?? '…'}</strong> on this test. Configure
+                    under Discounts.
+                  </p>
                 </div>
               </div>
               <div className="field">
@@ -770,9 +813,13 @@ export function OrderManagementPage() {
 
       <ConfirmDialog
         open={deleteTarget !== null}
-        title="Remove order?"
-        message={deleteTarget ? `Soft-delete order "${deleteTarget.id}" for ${deleteTarget.patient_name}?` : ''}
-        confirmLabel="Remove"
+        title="Delete order?"
+        message={
+          deleteTarget
+            ? `Delete order "${deleteTarget.id}" for ${deleteTarget.patient_name}?`
+            : ''
+        }
+        confirmLabel="Delete"
         cancelLabel="Cancel"
         danger
         onConfirm={() => void confirmDelete()}

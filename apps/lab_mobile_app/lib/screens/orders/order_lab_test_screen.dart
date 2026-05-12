@@ -141,12 +141,20 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
                 children: [
                   DropdownButtonFormField<String>(
                     value: _labFacility,
+                    isExpanded: true,
                     decoration: const InputDecoration(labelText: 'Lab Facility'),
                     items: const [
                       'MedLab Central - Downtown',
                       'MedLab East - Township',
                       'MedLab North - Clinic'
-                    ].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+                    ]
+                        .map(
+                          (e) => DropdownMenuItem<String>(
+                            value: e,
+                            child: Text(e, maxLines: 1, overflow: TextOverflow.ellipsis),
+                          ),
+                        )
+                        .toList(),
                     onChanged: (v) => setState(() => _labFacility = v ?? _labFacility),
                   ),
                   const SizedBox(height: 12),
@@ -326,13 +334,12 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
           border: Border.all(color: const Color(0x66E1E2EC)),
         ),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
-            _NavItem(icon: Icons.grid_view_rounded, label: 'HOME', onTap: () => context.go('/home')),
-            _NavItem(icon: Icons.biotech_outlined, label: 'ORDERS', active: true, onTap: () {}),
-            _NavItem(icon: Icons.assignment_outlined, label: 'RESULTS', onTap: () => context.push('/lab-results')),
-            _NavItem(icon: Icons.military_tech_outlined, label: 'POINTS', onTap: () => context.push('/loyalty')),
-            _NavItem(icon: Icons.person_outline, label: 'PROFILE', onTap: () => context.push('/profile')),
+            Expanded(child: _NavItem(icon: Icons.grid_view_rounded, label: 'HOME', onTap: () => context.go('/home'))),
+            Expanded(child: _NavItem(icon: Icons.biotech_outlined, label: 'ORDERS', active: true, onTap: () {})),
+            Expanded(child: _NavItem(icon: Icons.assignment_outlined, label: 'RESULTS', onTap: () => context.push('/lab-results'))),
+            Expanded(child: _NavItem(icon: Icons.military_tech_outlined, label: 'POINTS', onTap: () => context.push('/loyalty'))),
+            Expanded(child: _NavItem(icon: Icons.person_outline, label: 'PROFILE', onTap: () => context.push('/profile'))),
           ],
         ),
       ),
@@ -345,8 +352,19 @@ Widget _summaryRow(String label, String value, TextStyle? labelStyle, TextStyle?
     padding: const EdgeInsets.symmetric(vertical: 2),
     child: Row(
       children: [
-        Expanded(child: Text(label, style: labelStyle)),
-        Text(value, style: valueStyle),
+        Expanded(
+          child: Text(label, style: labelStyle, maxLines: 2, overflow: TextOverflow.ellipsis),
+        ),
+        const SizedBox(width: 8),
+        Flexible(
+          child: Text(
+            value,
+            style: valueStyle,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.end,
+          ),
+        ),
       ],
     ),
   );
@@ -438,18 +456,25 @@ class _NavItem extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 6),
           child: Column(
             mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Icon(icon, size: 20, color: fg),
               const SizedBox(height: 2),
-              Text(
-                label,
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: fg,
-                      fontWeight: active ? FontWeight.w700 : FontWeight.w600,
-                    ),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: fg,
+                        fontWeight: active ? FontWeight.w700 : FontWeight.w600,
+                      ),
+                ),
               ),
             ],
           ),

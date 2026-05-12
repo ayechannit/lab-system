@@ -3,7 +3,7 @@ import { ConfirmDialog } from '../components/common/ConfirmDialog'
 import { StaffFormModal } from '../components/staff/StaffFormModal'
 import { PageHeader } from '../components/common/PageHeader'
 import { TableActionMenu } from '../components/common/TableActionMenu'
-import type { StaffListRow, StaffRole } from '../mock-data/types'
+import type { StaffListRow, StaffRole } from '../model/types'
 import { isApiMode } from '../services/apiBase'
 import { deleteStaff, fetchStaffList } from '../services/staffService'
 import '../components/common/ui.css'
@@ -194,13 +194,13 @@ export function StaffManagementPage() {
 
       <ConfirmDialog
         open={deleteTarget !== null}
-        title="Remove staff?"
+        title="Delete staff?"
         message={
           deleteTarget
-            ? `Soft-delete "${deleteTarget.name}"? They will disappear from the list (DELETE /api/staff/:id).`
+            ? `Delete "${deleteTarget.name}"?`
             : ''
         }
-        confirmLabel="Remove"
+        confirmLabel="Delete"
         cancelLabel="Cancel"
         danger
         onConfirm={() => void confirmDelete()}

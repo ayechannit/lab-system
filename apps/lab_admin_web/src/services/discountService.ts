@@ -1,113 +1,88 @@
-import { getApiBaseUrl } from './apiBase'
+import type { EndUserRole } from '../model/types'
+import { apiFetch } from './apiClient'
 import { readApiErrorBody } from './readApiError'
 
-function discountsBasePath(): string {
-  const base = getApiBaseUrl()
-  if (!base) throw new Error('VITE_API_BASE_URL is not set')
-  return `${base}/api/discounts`
+export type FetchDiscountsParams = {
+  role?: EndUserRole | ''
+  test_id?: string
+  is_active?: boolean
+  test_name?: string
+  test_code?: string
+  page?: number
+  limit?: number
 }
 
-export type TestDiscountRow = {
+export type TestDiscountListRow = {
   id: string
   test_id: string
   role: string
   discount_percent: number
   is_active: boolean
   is_deleted: boolean
-}
-
-/** Row from GET /api/discounts (joined test_name / test_code per Swagger). */
-export type TestDiscountListRow = TestDiscountRow & {
   test_name?: string
   test_code?: string
+  original_price?: number
+  after_discount_price?: number
   created_at?: string
   updated_at?: string
 }
 
 export type DiscountUpsertBody = {
   test_id: string
-  role: 'clinic' | 'doctor' | 'patient' | 'all'
+  role: EndUserRole | 'all'
   discount_percent: number
-  is_active?: boolean
+  is_active: boolean
 }
 
-function toBool(v: unknown): boolean {
-  if (typeof v === 'boolean') return v
-  if (v === 1 || v === '1') return true
-  if (v === 0 || v === '0') return false
-  return Boolean(v)
+function toQuery(params?: FetchDiscountsParams): string {
+  if (!params) return ''
+  const q = new URLSearchParams()
+  if (params.role) q.set('role', params.role)
+  if (params.test_id) q.set('test_id', params.test_id)
+  if (params.is_active !== undefined) q.set('is_active', String(params.is_active))
+  if (params.test_name) q.set('test_name', params.test_name)
+  if (params.test_code) q.set('test_code', params.test_code)
+  if (params.page != null) q.set('page', String(params.page))
+  if (params.limit != null) q.set('limit', String(params.limit))
+  const s = q.toString()
+  return s ? `?${s}` : ''
 }
 
-function toNum(v: unknown): number {
-  const n = typeof v === 'number' ? v : Number.parseFloat(String(v))
-  return Number.isFinite(n) ? Math.round(n * 100) / 100 : 0
-}
-
-export function normalizeDiscountListRow(parsed: unknown): TestDiscountListRow | null {
-  if (!parsed || typeof parsed !== 'object') return null
-  const o = parsed as Record<string, unknown>
-  const id = o.id != null && String(o.id) !== '' ? String(o.id) : null
-  const test_id = o.test_id != null && String(o.test_id) !== '' ? String(o.test_id) : null
-  if (!id || !test_id) return null
+function normalizeDiscountRow(raw: Record<string, unknown>): TestDiscountListRow {
   return {
-    id,
-    test_id,
-    role: typeof o.role === 'string' ? o.role : '',
-    discount_percent: toNum(o.discount_percent),
-    is_active: toBool(o.is_active ?? true),
-    is_deleted: toBool(o.is_deleted),
-    ...(typeof o.test_name === 'string' ? { test_name: o.test_name } : {}),
-    ...(typeof o.test_code === 'string' ? { test_code: o.test_code } : {}),
-    ...(typeof o.created_at === 'string' ? { created_at: o.created_at } : {}),
-    ...(typeof o.updated_at === 'string' ? { updated_at: o.updated_at } : {}),
+    id: String(raw.id),
+    test_id: String(raw.test_id),
+    role: String(raw.role ?? ''),
+    discount_percent: Number(raw.discount_percent ?? 0),
+    is_active: Boolean(raw.is_active),
+    is_deleted: Boolean(raw.is_deleted),
+    test_name: raw.test_name != null ? String(raw.test_name) : undefined,
+    test_code: raw.test_code != null ? String(raw.test_code) : undefined,
+    original_price: raw.original_price != null ? Number(raw.original_price) : undefined,
+    after_discount_price: raw.after_discount_price != null ? Number(raw.after_discount_price) : undefined,
+    created_at: raw.created_at != null ? String(raw.created_at) : undefined,
+    updated_at: raw.updated_at != null ? String(raw.updated_at) : undefined,
   }
 }
 
-export function normalizeDiscountListRows(parsed: unknown): TestDiscountListRow[] {
-  if (!Array.isArray(parsed)) return []
-  const out: TestDiscountListRow[] = []
-  for (const item of parsed) {
-    const row = normalizeDiscountListRow(item)
-    if (row) out.push(row)
-  }
-  return out
-}
-
-/** GET /api/discounts — all test-specific discounts (Swagger tag Discounts). */
-export async function fetchAllDiscounts(): Promise<TestDiscountListRow[]> {
-  const res = await fetch(discountsBasePath())
+export async function fetchAllDiscounts(params?: FetchDiscountsParams): Promise<TestDiscountListRow[]> {
+  const res = await apiFetch(`/api/discounts${toQuery(params)}`)
   if (!res.ok) throw new Error(await readApiErrorBody(res))
-  return normalizeDiscountListRows(await res.json())
-}
-
-export async function fetchDiscountsForTest(testId: string): Promise<TestDiscountRow[]> {
-  const res = await fetch(`${discountsBasePath()}/${encodeURIComponent(testId)}`)
-  if (!res.ok) throw new Error(await readApiErrorBody(res))
-  const data: unknown = await res.json()
+  const data = (await res.json()) as Record<string, unknown>[]
   if (!Array.isArray(data)) return []
-  return normalizeDiscountListRows(data).map((r) => ({
-    id: r.id,
-    test_id: r.test_id,
-    role: r.role,
-    discount_percent: r.discount_percent,
-    is_active: r.is_active,
-    is_deleted: r.is_deleted,
-  }))
+  return data.map((row) => normalizeDiscountRow(row))
 }
 
-/** Upsert discount rows (backend expands `role: 'all'` to clinic, doctor, patient). */
 export async function upsertTestDiscount(body: DiscountUpsertBody): Promise<unknown> {
-  const res = await fetch(discountsBasePath(), {
+  const res = await apiFetch('/api/discounts', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   })
   if (!res.ok) throw new Error(await readApiErrorBody(res))
   return res.json()
 }
 
-/** DELETE /api/discounts/:id — soft delete (Swagger). */
 export async function deleteDiscountById(id: string): Promise<void> {
-  const res = await fetch(`${discountsBasePath()}/${encodeURIComponent(id)}`, { method: 'DELETE' })
+  const res = await apiFetch(`/api/discounts/${encodeURIComponent(id)}`, { method: 'DELETE' })
   if (!res.ok) throw new Error(await readApiErrorBody(res))
 }

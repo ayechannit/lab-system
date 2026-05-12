@@ -1,6 +1,7 @@
-import { type FormEvent, useEffect, useId, useState } from 'react'
+import { type FormEvent, useEffect, useId, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
-import type { LabTestCatalogRow } from '../../mock-data/types'
+import { discountedPriceMmk } from '../../model/labTestCatalogApi'
+import type { LabTestCatalogRow } from '../../model/types'
 import {
   type DiscountUpsertBody,
   type TestDiscountListRow,
@@ -44,9 +45,11 @@ export function DiscountFormModal({
   onSuccess,
 }: DiscountFormModalProps) {
   const titleId = useId()
+  const discountActiveId = useId()
   const [testId, setTestId] = useState('')
   const [role, setRole] = useState<DiscountUpsertBody['role']>('clinic')
   const [discountPercent, setDiscountPercent] = useState<number | ''>(0)
+  const [isActive, setIsActive] = useState(true)
   const [formError, setFormError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
@@ -58,10 +61,12 @@ export function DiscountFormModal({
       setTestId(initial.test_id)
       setRole(initial.role as DiscountUpsertBody['role'])
       setDiscountPercent(initial.discount_percent)
+      setIsActive(initial.is_active)
     } else {
       setTestId(tests[0]?.id ?? '')
       setRole('clinic')
       setDiscountPercent(0)
+      setIsActive(true)
     }
   }, [open, mode, initial, tests])
 
@@ -101,7 +106,7 @@ export function DiscountFormModal({
       test_id: testId,
       role: mode === 'edit' && initial ? (initial.role as DiscountUpsertBody['role']) : role,
       discount_percent: discN,
-      is_active: true,
+      is_active: isActive,
     }
     setSubmitting(true)
     try {
@@ -114,6 +119,15 @@ export function DiscountFormModal({
       setSubmitting(false)
     }
   }
+
+  const selectedTest = useMemo(() => tests.find((t) => t.id === testId), [tests, testId])
+  const previewAfter = useMemo(() => {
+    if (!selectedTest || discountPercent === '') return null
+    const pct =
+      typeof discountPercent === 'number' ? discountPercent : Number.parseFloat(String(discountPercent))
+    if (!Number.isFinite(pct)) return null
+    return discountedPriceMmk(selectedTest.base_price_mmk, pct)
+  }, [selectedTest, discountPercent])
 
   if (!open) return null
 
@@ -229,7 +243,35 @@ export function DiscountFormModal({
                   }}
                   disabled={submitting}
                 />
+                {selectedTest && previewAfter !== null ? (
+                  <p
+                    style={{ margin: '0.35rem 0 0', fontSize: '0.8rem', color: 'var(--muted)' }}
+                  >
+                    Base {selectedTest.base_price_mmk.toLocaleString()} MMK → after discount{' '}
+                    <strong>{previewAfter.toLocaleString()}</strong> MMK
+                  </p>
+                ) : null}
               </div>
+
+              <label htmlFor={discountActiveId} className="form-switch">
+                <span className="form-switch__control">
+                  <input
+                    id={discountActiveId}
+                    type="checkbox"
+                    className="form-switch__input"
+                    checked={isActive}
+                    onChange={(e) => setIsActive(e.target.checked)}
+                    disabled={submitting}
+                  />
+                  <span className="form-switch__track" aria-hidden="true" />
+                </span>
+                <span className="form-switch__text">
+                  <span className="form-switch__title">{isActive ? 'Discount is active' : 'Discount is inactive'}</span>
+                  <span className="form-switch__desc">
+                    Inactive rows are kept but do not apply to role-based pricing until turned on again.
+                  </span>
+                </span>
+              </label>
             </div>
           </div>
 

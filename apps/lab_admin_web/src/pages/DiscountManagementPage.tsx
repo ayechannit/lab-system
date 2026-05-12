@@ -3,17 +3,25 @@ import { ConfirmDialog } from '../components/common/ConfirmDialog'
 import { DiscountFormModal } from '../components/discounts/DiscountFormModal'
 import { PageHeader } from '../components/common/PageHeader'
 import { TableActionMenu } from '../components/common/TableActionMenu'
-import type { LabTestCatalogRow } from '../mock-data/types'
+import type { LabTestCatalogRow } from '../model/types'
 import { isApiMode } from '../services/apiBase'
 import {
   deleteDiscountById,
   fetchAllDiscounts,
+  type FetchDiscountsParams,
   type TestDiscountListRow,
 } from '../services/discountService'
 import { fetchLabTestsList } from '../services/labTestCatalogService'
 import '../components/common/ui.css'
 
-const colSpan = 6
+const colSpan = 8
+
+const ROLE_FILTER_OPTIONS: { value: '' | 'clinic' | 'doctor' | 'patient'; label: string }[] = [
+  { value: '', label: 'All roles' },
+  { value: 'clinic', label: 'Clinic' },
+  { value: 'doctor', label: 'Doctor' },
+  { value: 'patient', label: 'Patient' },
+]
 
 function roleLabel(role: string): string {
   const map: Record<string, string> = {
@@ -32,6 +40,7 @@ export function DiscountManagementPage() {
   const [loading, setLoading] = useState(hasApi)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [refreshTick, setRefreshTick] = useState(0)
+  const [roleFilter, setRoleFilter] = useState<'' | 'clinic' | 'doctor' | 'patient'>('')
 
   const [formOpen, setFormOpen] = useState(false)
   const [formMode, setFormMode] = useState<'create' | 'edit'>('create')
@@ -51,7 +60,12 @@ export function DiscountManagementPage() {
     setLoadError(null)
     void (async () => {
       try {
-        const [discountList, catalog] = await Promise.all([fetchAllDiscounts(), fetchLabTestsList()])
+        const listParams: FetchDiscountsParams | undefined =
+          roleFilter === '' ? undefined : { role: roleFilter }
+        const [discountList, catalog] = await Promise.all([
+          fetchAllDiscounts(listParams),
+          fetchLabTestsList(),
+        ])
         if (!cancelled) {
           setRows(discountList)
           setTests(catalog.filter((t) => t.is_active && !t.is_deleted))
@@ -65,7 +79,7 @@ export function DiscountManagementPage() {
     return () => {
       cancelled = true
     }
-  }, [hasApi, refreshTick])
+  }, [hasApi, refreshTick, roleFilter])
 
   const sorted = useMemo(() => {
     return [...rows].sort((a, b) => {
@@ -104,9 +118,23 @@ export function DiscountManagementPage() {
     }
   }
 
+  const emptyMessage =
+    roleFilter !== ''
+      ? {
+          title: 'No discounts for this role',
+          body: 'Switch to "All roles" to see every rule, or add a discount for this audience.',
+        }
+      : {
+          title: 'No discount rules yet',
+          body: 'Set percentage reductions per test and role. Prices on the Lab tests page reflect the role you select there.',
+        }
+
   return (
     <div className="stack">
-      <PageHeader title="Test discounts" />
+      <PageHeader
+        title="Test discounts"
+        description="Per-test, per-role percentages off catalog prices. Use the Lab tests page to preview published pricing for clinic, doctor, or patient."
+      />
 
       {!hasApi ? (
         <div className="card" style={{ borderColor: '#dfe5f0', background: '#f8fafc' }}>
@@ -124,28 +152,55 @@ export function DiscountManagementPage() {
       ) : null}
 
       <div className="card">
-        <div
-          style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            alignItems: 'center',
-            justifyContent: 'flex-end',
-            gap: '0.75rem',
-            marginBottom: '0.75rem',
-          }}
-        >
-          <button type="button" className="btn btn-primary" onClick={openCreate} disabled={loading || !hasApi}>
-            Add discount
-          </button>
+        <div className="catalog-card__toolbar">
+          <div className="catalog-card__filters">
+            <div className="field">
+              <label htmlFor="discount-role-filter">Role</label>
+              <select
+                id="discount-role-filter"
+                className="select-chevron-left"
+                value={roleFilter}
+                onChange={(e) =>
+                  setRoleFilter(e.target.value as '' | 'clinic' | 'doctor' | 'patient')
+                }
+                disabled={loading || !hasApi}
+                aria-label="Filter discounts by role"
+              >
+                {ROLE_FILTER_OPTIONS.map((o) => (
+                  <option key={o.value || 'all'} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="catalog-card__actions">
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => setRefreshTick((t) => t + 1)}
+              disabled={loading || !hasApi}
+            >
+              Refresh
+            </button>
+            <button type="button" className="btn btn-primary" onClick={openCreate} disabled={loading || !hasApi}>
+              Add discount
+            </button>
+          </div>
         </div>
+        <p className="catalog-mode-hint">
+          Rules apply to active catalog tests only. Editing here updates how discounted prices appear for each role.
+        </p>
         <div className="table-wrap">
-          <table className="data-table">
+          <table className="data-table data-table--discounts">
             <thead>
               <tr>
                 <th>Test</th>
                 <th>Code</th>
                 <th>Role</th>
-                <th>Discount (%)</th>
+                <th className="col-num">Base (MMK)</th>
+                <th className="col-num">Discount (%)</th>
+                <th className="col-num">After discount</th>
                 <th>Active</th>
                 <th className="action-col">Actions</th>
               </tr>
@@ -154,13 +209,24 @@ export function DiscountManagementPage() {
               {loading ? (
                 <tr>
                   <td colSpan={colSpan} className="data-table__state">
-                    Loading…
+                    Loading discounts…
                   </td>
                 </tr>
               ) : sorted.length === 0 ? (
                 <tr>
                   <td colSpan={colSpan} className="data-table__state">
-                    No discount rows yet.
+                    <div className="data-table__empty-panel">
+                      <div className="data-table__empty-icon" aria-hidden>
+                        <span className="material-symbols-outlined">percent</span>
+                      </div>
+                      <p className="data-table__empty-title">{emptyMessage.title}</p>
+                      <p className="data-table__empty-text">{emptyMessage.body}</p>
+                      {hasApi ? (
+                        <button type="button" className="btn btn-primary" onClick={openCreate}>
+                          Add discount
+                        </button>
+                      ) : null}
+                    </div>
                   </td>
                 </tr>
               ) : (
@@ -171,7 +237,15 @@ export function DiscountManagementPage() {
                       <code>{r.test_code ?? '—'}</code>
                     </td>
                     <td>{roleLabel(r.role)}</td>
-                    <td>{r.discount_percent}</td>
+                    <td className="col-num">
+                      {r.original_price !== undefined ? r.original_price.toLocaleString() : '—'}
+                    </td>
+                    <td className="col-num">{r.discount_percent}</td>
+                    <td className="col-num">
+                      {r.after_discount_price !== undefined
+                        ? r.after_discount_price.toLocaleString()
+                        : '—'}
+                    </td>
                     <td>
                       {r.is_active ? (
                         <span className="badge badge--success">Yes</span>
@@ -205,13 +279,13 @@ export function DiscountManagementPage() {
 
       <ConfirmDialog
         open={deleteTarget !== null}
-        title="Remove discount?"
+        title="Delete discount?"
         message={
           deleteTarget
-            ? `Soft-delete this ${roleLabel(deleteTarget.role)} discount for "${deleteTarget.test_name ?? deleteTarget.test_id}"?`
+            ? `Delete this ${roleLabel(deleteTarget.role)} discount for "${deleteTarget.test_name ?? deleteTarget.test_id}"?`
             : ''
         }
-        confirmLabel="Remove"
+        confirmLabel="Delete"
         cancelLabel="Cancel"
         danger
         onConfirm={() => void confirmDelete()}
