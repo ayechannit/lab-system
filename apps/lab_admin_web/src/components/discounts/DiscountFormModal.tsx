@@ -440,12 +440,14 @@ export function DiscountFormModal({
                 </button>
                 <button type="submit" className="btn btn-primary" disabled={createSubmitDisabled}>
                   {submitting
-                    ? 'Saving…'
+                    ? mode === 'create'
+                      ? 'Creating discount…'
+                      : 'Saving discount…'
                     : mode === 'create'
                       ? selectedTestIds.length > 1
-                        ? `Create (${selectedTestIds.length} tests)`
-                        : 'Create'
-                      : 'Save'}
+                        ? `Create discount (${selectedTestIds.length} tests)`
+                        : 'Create discount'
+                      : 'Save discount'}
                 </button>
               </div>
             </div>
