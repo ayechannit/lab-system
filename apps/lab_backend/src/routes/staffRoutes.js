@@ -2,8 +2,6 @@ const express = require('express');
 const router = express.Router();
 const { authMiddleware } = require('../middlewares/authMiddleware');
 const staffController = require('../controllers/staffController');
-const validate = require('../middlewares/validate');
-const { staffSchema } = require('../utils/validators');
 
 router.use(authMiddleware);
 
@@ -131,7 +129,24 @@ router.use(authMiddleware);
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/Staff'
+ *             type: object
+ *             required:
+ *               - name
+ *               - email
+ *               - password_hash
+ *               - role
+ *             properties:
+ *               name:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *               password_hash:
+ *                 type: string
+ *               role:
+ *                 type: string
+ *                 enum: [admin, lab_technician, reception, manager]
+ *               is_active:
+ *                 type: boolean
  *     responses:
  *       201:
  *         description: Staff created
@@ -161,7 +176,14 @@ router.use(authMiddleware);
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/Staff'
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *               is_active:
+ *                 type: boolean
  *     responses:
  *       200:
  *         description: Staff updated
@@ -195,8 +217,8 @@ router.use(authMiddleware);
 
 router.get('/', staffController.getAllStaff);
 router.get('/:id', staffController.getStaffById);
-router.post('/', validate(staffSchema), staffController.createStaff);
-router.put('/:id', validate(staffSchema), staffController.updateStaff);
+router.post('/', staffController.createStaff);
+router.put('/:id', staffController.updateStaff);
 router.delete('/:id', staffController.deleteStaff);
 
 module.exports = router;

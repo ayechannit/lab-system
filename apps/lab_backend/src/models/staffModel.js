@@ -75,8 +75,6 @@ class Staff {
     const request = pool.request()
       .input('id', sql.UniqueIdentifier, id)
       .input('name', sql.VarChar, data.name)
-      .input('email', sql.VarChar, data.email)
-      .input('role', sql.VarChar, data.role)
       .input('is_active', sql.Bit, data.is_active)
       .input('updated_user', sql.UniqueIdentifier, updatedBy);
 
@@ -89,7 +87,7 @@ class Staff {
 
     const result = await request.query(`
       UPDATE lab_staff
-      SET name = @name, email = @email, role = @role, is_active = @is_active, updated_user = @updated_user, updated_at = GETDATE()
+      SET name = @name, is_active = @is_active, updated_user = @updated_user, updated_at = GETDATE()
           ${passwordFragment}
       OUTPUT INSERTED.id, INSERTED.name, INSERTED.email, INSERTED.role, INSERTED.is_active, INSERTED.created_user, INSERTED.updated_user, INSERTED.created_at, INSERTED.updated_at
       WHERE id = @id AND is_deleted = 0

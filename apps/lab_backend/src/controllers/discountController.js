@@ -31,7 +31,12 @@ const getDiscountByTestIdAndRole = async (req, res) => {
 
 const upsertDiscount = async (req, res) => {
   try {
-    const result = await Discount.upsert(req.body, req.user?.id);
+    const { test_id, role, discount_percent, is_active } = req.body;
+    if (!test_id || !role || discount_percent === undefined) {
+      return res.status(400).json({ message: 'test_id, role, and discount_percent are required' });
+    }
+    const discountData = { test_id, role, discount_percent, is_active };
+    const result = await Discount.upsert(discountData, req.user?.id);
     res.json(result);
   } catch (error) {
     res.status(500).json({ error: error.message });

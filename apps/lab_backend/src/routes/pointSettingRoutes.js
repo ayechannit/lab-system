@@ -2,8 +2,6 @@ const express = require('express');
 const router = express.Router();
 const { authMiddleware } = require('../middlewares/authMiddleware');
 const pointSettingController = require('../controllers/pointSettingController');
-const validate = require('../middlewares/validate');
-const { pointSettingSchema } = require('../utils/validators');
 
 router.use(authMiddleware);
 
@@ -83,7 +81,26 @@ router.use(authMiddleware);
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/PointSetting'
+ *             type: object
+ *             required:
+ *               - name
+ *               - spend_amount_mmk
+ *               - points_reward
+ *             properties:
+ *               name:
+ *                 type: string
+ *               spend_amount_mmk:
+ *                 type: number
+ *               points_reward:
+ *                 type: integer
+ *               start_date:
+ *                 type: string
+ *                 format: date-time
+ *               end_date:
+ *                 type: string
+ *                 format: date-time
+ *               is_active:
+ *                 type: boolean
  *     responses:
  *       201:
  *         description: Point setting created successfully
@@ -113,7 +130,22 @@ router.use(authMiddleware);
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/PointSetting'
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *               spend_amount_mmk:
+ *                 type: number
+ *               points_reward:
+ *                 type: integer
+ *               start_date:
+ *                 type: string
+ *                 format: date-time
+ *               end_date:
+ *                 type: string
+ *                 format: date-time
+ *               is_active:
+ *                 type: boolean
  *     responses:
  *       200:
  *         description: Point setting updated successfully
@@ -142,8 +174,8 @@ router.use(authMiddleware);
  */
 
 router.get('/', pointSettingController.getAllSettings);
-router.post('/', validate(pointSettingSchema), pointSettingController.createSetting);
-router.put('/:id', validate(pointSettingSchema), pointSettingController.updateSetting);
+router.post('/', pointSettingController.createSetting);
+router.put('/:id', pointSettingController.updateSetting);
 router.delete('/:id', pointSettingController.deleteSetting);
 
 module.exports = router;

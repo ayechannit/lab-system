@@ -29,7 +29,21 @@ const getOrderById = async (req, res) => {
 
 const createOrder = async (req, res) => {
   try {
-    const orderData = { ...req.body };
+    const { 
+      user_id, description, priority, patient_name, patient_age, patient_phone, 
+      address, latitude, longitude, status, report_delivery_method, 
+      original_price_mmk, discount_percent, final_price_mmk, items 
+    } = req.body;
+
+    if (!user_id || !priority || !patient_name || !patient_age || !patient_phone || !address || !report_delivery_method) {
+      return res.status(400).json({ message: 'user_id, priority, patient_name, patient_age, patient_phone, address, and report_delivery_method are required' });
+    }
+
+    const orderData = { 
+      user_id, description, priority, patient_name, patient_age, patient_phone, 
+      address, latitude, longitude, status, report_delivery_method, 
+      original_price_mmk, discount_percent, final_price_mmk, items 
+    };
     
     // Parse items if it's a string (from multipart/form-data)
     if (typeof orderData.items === 'string') {

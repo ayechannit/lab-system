@@ -3,18 +3,24 @@ const Order = require('../models/orderModel');
 
 const createRating = async (req, res) => {
   try {
+    const { order_id, user_id, rating: ratingScore, remark } = req.body;
+    if (!order_id || !user_id || !ratingScore) {
+       return res.status(400).json({ message: 'order_id, user_id, and rating are required' });
+    }
+
     // Ensure the order exists and belongs to the user
-    const order = await Order.getById(req.body.order_id);
+    const order = await Order.getById(order_id);
     if (!order) {
       return res.status(404).json({ message: 'Order not found' });
     }
     
     // In a real app, you would verify req.user.id == order.user_id
-    if (order.user_id.toLowerCase() !== req.body.user_id.toLowerCase()) {
+    if (order.user_id.toLowerCase() !== user_id.toLowerCase()) {
       return res.status(403).json({ message: 'You can only rate your own orders' });
     }
 
-    const rating = await Rating.create(req.body, req.user?.id);
+    const ratingData = { order_id, user_id, rating: ratingScore, remark };
+    const rating = await Rating.create(ratingData, req.user?.id);
     res.status(201).json(rating);
   } catch (error) {
     res.status(400).json({ message: error.message });
