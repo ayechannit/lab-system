@@ -79,13 +79,10 @@ class User {
     const request = pool.request()
       .input('id', sql.UniqueIdentifier, id)
       .input('name', sql.VarChar, data.name)
-      .input('email', sql.VarChar, data.email)
       .input('phone', sql.VarChar, data.phone)
-      .input('role', sql.VarChar, data.role)
       .input('address', sql.Text, data.address)
       .input('latitude', sql.Float, data.latitude)
       .input('longitude', sql.Float, data.longitude)
-      .input('total_points', sql.Int, data.total_points)
       .input('updated_user', sql.UniqueIdentifier, updatedBy);
 
     const newPassword = data.password || data.password_hash;
@@ -97,9 +94,9 @@ class User {
 
     const result = await request.query(`
       UPDATE users
-      SET name = @name, email = @email, phone = @phone, role = @role, 
+      SET name = @name, phone = @phone, 
           address = @address, latitude = @latitude, longitude = @longitude, 
-          total_points = @total_points, updated_user = @updated_user, updated_at = GETDATE()
+          updated_user = @updated_user, updated_at = GETDATE()
           ${passwordFragment}
       OUTPUT INSERTED.id, INSERTED.name, INSERTED.email, INSERTED.phone, INSERTED.role, INSERTED.address, INSERTED.latitude, INSERTED.longitude, INSERTED.total_points, INSERTED.created_user, INSERTED.updated_user, INSERTED.created_at, INSERTED.updated_at
       WHERE id = @id AND is_deleted = 0

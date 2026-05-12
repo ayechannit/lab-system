@@ -2,8 +2,6 @@ const express = require('express');
 const router = express.Router();
 const { authMiddleware } = require('../middlewares/authMiddleware');
 const paymentController = require('../controllers/paymentController');
-const validate = require('../middlewares/validate');
-const { paymentSchema } = require('../utils/validators');
 
 router.use(authMiddleware);
 
@@ -103,7 +101,25 @@ router.use(authMiddleware);
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/Payment'
+ *             type: object
+ *             required:
+ *               - order_id
+ *               - amount_mmk
+ *               - method
+ *             properties:
+ *               order_id:
+ *                 type: string
+ *                 format: uuid
+ *               amount_mmk:
+ *                 type: number
+ *               status:
+ *                 type: string
+ *                 enum: [pending, received, verified, failed]
+ *               method:
+ *                 type: string
+ *                 enum: [cash, bank_transfer, mobile_pay]
+ *               reference_no:
+ *                 type: string
  *     responses:
  *       201:
  *         description: Payment recorded
@@ -146,7 +162,7 @@ router.use(authMiddleware);
  */
 
 router.get('/:order_id', paymentController.getPaymentByOrderId);
-router.post('/', validate(paymentSchema), paymentController.createPayment);
+router.post('/', paymentController.createPayment);
 router.put('/:id/verify', paymentController.verifyPayment);
 
 module.exports = router;

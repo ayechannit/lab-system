@@ -2,10 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { authMiddleware } = require('../middlewares/authMiddleware');
 const userController = require('../controllers/userController');
-const validate = require('../middlewares/validate');
-const { userSchema } = require('../utils/validators');
 
-router.use(authMiddleware);
 
 /**
  * @swagger
@@ -141,7 +138,31 @@ router.use(authMiddleware);
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/User'
+ *             type: object
+ *             required:
+ *               - name
+ *               - email
+ *               - phone
+ *               - password_hash
+ *               - role
+ *             properties:
+ *               name:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *               phone:
+ *                 type: string
+ *               password_hash:
+ *                 type: string
+ *               role:
+ *                 type: string
+ *                 enum: [clinic, doctor, patient]
+ *               address:
+ *                 type: string
+ *               latitude:
+ *                 type: number
+ *               longitude:
+ *                 type: number
  *     responses:
  *       201:
  *         description: User created
@@ -172,7 +193,20 @@ router.use(authMiddleware);
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/User'
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *               phone:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *               address:
+ *                 type: string
+ *               latitude:
+ *                 type: number
+ *               longitude:
+ *                 type: number
  *     responses:
  *       200:
  *         description: User updated
@@ -250,13 +284,13 @@ router.use(authMiddleware);
  *         description: User not found
  */
 
-router.get('/', userController.getAllUsers);
+router.get('/',authMiddleware, userController.getAllUsers);
 
-router.get('/:id/orders', userController.getOrdersByUser);
-router.get('/:id', userController.getUserById);
+router.get('/:id/orders',authMiddleware, userController.getOrdersByUser);
+router.get('/:id',authMiddleware, userController.getUserById);
 
-router.post('/', validate(userSchema), userController.createUser);
-router.put('/:id', validate(userSchema), userController.updateUser);
+router.post('/', userController.createUser);
+router.put('/:id', userController.updateUser);
 router.delete('/:id', userController.deleteUser);
 
 module.exports = router;

@@ -2,8 +2,6 @@ const express = require('express');
 const router = express.Router();
 const { authMiddleware } = require('../middlewares/authMiddleware');
 const scheduleController = require('../controllers/scheduleController');
-const validate = require('../middlewares/validate');
-const { scheduleSchema } = require('../utils/validators');
 
 router.use(authMiddleware);
 
@@ -83,7 +81,26 @@ router.use(authMiddleware);
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/Schedule'
+ *             type: object
+ *             required:
+ *               - order_id
+ *             properties:
+ *               order_id:
+ *                 type: string
+ *                 format: uuid
+ *               collecting_person:
+ *                 type: string
+ *               collection_time:
+ *                 type: string
+ *                 format: date-time
+ *               running_time:
+ *                 type: string
+ *                 format: date-time
+ *               report_out_time:
+ *                 type: string
+ *                 format: date-time
+ *               accepted_by_user:
+ *                 type: boolean
  *     responses:
  *       200:
  *         description: Schedule updated/created
@@ -94,6 +111,6 @@ router.use(authMiddleware);
  */
 
 router.get('/:order_id', scheduleController.getScheduleByOrderId);
-router.post('/', validate(scheduleSchema), scheduleController.upsertSchedule);
+router.post('/', scheduleController.upsertSchedule);
 
 module.exports = router;

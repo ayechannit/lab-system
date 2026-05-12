@@ -1745,12 +1745,6 @@ window.onload = function() {
             "is_deleted": {
               "type": "boolean"
             },
-            "discount_percent": {
-              "type": "number"
-            },
-            "discounted_price_mmk": {
-              "type": "number"
-            },
             "created_at": {
               "type": "string",
               "format": "date-time"

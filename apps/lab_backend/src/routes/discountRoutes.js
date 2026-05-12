@@ -2,8 +2,6 @@ const express = require('express');
 const router = express.Router();
 const { authMiddleware } = require('../middlewares/authMiddleware');
 const discountController = require('../controllers/discountController');
-const validate = require('../middlewares/validate');
-const { discountSchema } = require('../utils/validators');
 
 router.use(authMiddleware);
 
@@ -173,7 +171,22 @@ router.use(authMiddleware);
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/Discount'
+ *             type: object
+ *             required:
+ *               - test_id
+ *               - role
+ *               - discount_percent
+ *             properties:
+ *               test_id:
+ *                 type: string
+ *                 format: uuid
+ *               role:
+ *                 type: string
+ *                 enum: [clinic, doctor, patient, all]
+ *               discount_percent:
+ *                 type: number
+ *               is_active:
+ *                 type: boolean
  *     responses:
  *       200:
  *         description: The created/updated discount(s)
@@ -208,7 +221,7 @@ router.use(authMiddleware);
 router.get('/', discountController.getAllDiscounts);
 router.get('/:test_id', discountController.getDiscountsByTestId);
 router.get('/:test_id/:role', discountController.getDiscountByTestIdAndRole);
-router.post('/', validate(discountSchema), discountController.upsertDiscount);
+router.post('/', discountController.upsertDiscount);
 router.delete('/:id', discountController.deleteDiscount);
 
 module.exports = router;

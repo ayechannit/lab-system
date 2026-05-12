@@ -2,8 +2,6 @@ const express = require('express');
 const router = express.Router();
 const { authMiddleware } = require('../middlewares/authMiddleware');
 const ratingController = require('../controllers/ratingController');
-const validate = require('../middlewares/validate');
-const { ratingSchema } = require('../utils/validators');
 
 router.use(authMiddleware);
 
@@ -89,7 +87,24 @@ router.use(authMiddleware);
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/Rating'
+ *             type: object
+ *             required:
+ *               - order_id
+ *               - user_id
+ *               - rating
+ *             properties:
+ *               order_id:
+ *                 type: string
+ *                 format: uuid
+ *               user_id:
+ *                 type: string
+ *                 format: uuid
+ *               rating:
+ *                 type: integer
+ *                 minimum: 1
+ *                 maximum: 5
+ *               remark:
+ *                 type: string
  *     responses:
  *       201:
  *         description: Rating submitted successfully
@@ -173,7 +188,7 @@ router.use(authMiddleware);
  *         description: No rating found for this order
  */
 
-router.post('/', validate(ratingSchema), ratingController.createRating);
+router.post('/', ratingController.createRating);
 router.get('/', ratingController.getAllRatings);
 router.get('/order/:orderId', ratingController.getRatingByOrderId);
 

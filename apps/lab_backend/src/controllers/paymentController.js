@@ -14,8 +14,17 @@ const getPaymentByOrderId = async (req, res) => {
 };
 
 const createPayment = async (req, res) => {
-  const payment = await Payment.create(req.body, req.user?.id);
-  res.status(201).json(payment);
+  const { order_id, amount_mmk, method, status, reference_no } = req.body;
+  if (!order_id || !amount_mmk || !method) {
+    return res.status(400).json({ message: 'order_id, amount_mmk, and method are required' });
+  }
+  const paymentData = { order_id, amount_mmk, method, status, reference_no };
+  try {
+    const payment = await Payment.create(paymentData, req.user?.id);
+    res.status(201).json(payment);
+  } catch(error) {
+     res.status(500).json({ error: error.message });
+  }
 };
 
 const verifyPayment = async (req, res) => {

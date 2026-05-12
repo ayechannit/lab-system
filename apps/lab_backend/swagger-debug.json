@@ -12,6 +12,95 @@
     }
   ],
   "paths": {
+    "/api/auth/login/user": {
+      "post": {
+        "summary": "User login",
+        "tags": [
+          "Auth"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string"
+                  },
+                  "password": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/auth/login/staff": {
+      "post": {
+        "summary": "Staff login",
+        "tags": [
+          "Auth"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string"
+                  },
+                  "password": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/auth/me": {
+      "get": {
+        "summary": "Get current authenticated account info",
+        "tags": [
+          "Auth"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current account details"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
     "/api/discounts": {
       "get": {
         "summary": "Get all test-specific discounts",
@@ -277,6 +366,14 @@
           },
           {
             "in": "query",
+            "name": "is_tests_assigned",
+            "schema": {
+              "type": "boolean"
+            },
+            "description": "Filter by whether tests have been assigned (useful for triage)"
+          },
+          {
+            "in": "query",
             "name": "page",
             "schema": {
               "type": "integer",
@@ -311,16 +408,67 @@
         }
       },
       "post": {
-        "summary": "Create a new order with items",
+        "summary": "Create a new order (with optional prescription upload and items)",
         "tags": [
           "Orders"
         ],
         "requestBody": {
           "required": true,
           "content": {
-            "application/json": {
+            "multipart/form-data": {
               "schema": {
-                "$ref": "#/components/schemas/Order"
+                "type": "object",
+                "properties": {
+                  "user_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "priority": {
+                    "type": "string",
+                    "enum": [
+                      "urgent",
+                      "elective"
+                    ]
+                  },
+                  "patient_name": {
+                    "type": "string"
+                  },
+                  "patient_age": {
+                    "type": "integer"
+                  },
+                  "patient_phone": {
+                    "type": "string"
+                  },
+                  "address": {
+                    "type": "string"
+                  },
+                  "report_delivery_method": {
+                    "type": "string",
+                    "enum": [
+                      "hard_copy",
+                      "soft_copy",
+                      "both"
+                    ]
+                  },
+                  "prescription": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "Image or PDF of the prescription"
+                  },
+                  "items": {
+                    "type": "string",
+                    "description": "JSON stringified array of OrderItem objects (optional if uploading prescription)"
+                  },
+                  "original_price_mmk": {
+                    "type": "number"
+                  },
+                  "discount_percent": {
+                    "type": "number"
+                  },
+                  "final_price_mmk": {
+                    "type": "number"
+                  }
+                }
               }
             }
           }
@@ -394,6 +542,64 @@
           },
           "404": {
             "description": "Order not found"
+          }
+        }
+      }
+    },
+    "/api/orders/{id}/items": {
+      "post": {
+        "summary": "Add items (tests) to an existing order and update totals",
+        "tags": [
+          "Orders"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/OrderItem"
+                    }
+                  },
+                  "original_price_mmk": {
+                    "type": "number"
+                  },
+                  "discount_percent": {
+                    "type": "number"
+                  },
+                  "final_price_mmk": {
+                    "type": "number"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Order updated with new items",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Order"
+                }
+              }
+            }
           }
         }
       }
@@ -731,6 +937,256 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/api/point-settings": {
+      "get": {
+        "summary": "Get all point reward rules",
+        "tags": [
+          "PointSettings"
+        ],
+        "responses": {
+          "200": {
+            "description": "List of point settings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PointSetting"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a new point reward rule",
+        "tags": [
+          "PointSettings"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PointSetting"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Point setting created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PointSetting"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error"
+          }
+        }
+      }
+    },
+    "/api/point-settings/{id}": {
+      "put": {
+        "summary": "Update a point reward rule",
+        "tags": [
+          "PointSettings"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PointSetting"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Point setting updated successfully"
+          },
+          "404": {
+            "description": "Rule not found"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete a point reward rule",
+        "tags": [
+          "PointSettings"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Rule deleted successfully"
+          },
+          "404": {
+            "description": "Rule not found"
+          }
+        }
+      }
+    },
+    "/api/ratings": {
+      "post": {
+        "summary": "Submit a rating for an order",
+        "tags": [
+          "Ratings"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Rating"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Rating submitted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Rating"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error or order already rated"
+          },
+          "403": {
+            "description": "Unauthorized to rate this order"
+          },
+          "404": {
+            "description": "Order not found"
+          }
+        }
+      },
+      "get": {
+        "summary": "Get all ratings (For Lab Staff)",
+        "tags": [
+          "Ratings"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "rating",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 5
+            },
+            "description": "Filter by specific rating score"
+          },
+          {
+            "in": "query",
+            "name": "user_id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Filter by specific user"
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "description": "Page number for pagination"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "description": "Number of items per page for pagination"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of all ratings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RatingWithDetails"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ratings/order/{orderId}": {
+      "get": {
+        "summary": "Get rating for a specific order",
+        "tags": [
+          "Ratings"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orderId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "The unique identifier of the order"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Rating details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RatingWithDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No rating found for this order"
           }
         }
       }
@@ -1341,7 +1797,8 @@
             "schema": {
               "type": "string",
               "format": "uuid"
-            }
+            },
+            "description": "The unique identifier of the user"
           }
         ],
         "responses": {
@@ -1373,7 +1830,8 @@
             "schema": {
               "type": "string",
               "format": "uuid"
-            }
+            },
+            "description": "The unique identifier of the user"
           }
         ],
         "requestBody": {
@@ -1415,7 +1873,8 @@
             "schema": {
               "type": "string",
               "format": "uuid"
-            }
+            },
+            "description": "The unique identifier of the user"
           }
         ],
         "responses": {
@@ -1442,7 +1901,8 @@
             "schema": {
               "type": "string",
               "format": "uuid"
-            }
+            },
+            "description": "The unique identifier of the user"
           },
           {
             "in": "query",
@@ -1487,7 +1947,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "type": "object"
+                    "$ref": "#/components/schemas/Order"
                   }
                 }
               }
@@ -1601,10 +2061,7 @@
           "patient_age",
           "patient_phone",
           "address",
-          "report_delivery_method",
-          "original_price_mmk",
-          "final_price_mmk",
-          "items"
+          "report_delivery_method"
         ],
         "properties": {
           "id": {
@@ -1670,6 +2127,12 @@
           },
           "final_price_mmk": {
             "type": "number"
+          },
+          "prescription_url": {
+            "type": "string"
+          },
+          "is_tests_assigned": {
+            "type": "boolean"
           },
           "is_deleted": {
             "type": "boolean"
@@ -1762,6 +2225,141 @@
             "format": "date-time"
           }
         }
+      },
+      "PointSetting": {
+        "type": "object",
+        "required": [
+          "name",
+          "spend_amount_mmk",
+          "points_reward"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name of the tier or campaign (e.g. Base Tier, Summer Promo)"
+          },
+          "spend_amount_mmk": {
+            "type": "number",
+            "description": "The amount of money required to earn the points reward"
+          },
+          "points_reward": {
+            "type": "integer",
+            "description": "The number of points awarded per the spend amount"
+          },
+          "start_date": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Optional start date for the rule/campaign"
+          },
+          "end_date": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Optional end date for the rule/campaign"
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Rating": {
+        "type": "object",
+        "required": [
+          "order_id",
+          "user_id",
+          "rating"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "order_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "rating": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5
+          },
+          "remark": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "RatingWithDetails": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Rating"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "user_name": {
+                "type": "string"
+              },
+              "user_email": {
+                "type": "string"
+              },
+              "user_phone": {
+                "type": "string"
+              },
+              "patient_name": {
+                "type": "string"
+              },
+              "patient_age": {
+                "type": "integer"
+              },
+              "order_status": {
+                "type": "string"
+              },
+              "priority": {
+                "type": "string"
+              },
+              "final_price_mmk": {
+                "type": "number"
+              },
+              "order_created_at": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "order_tests": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "test_name": {
+                      "type": "string"
+                    },
+                    "test_code": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
       },
       "Schedule": {
         "type": "object",
@@ -1882,12 +2480,6 @@
           "is_deleted": {
             "type": "boolean"
           },
-          "discount_percent": {
-            "type": "number"
-          },
-          "discounted_price_mmk": {
-            "type": "number"
-          },
           "created_at": {
             "type": "string",
             "format": "date-time"
@@ -1957,6 +2549,10 @@
   },
   "tags": [
     {
+      "name": "Auth",
+      "description": "Authentication for users and lab staff"
+    },
+    {
       "name": "Discounts",
       "description": "Test-specific role-based discount management"
     },
@@ -1967,6 +2563,14 @@
     {
       "name": "Payments",
       "description": "Payment processing and verification (Supports partial/reserve payments)"
+    },
+    {
+      "name": "PointSettings",
+      "description": "Management of point reward rules for user purchases"
+    },
+    {
+      "name": "Ratings",
+      "description": "Lab order rating management"
     },
     {
       "name": "Schedules",

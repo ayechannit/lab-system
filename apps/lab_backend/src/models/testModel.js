@@ -95,26 +95,31 @@ class LabTest {
   }
 
   /**
-   * Fetches all tests and applies discounts based on the provided role.
-   * Logic: Joins with test_specific_discounts for the given role.
+   * Fetches all tests and includes an array of all active discounts for each test.
    */
-  static async getAllWithDiscounts(role, filters = {}) {
+  static async getAllWithAllDiscounts(filters = {}) {
     const pool = await poolPromise;
     const request = pool.request();
-    request.input('role', sql.VarChar, role);
 
     let query = `
-      SELECT t.*, 
-             ISNULL(sd.discount_percent, 0) as discount_percent,
-             (t.base_price_mmk * (1 - ISNULL(sd.discount_percent, 0) / 100)) as discounted_price_mmk
+      SELECT t.*,
+             (
+                SELECT sd.id, sd.role, sd.discount_percent
+                FROM test_specific_discounts sd
+                WHERE sd.test_id = t.id AND sd.is_active = 1 AND sd.is_deleted = 0
+                FOR JSON PATH
+             ) as discounts_json
       FROM lab_test_catalog t
-      LEFT JOIN test_specific_discounts sd ON sd.test_id = t.id AND sd.role = @role AND sd.is_active = 1 AND sd.is_deleted = 0
-      WHERE t.is_active = 1 AND t.is_deleted = 0
+      WHERE t.is_deleted = 0
     `;
 
     if (filters.category) {
       query += ' AND t.category = @category';
       request.input('category', sql.VarChar, filters.category);
+    }
+    if (filters.is_active !== undefined) {
+      query += ' AND t.is_active = @is_active';
+      request.input('is_active', sql.Bit, filters.is_active === 'true' || filters.is_active === true ? 1 : 0);
     }
     if (filters.test_name) {
       query += ' AND t.test_name LIKE @test_name';
@@ -137,7 +142,17 @@ class LabTest {
     }
 
     const result = await request.query(query);
-    return result.recordset;
+    
+    // Parse the JSON string from SQL Server into an actual array
+    return result.recordset.map(row => {
+      if (row.discounts_json) {
+        row.discounts = JSON.parse(row.discounts_json);
+      } else {
+        row.discounts = [];
+      }
+      delete row.discounts_json;
+      return row;
+    });
   }
 }
 

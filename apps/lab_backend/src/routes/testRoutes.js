@@ -2,8 +2,6 @@ const express = require('express');
 const router = express.Router();
 const { authMiddleware } = require('../middlewares/authMiddleware');
 const testController = require('../controllers/testController');
-const validate = require('../middlewares/validate');
-const { testSchema } = require('../utils/validators');
 
 router.use(authMiddleware);
 
@@ -35,13 +33,22 @@ router.use(authMiddleware);
  *           type: boolean
  *         is_deleted:
  *           type: boolean
- *         discount_percent:
- *           type: number
- *         discounted_price_mmk:
- *           type: number
  *         created_at:
  *           type: string
  *           format: date-time
+ *         discounts:
+ *           type: array
+ *           description: List of active role-based discounts for this test
+ *           items:
+ *             type: object
+ *             properties:
+ *               id:
+ *                 type: string
+ *                 format: uuid
+ *               role:
+ *                 type: string
+ *               discount_percent:
+ *                 type: number
  */
 
 /**
@@ -55,15 +62,9 @@ router.use(authMiddleware);
  * @swagger
  * /api/tests:
  *   get:
- *     summary: Returns the list of all lab tests
+ *     summary: Returns the list of all lab tests with their associated discounts
  *     tags: [Tests]
  *     parameters:
- *       - in: query
- *         name: role
- *         schema:
- *           type: string
- *           enum: [clinic, doctor, patient]
- *         description: User role to calculate specific discounts
  *       - in: query
  *         name: category
  *         schema:
@@ -142,7 +143,24 @@ router.use(authMiddleware);
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/LabTest'
+ *             type: object
+ *             required:
+ *               - test_name
+ *               - test_code
+ *               - base_price_mmk
+ *             properties:
+ *               test_name:
+ *                 type: string
+ *               test_code:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *               base_price_mmk:
+ *                 type: number
+ *               category:
+ *                 type: string
+ *               is_active:
+ *                 type: boolean
  *     responses:
  *       201:
  *         description: The test was successfully created
@@ -172,7 +190,20 @@ router.use(authMiddleware);
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/LabTest'
+ *             type: object
+ *             properties:
+ *               test_name:
+ *                 type: string
+ *               test_code:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *               base_price_mmk:
+ *                 type: number
+ *               category:
+ *                 type: string
+ *               is_active:
+ *                 type: boolean
  *     responses:
  *       200:
  *         description: The test was updated
@@ -206,8 +237,8 @@ router.use(authMiddleware);
 
 router.get('/', testController.getAllTests);
 router.get('/:id', testController.getTestById);
-router.post('/', validate(testSchema), testController.createTest);
-router.put('/:id', validate(testSchema), testController.updateTest);
+router.post('/', testController.createTest);
+router.put('/:id', testController.updateTest);
 router.delete('/:id', testController.deleteTest);
 
 module.exports = router;

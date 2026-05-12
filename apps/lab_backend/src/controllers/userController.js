@@ -37,16 +37,31 @@ const getOrdersByUser = async (req, res) => {
 
 const createUser = async (req, res) => {
   try {
-    const user = await User.create(req.body, req.user?.id);
+    const { name, email, phone, role, password, password_hash, address, latitude, longitude } = req.body;
+    
+    // Basic validation
+    if (!name || !email || !phone || !role || (!password && !password_hash)) {
+      return res.status(400).json({ message: 'name, email, phone, role, and password are required' });
+    }
+
+    const userData = { name, email, phone, role, password, password_hash, address, latitude, longitude };
+    const user = await User.create(userData, req.user?.id);
     res.status(201).json(user);
   } catch (error) {
+    if (error.message.includes('UNIQUE KEY')) {
+      return res.status(400).json({ message: 'Email already exists' });
+    }
     res.status(500).json({ error: error.message });
   }
 };
 
 const updateUser = async (req, res) => {
   try {
-    const user = await User.update(req.params.id, req.body, req.user?.id);
+    // Only allow specific fields to be updated
+    const { name, phone, address, latitude, longitude, password, password_hash } = req.body;
+    const updateData = { name, phone, address, latitude, longitude, password, password_hash };
+    
+    const user = await User.update(req.params.id, updateData, req.user?.id);
     if (!user) return res.status(404).json({ message: 'User not found' });
     res.json(user);
   } catch (error) {

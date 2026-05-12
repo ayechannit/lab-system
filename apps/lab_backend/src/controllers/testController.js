@@ -2,13 +2,7 @@ const LabTest = require('../models/testModel');
 
 const getAllTests = async (req, res) => {
   try {
-    const { role, ...filters } = req.query;
-    let tests;
-    if (role) {
-      tests = await LabTest.getAllWithDiscounts(role, filters);
-    } else {
-      tests = await LabTest.getAll(req.query);
-    }
+    const tests = await LabTest.getAllWithAllDiscounts(req.query);
     res.json(tests);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -27,19 +21,32 @@ const getTestById = async (req, res) => {
 
 const createTest = async (req, res) => {
   try {
-    const test = await LabTest.create(req.body, req.user?.id);
+    const { test_name, test_code, description, base_price_mmk, category, is_active } = req.body;
+    if (!test_name || !test_code || base_price_mmk === undefined) {
+       return res.status(400).json({ message: 'test_name, test_code, and base_price_mmk are required' });
+    }
+    const testData = { test_name, test_code, description, base_price_mmk, category, is_active };
+    const test = await LabTest.create(testData, req.user?.id);
     res.status(201).json(test);
   } catch (error) {
+    if (error.message.includes('UNIQUE KEY')) {
+      return res.status(400).json({ message: 'Test code already exists' });
+    }
     res.status(500).json({ error: error.message });
   }
 };
 
 const updateTest = async (req, res) => {
   try {
-    const test = await LabTest.update(req.params.id, req.body, req.user?.id);
+    const { test_name, test_code, description, base_price_mmk, category, is_active } = req.body;
+    const testData = { test_name, test_code, description, base_price_mmk, category, is_active };
+    const test = await LabTest.update(req.params.id, testData, req.user?.id);
     if (!test) return res.status(404).json({ message: 'Test not found' });
     res.json(test);
   } catch (error) {
+    if (error.message.includes('UNIQUE KEY')) {
+      return res.status(400).json({ message: 'Test code already exists' });
+    }
     res.status(500).json({ error: error.message });
   }
 };

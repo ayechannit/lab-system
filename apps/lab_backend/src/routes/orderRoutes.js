@@ -2,9 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { authMiddleware } = require('../middlewares/authMiddleware');
 const orderController = require('../controllers/orderController');
-const validate = require('../middlewares/validate');
 const upload = require('../middlewares/upload');
-const { orderSchema, orderStatusUpdateSchema } = require('../utils/validators');
 
 router.use(authMiddleware);
 
@@ -446,7 +444,7 @@ router.get('/', orderController.getAllOrders);
 router.get('/:id', orderController.getOrderById);
 router.post('/', upload.single('prescription'), orderController.createOrder);
 router.post('/:id/items', orderController.addOrderItems);
-router.put('/:id/status', validate(orderStatusUpdateSchema), orderController.updateOrderStatus);
+router.put('/:id/status', orderController.updateOrderStatus);
 router.delete('/:id', orderController.deleteOrder);
 router.get('/:id/tests/:testId/qrcode', orderController.generateQrCode);
 router.post('/:id/tests/:testId/upload-result', upload.single('file'), orderController.uploadTestResult);
