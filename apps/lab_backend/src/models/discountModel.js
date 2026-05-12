@@ -38,6 +38,18 @@ class Discount {
     return results;
   }
 
+  /**
+   * Bulk upsert multiple discounts.
+   */
+  static async bulkUpsert(discountsArray, updatedBy = null) {
+    const results = [];
+    for (const data of discountsArray) {
+      const res = await this.upsert(data, updatedBy);
+      results.push(...res);
+    }
+    return results;
+  }
+
   static async getByTestIdAndRole(test_id, role) {
     const pool = await poolPromise;
     const result = await pool.request()

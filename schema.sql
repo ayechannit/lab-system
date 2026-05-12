@@ -239,3 +239,28 @@ INSERT INTO point_settings (name, spend_amount_mmk, points_reward, is_active)
 VALUES 
 ('Standard Loyalty', 100000.00, 10, 1),
 ('Gold Member Promo', 50000.00, 15, 1);
+
+-- AI CONFIGURATIONS
+CREATE TABLE ai_configs (
+    id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+    model_name NVARCHAR(255) NOT NULL,
+    api_key NVARCHAR(MAX) NOT NULL,
+    type NVARCHAR(50) NOT NULL CHECK (type IN ('gemini', 'openai')),
+    created_user UNIQUEIDENTIFIER,
+    updated_user UNIQUEIDENTIFIER,
+    is_deleted BIT DEFAULT 0,
+    created_at DATETIME2 DEFAULT GETDATE(),
+    updated_at DATETIME2 DEFAULT GETDATE()
+);
+
+-- AI PROMPTS
+CREATE TABLE ai_prompts (
+    id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+    name NVARCHAR(255) NOT NULL,
+    prompt_text NVARCHAR(MAX) NOT NULL,
+    created_user UNIQUEIDENTIFIER,
+    updated_user UNIQUEIDENTIFIER,
+    is_deleted BIT DEFAULT 0,
+    created_at DATETIME2 DEFAULT GETDATE(),
+    updated_at DATETIME2 DEFAULT GETDATE()
+);

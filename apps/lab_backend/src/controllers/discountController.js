@@ -43,6 +43,28 @@ const upsertDiscount = async (req, res) => {
   }
 };
 
+const bulkUpsertDiscounts = async (req, res) => {
+  try {
+    const { discounts } = req.body;
+    
+    if (!Array.isArray(discounts) || discounts.length === 0) {
+      return res.status(400).json({ message: 'A non-empty discounts array is required' });
+    }
+
+    // Basic validation for each item
+    for (const d of discounts) {
+      if (!d.test_id || !d.role || d.discount_percent === undefined) {
+        return res.status(400).json({ message: 'Each discount must have test_id, role, and discount_percent' });
+      }
+    }
+
+    const result = await Discount.bulkUpsert(discounts, req.user?.id);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 const deleteDiscount = async (req, res) => {
   try {
     const success = await Discount.delete(req.params.id, req.user?.id);
@@ -58,5 +80,6 @@ module.exports = {
   getDiscountsByTestId,
   getDiscountByTestIdAndRole,
   upsertDiscount,
+  bulkUpsertDiscounts,
   deleteDiscount,
 };

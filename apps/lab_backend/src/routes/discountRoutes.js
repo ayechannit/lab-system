@@ -161,6 +161,52 @@ router.use(authMiddleware);
 
 /**
  * @swagger
+ * /api/discounts/bulk:
+ *   post:
+ *     summary: Bulk create or update discounts
+ *     description: Accepts an array of discounts and upserts them.
+ *     tags: [Discounts]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - discounts
+ *             properties:
+ *               discounts:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   required:
+ *                     - test_id
+ *                     - role
+ *                     - discount_percent
+ *                   properties:
+ *                     test_id:
+ *                       type: string
+ *                       format: uuid
+ *                     role:
+ *                       type: string
+ *                       enum: [clinic, doctor, patient, all]
+ *                     discount_percent:
+ *                       type: number
+ *                     is_active:
+ *                       type: boolean
+ *     responses:
+ *       200:
+ *         description: The created/updated discounts
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Discount'
+ */
+
+/**
+ * @swagger
  * /api/discounts:
  *   post:
  *     summary: Create or update a discount
@@ -221,6 +267,7 @@ router.use(authMiddleware);
 router.get('/', discountController.getAllDiscounts);
 router.get('/:test_id', discountController.getDiscountsByTestId);
 router.get('/:test_id/:role', discountController.getDiscountByTestIdAndRole);
+router.post('/bulk', discountController.bulkUpsertDiscounts);
 router.post('/', discountController.upsertDiscount);
 router.delete('/:id', discountController.deleteDiscount);
 

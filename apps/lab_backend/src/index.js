@@ -12,6 +12,10 @@ const scheduleRoutes = require('./routes/scheduleRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
 const ratingRoutes = require('./routes/ratingRoutes');
 const pointSettingRoutes = require('./routes/pointSettingRoutes');
+const aiConfigRoutes = require('./routes/aiConfigRoutes');
+const promptRoutes = require('./routes/promptRoutes');
+const conversationRoutes = require('./routes/conversationRoutes');
+const notificationRoutes = require('./routes/notificationRoutes');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpecs = require('./config/swagger');
 const errorHandler = require('./middlewares/errorHandler');
@@ -42,6 +46,10 @@ app.use('/api/schedules', scheduleRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/ratings', ratingRoutes);
 app.use('/api/point-settings', pointSettingRoutes);
+app.use('/api/ai-configs', aiConfigRoutes);
+app.use('/api/prompts', promptRoutes);
+app.use('/api/conversations', conversationRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Base route
 app.get('/', (req, res) => {
