@@ -71,14 +71,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(color: AppColors.primary),
                 ),
-                const SizedBox(height: 6),
-                Text(
-                  'Create an account on the lab server. Use at least 8 characters for your password. '
-                  'You must pick a location on the map so latitude and longitude are saved (same as the admin web user form). '
-                  'After registering, sign in with your email and password.',
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: AppColors.onSurfaceVariant),
-                ),
                 const SizedBox(height: 18),
                 Container(
                   width: double.infinity,
