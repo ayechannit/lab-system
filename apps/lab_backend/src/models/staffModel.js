@@ -70,9 +70,11 @@ class Staff {
 
   static async update(id, data, updatedBy = null) {
     const pool = await poolPromise;
-    
+
     let passwordFragment = '';
-    const request = pool.request()
+    let emailFragment = '';
+    const request = pool
+      .request()
       .input('id', sql.UniqueIdentifier, id)
       .input('name', sql.VarChar, data.name)
       .input('is_active', sql.Bit, data.is_active)
@@ -85,9 +87,15 @@ class Staff {
       request.input('password_hash', sql.VarChar, hashedPassword);
     }
 
+    if (data.email !== undefined && data.email !== null && String(data.email).trim() !== '') {
+      emailFragment = ', email = @email';
+      request.input('email', sql.VarChar, String(data.email).trim().toLowerCase());
+    }
+
     const result = await request.query(`
       UPDATE lab_staff
       SET name = @name, is_active = @is_active, updated_user = @updated_user, updated_at = GETDATE()
+          ${emailFragment}
           ${passwordFragment}
       OUTPUT INSERTED.id, INSERTED.name, INSERTED.email, INSERTED.role, INSERTED.is_active, INSERTED.created_user, INSERTED.updated_user, INSERTED.created_at, INSERTED.updated_at
       WHERE id = @id AND is_deleted = 0

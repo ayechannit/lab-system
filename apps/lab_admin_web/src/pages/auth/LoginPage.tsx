@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { Navigate, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/AuthContext'
 import { authImages } from './authAssets'
 import { AuthFooter } from './AuthFooter'
@@ -7,10 +7,8 @@ import { AuthMarketingPanel } from './AuthMarketingPanel'
 import './auth-screens.css'
 
 export function LoginPage() {
-  const { signInWithUserCredentials, signedIn, initializing } = useAuth()
+  const { signInWithStaffCredentials, signedIn, initializing } = useAuth()
   const navigate = useNavigate()
-  const location = useLocation()
-  const registered = Boolean((location.state as { registered?: boolean } | null)?.registered)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -42,14 +40,8 @@ export function LoginPage() {
             <div className="auth-icon-tile">
               <span className="material-symbols-outlined">shield_person</span>
             </div>
-            <h1 className="auth-title">Welcome Back</h1>
-            <p className="auth-subtitle">Sign in with your user account (email and password).</p>
-
-            {registered ? (
-              <p style={{ margin: '0.5rem 0 0', color: '#0d8a5b', fontSize: '0.875rem' }}>
-                Account created. Sign in here with the same email and password you used at registration.
-              </p>
-            ) : null}
+            <h1 className="auth-title">Staff sign in</h1>
+            <p className="auth-subtitle">Use your lab staff account (admin, technician, reception, or manager).</p>
 
             <form
               className="auth-stack"
@@ -60,7 +52,7 @@ export function LoginPage() {
                 setSubmitting(true)
                 void (async () => {
                   try {
-                    await signInWithUserCredentials(email, password, remember)
+                    await signInWithStaffCredentials(email, password, remember)
                     navigate('/')
                   } catch (err) {
                     setError(err instanceof Error ? err.message : 'Sign-in failed')
@@ -150,11 +142,6 @@ export function LoginPage() {
                 {submitting ? 'Signing in…' : 'Sign In to MedLab Smart '}
               </button>
             </form>
-
-            <div className="auth-bottom-link">
-              <span>New patient / clinic / doctor account? </span>
-              <Link to="/signup">Create Account</Link>
-            </div>
           </div>
         </div>
         <AuthFooter />

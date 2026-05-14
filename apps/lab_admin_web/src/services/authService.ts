@@ -7,11 +7,6 @@ export type StaffLoginResponse = {
   staff: { id: string; name: string; email: string; role: string }
 }
 
-export type UserLoginResponse = {
-  token: string
-  user: { id: string; name: string; email: string; role: string }
-}
-
 const STAFF_ROLES = new Set(['admin', 'lab_technician', 'reception', 'manager'])
 
 function accountFromMePayload(raw: Record<string, unknown>): StoredAccount {
@@ -34,17 +29,6 @@ export async function loginStaff(email: string, password: string): Promise<Staff
   })
   if (!res.ok) throw new Error(await readApiErrorBody(res))
   return (await res.json()) as StaffLoginResponse
-}
-
-/** End-user login (`users` table): clinic, doctor, patient. */
-export async function loginUser(email: string, password: string): Promise<UserLoginResponse> {
-  const res = await fetch(apiUrl('/api/auth/login/user'), {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password }),
-  })
-  if (!res.ok) throw new Error(await readApiErrorBody(res))
-  return (await res.json()) as UserLoginResponse
 }
 
 export async function fetchSessionAccount(): Promise<StoredAccount> {

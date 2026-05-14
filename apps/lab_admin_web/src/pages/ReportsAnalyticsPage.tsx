@@ -14,6 +14,7 @@ import {
   YAxis,
 } from 'recharts'
 import { PageHeader } from '../components/common/PageHeader'
+import { LoadingSpinner } from '../components/common/LoadingSpinner'
 import { isApiMode } from '../services/apiBase'
 import { fetchOrders, type ApiOrderListRow } from '../services/orderService'
 import type { UserListRow } from '../model/types'
@@ -148,17 +149,16 @@ export function ReportsAnalyticsPage() {
 
       <div className="card">
         <h3 className="card-title">Snapshot</h3>
-        <p style={{ margin: 0, color: 'var(--muted)', fontSize: '0.9rem' }}>
-          {loading ? (
-            'Loading…'
-          ) : (
-            <>
-              <strong>{orders.length}</strong> orders loaded · sum of order totals (final price):{' '}
-              <strong>{paidTotalMmk.toLocaleString()} MMK</strong> · <strong>{users.length}</strong> active user
-              accounts.
-            </>
-          )}
-        </p>
+        {loading ? (
+          <div className="reports-snapshot-loading">
+            <LoadingSpinner label="Loading snapshot" />
+          </div>
+        ) : (
+          <p style={{ margin: 0, color: 'var(--muted)', fontSize: '0.9rem' }}>
+            <strong>{orders.length}</strong> orders loaded · sum of order totals (final price):{' '}
+            <strong>{paidTotalMmk.toLocaleString()} MMK</strong> · <strong>{users.length}</strong> active user accounts.
+          </p>
+        )}
       </div>
 
       <div className="grid-2">

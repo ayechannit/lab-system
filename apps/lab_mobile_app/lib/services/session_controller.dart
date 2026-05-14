@@ -29,12 +29,8 @@ class SessionController extends ChangeNotifier {
   LabResultReport? get latestResult => _latestResult;
   AiAnalysisResult? get aiAnalysis => _aiAnalysis;
   LoyaltySnapshot get loyalty => _loyalty;
-  String get homeRoute => switch (_user?.role) {
-        UserRole.doctor => '/home-doctor',
-        UserRole.clinic => '/home-clinic',
-        UserRole.patient => '/home-patient',
-        null => '/login',
-      };
+  /// All end-user roles (patient, doctor, clinic) share the same home shell.
+  String get homeRoute => _user == null ? '/login' : '/home';
 
   Future<void> login({
     required String email,
@@ -46,6 +42,8 @@ class SessionController extends ChangeNotifier {
     _setBusy(false);
   }
 
+  /// Creates the account on the server only. Caller should navigate to `/login`;
+  /// the user is not signed in after this returns.
   Future<void> register({
     required String name,
     required String phone,
@@ -53,24 +51,27 @@ class SessionController extends ChangeNotifier {
     required String password,
     required UserRole role,
     String address = '',
-    double latitude = 0,
-    double longitude = 0,
+    required double latitude,
+    required double longitude,
   }) async {
     _setBusy(true);
-    _user = await _api.register(
-      RegisterRequest(
-        name: name,
-        phone: phone,
-        email: email,
-        password: password,
-        role: role,
-        address: address,
-        latitude: latitude,
-        longitude: longitude,
-      ),
-    );
-    await _hydrateUserData();
-    _setBusy(false);
+    try {
+      await _api.register(
+        RegisterRequest(
+          name: name,
+          phone: phone,
+          email: email,
+          password: password,
+          role: role,
+          address: address,
+          latitude: latitude,
+          longitude: longitude,
+        ),
+      );
+      _api.clearAuth();
+    } finally {
+      _setBusy(false);
+    }
   }
 
   void logout() {
@@ -84,16 +85,25 @@ class SessionController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> updateProfile({String? name, String? phone, String? email}) async {
+  Future<void> updateProfile({
+    String? name,
+    String? phone,
+    String? email,
+    String? address,
+    double? latitude,
+    double? longitude,
+  }) async {
     final u = _user;
     if (u == null) return;
-    await _api.updateProfile(
+    _user = await _api.updateProfile(
       userId: u.id,
       name: name,
       phone: phone,
       email: email,
+      address: address,
+      latitude: latitude,
+      longitude: longitude,
     );
-    _user = u.copyWith(name: name, phone: phone, email: email);
     notifyListeners();
   }
 

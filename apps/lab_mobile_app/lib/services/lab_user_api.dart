@@ -14,8 +14,8 @@ class RegisterRequest {
     required this.password,
     required this.role,
     this.address = '',
-    this.latitude = 0,
-    this.longitude = 0,
+    required this.latitude,
+    required this.longitude,
   });
 
   final String name;
@@ -24,7 +24,7 @@ class RegisterRequest {
   final String password;
   final UserRole role;
 
-  /// Home / clinic address line (admin web signup sends the same to `POST /api/users`).
+  /// Home / clinic address line (`POST /api/users`).
   final String address;
   final double latitude;
   final double longitude;
@@ -42,13 +42,17 @@ class LoginRequest {
 
 /// Contract-first API for user app features.
 abstract class LabUserApi {
-  Future<AppUser> register(RegisterRequest request);
+  /// Creates the account via `POST /api/users` only — does not sign the user in.
+  Future<void> register(RegisterRequest request);
   Future<AppUser> login(LoginRequest request);
-  Future<void> updateProfile({
+  Future<AppUser> updateProfile({
     required String userId,
     String? name,
     String? phone,
     String? email,
+    String? address,
+    double? latitude,
+    double? longitude,
   });
   Future<List<LabTestPick>> listActiveLabTests();
   Future<LabOrderSummary> createOrder({

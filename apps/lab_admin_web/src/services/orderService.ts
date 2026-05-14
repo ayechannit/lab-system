@@ -1,5 +1,6 @@
 import { apiFetch } from './apiClient'
 import { readApiErrorBody } from './readApiError'
+import type { ApiOrderSchedule } from './scheduleService'
 
 export type ApiOrderStatus =
   | 'pending'
@@ -11,6 +12,7 @@ export type ApiOrderStatus =
 
 export type ApiOrderListRow = {
   id: string
+  user_id?: string
   patient_name: string
   patient_phone?: string
   address?: string
@@ -19,9 +21,13 @@ export type ApiOrderListRow = {
   original_price_mmk: number
   final_price_mmk: number
   created_at: string
+  prescription_url?: string | null
+  is_tests_assigned?: boolean | number | null
+  report_delivery_method?: string
 }
 
 export type ApiOrderDetailItem = {
+  id?: string
   test_id: string
   quantity: number
   unit_price_mmk: number
@@ -32,12 +38,18 @@ export type ApiOrderDetailItem = {
 
 export type ApiOrderDetail = {
   id: string
+  user_id?: string
+  /** From users join on GET /orders/:id (may be null if no user row) */
+  ordering_user_name?: string | null
+  ordering_user_role?: string | null
   patient_name: string
   patient_phone: string
   patient_age?: number
   priority: 'urgent' | 'elective'
   status: ApiOrderStatus
   address: string
+  description?: string | null
+  report_delivery_method?: string
   original_price_mmk: number
   discount_percent: number
   final_price_mmk: number
@@ -45,7 +57,11 @@ export type ApiOrderDetail = {
   updated_at?: string
   total_paid_mmk?: number
   balance_mmk?: number
+  prescription_url?: string | null
+  prescription_download_url?: string | null
+  is_tests_assigned?: boolean | number | null
   items: ApiOrderDetailItem[]
+  schedule?: ApiOrderSchedule | null
 }
 
 export type ApiOrderCreateItem = {
@@ -73,8 +89,25 @@ export type ApiOrderCreateBody = {
   items: ApiOrderCreateItem[]
 }
 
-export async function fetchOrders(): Promise<ApiOrderListRow[]> {
-  const res = await apiFetch('/api/orders')
+export type FetchOrdersParams = {
+  status?: ApiOrderStatus
+  priority?: 'urgent' | 'elective'
+  patient_name?: string
+  is_tests_assigned?: boolean
+  page?: number
+  limit?: number
+}
+
+export async function fetchOrders(params?: FetchOrdersParams): Promise<ApiOrderListRow[]> {
+  const sp = new URLSearchParams()
+  if (params?.status) sp.set('status', params.status)
+  if (params?.priority) sp.set('priority', params.priority)
+  if (params?.patient_name?.trim()) sp.set('patient_name', params.patient_name.trim())
+  if (params?.is_tests_assigned !== undefined) sp.set('is_tests_assigned', params.is_tests_assigned ? 'true' : 'false')
+  if (params?.page != null && params.page > 0) sp.set('page', String(params.page))
+  if (params?.limit != null && params.limit > 0) sp.set('limit', String(params.limit))
+  const qs = sp.toString()
+  const res = await apiFetch(`/api/orders${qs ? `?${qs}` : ''}`)
   if (!res.ok) throw new Error(await readApiErrorBody(res))
   const data = await res.json()
   return Array.isArray(data) ? (data as ApiOrderListRow[]) : []
@@ -111,6 +144,23 @@ export async function updateOrderStatus(
 ): Promise<unknown> {
   const res = await apiFetch(`/api/orders/${encodeURIComponent(id)}/status`, {
     method: 'PUT',
+    body: JSON.stringify(body),
+  })
+  if (!res.ok) throw new Error(await readApiErrorBody(res))
+  return res.json()
+}
+
+export async function addOrderItems(
+  orderId: string,
+  body: {
+    items: ApiOrderCreateItem[]
+    original_price_mmk: number
+    discount_percent: number
+    final_price_mmk: number
+  },
+): Promise<unknown> {
+  const res = await apiFetch(`/api/orders/${encodeURIComponent(orderId)}/items`, {
+    method: 'POST',
     body: JSON.stringify(body),
   })
   if (!res.ok) throw new Error(await readApiErrorBody(res))

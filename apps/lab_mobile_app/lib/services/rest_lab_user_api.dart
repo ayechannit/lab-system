@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 
 import '../config/lab_api_config.dart';
 import '../models/app_user.dart';
@@ -19,6 +20,25 @@ class LabApiException implements Exception {
 
   @override
   String toString() => message;
+}
+
+/// Sets multipart `Content-Type` so multer accepts the part (fromBytes otherwise often sends `application/octet-stream`).
+MediaType? _prescriptionMediaTypeFromFilename(String filename) {
+  final dot = filename.lastIndexOf('.');
+  if (dot < 0 || dot >= filename.length - 1) return null;
+  switch (filename.substring(dot).toLowerCase()) {
+    case '.pdf':
+      return MediaType('application', 'pdf');
+    case '.png':
+      return MediaType('image', 'png');
+    case '.jpg':
+    case '.jpeg':
+      return MediaType('image', 'jpeg');
+    case '.webp':
+      return MediaType('image', 'webp');
+    default:
+      return null;
+  }
 }
 
 class RestLabUserApi implements LabUserApi {
@@ -95,6 +115,19 @@ class RestLabUserApi implements LabUserApi {
     return s == 'true' || s == '1';
   }
 
+  List<LabTestDiscount> _parseDiscountList(dynamic raw) {
+    if (raw is! List) return const [];
+    final out = <LabTestDiscount>[];
+    for (final e in raw) {
+      final m = _asObj(e);
+      final role = '${_gv(m, 'role')}'.trim();
+      if (role.isEmpty) continue;
+      final pct = _asInt(_gv(m, 'discount_percent') ?? _gv(m, 'discountPercent')).clamp(0, 100);
+      out.add(LabTestDiscount(role: role, discountPercent: pct));
+    }
+    return out;
+  }
+
   UserRole _parseRole(String? r) {
     switch ((r ?? '').toLowerCase()) {
       case 'doctor':
@@ -115,11 +148,14 @@ class RestLabUserApi implements LabUserApi {
       email: '${_gv(m, 'email') ?? ''}',
       role: _parseRole('${_gv(m, 'role')}'),
       pointsBalance: _asInt(_gv(m, 'total_points')),
+      address: '${_gv(m, 'address') ?? ''}'.trim(),
+      latitude: _asDouble(_gv(m, 'latitude')),
+      longitude: _asDouble(_gv(m, 'longitude')),
     );
   }
 
   @override
-  Future<AppUser> register(RegisterRequest request) async {
+  Future<void> register(RegisterRequest request) async {
     final body = jsonEncode({
       'name': request.name,
       'email': request.email.trim().toLowerCase(),
@@ -133,7 +169,6 @@ class RestLabUserApi implements LabUserApi {
     });
     final r = await http.post(Uri.parse('$_base/api/users'), headers: _jsonHeaders(withAuth: false), body: body);
     if (r.statusCode >= 400) _throwFromResponse(r);
-    return login(LoginRequest(email: request.email.trim(), password: request.password));
   }
 
   @override
@@ -158,22 +193,30 @@ class RestLabUserApi implements LabUserApi {
   }
 
   @override
-  Future<void> updateProfile({
+  Future<AppUser> updateProfile({
     required String userId,
     String? name,
     String? phone,
     String? email,
+    String? address,
+    double? latitude,
+    double? longitude,
   }) async {
     final body = <String, dynamic>{};
     if (name != null) body['name'] = name;
     if (phone != null) body['phone'] = phone;
     if (email != null) body['email'] = email;
+    if (address != null) body['address'] = address;
+    if (latitude != null) body['latitude'] = latitude;
+    if (longitude != null) body['longitude'] = longitude;
     final r = await http.put(
       Uri.parse('$_base/api/users/$userId'),
       headers: _jsonHeaders(),
       body: jsonEncode(body),
     );
     if (r.statusCode >= 400) _throwFromResponse(r);
+    final map = _asObj(jsonDecode(r.body));
+    return _userFromMe(map);
   }
 
   @override
@@ -192,6 +235,7 @@ class RestLabUserApi implements LabUserApi {
         name: '${_gv(m, 'test_name') ?? _gv(m, 'testName') ?? 'Test'}',
         code: '${_gv(m, 'test_code') ?? _gv(m, 'testCode') ?? ''}',
         basePriceMmk: _asInt(_gv(m, 'base_price_mmk') ?? _gv(m, 'basePriceMmk')),
+        discounts: _parseDiscountList(m['discounts']),
       );
     }).toList();
   }
@@ -201,25 +245,29 @@ class RestLabUserApi implements LabUserApi {
     required String userId,
     required LabOrderRequest request,
   }) async {
-    final tid = request.catalogTestId;
-    if (tid == null || tid.isEmpty) {
-      throw LabApiException('Select a lab test from the catalog.');
+    final lines = request.catalogLines;
+    final hasFile = request.prescriptionBytes != null &&
+        request.prescriptionBytes!.isNotEmpty &&
+        (request.prescriptionFilename ?? '').trim().isNotEmpty;
+
+    if (lines.isEmpty && !hasFile) {
+      throw LabApiException('Choose one or more tests, or upload a prescription (PDF or image).');
     }
-    final price = request.catalogLinePriceMmk > 0 ? request.catalogLinePriceMmk : 0;
-    if (price <= 0) {
-      throw LabApiException('Invalid test price.');
+    if (lines.isNotEmpty && hasFile) {
+      throw LabApiException('Choose either tests from the catalog or a prescription upload — not both.');
     }
-    final items = [
-      {
-        'test_id': tid,
-        'quantity': 1,
-        'unit_price_mmk': price,
-        'subtotal_mmk': price,
-      },
-    ];
-    final desc = _composeDescription(request);
+
+    /*
+     * POST /api/orders (multipart) — field names match `orderController.createOrder` + `Order.create`:
+     * Required: user_id, priority, patient_name, patient_age, patient_phone, address, report_delivery_method.
+     * Optional: description, latitude, longitude, status, original_price_mmk, discount_percent, final_price_mmk, items (JSON string).
+     * File: prescription (multer upload.single('prescription')).
+     */
     final mp = http.MultipartRequest('POST', Uri.parse('$_base/api/orders'));
     mp.headers['Authorization'] = 'Bearer $_token';
+
+    double roundMoney(double v) => (v * 100).round() / 100.0;
+
     mp.fields['user_id'] = userId;
     mp.fields['priority'] = request.priority.name;
     mp.fields['patient_name'] = request.patientName;
@@ -229,11 +277,39 @@ class RestLabUserApi implements LabUserApi {
     mp.fields['latitude'] = '${request.address.latitude}';
     mp.fields['longitude'] = '${request.address.longitude}';
     mp.fields['report_delivery_method'] = request.reportDeliveryMethod;
-    mp.fields['description'] = desc;
-    mp.fields['original_price_mmk'] = '$price';
-    mp.fields['discount_percent'] = '0';
-    mp.fields['final_price_mmk'] = '$price';
-    mp.fields['items'] = jsonEncode(items);
+    mp.fields['description'] = _composeDescription(request);
+    mp.fields['status'] = 'pending';
+
+    if (lines.isNotEmpty) {
+      final original = roundMoney(lines.fold<double>(0, (a, b) => a + b.unitPriceMmk));
+      final finalSum = roundMoney(lines.fold<double>(0, (a, b) => a + b.subtotalMmk));
+      final blended =
+          original > 0 ? ((1 - finalSum / original) * 10000).round() / 100 : 0.0;
+      mp.fields['original_price_mmk'] = roundMoney(original).toString();
+      mp.fields['final_price_mmk'] = roundMoney(finalSum).toString();
+      mp.fields['discount_percent'] = roundMoney(blended).toString();
+      mp.fields['items'] = jsonEncode(lines.map((e) => e.toItemJson()).toList());
+    } else {
+      mp.fields['original_price_mmk'] = '0';
+      mp.fields['final_price_mmk'] = '0';
+      mp.fields['discount_percent'] = '0';
+      mp.fields['items'] = jsonEncode([]);
+    }
+
+    if (hasFile) {
+      final rawName = request.prescriptionFilename!.trim();
+      final shortName = rawName.contains('/') ? rawName.split('/').last : rawName.split(r'\').last;
+      final nameForPart = shortName.isEmpty ? 'prescription' : shortName;
+      final contentType = _prescriptionMediaTypeFromFilename(nameForPart);
+      mp.files.add(
+        http.MultipartFile.fromBytes(
+          'prescription',
+          request.prescriptionBytes!,
+          filename: nameForPart,
+          contentType: contentType,
+        ),
+      );
+    }
 
     final streamed = await mp.send();
     final r = await http.Response.fromStream(streamed);
@@ -243,15 +319,28 @@ class RestLabUserApi implements LabUserApi {
     return _hydrateOrderSummary(id);
   }
 
+  /// Maps to API `description` (single `lab_orders.description` column). Catalog lines live in `items` JSON only.
   String _composeDescription(LabOrderRequest request) {
     final buf = StringBuffer();
-    buf.writeln(request.description.trim());
-    buf.writeln();
-    buf.writeln('Facility / notes: ${request.labFacility}');
-    buf.writeln('Gender: ${request.gender} · Blood type: ${request.bloodType}');
-    buf.writeln(
-      'Preferred collection: ${request.preferredDate.toIso8601String().split('T').first} · ${request.timeSlot}',
+    final notes = request.description.trim();
+    if (notes.isNotEmpty) {
+      buf.writeln(notes);
+    }
+    final extras = <String>[];
+    if (request.labFacility.trim().isNotEmpty) {
+      extras.add('Facility / collection notes: ${request.labFacility.trim()}');
+    }
+    extras.add(
+      'Gender: ${request.gender} · Blood type: ${request.bloodType.trim().isEmpty ? '—' : request.bloodType.trim()}',
     );
+    extras.add(
+      'Preferred collection: ${request.preferredDate.toIso8601String().split('T').first} · ${request.timeSlot.trim().isEmpty ? '—' : request.timeSlot.trim()}',
+    );
+    if (request.catalogLines.isEmpty && request.prescriptionBytes != null && request.prescriptionBytes!.isNotEmpty) {
+      extras.add('Order path: prescription upload (catalog tests to be assigned by lab).');
+    }
+    if (buf.isNotEmpty) buf.writeln();
+    buf.write(extras.join('\n'));
     return buf.toString().trim();
   }
 

@@ -2,9 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/session_scope.dart';
+import '../../config/map_defaults.dart';
+import '../../models/address_map_pick_result.dart';
+import '../../models/post_register_login_hint.dart';
 import '../../models/user_role.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/common/app_brand_mark.dart';
+import '../../widgets/location/address_map_picker_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key, this.initialRole});
@@ -29,6 +33,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _obscurePassword = true;
   bool _agreeTerms = false;
   late String _selectedRole;
+  double _addressLat = 0;
+  double _addressLng = 0;
 
   @override
   void initState() {
@@ -67,8 +73,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'Create an account on the lab server. Use at least 8 characters for your password '
-                  'and the same fields as the web signup (name, email, phone, optional address).',
+                  'Create an account on the lab server. Use at least 8 characters for your password. '
+                  'You must pick a location on the map so latitude and longitude are saved (same as the admin web user form). '
+                  'After registering, sign in with your email and password.',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: AppColors.onSurfaceVariant),
                 ),
@@ -177,19 +184,79 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         ),
                       ),
                       const SizedBox(height: 12),
-                      _RegisterLabel(text: 'Address (optional)'),
+                      _RegisterLabel(text: 'Address'),
+                      Text(
+                        'Tap “Choose on map”, drop the pin, then save — latitude and longitude are required.',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.onSurfaceVariant, height: 1.35),
+                      ),
+                      const SizedBox(height: 8),
                       _RegisterInputShell(
-                        child: TextFormField(
-                          controller: _address,
-                          decoration: const InputDecoration(
-                            prefixIcon: Icon(Icons.home_outlined),
-                            border: InputBorder.none,
-                            enabledBorder: InputBorder.none,
-                            focusedBorder: InputBorder.none,
-                            filled: false,
-                          ),
-                          maxLines: 2,
-                          textInputAction: TextInputAction.next,
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.only(left: 14, top: 12, right: 4),
+                              child: Icon(
+                                Icons.home_outlined,
+                                size: 22,
+                                color: Theme.of(context).iconTheme.color ?? AppColors.onSurfaceVariant,
+                              ),
+                            ),
+                            Expanded(
+                              child: TextFormField(
+                                controller: _address,
+                                textAlignVertical: TextAlignVertical.top,
+                                decoration: InputDecoration(
+                                  border: InputBorder.none,
+                                  enabledBorder: InputBorder.none,
+                                  focusedBorder: InputBorder.none,
+                                  filled: false,
+                                  isDense: true,
+                                  contentPadding: const EdgeInsets.fromLTRB(0, 12, 14, 12),
+                                ),
+                                minLines: 1,
+                                maxLines: 4,
+                                textInputAction: TextInputAction.next,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      _RegisterLabel(text: 'Latitude–Longitude'),
+                      const SizedBox(height: 6),
+                      Text(
+                        hasMeaningfulCoordinates(_addressLat, _addressLng)
+                            ? '${_addressLat.toStringAsFixed(5)}, ${_addressLng.toStringAsFixed(5)}'
+                            : '—',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: AppColors.onSurfaceVariant,
+                              fontFeatures: const [FontFeature.tabularFigures()],
+                            ),
+                      ),
+                      const SizedBox(height: 8),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: OutlinedButton.icon(
+                          onPressed: () async {
+                            final r = await Navigator.of(context).push<AddressMapPickResult?>(
+                              MaterialPageRoute(
+                                builder: (_) => AddressMapPickerScreen(
+                                  initialAddress: _address.text,
+                                  initialLatitude: _addressLat,
+                                  initialLongitude: _addressLng,
+                                ),
+                              ),
+                            );
+                            if (!context.mounted || r == null) return;
+                            setState(() {
+                              _address.text = r.addressLine;
+                              _addressLat = r.latitude;
+                              _addressLng = r.longitude;
+                            });
+                          },
+                          icon: const Icon(Icons.map_outlined, size: 20),
+                          label: const Text('Choose on map'),
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -297,17 +364,36 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               );
                               return;
                             }
+                            if (!hasMeaningfulCoordinates(_addressLat, _addressLng)) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Choose a location on the map. Latitude and longitude are required to register.',
+                                  ),
+                                ),
+                              );
+                              return;
+                            }
                             try {
+                              final emailTrim = _email.text.trim();
                               await session.register(
                                 name: _name.text.trim(),
                                 phone: _phone.text.trim(),
-                                email: _email.text.trim(),
+                                email: emailTrim,
                                 password: _password.text,
                                 role: _selectedRole.toUserRole(),
                                 address: _address.text.trim(),
+                                latitude: _addressLat,
+                                longitude: _addressLng,
                               );
                               if (!context.mounted) return;
-                              context.go(session.homeRoute);
+                              context.go(
+                                '/login',
+                                extra: PostRegisterLoginHint(
+                                  message: 'Account created. Sign in with your email and password.',
+                                  email: emailTrim,
+                                ),
+                              );
                             } catch (e) {
                               if (!context.mounted) return;
                               ScaffoldMessenger.of(context).showSnackBar(
@@ -326,6 +412,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 const SizedBox(height: 18),
                 TextButton(
                   onPressed: () => context.go('/login'),
+                  style: TextButton.styleFrom(
+                    splashFactory: NoSplash.splashFactory,
+                    overlayColor: Colors.transparent,
+                    foregroundColor: AppColors.onSurfaceVariant,
+                  ),
                   child: Text.rich(
                     TextSpan(
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: AppColors.onSurfaceVariant),

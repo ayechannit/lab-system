@@ -3,7 +3,7 @@ export type StaffRole = 'admin' | 'lab_technician' | 'reception' | 'manager'
 /** End-user roles for `POST /api/users` (`users.role`). */
 export type EndUserRole = 'clinic' | 'doctor' | 'patient'
 
-/** Role stored in the admin session after login / signup. */
+/** Role stored in the admin session after login. */
 export type SessionRole = StaffRole | EndUserRole
 
 export interface StaffListRow {

@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState, type ChangeEventHandler, type FormEvent } from 'react'
 import { PageHeader } from '../components/common/PageHeader'
+import { LoadingSpinner } from '../components/common/LoadingSpinner'
+import { DEFAULT_TABLE_PAGE_SIZE, TablePagination } from '../components/common/TablePagination'
 import { isApiMode } from '../services/apiBase'
 import {
   fetchOrderById,
@@ -7,9 +9,21 @@ import {
   uploadOrderTestResult,
   type ApiOrderDetail,
   type ApiOrderListRow,
+  type ApiOrderStatus,
+  type FetchOrdersParams,
 } from '../services/orderService'
 import { reviewLabResultsNumeric } from '../services/aiDemo'
 import '../components/common/ui.css'
+
+const ORDER_STATUS_OPTIONS: { value: '' | ApiOrderStatus; label: string }[] = [
+  { value: '', label: 'All statuses' },
+  { value: 'pending', label: 'Pending' },
+  { value: 'scheduled', label: 'Scheduled' },
+  { value: 'collecting', label: 'Collecting' },
+  { value: 'running', label: 'Running' },
+  { value: 'completed', label: 'Completed' },
+  { value: 'delivered', label: 'Delivered' },
+]
 
 export function LabResultManagementPage() {
   const hasApi = isApiMode()
@@ -28,6 +42,37 @@ export function LabResultManagementPage() {
   const [uploadBusy, setUploadBusy] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [localPdfName, setLocalPdfName] = useState<string | null>(null)
+  const [patientInput, setPatientInput] = useState('')
+  const [patientName, setPatientName] = useState('')
+  const [statusFilter, setStatusFilter] = useState<'' | ApiOrderStatus>('')
+  const [ordersPage, setOrdersPage] = useState(1)
+  const [ordersPageSize, setOrdersPageSize] = useState(DEFAULT_TABLE_PAGE_SIZE)
+  const [refreshTick, setRefreshTick] = useState(0)
+
+  useEffect(() => {
+    const id = window.setTimeout(() => setPatientName(patientInput.trim()), 350)
+    return () => window.clearTimeout(id)
+  }, [patientInput])
+
+  const orderFetchParams = useMemo((): FetchOrdersParams | undefined => {
+    const p: FetchOrdersParams = {}
+    if (patientName) p.patient_name = patientName
+    if (statusFilter) p.status = statusFilter
+    return Object.keys(p).length ? p : undefined
+  }, [patientName, statusFilter])
+
+  const ordersListQuery = useMemo(
+    (): FetchOrdersParams => ({
+      ...(orderFetchParams ?? {}),
+      page: ordersPage,
+      limit: ordersPageSize,
+    }),
+    [orderFetchParams, ordersPage, ordersPageSize],
+  )
+
+  useEffect(() => {
+    queueMicrotask(() => setOrdersPage(1))
+  }, [patientName, statusFilter])
 
   useEffect(() => {
     if (!hasApi) {
@@ -40,10 +85,16 @@ export function LabResultManagementPage() {
     setListError(null)
     void (async () => {
       try {
-        const list = await fetchOrders()
+        const list = await fetchOrders(ordersListQuery)
         if (!cancelled) {
           setOrders(list)
-          setOrderId((prev) => prev || list[0]?.id || '')
+          if (list.length === 0 && ordersPage > 1) {
+            setOrdersPage((p) => Math.max(1, p - 1))
+          }
+          setOrderId((prev) => {
+            if (list.some((o) => o.id === prev)) return prev
+            return list[0]?.id ?? ''
+          })
         }
       } catch (e) {
         if (!cancelled) setListError(e instanceof Error ? e.message : 'Failed to load orders')
@@ -54,7 +105,7 @@ export function LabResultManagementPage() {
     return () => {
       cancelled = true
     }
-  }, [hasApi])
+  }, [hasApi, ordersListQuery, refreshTick])
 
   useEffect(() => {
     if (!hasApi || !orderId) {
@@ -173,6 +224,66 @@ export function LabResultManagementPage() {
         </div>
       ) : null}
 
+      <div className="list-tools-row">
+        <div className="list-filters-bar" aria-label="Filter orders">
+          <div className="list-filters-bar__group list-filters-bar__group--text">
+            <label className="list-filters-bar__label" htmlFor="lab-result-patient">
+              Patient
+            </label>
+            <input
+              id="lab-result-patient"
+              className="list-filters-bar__input"
+              placeholder="Name contains…"
+              value={patientInput}
+              onChange={(e) => setPatientInput(e.target.value)}
+              disabled={!hasApi || listLoading}
+              autoComplete="off"
+            />
+          </div>
+          <div className="list-filters-bar__group">
+            <label className="list-filters-bar__label" htmlFor="lab-result-status">
+              Status
+            </label>
+            <select
+              id="lab-result-status"
+              className="list-filters-bar__select"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter((e.target.value || '') as '' | ApiOrderStatus)}
+              disabled={!hasApi || listLoading}
+            >
+              {ORDER_STATUS_OPTIONS.map((o) => (
+                <option key={o.value || 'all'} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm list-filters-bar__clear"
+            onClick={() => {
+              setPatientInput('')
+              setPatientName('')
+              setStatusFilter('')
+              setOrdersPage(1)
+            }}
+            disabled={!hasApi || listLoading}
+          >
+            Clear filters
+          </button>
+        </div>
+        <div className="list-tools-row__actions">
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => setRefreshTick((t) => t + 1)}
+            disabled={!hasApi || listLoading}
+          >
+            Refresh
+          </button>
+        </div>
+      </div>
+
       <div className="card">
         <h3 className="card-title">Select order</h3>
         <div className="field" style={{ maxWidth: 480 }}>
@@ -195,14 +306,36 @@ export function LabResultManagementPage() {
             )}
           </select>
         </div>
+        {orders.length === 0 && !listLoading && hasApi ? (
+          <p style={{ margin: '0.5rem 0 0', fontSize: '0.875rem', color: 'var(--muted)' }}>
+            {patientName || statusFilter
+              ? 'No orders match these filters. Clear filters or adjust the patient name.'
+              : 'No orders returned from the server.'}
+          </p>
+        ) : null}
         {detailError ? (
           <p style={{ margin: '0.75rem 0 0', color: '#b91c1c', fontSize: '0.875rem' }}>{detailError}</p>
+        ) : null}
+        {!listLoading && hasApi ? (
+          <TablePagination
+            mode="server"
+            page={ordersPage}
+            pageSize={ordersPageSize}
+            itemsOnPage={orders.length}
+            onPageChange={setOrdersPage}
+            onPageSizeChange={(n) => {
+              setOrdersPageSize(n)
+              setOrdersPage(1)
+            }}
+          />
         ) : null}
       </div>
 
       {detailLoading ? (
         <div className="card">
-          <p style={{ margin: 0 }}>Loading order detail…</p>
+          <div className="card-body-loading">
+            <LoadingSpinner label="Loading order detail" />
+          </div>
         </div>
       ) : null}
 

@@ -211,10 +211,6 @@
   max-width: 480px;
 }
 
-.auth-form-wrap--signup {
-  max-width: 540px;
-}
-
 .auth-icon-tile {
   display: inline-flex;
   align-items: center;
@@ -356,12 +352,12 @@
 
 .auth-select {
   appearance: none;
-  padding-right: 2.75rem;
+  padding-right: 2.85rem;
 }
 
 .auth-chevron {
   position: absolute;
-  right: 1rem;
+  right: 1.28rem;
   top: 50%;
   transform: translateY(-50%);
   color: #727784;
@@ -421,23 +417,6 @@
 
 .auth-primary-btn:active {
   transform: scale(0.99);
-}
-
-.auth-bottom-link {
-  margin-top: 2rem;
-  text-align: center;
-  font-size: 0.875rem;
-  color: #424752;
-}
-
-.auth-bottom-link a {
-  font-weight: 700;
-  color: #003f87;
-  text-decoration: none;
-}
-
-.auth-bottom-link a:hover {
-  text-decoration: underline;
 }
 
 .auth-grid-2 {

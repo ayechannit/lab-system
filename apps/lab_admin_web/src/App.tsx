@@ -1,8 +1,8 @@
 import { BrowserRouter, HashRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom'
+import { LoadingSpinner } from './components/common/LoadingSpinner'
 import { useAuth } from './hooks/AuthContext'
 import { AdminLayout } from './layout/AdminLayout'
 import { LoginPage } from './pages/auth/LoginPage'
-import { SignUpPage } from './pages/auth/SignUpPage'
 import { DiscountManagementPage } from './pages/DiscountManagementPage'
 import { LabTestCatalogPage } from './pages/LabTestCatalogPage'
 import { LabResultManagementPage } from './pages/LabResultManagementPage'
@@ -18,8 +18,8 @@ function RequireAuth() {
   const { signedIn, initializing } = useAuth()
   if (initializing) {
     return (
-      <div style={{ padding: '2rem', fontFamily: 'system-ui', color: '#334155' }}>
-        Loading session…
+      <div className="card-body-loading" style={{ minHeight: '40vh' }}>
+        <LoadingSpinner layout="block" label="Loading session" />
       </div>
     )
   }
@@ -34,7 +34,6 @@ export default function App() {
     <Router>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
-        <Route path="/signup" element={<SignUpPage />} />
         <Route element={<RequireAuth />}>
           <Route path="/" element={<AdminLayout />}>
             <Route index element={<Navigate to="orders" replace />} />

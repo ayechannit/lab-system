@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/session_scope.dart';
+import '../../config/map_defaults.dart';
+import '../../models/address_map_pick_result.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/common/app_brand_mark.dart';
+import '../../widgets/location/address_map_picker_screen.dart';
 import '../../widgets/navigation/lab_main_bottom_nav.dart';
 
 class EditProfileScreen extends StatefulWidget {
@@ -20,10 +23,24 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   final _name = TextEditingController();
   final _phone = TextEditingController();
   final _email = TextEditingController();
+  final _address = TextEditingController();
+  final _addressFocusNode = FocusNode();
+  double _addressLat = 0;
+  double _addressLng = 0;
   var _seeded = false;
   var _saving = false;
   _ToastKind? _toast;
   String _toastError = '';
+
+  void _onAddressFocusChanged() {
+    setState(() {});
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _addressFocusNode.addListener(_onAddressFocusChanged);
+  }
 
   @override
   void didChangeDependencies() {
@@ -40,21 +57,28 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _name.text = u.name;
     _phone.text = u.phone;
     _email.text = u.email;
+    _address.text = u.address;
+    _addressLat = u.latitude;
+    _addressLng = u.longitude;
   }
 
   @override
   void dispose() {
+    _addressFocusNode.removeListener(_onAddressFocusChanged);
+    _addressFocusNode.dispose();
     _name.dispose();
     _phone.dispose();
     _email.dispose();
+    _address.dispose();
     super.dispose();
   }
 
   InputDecoration _fieldDecoration(String label, {String? hint, IconData? prefix}) {
+    final iconColor = Theme.of(context).iconTheme.color ?? AppColors.onSurfaceVariant;
     return InputDecoration(
       labelText: label,
       hintText: hint,
-      prefixIcon: prefix != null ? Icon(prefix, size: 22, color: AppColors.outline) : null,
+      prefixIcon: prefix != null ? Icon(prefix, size: 22, color: iconColor) : null,
       filled: true,
       fillColor: Colors.white,
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
@@ -90,6 +114,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         name: _name.text.trim(),
         phone: _phone.text.trim(),
         email: _email.text.trim(),
+        address: _address.text.trim(),
+        latitude: _addressLat,
+        longitude: _addressLng,
       );
       if (!mounted) return;
       setState(() {
@@ -288,6 +315,107 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                           if (!s.contains('@') || !s.contains('.')) return 'Enter a valid email';
                           return null;
                         },
+                      ),
+                      const SizedBox(height: 14),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          'Address',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: AppColors.onSurfaceVariant,
+                                fontWeight: FontWeight.w600,
+                              ),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 120),
+                        curve: Curves.easeOut,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: _addressFocusNode.hasFocus ? AppColors.primaryLight : const Color(0x66E1E2EC),
+                            width: _addressFocusNode.hasFocus ? 2 : 1,
+                          ),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.only(left: 14, top: 14, right: 6),
+                              child: Icon(
+                                Icons.home_outlined,
+                                size: 22,
+                                color: Theme.of(context).iconTheme.color ?? AppColors.onSurfaceVariant,
+                              ),
+                            ),
+                            Expanded(
+                              child: TextFormField(
+                                controller: _address,
+                                focusNode: _addressFocusNode,
+                                minLines: 2,
+                                maxLines: 4,
+                                textAlignVertical: TextAlignVertical.top,
+                                decoration: InputDecoration(
+                                  hintText: 'Street, city, etc.',
+                                  border: InputBorder.none,
+                                  enabledBorder: InputBorder.none,
+                                  focusedBorder: InputBorder.none,
+                                  filled: false,
+                                  isDense: true,
+                                  contentPadding: const EdgeInsets.fromLTRB(0, 12, 14, 12),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        'Latitude–Longitude',
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                              color: AppColors.onSurface,
+                              fontWeight: FontWeight.w600,
+                            ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        hasMeaningfulCoordinates(_addressLat, _addressLng)
+                            ? '${_addressLat.toStringAsFixed(5)}, ${_addressLng.toStringAsFixed(5)}'
+                            : '—',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: AppColors.onSurfaceVariant,
+                              fontFeatures: const [FontFeature.tabularFigures()],
+                            ),
+                      ),
+                      const SizedBox(height: 8),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: OutlinedButton.icon(
+                          onPressed: _saving
+                              ? null
+                              : () async {
+                                  final r = await Navigator.of(context).push<AddressMapPickResult?>(
+                                    MaterialPageRoute(
+                                      fullscreenDialog: true,
+                                      builder: (_) => AddressMapPickerScreen(
+                                        initialAddress: _address.text,
+                                        initialLatitude: _addressLat,
+                                        initialLongitude: _addressLng,
+                                      ),
+                                    ),
+                                  );
+                                  if (!mounted || r == null) return;
+                                  setState(() {
+                                    _address.text = r.addressLine;
+                                    _addressLat = r.latitude;
+                                    _addressLng = r.longitude;
+                                  });
+                                },
+                          icon: const Icon(Icons.map_outlined, size: 20),
+                          label: const Text('Choose on map'),
+                        ),
                       ),
                       const SizedBox(height: 22),
                       FilledButton(

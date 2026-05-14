@@ -1,11 +1,28 @@
 import { useEffect, useMemo, useState } from 'react'
 import { PageHeader } from '../components/common/PageHeader'
+import { LoadingSpinner } from '../components/common/LoadingSpinner'
+import { DEFAULT_TABLE_PAGE_SIZE, TablePagination } from '../components/common/TablePagination'
 import { isApiMode } from '../services/apiBase'
-import { fetchOrders, type ApiOrderListRow, type ApiOrderStatus } from '../services/orderService'
+import {
+  fetchOrders,
+  type ApiOrderListRow,
+  type ApiOrderStatus,
+  type FetchOrdersParams,
+} from '../services/orderService'
 import { suggestCollectionRoute } from '../services/aiDemo'
 import '../components/common/ui.css'
 
 const ROUTING_STATUSES: ApiOrderStatus[] = ['pending', 'scheduled', 'collecting']
+
+const ORDER_STATUS_OPTIONS: { value: '' | ApiOrderStatus; label: string }[] = [
+  { value: '', label: 'All statuses' },
+  { value: 'pending', label: 'Pending' },
+  { value: 'scheduled', label: 'Scheduled' },
+  { value: 'collecting', label: 'Collecting' },
+  { value: 'running', label: 'Running' },
+  { value: 'completed', label: 'Completed' },
+  { value: 'delivered', label: 'Delivered' },
+]
 
 function fmtWhen(iso: string | undefined): string {
   if (!iso) return '—'
@@ -21,6 +38,37 @@ export function SampleCollectionPage() {
   const [loadError, setLoadError] = useState<string | null>(null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set())
   const [routeResult, setRouteResult] = useState<ReturnType<typeof suggestCollectionRoute> | null>(null)
+  const [patientInput, setPatientInput] = useState('')
+  const [patientName, setPatientName] = useState('')
+  const [statusFilter, setStatusFilter] = useState<'' | ApiOrderStatus>('')
+  const [ordersPage, setOrdersPage] = useState(1)
+  const [ordersPageSize, setOrdersPageSize] = useState(DEFAULT_TABLE_PAGE_SIZE)
+  const [refreshTick, setRefreshTick] = useState(0)
+
+  useEffect(() => {
+    const id = window.setTimeout(() => setPatientName(patientInput.trim()), 350)
+    return () => window.clearTimeout(id)
+  }, [patientInput])
+
+  const orderFetchParams = useMemo((): FetchOrdersParams | undefined => {
+    const p: FetchOrdersParams = {}
+    if (patientName) p.patient_name = patientName
+    if (statusFilter) p.status = statusFilter
+    return Object.keys(p).length ? p : undefined
+  }, [patientName, statusFilter])
+
+  const ordersListQuery = useMemo(
+    (): FetchOrdersParams => ({
+      ...(orderFetchParams ?? {}),
+      page: ordersPage,
+      limit: ordersPageSize,
+    }),
+    [orderFetchParams, ordersPage, ordersPageSize],
+  )
+
+  useEffect(() => {
+    queueMicrotask(() => setOrdersPage(1))
+  }, [patientName, statusFilter])
 
   useEffect(() => {
     if (!hasApi) {
@@ -33,8 +81,13 @@ export function SampleCollectionPage() {
     setLoadError(null)
     void (async () => {
       try {
-        const list = await fetchOrders()
-        if (!cancelled) setOrders(list)
+        const list = await fetchOrders(ordersListQuery)
+        if (!cancelled) {
+          setOrders(list)
+          if (list.length === 0 && ordersPage > 1) {
+            setOrdersPage((p) => Math.max(1, p - 1))
+          }
+        }
       } catch (e) {
         if (!cancelled) setLoadError(e instanceof Error ? e.message : 'Failed to load orders')
       } finally {
@@ -44,7 +97,11 @@ export function SampleCollectionPage() {
     return () => {
       cancelled = true
     }
-  }, [hasApi])
+  }, [hasApi, ordersListQuery, refreshTick])
+
+  useEffect(() => {
+    setSelectedIds(new Set())
+  }, [ordersListQuery])
 
   const routable = useMemo(
     () => orders.filter((o) => ROUTING_STATUSES.includes(o.status)),
@@ -61,7 +118,7 @@ export function SampleCollectionPage() {
   }
 
   const runAiRoute = () => {
-    const picked = orders.filter((o) => selectedIds.has(o.id))
+    const picked = routable.filter((o) => selectedIds.has(o.id))
     if (picked.length < 2) {
       window.alert('Select at least two orders to build a multi-stop collection route.')
       return
@@ -91,10 +148,71 @@ export function SampleCollectionPage() {
         </div>
       ) : null}
 
+      <div className="list-tools-row">
+        <div className="list-filters-bar" aria-label="Filter orders for collection">
+          <div className="list-filters-bar__group list-filters-bar__group--text">
+            <label className="list-filters-bar__label" htmlFor="collection-patient">
+              Patient
+            </label>
+            <input
+              id="collection-patient"
+              className="list-filters-bar__input"
+              placeholder="Name contains…"
+              value={patientInput}
+              onChange={(e) => setPatientInput(e.target.value)}
+              disabled={!hasApi || loading}
+              autoComplete="off"
+            />
+          </div>
+          <div className="list-filters-bar__group">
+            <label className="list-filters-bar__label" htmlFor="collection-status">
+              Status
+            </label>
+            <select
+              id="collection-status"
+              className="list-filters-bar__select"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter((e.target.value || '') as '' | ApiOrderStatus)}
+              disabled={!hasApi || loading}
+            >
+              {ORDER_STATUS_OPTIONS.map((o) => (
+                <option key={o.value || 'all'} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm list-filters-bar__clear"
+            onClick={() => {
+              setPatientInput('')
+              setPatientName('')
+              setStatusFilter('')
+              setOrdersPage(1)
+            }}
+            disabled={!hasApi || loading}
+          >
+            Clear filters
+          </button>
+        </div>
+        <div className="list-tools-row__actions">
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => setRefreshTick((t) => t + 1)}
+            disabled={!hasApi || loading}
+          >
+            Refresh
+          </button>
+        </div>
+      </div>
+
       <div className="card">
         <h3 className="card-title">Orders ready for pickup routing</h3>
         <p style={{ margin: '0 0 0.75rem', color: 'var(--muted)', fontSize: '0.875rem' }}>
           Addresses come from the order record. Select rows and run heuristic route ordering (demo helper).
+          Rows below are still limited to pending, scheduled, or collecting for routing.
         </p>
         <div className="table-wrap">
           <table className="data-table">
@@ -111,14 +229,18 @@ export function SampleCollectionPage() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="data-table__state">
-                    Loading…
+                  <td colSpan={6} className="data-table__state data-table__state--loading">
+                    <LoadingSpinner label="Loading samples" />
                   </td>
                 </tr>
               ) : routable.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="data-table__state">
-                    No orders in pending / scheduled / collecting.
+                    {orders.length === 0
+                      ? patientName || statusFilter
+                        ? 'No orders match these filters.'
+                        : 'No orders returned from the server.'
+                      : 'No orders in pending / scheduled / collecting in this list. Clear the status filter or load all orders to see other stages.'}
                   </td>
                 </tr>
               ) : (
@@ -145,6 +267,19 @@ export function SampleCollectionPage() {
             </tbody>
           </table>
         </div>
+        {!loading && hasApi ? (
+          <TablePagination
+            mode="server"
+            page={ordersPage}
+            pageSize={ordersPageSize}
+            itemsOnPage={orders.length}
+            onPageChange={setOrdersPage}
+            onPageSizeChange={(n) => {
+              setOrdersPageSize(n)
+              setOrdersPage(1)
+            }}
+          />
+        ) : null}
         <div className="row-actions" style={{ marginTop: '1rem' }}>
           <button type="button" className="btn btn-primary" onClick={runAiRoute} disabled={!hasApi || loading}>
             Plan route (demo ordering)

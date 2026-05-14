@@ -5,6 +5,8 @@ import './ui.css'
 export type TableActionMenuItem = {
   label: string
   onSelect: () => void
+  /** Destructive row action (e.g. delete) — red on hover */
+  danger?: boolean
 }
 
 type TableActionMenuProps = {
@@ -90,12 +92,14 @@ export function TableActionMenu({ open, onOpenChange, items }: TableActionMenuPr
           zIndex: PORTAL_Z,
         }}
       >
-        {items.map((item, i) => (
+        {items.map((item, i) => {
+          const danger = item.danger ?? /^delete$/i.test(item.label.trim())
+          return (
           <button
             key={`${item.label}-${i}`}
             type="button"
             role="menuitem"
-            className="action-menu-item"
+            className={danger ? 'action-menu-item action-menu-item--danger' : 'action-menu-item'}
             onClick={() => {
               item.onSelect()
               onOpenChange(false)
@@ -103,7 +107,8 @@ export function TableActionMenu({ open, onOpenChange, items }: TableActionMenuPr
           >
             {item.label}
           </button>
-        ))}
+          )
+        })}
       </div>
     ) : null
 

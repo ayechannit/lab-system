@@ -2,11 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/session_scope.dart';
+import '../../models/post_register_login_hint.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/common/app_brand_mark.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  const LoginScreen({super.key, this.routeExtra});
+
+  /// e.g. [PostRegisterLoginHint] after successful signup.
+  final Object? routeExtra;
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -24,6 +28,14 @@ class _LoginScreenState extends State<LoginScreen> {
     super.initState();
     _email = TextEditingController();
     _password = TextEditingController();
+    final ex = widget.routeExtra;
+    if (ex is PostRegisterLoginHint) {
+      _email.text = ex.email;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(ex.message)));
+      });
+    }
   }
 
   @override

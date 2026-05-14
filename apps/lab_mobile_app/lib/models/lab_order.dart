@@ -1,3 +1,8 @@
+import 'dart:typed_data';
+
+/// Two decimal places for `lab_orders` / `lab_order_items` money fields (matches admin rounding).
+double roundPriceMmk(double v) => (v * 100).round() / 100.0;
+
 class OrderTimelineStep {
   const OrderTimelineStep({
     required this.title,
@@ -38,6 +43,32 @@ class LabAddress {
   final String? placeId;
 }
 
+/// One catalog line on the order (maps to `lab_order_items`).
+class CatalogOrderLine {
+  const CatalogOrderLine({
+    required this.testId,
+    required this.testName,
+    required this.testCode,
+    required this.unitPriceMmk,
+    required this.discountPercent,
+    required this.subtotalMmk,
+  });
+
+  final String testId;
+  final String testName;
+  final String testCode;
+  final double unitPriceMmk;
+  final int discountPercent;
+  final double subtotalMmk;
+
+  Map<String, dynamic> toItemJson() => {
+        'test_id': testId,
+        'quantity': 1,
+        'unit_price_mmk': roundPriceMmk(unitPriceMmk),
+        'subtotal_mmk': roundPriceMmk(subtotalMmk),
+      };
+}
+
 class LabOrderRequest {
   const LabOrderRequest({
     required this.testName,
@@ -54,11 +85,15 @@ class LabOrderRequest {
     required this.address,
     required this.createdAt,
     this.reportDeliveryMethod = 'soft_copy',
-    this.catalogTestId,
-    this.catalogLinePriceMmk = 0,
+    this.catalogLines = const [],
+    this.prescriptionBytes,
+    this.prescriptionFilename,
   });
 
+  /// Local summary for UI only (not a separate API column).
   final String testName;
+
+  /// Maps to API `description` (`lab_orders.description`). Tests are only in `items` JSON — not duplicated here.
   final String description;
   final OrderPriority priority;
   final String patientName;
@@ -72,14 +107,18 @@ class LabOrderRequest {
   final LabAddress address;
   final DateTime createdAt;
 
-  /// Backend: `hard_copy` | `soft_copy` | `both`
+  /// Backend `report_delivery_method`: `soft_copy` | `hard_copy` | `both`.
   final String reportDeliveryMethod;
 
-  /// When set, REST orders send a catalog line item (`test_id` UUID).
-  final String? catalogTestId;
+  /// Selected catalog tests with per-line pricing (empty when prescription-only).
+  final List<CatalogOrderLine> catalogLines;
 
-  /// Unit / line total in MMK for the selected catalog test (REST).
-  final int catalogLinePriceMmk;
+  /// Optional prescription image/PDF (`multipart` field `prescription`).
+  final Uint8List? prescriptionBytes;
+  final String? prescriptionFilename;
+
+  bool get isPrescriptionOnly =>
+      (prescriptionBytes != null && prescriptionBytes!.isNotEmpty) && catalogLines.isEmpty;
 }
 
 class UpcomingTest {

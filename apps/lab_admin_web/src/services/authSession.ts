@@ -18,6 +18,13 @@ export function getStoredAccessToken(): string | null {
   return window.sessionStorage.getItem(TOKEN_KEY) ?? window.localStorage.getItem(TOKEN_KEY)
 }
 
+/** `true` when the access token lives in localStorage (remember-me), not sessionStorage. */
+export function isRememberedSession(): boolean {
+  if (typeof window === 'undefined') return false
+  if (window.sessionStorage.getItem(TOKEN_KEY) != null) return false
+  return window.localStorage.getItem(TOKEN_KEY) != null
+}
+
 export function getStoredAccount(): StoredAccount | null {
   if (typeof window === 'undefined') return null
   const raw =

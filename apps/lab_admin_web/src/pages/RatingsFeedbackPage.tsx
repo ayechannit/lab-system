@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { PageHeader } from '../components/common/PageHeader'
+import { LoadingSpinner } from '../components/common/LoadingSpinner'
+import { DEFAULT_TABLE_PAGE_SIZE, TablePagination } from '../components/common/TablePagination'
 import { isApiMode } from '../services/apiBase'
 import {
   fetchAllRatings,
@@ -25,6 +27,11 @@ export function RatingsFeedbackPage() {
   const [rows, setRows] = useState<RatingListRow[]>([])
   const [loading, setLoading] = useState(hasApi)
   const [loadError, setLoadError] = useState<string | null>(null)
+  const [ratingFilterInput, setRatingFilterInput] = useState('')
+  const [ratingFilter, setRatingFilter] = useState('')
+  const [ratingPage, setRatingPage] = useState(1)
+  const [ratingPageSize, setRatingPageSize] = useState(DEFAULT_TABLE_PAGE_SIZE)
+  const [refreshTick, setRefreshTick] = useState(0)
 
   useEffect(() => {
     if (!hasApi) {
@@ -48,7 +55,16 @@ export function RatingsFeedbackPage() {
     return () => {
       cancelled = true
     }
-  }, [hasApi])
+  }, [hasApi, refreshTick])
+
+  useEffect(() => {
+    const id = window.setTimeout(() => setRatingFilter(ratingFilterInput.trim().toLowerCase()), 300)
+    return () => window.clearTimeout(id)
+  }, [ratingFilterInput])
+
+  useEffect(() => {
+    queueMicrotask(() => setRatingPage(1))
+  }, [ratingFilter])
 
   const sorted = useMemo(
     () =>
@@ -57,6 +73,29 @@ export function RatingsFeedbackPage() {
       ),
     [rows],
   )
+
+  const filteredRatings = useMemo(() => {
+    const q = ratingFilter
+    if (!q) return sorted
+    return sorted.filter((r) => {
+      const blob = [
+        r.user_name,
+        r.user_role,
+        String(r.rating),
+        r.remark,
+        formatRatingSubmittedDate(r.created_at),
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase()
+      return blob.includes(q)
+    })
+  }, [sorted, ratingFilter])
+
+  const pagedRatings = useMemo(() => {
+    const start = (ratingPage - 1) * ratingPageSize
+    return filteredRatings.slice(start, start + ratingPageSize)
+  }, [filteredRatings, ratingPage, ratingPageSize])
 
   return (
     <div className="stack">
@@ -80,6 +119,47 @@ export function RatingsFeedbackPage() {
         </div>
       ) : null}
 
+      <div className="list-tools-row">
+        <div className="list-filters-bar" aria-label="Filter ratings">
+          <div className="list-filters-bar__group list-filters-bar__group--text">
+            <label className="list-filters-bar__label" htmlFor="rating-filter-search">
+              Search
+            </label>
+            <input
+              id="rating-filter-search"
+              className="list-filters-bar__input"
+              placeholder="User, role, stars, remark…"
+              value={ratingFilterInput}
+              onChange={(e) => setRatingFilterInput(e.target.value)}
+              disabled={!hasApi || loading}
+              autoComplete="off"
+            />
+          </div>
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm list-filters-bar__clear"
+            onClick={() => {
+              setRatingFilterInput('')
+              setRatingFilter('')
+              setRatingPage(1)
+            }}
+            disabled={!hasApi || loading || ratingFilterInput.trim() === ''}
+          >
+            Clear filters
+          </button>
+        </div>
+        <div className="list-tools-row__actions">
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => setRefreshTick((t) => t + 1)}
+            disabled={!hasApi || loading}
+          >
+            Refresh
+          </button>
+        </div>
+      </div>
+
       <div className="table-wrap">
         <table className="data-table">
           <thead>
@@ -94,8 +174,8 @@ export function RatingsFeedbackPage() {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={colSpan} className="data-table__state">
-                  Loading…
+                <td colSpan={colSpan} className="data-table__state data-table__state--loading">
+                  <LoadingSpinner label="Loading ratings" />
                 </td>
               </tr>
             ) : sorted.length === 0 ? (
@@ -104,8 +184,14 @@ export function RatingsFeedbackPage() {
                   {hasApi ? 'No ratings yet.' : 'Configure the API to load ratings.'}
                 </td>
               </tr>
+            ) : filteredRatings.length === 0 ? (
+              <tr>
+                <td colSpan={colSpan} className="data-table__state">
+                  No ratings match this search.
+                </td>
+              </tr>
             ) : (
-              sorted.map((r) => (
+              pagedRatings.map((r) => (
                 <tr key={r.id}>
                   <td>{r.user_name?.trim() || '—'}</td>
                   <td>{endUserRoleLabel(r.user_role)}</td>
@@ -118,6 +204,20 @@ export function RatingsFeedbackPage() {
           </tbody>
         </table>
       </div>
+      {!loading && hasApi && filteredRatings.length > 0 ? (
+        <TablePagination
+          mode="client"
+          page={ratingPage}
+          pageSize={ratingPageSize}
+          totalItems={filteredRatings.length}
+          itemsOnPage={pagedRatings.length}
+          onPageChange={setRatingPage}
+          onPageSizeChange={(n) => {
+            setRatingPageSize(n)
+            setRatingPage(1)
+          }}
+        />
+      ) : null}
     </div>
   )
 }

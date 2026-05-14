@@ -1,5 +1,12 @@
 const { sql, poolPromise } = require('../config/db');
 
+/** Accept ISO strings, Date, or empty; return null for SQL nullable datetime2. */
+function toSqlDateTime2(value) {
+  if (value === undefined || value === null || value === '') return null;
+  const d = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
 class Schedule {
   static async getByOrderId(orderId) {
     const pool = await poolPromise;
@@ -13,11 +20,11 @@ class Schedule {
     const pool = await poolPromise;
     const result = await pool.request()
       .input('order_id', sql.UniqueIdentifier, data.order_id)
-      .input('collecting_person', sql.VarChar, data.collecting_person)
-      .input('collection_time', sql.DateTime, data.collection_time)
-      .input('running_time', sql.DateTime, data.running_time)
-      .input('report_out_time', sql.DateTime, data.report_out_time)
-      .input('accepted_by_user', sql.Bit, data.accepted_by_user || 0)
+      .input('collecting_person', sql.NVarChar(255), data.collecting_person || null)
+      .input('collection_time', sql.DateTime2, toSqlDateTime2(data.collection_time))
+      .input('running_time', sql.DateTime2, toSqlDateTime2(data.running_time))
+      .input('report_out_time', sql.DateTime2, toSqlDateTime2(data.report_out_time))
+      .input('accepted_by_user', sql.Bit, data.accepted_by_user ? 1 : 0)
       .input('updated_user', sql.UniqueIdentifier, updatedBy)
       .query(`
         IF EXISTS (SELECT 1 FROM order_schedules WHERE order_id = @order_id)

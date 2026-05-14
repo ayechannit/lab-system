@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useState } from 'react'
 import { ConfirmDialog } from '../components/common/ConfirmDialog'
+import { LoadingSpinner } from '../components/common/LoadingSpinner'
 import { DiscountFormModal } from '../components/discounts/DiscountFormModal'
 import { PageHeader } from '../components/common/PageHeader'
+import { DEFAULT_TABLE_PAGE_SIZE, TablePagination } from '../components/common/TablePagination'
 import { TableActionMenu } from '../components/common/TableActionMenu'
 import type { LabTestCatalogRow } from '../model/types'
 import { isApiMode } from '../services/apiBase'
 import {
   deleteDiscountById,
   fetchAllDiscounts,
-  type FetchDiscountsParams,
   type TestDiscountListRow,
 } from '../services/discountService'
 import { fetchLabTestsList } from '../services/labTestCatalogService'
@@ -16,11 +17,12 @@ import '../components/common/ui.css'
 
 const colSpan = 8
 
-const ROLE_FILTER_OPTIONS: { value: '' | 'clinic' | 'doctor' | 'patient'; label: string }[] = [
+const DISCOUNT_ROLE_FILTER_OPTIONS: { value: '' | 'clinic' | 'doctor' | 'patient' | 'all'; label: string }[] = [
   { value: '', label: 'All roles' },
   { value: 'clinic', label: 'Clinic' },
   { value: 'doctor', label: 'Doctor' },
   { value: 'patient', label: 'Patient' },
+  { value: 'all', label: 'All customers' },
 ]
 
 function roleLabel(role: string): string {
@@ -40,13 +42,19 @@ export function DiscountManagementPage() {
   const [loading, setLoading] = useState(hasApi)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [refreshTick, setRefreshTick] = useState(0)
-  const [roleFilter, setRoleFilter] = useState<'' | 'clinic' | 'doctor' | 'patient'>('')
+
+  const [discountPage, setDiscountPage] = useState(1)
+  const [discountPageSize, setDiscountPageSize] = useState(DEFAULT_TABLE_PAGE_SIZE)
 
   const [formOpen, setFormOpen] = useState(false)
   const [formMode, setFormMode] = useState<'create' | 'edit'>('create')
   const [editInitial, setEditInitial] = useState<TestDiscountListRow | null>(null)
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<TestDiscountListRow | null>(null)
+
+  const [discountSearchInput, setDiscountSearchInput] = useState('')
+  const [discountSearch, setDiscountSearch] = useState('')
+  const [discountRoleFilter, setDiscountRoleFilter] = useState<'' | 'clinic' | 'doctor' | 'patient' | 'all'>('')
 
   useEffect(() => {
     if (!hasApi) {
@@ -60,10 +68,8 @@ export function DiscountManagementPage() {
     setLoadError(null)
     void (async () => {
       try {
-        const listParams: FetchDiscountsParams | undefined =
-          roleFilter === '' ? undefined : { role: roleFilter }
         const [discountList, catalog] = await Promise.all([
-          fetchAllDiscounts(listParams),
+          fetchAllDiscounts(),
           fetchLabTestsList(),
         ])
         if (!cancelled) {
@@ -79,7 +85,16 @@ export function DiscountManagementPage() {
     return () => {
       cancelled = true
     }
-  }, [hasApi, refreshTick, roleFilter])
+  }, [hasApi, refreshTick])
+
+  useEffect(() => {
+    const id = window.setTimeout(() => setDiscountSearch(discountSearchInput.trim().toLowerCase()), 300)
+    return () => window.clearTimeout(id)
+  }, [discountSearchInput])
+
+  useEffect(() => {
+    queueMicrotask(() => setDiscountPage(1))
+  }, [refreshTick, discountSearch, discountRoleFilter])
 
   const sorted = useMemo(() => {
     return [...rows].sort((a, b) => {
@@ -88,6 +103,26 @@ export function DiscountManagementPage() {
       return a.role.localeCompare(b.role)
     })
   }, [rows])
+
+  const filteredDiscounts = useMemo(() => {
+    let list = sorted
+    if (discountRoleFilter) {
+      list = list.filter((r) => r.role === discountRoleFilter)
+    }
+    if (discountSearch) {
+      list = list.filter((r) => {
+        const name = (r.test_name ?? '').toLowerCase()
+        const code = (r.test_code ?? '').toLowerCase()
+        return name.includes(discountSearch) || code.includes(discountSearch)
+      })
+    }
+    return list
+  }, [sorted, discountSearch, discountRoleFilter])
+
+  const pagedDiscounts = useMemo(() => {
+    const start = (discountPage - 1) * discountPageSize
+    return filteredDiscounts.slice(start, start + discountPageSize)
+  }, [filteredDiscounts, discountPage, discountPageSize])
 
   function openCreate() {
     setFormMode('create')
@@ -118,16 +153,17 @@ export function DiscountManagementPage() {
     }
   }
 
-  const emptyMessage =
-    roleFilter !== ''
-      ? {
-          title: 'No discounts for this role',
-          body: 'Switch to "All roles" to see every rule, or add a discount for this audience.',
-        }
-      : {
-          title: 'No discount rules yet',
-          body: 'Add a rule for each test and customer type. The Lab tests list shows base price and example prices when discounts apply.',
-        }
+  function clearDiscountFilters() {
+    setDiscountSearchInput('')
+    setDiscountSearch('')
+    setDiscountRoleFilter('')
+    setDiscountPage(1)
+  }
+
+  const emptyMessage = {
+    title: 'No discount rules yet',
+    body: 'Add a rule for each test and customer type. The Lab tests list shows base price and example prices when discounts apply.',
+  }
 
   return (
     <div className="stack">
@@ -152,29 +188,58 @@ export function DiscountManagementPage() {
       ) : null}
 
       <div className="card">
-        <div className="catalog-card__toolbar">
-          <div className="catalog-card__filters">
-            <div className="field">
-              <label htmlFor="discount-role-filter">Role</label>
+        <div className="list-tools-row">
+          <div className="list-filters-bar" aria-label="Discount filters">
+            <div className="list-filters-bar__group list-filters-bar__group--text">
+              <label className="list-filters-bar__label" htmlFor="discount-filter-test">
+                Test
+              </label>
+              <input
+                id="discount-filter-test"
+                className="list-filters-bar__input"
+                placeholder="Name or code contains…"
+                value={discountSearchInput}
+                onChange={(e) => setDiscountSearchInput(e.target.value)}
+                disabled={loading || !hasApi}
+                autoComplete="off"
+              />
+            </div>
+            <div className="list-filters-bar__group">
+              <label className="list-filters-bar__label" htmlFor="discount-filter-role">
+                Role
+              </label>
               <select
-                id="discount-role-filter"
-                className="select-chevron-left"
-                value={roleFilter}
+                id="discount-filter-role"
+                className="list-filters-bar__select"
+                value={discountRoleFilter}
                 onChange={(e) =>
-                  setRoleFilter(e.target.value as '' | 'clinic' | 'doctor' | 'patient')
+                  setDiscountRoleFilter(
+                    (e.target.value || '') as '' | 'clinic' | 'doctor' | 'patient' | 'all',
+                  )
                 }
                 disabled={loading || !hasApi}
-                aria-label="Filter discounts by role"
               >
-                {ROLE_FILTER_OPTIONS.map((o) => (
-                  <option key={o.value || 'all'} value={o.value}>
+                {DISCOUNT_ROLE_FILTER_OPTIONS.map((o) => (
+                  <option key={o.value || 'all-roles'} value={o.value}>
                     {o.label}
                   </option>
                 ))}
               </select>
             </div>
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm list-filters-bar__clear"
+              onClick={clearDiscountFilters}
+              disabled={
+                loading ||
+                !hasApi ||
+                (discountSearchInput.trim() === '' && discountRoleFilter === '')
+              }
+            >
+              Clear filters
+            </button>
           </div>
-          <div className="catalog-card__actions">
+          <div className="list-tools-row__actions">
             <button
               type="button"
               className="btn btn-secondary"
@@ -208,8 +273,8 @@ export function DiscountManagementPage() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={colSpan} className="data-table__state">
-                    Loading discounts…
+                  <td colSpan={colSpan} className="data-table__state data-table__state--loading">
+                    <LoadingSpinner label="Loading discounts" />
                   </td>
                 </tr>
               ) : sorted.length === 0 ? (
@@ -229,8 +294,14 @@ export function DiscountManagementPage() {
                     </div>
                   </td>
                 </tr>
+              ) : filteredDiscounts.length === 0 ? (
+                <tr>
+                  <td colSpan={colSpan} className="data-table__state">
+                    No discounts match these filters. Clear filters or try a different test or role.
+                  </td>
+                </tr>
               ) : (
-                sorted.map((r) => (
+                pagedDiscounts.map((r) => (
                   <tr key={r.id}>
                     <td>{r.test_name ?? '—'}</td>
                     <td>
@@ -275,6 +346,20 @@ export function DiscountManagementPage() {
             </tbody>
           </table>
         </div>
+        {!loading && hasApi && filteredDiscounts.length > 0 ? (
+          <TablePagination
+            mode="client"
+            page={discountPage}
+            pageSize={discountPageSize}
+            totalItems={filteredDiscounts.length}
+            itemsOnPage={pagedDiscounts.length}
+            onPageChange={setDiscountPage}
+            onPageSizeChange={(n) => {
+              setDiscountPageSize(n)
+              setDiscountPage(1)
+            }}
+          />
+        ) : null}
       </div>
 
       <ConfirmDialog

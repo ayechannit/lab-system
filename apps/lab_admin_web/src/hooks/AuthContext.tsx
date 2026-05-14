@@ -7,17 +7,25 @@ import {
   useState,
   type ReactNode,
 } from 'react'
-import type { SessionRole } from '../model/types'
-import { clearSession, getStoredAccessToken, setSession, type StoredAccount } from '../services/authSession'
-import { fetchSessionAccount, loginUser } from '../services/authService'
+import type { EndUserRole, SessionRole } from '../model/types'
+import {
+  clearSession,
+  getStoredAccessToken,
+  isRememberedSession,
+  setSession,
+  type StoredAccount,
+} from '../services/authSession'
+import { fetchSessionAccount, loginStaff } from '../services/authService'
 
 type AuthContextValue = {
   signedIn: boolean
   initializing: boolean
   role: SessionRole | null
   account: StoredAccount | null
-  /** Signs in via `POST /api/auth/login/user` (clinic / doctor / patient accounts). */
-  signInWithUserCredentials: (email: string, password: string, remember: boolean) => Promise<void>
+  /** Signs in via `POST /api/auth/login/staff` (admin, lab technician, reception, manager). */
+  signInWithStaffCredentials: (email: string, password: string, remember: boolean) => Promise<void>
+  /** Re-fetches `/api/auth/me` and updates stored session (preserves remember-me storage). */
+  refreshAccount: () => Promise<void>
   signOut: () => void
 }
 
@@ -33,6 +41,10 @@ function isSessionRole(r: string): r is SessionRole {
     r === 'doctor' ||
     r === 'patient'
   )
+}
+
+function isEndUserRole(r: string): r is EndUserRole {
+  return r === 'clinic' || r === 'doctor' || r === 'patient'
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -54,6 +66,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       try {
         const me = await fetchSessionAccount()
+        // Old sessions used `POST /api/auth/login/user`; admin web is staff-only — drop end-user JWTs.
+        if (isEndUserRole(me.role)) {
+          clearSession()
+          if (!cancelled) {
+            setAccount(null)
+            setSignedIn(false)
+          }
+          return
+        }
         if (!cancelled) {
           setAccount(me)
           setSignedIn(true)
@@ -73,15 +94,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  const signInWithUserCredentials = useCallback(
+  const signInWithStaffCredentials = useCallback(
     async (email: string, password: string, remember: boolean) => {
-      const { token, user } = await loginUser(email.trim(), password)
+      const { token, staff } = await loginStaff(email.trim(), password)
       const acc: StoredAccount = {
-        type: 'user',
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
+        type: 'staff',
+        id: staff.id,
+        name: staff.name,
+        email: staff.email,
+        role: staff.role,
       }
       setSession(token, acc, remember)
       setAccount(acc)
@@ -96,6 +117,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSignedIn(false)
   }, [])
 
+  const refreshAccount = useCallback(async () => {
+    const token = getStoredAccessToken()
+    if (!token) return
+    const me = await fetchSessionAccount()
+    if (isEndUserRole(me.role)) {
+      clearSession()
+      setAccount(null)
+      setSignedIn(false)
+      return
+    }
+    setSession(token, me, isRememberedSession())
+    setAccount(me)
+  }, [])
+
   const role: SessionRole | null =
     account && isSessionRole(account.role) ? account.role : account ? (account.role as SessionRole) : null
 
@@ -105,10 +140,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       initializing,
       role,
       account,
-      signInWithUserCredentials,
+      signInWithStaffCredentials,
+      refreshAccount,
       signOut,
     }),
-    [signedIn, initializing, role, account, signInWithUserCredentials, signOut],
+    [signedIn, initializing, role, account, signInWithStaffCredentials, refreshAccount, signOut],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

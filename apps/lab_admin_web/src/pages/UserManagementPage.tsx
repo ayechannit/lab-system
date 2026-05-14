@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import { ConfirmDialog } from '../components/common/ConfirmDialog'
+import { LoadingSpinner } from '../components/common/LoadingSpinner'
 import { UserFormModal } from '../components/users/UserFormModal'
 import { PageHeader } from '../components/common/PageHeader'
+import { DEFAULT_TABLE_PAGE_SIZE, TablePagination } from '../components/common/TablePagination'
 import { TableActionMenu } from '../components/common/TableActionMenu'
 import type { EndUserRole, UserListRow } from '../model/types'
 import { isApiMode } from '../services/apiBase'
-import { deleteUser, fetchUserList } from '../services/userService'
+import { deleteUser, fetchUserList, type FetchUserListParams } from '../services/userService'
 import '../components/common/ui.css'
 
 function roleLabel(r: EndUserRole): string {
@@ -17,6 +19,8 @@ function roleLabel(r: EndUserRole): string {
   return map[r]
 }
 
+const USER_ROLES: EndUserRole[] = ['clinic', 'doctor', 'patient']
+
 export function UserManagementPage() {
   const hasApi = isApiMode()
   const [rows, setRows] = useState<UserListRow[]>([])
@@ -24,11 +28,49 @@ export function UserManagementPage() {
   const [loadError, setLoadError] = useState<string | null>(null)
   const [refreshTick, setRefreshTick] = useState(0)
 
+  const [userFilterNameInput, setUserFilterNameInput] = useState('')
+  const [userFilterName, setUserFilterName] = useState('')
+  const [userFilterPhoneInput, setUserFilterPhoneInput] = useState('')
+  const [userFilterPhone, setUserFilterPhone] = useState('')
+  const [userFilterRole, setUserFilterRole] = useState<'' | EndUserRole>('')
+
+  const [userPage, setUserPage] = useState(1)
+  const [userPageSize, setUserPageSize] = useState(DEFAULT_TABLE_PAGE_SIZE)
+
   const [formOpen, setFormOpen] = useState(false)
   const [formMode, setFormMode] = useState<'create' | 'edit'>('create')
   const [editInitial, setEditInitial] = useState<UserListRow | null>(null)
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<UserListRow | null>(null)
+
+  useEffect(() => {
+    const id = window.setTimeout(() => {
+      setUserFilterName(userFilterNameInput.trim())
+      setUserFilterPhone(userFilterPhoneInput.trim())
+    }, 350)
+    return () => window.clearTimeout(id)
+  }, [userFilterNameInput, userFilterPhoneInput])
+
+  const userFetchParams = useMemo((): FetchUserListParams | undefined => {
+    const p: FetchUserListParams = {}
+    if (userFilterName) p.name = userFilterName
+    if (userFilterPhone) p.phone = userFilterPhone
+    if (userFilterRole) p.role = userFilterRole
+    return Object.keys(p).length ? p : undefined
+  }, [userFilterName, userFilterPhone, userFilterRole])
+
+  const userListQuery = useMemo(
+    (): FetchUserListParams => ({
+      ...(userFetchParams ?? {}),
+      page: userPage,
+      limit: userPageSize,
+    }),
+    [userFetchParams, userPage, userPageSize],
+  )
+
+  useEffect(() => {
+    queueMicrotask(() => setUserPage(1))
+  }, [userFilterName, userFilterPhone, userFilterRole])
 
   useEffect(() => {
     if (!hasApi) {
@@ -41,8 +83,13 @@ export function UserManagementPage() {
     setLoadError(null)
     void (async () => {
       try {
-        const list = await fetchUserList()
-        if (!cancelled) setRows(list)
+        const list = await fetchUserList(userListQuery)
+        if (!cancelled) {
+          setRows(list)
+          if (list.length === 0 && userPage > 1) {
+            setUserPage((p) => Math.max(1, p - 1))
+          }
+        }
       } catch (e) {
         if (!cancelled) setLoadError(e instanceof Error ? e.message : 'Failed to load users')
       } finally {
@@ -52,7 +99,7 @@ export function UserManagementPage() {
     return () => {
       cancelled = true
     }
-  }, [hasApi, refreshTick])
+  }, [hasApi, refreshTick, userListQuery])
 
   const sorted = useMemo(
     () => [...rows].sort((a, b) => a.name.localeCompare(b.name)),
@@ -88,6 +135,15 @@ export function UserManagementPage() {
     }
   }
 
+  function clearUserFilters() {
+    setUserFilterNameInput('')
+    setUserFilterName('')
+    setUserFilterPhoneInput('')
+    setUserFilterPhone('')
+    setUserFilterRole('')
+    setUserPage(1)
+  }
+
   const colSpan = 8
 
   return (
@@ -114,23 +170,81 @@ export function UserManagementPage() {
       ) : null}
 
       <div className="card">
-        <div
-          style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '0.75rem',
-            marginBottom: '0.75rem',
-          }}
-        >
-          <h3 className="card-title" style={{ margin: 0 }}>
-            Users
-          </h3>
-          <button type="button" className="btn btn-primary" onClick={openCreate} disabled={loading || !hasApi}>
-            Add user
-          </button>
+        <div className="list-tools-row">
+          <div className="list-filters-bar" aria-label="User filters">
+            <div className="list-filters-bar__group list-filters-bar__group--text">
+              <label className="list-filters-bar__label" htmlFor="user-filter-name">
+                Name
+              </label>
+              <input
+                id="user-filter-name"
+                className="list-filters-bar__input"
+                placeholder="Contains…"
+                value={userFilterNameInput}
+                onChange={(e) => setUserFilterNameInput(e.target.value)}
+                disabled={loading || !hasApi}
+                autoComplete="off"
+              />
+            </div>
+            <div className="list-filters-bar__group list-filters-bar__group--text">
+              <label className="list-filters-bar__label" htmlFor="user-filter-phone">
+                Phone
+              </label>
+              <input
+                id="user-filter-phone"
+                className="list-filters-bar__input"
+                placeholder="Contains…"
+                value={userFilterPhoneInput}
+                onChange={(e) => setUserFilterPhoneInput(e.target.value)}
+                disabled={loading || !hasApi}
+                autoComplete="off"
+              />
+            </div>
+            <div className="list-filters-bar__group">
+              <label className="list-filters-bar__label" htmlFor="user-filter-role">
+                Role
+              </label>
+              <select
+                id="user-filter-role"
+                className="list-filters-bar__select"
+                value={userFilterRole}
+                onChange={(e) => setUserFilterRole(e.target.value as '' | EndUserRole)}
+                disabled={loading || !hasApi}
+              >
+                <option value="">All</option>
+                {USER_ROLES.map((r) => (
+                  <option key={r} value={r}>
+                    {roleLabel(r)}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm list-filters-bar__clear"
+              onClick={clearUserFilters}
+              disabled={loading || !hasApi}
+            >
+              Clear filters
+            </button>
+          </div>
+          <div className="list-tools-row__actions">
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => setRefreshTick((t) => t + 1)}
+              disabled={loading || !hasApi}
+            >
+              Refresh
+            </button>
+            <button type="button" className="btn btn-primary" onClick={openCreate} disabled={loading || !hasApi}>
+              Add user
+            </button>
+          </div>
         </div>
+        <h3 className="card-title" style={{ margin: '0 0 0.65rem' }}>
+          User directory
+        </h3>
         <div className="table-wrap">
           <table className="data-table">
             <thead>
@@ -148,8 +262,8 @@ export function UserManagementPage() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={colSpan} className="data-table__state">
-                    Loading…
+                  <td colSpan={colSpan} className="data-table__state data-table__state--loading">
+                    <LoadingSpinner label="Loading users" />
                   </td>
                 </tr>
               ) : sorted.length === 0 ? (
@@ -192,6 +306,19 @@ export function UserManagementPage() {
             </tbody>
           </table>
         </div>
+        {!loading && hasApi ? (
+          <TablePagination
+            mode="server"
+            page={userPage}
+            pageSize={userPageSize}
+            itemsOnPage={sorted.length}
+            onPageChange={setUserPage}
+            onPageSizeChange={(n) => {
+              setUserPageSize(n)
+              setUserPage(1)
+            }}
+          />
+        ) : null}
       </div>
 
       <ConfirmDialog

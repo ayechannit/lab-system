@@ -1,12 +1,19 @@
+import 'dart:io';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/session_scope.dart';
 import '../../models/lab_order.dart';
 import '../../models/lab_test_pick.dart';
+import '../../models/user_role.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/common/app_brand_mark.dart';
 import '../../widgets/navigation/lab_main_bottom_nav.dart';
+
+enum _OrderMode { catalogTests, prescriptionOnly }
 
 class OrderLabTestScreen extends StatefulWidget {
   const OrderLabTestScreen({super.key});
@@ -26,25 +33,39 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
   final _facilityNotes = TextEditingController();
   final _timeSlot = TextEditingController();
   final _addressLine = TextEditingController();
+  final _testFilter = TextEditingController();
   OrderPriority _priority = OrderPriority.elective;
   static const double _defaultLat = 0;
   static const double _defaultLng = 0;
 
   Future<List<LabTestPick>>? _testsFuture;
-  LabTestPick? _selectedTest;
+  List<LabTestPick> _tests = const [];
+  bool _catalogInit = false;
+  bool _prefilledProfileAddress = false;
+
+  _OrderMode _mode = _OrderMode.catalogTests;
+  final Set<String> _selectedTestIds = {};
+
+  Uint8List? _prescriptionBytes;
+  String? _prescriptionName;
+
   DateTime _preferredDate = DateTime.now().add(const Duration(days: 1));
   String _reportDelivery = 'soft_copy';
-  bool _catalogInit = false;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    if (!_prefilledProfileAddress) {
+      final u = SessionScope.of(context).user;
+      if (u != null && u.address.isNotEmpty && _addressLine.text.trim().isEmpty) {
+        _addressLine.text = u.address;
+      }
+      _prefilledProfileAddress = true;
+    }
     if (_catalogInit) return;
     _catalogInit = true;
     _testsFuture = SessionScope.of(context).fetchActiveLabTests().then((list) {
-      if (mounted && list.isNotEmpty) {
-        setState(() => _selectedTest = list.first);
-      }
+      if (mounted) setState(() => _tests = list);
       return list;
     });
   }
@@ -59,46 +80,290 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
     _facilityNotes.dispose();
     _timeSlot.dispose();
     _addressLine.dispose();
+    _testFilter.dispose();
     super.dispose();
+  }
+
+  LabTestPick? _testById(String id) {
+    for (final t in _tests) {
+      if (t.id == id) return t;
+    }
+    return null;
+  }
+
+  List<LabTestPick> get _filteredTests {
+    final q = _testFilter.text.trim().toLowerCase();
+    if (q.isEmpty) return _tests;
+    return _tests
+        .where((t) => t.name.toLowerCase().contains(q) || t.code.toLowerCase().contains(q))
+        .toList();
+  }
+
+  Widget _stackedFieldLabel(BuildContext context, String text) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Text(
+        text,
+        style: theme.textTheme.titleSmall?.copyWith(
+          fontWeight: FontWeight.w500,
+          color: theme.colorScheme.onSurface,
+        ),
+      ),
+    );
+  }
+
+  InputDecoration _inputOutlineNoFloating(BuildContext context, {String? hint}) {
+    final cs = Theme.of(context).colorScheme;
+    final r = BorderRadius.circular(12);
+    return InputDecoration(
+      hintText: hint,
+      hintStyle: TextStyle(color: cs.onSurfaceVariant.withValues(alpha: 0.72)),
+      isDense: true,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      border: OutlineInputBorder(borderRadius: r),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: r,
+        borderSide: BorderSide(color: cs.outline),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: r,
+        borderSide: BorderSide(color: cs.primary, width: 2),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: r,
+        borderSide: BorderSide(color: cs.error),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: r,
+        borderSide: BorderSide(color: cs.error, width: 2),
+      ),
+    );
+  }
+
+  /// Material 3 defaults use medium/bold weight for dropdown labels — use regular body text.
+  TextStyle _dropdownBodyStyle(BuildContext context) {
+    final base = Theme.of(context).textTheme.bodyLarge ?? Theme.of(context).textTheme.bodyMedium;
+    return (base ?? const TextStyle(fontSize: 16)).copyWith(fontWeight: FontWeight.w400);
+  }
+
+  List<CatalogOrderLine> _linesForRole(UserRole role) {
+    final out = <CatalogOrderLine>[];
+    for (final id in _selectedTestIds) {
+      final t = _testById(id);
+      if (t == null) continue;
+      final pct = t.discountPercentForUser(role);
+      final unit = t.basePriceMmk.toDouble();
+      final sub = t.lineSubtotalMmk(role);
+      out.add(CatalogOrderLine(
+        testId: t.id,
+        testName: t.name,
+        testCode: t.code,
+        unitPriceMmk: unit,
+        discountPercent: pct,
+        subtotalMmk: sub,
+      ));
+    }
+    return out;
+  }
+
+  double _sumOriginal(List<CatalogOrderLine> lines) => lines.fold(0.0, (a, b) => a + b.unitPriceMmk);
+
+  double _sumFinal(List<CatalogOrderLine> lines) => lines.fold(0.0, (a, b) => a + b.subtotalMmk);
+
+  Future<void> _pickPrescription() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: const ['pdf', 'jpg', 'jpeg', 'png', 'gif', 'webp'],
+      allowMultiple: false,
+      withData: true,
+    );
+    if (result == null || result.files.isEmpty) return;
+    final f = result.files.first;
+    var bytes = f.bytes;
+    if (bytes == null && f.path != null) {
+      try {
+        bytes = await File(f.path!).readAsBytes();
+      } catch (_) {
+        bytes = null;
+      }
+    }
+    if (bytes == null || bytes.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not read the selected file.')),
+        );
+      }
+      return;
+    }
+    setState(() {
+      _prescriptionBytes = bytes;
+      _prescriptionName = f.name;
+    });
+  }
+
+  Future<void> _openTestCatalogSheet(UserRole role) async {
+    if (_tests.isEmpty) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      useSafeArea: true,
+      builder: (sheetContext) {
+        final maxH = MediaQuery.sizeOf(sheetContext).height * 0.88;
+        return StatefulBuilder(
+          builder: (context, setModal) {
+            final filtered = _filteredTests;
+            return Padding(
+              padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+              child: SizedBox(
+                height: maxH,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 4, 8, 0),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              'Select tests',
+                              style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.of(sheetContext).pop(),
+                            child: const Text('Done'),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                      child: TextField(
+                        controller: _testFilter,
+                        onChanged: (_) {
+                          setState(() {});
+                          setModal(() {});
+                        },
+                        decoration: const InputDecoration(
+                          hintText: 'Search by test name or code',
+                          prefixIcon: Icon(Icons.search),
+                          border: OutlineInputBorder(),
+                          isDense: true,
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Text(
+                        '${filtered.length} match${filtered.length == 1 ? '' : 'es'} · ${_selectedTestIds.length} selected',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.onSurfaceVariant),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Expanded(
+                      child: filtered.isEmpty
+                          ? Center(
+                              child: Text(
+                                'No tests match your search.',
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.onSurfaceVariant),
+                              ),
+                            )
+                          : ListView.builder(
+                              padding: const EdgeInsets.fromLTRB(8, 0, 8, 16),
+                              itemCount: filtered.length,
+                              itemBuilder: (context, index) {
+                                final t = filtered[index];
+                                final checked = _selectedTestIds.contains(t.id);
+                                final pct = t.discountPercentForUser(role);
+                                final sub = t.lineSubtotalMmk(role);
+                                final body = Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w400);
+                                final small = Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w400);
+                                return Card(
+                                  margin: const EdgeInsets.only(bottom: 6),
+                                  child: CheckboxListTile(
+                                    dense: true,
+                                    value: checked,
+                                    onChanged: (v) {
+                                      setState(() {
+                                        if (v == true) {
+                                          _selectedTestIds.add(t.id);
+                                        } else {
+                                          _selectedTestIds.remove(t.id);
+                                        }
+                                      });
+                                      setModal(() {});
+                                    },
+                                    title: Text(t.name, maxLines: 2, overflow: TextOverflow.ellipsis, style: body),
+                                    subtitle: Text(
+                                      '${t.code} · $pct% off · ${sub.toStringAsFixed(0)} MMK (was ${t.basePriceMmk} MMK)',
+                                      style: small,
+                                    ),
+                                    controlAffinity: ListTileControlAffinity.leading,
+                                  ),
+                                );
+                              },
+                            ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  String _summaryTestTitle(UserRole role) {
+    if (_mode == _OrderMode.prescriptionOnly) return 'Prescription upload';
+    final lines = _linesForRole(role);
+    if (lines.isEmpty) return '—';
+    if (lines.length == 1) return lines.first.testName;
+    return '${lines.length} selected tests';
   }
 
   @override
   Widget build(BuildContext context) {
     final session = SessionScope.of(context);
+    final user = session.user;
+    final role = user?.role ?? UserRole.patient;
+    final lines = _linesForRole(role);
+
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        titleSpacing: 4,
-        title: Text(
-          'MedLab Smart',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: AppColors.primary,
-                fontWeight: FontWeight.w800,
-              ),
+        titleSpacing: 12,
+        title: Row(
+          children: [
+            const AppBrandMark(size: 32, iconSize: 16, borderRadius: 8),
+            const SizedBox(width: 10),
+            Text(
+              'MedLab Smart',
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.w800,
+                  ),
+            ),
+          ],
         ),
-        actions: const [
-          AppBrandMark(size: 24, iconSize: 12, borderRadius: 6),
-          SizedBox(width: 10),
-        ],
       ),
       body: Form(
         key: _formKey,
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
           children: [
-            Text('Order Lab Test', style: Theme.of(context).textTheme.headlineMedium),
-            const SizedBox(height: 4),
-            Text('Schedule a medical screening at your convenience.',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.onSurfaceVariant)),
+            Text('Order lab test', style: Theme.of(context).textTheme.headlineMedium),
             const SizedBox(height: 16),
             _SectionCard(
               icon: Icons.person_outline,
-              title: 'Patient Details',
+              title: 'Patient details',
               child: Column(
                 children: [
                   TextFormField(
                     controller: _patientName,
-                    decoration: const InputDecoration(labelText: 'Full Name'),
+                    decoration: const InputDecoration(labelText: 'Patient full name'),
                     validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
                   ),
                   const SizedBox(height: 12),
@@ -119,9 +384,10 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
                           controller: _age,
                           decoration: const InputDecoration(labelText: 'Age'),
                           keyboardType: TextInputType.number,
+                          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                           validator: (v) {
                             final age = int.tryParse((v ?? '').trim());
-                            return (age == null || age <= 0) ? 'Invalid' : null;
+                            return (age == null || age <= 0) ? 'Enter a valid age' : null;
                           },
                         ),
                       ),
@@ -130,9 +396,15 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
                         child: DropdownButtonFormField<String>(
                           value: _gender,
                           isExpanded: true,
+                          style: _dropdownBodyStyle(context),
                           decoration: const InputDecoration(labelText: 'Gender'),
-                          items: const ['Male', 'Female', 'Other']
-                              .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                          items: ['Male', 'Female', 'Other']
+                              .map(
+                                (e) => DropdownMenuItem<String>(
+                                  value: e,
+                                  child: Text(e, style: _dropdownBodyStyle(context)),
+                                ),
+                              )
                               .toList(),
                           onChanged: (v) => setState(() => _gender = v ?? _gender),
                         ),
@@ -142,13 +414,13 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
                   const SizedBox(height: 12),
                   TextFormField(
                     controller: _bloodType,
-                    decoration: const InputDecoration(labelText: 'Blood'),
+                    decoration: const InputDecoration(labelText: 'Blood type (optional)'),
                   ),
                   const SizedBox(height: 12),
                   TextFormField(
                     controller: _description,
                     decoration: const InputDecoration(
-                      labelText: 'Medical notes / symptoms',
+                      labelText: 'Clinical notes (optional)',
                       alignLabelWithHint: true,
                     ),
                     maxLines: 2,
@@ -158,131 +430,95 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
             ),
             const SizedBox(height: 12),
             _SectionCard(
-              icon: Icons.biotech_outlined,
-              title: 'Screening Details',
+              icon: Icons.flag_outlined,
+              title: 'Priority & delivery',
               trailing: Switch(
                 value: _priority == OrderPriority.urgent,
                 onChanged: (v) => setState(() => _priority = v ? OrderPriority.urgent : OrderPriority.elective),
               ),
               subtitle: _priority == OrderPriority.urgent ? 'Urgent' : 'Elective',
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  TextFormField(
-                    controller: _facilityNotes,
-                    decoration: const InputDecoration(
-                      labelText: 'Collection / facility notes',
-                    ),
-                    maxLines: 2,
-                  ),
-                  const SizedBox(height: 12),
-                  FutureBuilder<List<LabTestPick>>(
-                    future: _testsFuture,
-                    builder: (context, snap) {
-                      if (snap.connectionState == ConnectionState.waiting) {
-                        return const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 8),
-                          child: Center(child: CircularProgressIndicator()),
-                        );
-                      }
-                      final tests = snap.data ?? const <LabTestPick>[];
-                      if (tests.isEmpty) {
-                        return Text(
-                          'No lab tests available. Ask the lab to publish the catalog.',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.error),
-                        );
-                      }
-                      return DropdownButtonFormField<LabTestPick>(
-                        value: () {
-                          if (tests.isEmpty) return null;
-                          if (_selectedTest == null) return tests.first;
-                          for (final t in tests) {
-                            if (t.id == _selectedTest!.id) return t;
-                          }
-                          return tests.first;
-                        }(),
-                        isExpanded: true,
-                        decoration: const InputDecoration(labelText: 'Lab test (catalog)'),
-                        items: tests
-                            .map(
-                              (t) => DropdownMenuItem<LabTestPick>(
-                                value: t,
-                                child: Text('${t.name} (${t.basePriceMmk} MMK)', overflow: TextOverflow.ellipsis),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: (v) => setState(() => _selectedTest = v),
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 12),
+                  _stackedFieldLabel(context, 'Report delivery'),
                   DropdownButtonFormField<String>(
                     value: _reportDelivery,
                     isExpanded: true,
-                    decoration: const InputDecoration(labelText: 'Report delivery'),
-                    items: const [
-                      DropdownMenuItem(value: 'soft_copy', child: Text('Soft copy (app/PDF)')),
-                      DropdownMenuItem(value: 'hard_copy', child: Text('Hard copy')),
-                      DropdownMenuItem(value: 'both', child: Text('Both')),
+                    style: _dropdownBodyStyle(context),
+                    decoration: _inputOutlineNoFloating(context),
+                    items: [
+                      DropdownMenuItem(
+                        value: 'soft_copy',
+                        child: Text('Soft copy (app/PDF)', style: _dropdownBodyStyle(context)),
+                      ),
+                      DropdownMenuItem(
+                        value: 'hard_copy',
+                        child: Text('Hard copy', style: _dropdownBodyStyle(context)),
+                      ),
+                      DropdownMenuItem(
+                        value: 'both',
+                        child: Text('Both', style: _dropdownBodyStyle(context)),
+                      ),
                     ],
                     onChanged: (v) => setState(() => _reportDelivery = v ?? _reportDelivery),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 16),
+                  _stackedFieldLabel(context, 'Collection / facility notes (optional)'),
+                  TextFormField(
+                    controller: _facilityNotes,
+                    decoration: _inputOutlineNoFloating(
+                      context,
+                      hint: 'Notes for collector or lab…',
+                    ),
+                    maxLines: 2,
+                  ),
+                  const SizedBox(height: 16),
                   Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Expanded(
-                        child: InkWell(
-                          onTap: () async {
-                            final picked = await showDatePicker(
-                              context: context,
-                              initialDate: _preferredDate,
-                              firstDate: DateTime.now(),
-                              lastDate: DateTime.now().add(const Duration(days: 365)),
-                            );
-                            if (picked != null) setState(() => _preferredDate = picked);
-                          },
-                          child: InputDecorator(
-                            decoration: const InputDecoration(labelText: 'Preferred collection date'),
-                            child: Text(
-                              '${_preferredDate.year}-${_preferredDate.month.toString().padLeft(2, '0')}-${_preferredDate.day.toString().padLeft(2, '0')}',
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _stackedFieldLabel(context, 'Preferred collection date'),
+                            InkWell(
+                              onTap: () async {
+                                final picked = await showDatePicker(
+                                  context: context,
+                                  initialDate: _preferredDate,
+                                  firstDate: DateTime.now(),
+                                  lastDate: DateTime.now().add(const Duration(days: 365)),
+                                );
+                                if (picked != null) setState(() => _preferredDate = picked);
+                              },
+                              borderRadius: BorderRadius.circular(12),
+                              child: InputDecorator(
+                                decoration: _inputOutlineNoFloating(context),
+                                child: Text(
+                                  '${_preferredDate.year}-${_preferredDate.month.toString().padLeft(2, '0')}-${_preferredDate.day.toString().padLeft(2, '0')}',
+                                ),
+                              ),
                             ),
-                          ),
+                          ],
                         ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
-                        child: TextFormField(
-                          controller: _timeSlot,
-                          decoration: const InputDecoration(labelText: 'Time preference'),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _stackedFieldLabel(context, 'Time note (optional)'),
+                            TextFormField(
+                              controller: _timeSlot,
+                              decoration: _inputOutlineNoFloating(
+                                context,
+                                hint: 'e.g. Morning, after 2pm',
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
-                  ),
-                  const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFEAF1FF),
-                      borderRadius: BorderRadius.circular(10),
-                      border: const Border(
-                        left: BorderSide(color: AppColors.primaryLight, width: 3),
-                      ),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Icon(Icons.info_outline, color: AppColors.primary, size: 18),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Turnaround and priority are determined by the lab after you submit this order.',
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodySmall
-                                ?.copyWith(color: AppColors.onSurfaceVariant),
-                          ),
-                        ),
-                      ],
-                    ),
                   ),
                 ],
               ),
@@ -291,88 +527,245 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
             _SectionCard(
               icon: Icons.location_on_outlined,
               title: 'Collection address',
+              child: TextFormField(
+                controller: _addressLine,
+                decoration: const InputDecoration(
+                  labelText: 'Full address for sample collection',
+                ),
+                maxLines: 3,
+                validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+              ),
+            ),
+            const SizedBox(height: 12),
+            _SectionCard(
+              icon: Icons.route_outlined,
+              title: 'How should we process this order?',
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  TextFormField(
-                    controller: _addressLine,
-                    decoration: const InputDecoration(
-                      labelText: 'Full address for sample collection',
+                  SegmentedButton<_OrderMode>(
+                    segments: [
+                      ButtonSegment(
+                        value: _OrderMode.catalogTests,
+                        label: Text(
+                          'Tests from list',
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w400),
+                        ),
+                        icon: const Icon(Icons.checklist_outlined),
+                      ),
+                      ButtonSegment(
+                        value: _OrderMode.prescriptionOnly,
+                        label: Text(
+                          'Prescription file',
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w400),
+                        ),
+                        icon: const Icon(Icons.upload_file_outlined),
+                      ),
+                    ],
+                    selected: {_mode},
+                    onSelectionChanged: (s) {
+                      setState(() {
+                        _mode = s.first;
+                        if (_mode == _OrderMode.prescriptionOnly) {
+                          _selectedTestIds.clear();
+                        } else {
+                          _prescriptionBytes = null;
+                          _prescriptionName = null;
+                        }
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 14),
+                  if (_mode == _OrderMode.catalogTests) ...[
+                    FutureBuilder<List<LabTestPick>>(
+                      future: _testsFuture,
+                      builder: (context, snap) {
+                        if (snap.connectionState == ConnectionState.waiting) {
+                          return const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 12),
+                            child: Center(child: CircularProgressIndicator()),
+                          );
+                        }
+                        if (_tests.isEmpty) {
+                          return Text(
+                            'No lab tests in the catalog. Use “Prescription file” or ask the lab to publish tests.',
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.error),
+                          );
+                        }
+                        final n = _selectedTestIds.length;
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            OutlinedButton(
+                              onPressed: () => _openTestCatalogSheet(role),
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                                alignment: Alignment.centerLeft,
+                              ),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      n == 0
+                                          ? 'Select tests from catalog…'
+                                          : '$n test${n == 1 ? '' : 's'} selected — tap to add or remove',
+                                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                            fontWeight: FontWeight.w400,
+                                          ),
+                                      textAlign: TextAlign.left,
+                                    ),
+                                  ),
+                                  Icon(
+                                    Icons.arrow_drop_down,
+                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        );
+                      },
                     ),
-                    maxLines: 3,
-                    validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Map pin selection will use the lab geocoder in a future update. '
-                    'Coordinates are sent as 0,0 until then; the lab uses your address text.',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.onSurfaceVariant),
-                  ),
+                  ] else ...[
+                    OutlinedButton.icon(
+                      onPressed: _pickPrescription,
+                      icon: const Icon(Icons.attach_file),
+                      label: Text(
+                        _prescriptionName == null ? 'Choose PDF or image' : 'Change file',
+                        style: Theme.of(context).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w400),
+                      ),
+                    ),
+                    if (_prescriptionName != null) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        _prescriptionName!,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.onSurfaceVariant),
+                      ),
+                    ],
+                    const SizedBox(height: 8),
+                    Text(
+                      'The lab will review your file and assign tests. Order status stays pending until they add catalog lines.',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.onSurfaceVariant),
+                    ),
+                  ],
                 ],
               ),
             ),
             const SizedBox(height: 12),
             _SectionCard(
               icon: Icons.receipt_long_outlined,
-              title: 'Order Summary',
-              child: Builder(
-                builder: (context) {
-                  final pick = _selectedTest;
-                  final base = pick?.basePriceMmk ?? 0;
-                  final urgent = _priority == OrderPriority.urgent ? 15000 : 0;
-                  final collection = 10000;
-                  final total = base + collection + urgent;
-                  TextStyle? label = Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.onSurfaceVariant);
-                  TextStyle? value = Theme.of(context).textTheme.bodyMedium;
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (pick != null) ...[
-                        _summaryRow('${pick.name} (${pick.code})', '$base MMK', label, value),
-                        _summaryRow('Home collection', '$collection MMK', label, value),
-                        _summaryRow('Urgent processing', urgent == 0 ? '0 MMK' : '$urgent MMK', label, value),
-                      ] else
-                        Text('Select a lab test to see pricing.', style: label),
-                      const Divider(height: 18),
-                      _summaryRow(
-                        'Estimated total',
-                        '$total MMK',
-                        Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-                        Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.only(top: 8),
-                        child: Text(
-                          'Totals are estimates from catalog prices; the lab confirms final amounts on the order.',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.onSurfaceVariant),
-                        ),
-                      ),
-                    ],
-                  );
-                },
-              ),
+              title: 'Summary',
+              child: _mode == _OrderMode.catalogTests
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (lines.isEmpty)
+                          Text('No tests selected yet.', style: Theme.of(context).textTheme.bodyMedium)
+                        else ...[
+                          for (final line in lines)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 6),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      '${line.testName} (${line.testCode})',
+                                      style: Theme.of(context).textTheme.bodyMedium,
+                                    ),
+                                  ),
+                                  Text(
+                                    '${line.subtotalMmk.toStringAsFixed(0)} MMK',
+                                    style: Theme.of(context).textTheme.bodyMedium,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          const Divider(height: 20),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  'Original subtotal',
+                                  style: Theme.of(context).textTheme.bodySmall,
+                                ),
+                              ),
+                              Text(
+                                '${_sumOriginal(lines).toStringAsFixed(0)} MMK',
+                                style: Theme.of(context).textTheme.bodySmall,
+                                textAlign: TextAlign.right,
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  'Estimated total (after discounts)',
+                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                        color: Theme.of(context).colorScheme.onSurface,
+                                      ),
+                                  softWrap: true,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                '${_sumFinal(lines).toStringAsFixed(0)} MMK',
+                                style: Theme.of(context).textTheme.bodyMedium,
+                                textAlign: TextAlign.right,
+                              ),
+                            ],
+                          ),
+                        ],
+                      ],
+                    )
+                  : Text(
+                      _prescriptionBytes == null
+                          ? 'Add a prescription file to submit.'
+                          : 'Prescription attached. Totals will be set when the lab assigns tests.',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
             SizedBox(
               height: 56,
               child: FilledButton.icon(
-                onPressed: session.busy
+                onPressed: session.busy || user == null
                     ? null
                     : () async {
                         if (!_formKey.currentState!.validate()) return;
-                        final pick = _selectedTest;
-                        if (pick == null) {
+                        if (_mode == _OrderMode.catalogTests && _selectedTestIds.isEmpty) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Select a lab test from the catalog.')),
+                            const SnackBar(content: Text('Select at least one test, or switch to prescription upload.')),
                           );
                           return;
                         }
+                        if (_mode == _OrderMode.prescriptionOnly &&
+                            (_prescriptionBytes == null || _prescriptionBytes!.isEmpty)) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Choose a prescription PDF or image.')),
+                          );
+                          return;
+                        }
+
+                        final ageYears = int.tryParse(_age.text.trim());
+                        if (ageYears == null || ageYears <= 0) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Enter a valid age (whole number).')),
+                          );
+                          return;
+                        }
+
+                        final builtLines = _linesForRole(user.role);
                         final order = LabOrderRequest(
-                          testName: pick.name,
+                          testName: _summaryTestTitle(user.role),
                           description: _description.text.trim(),
                           priority: _priority,
                           patientName: _patientName.text.trim(),
-                          age: int.parse(_age.text.trim()),
+                          age: ageYears,
                           phone: _phone.text.trim(),
                           gender: _gender,
                           bloodType: _bloodType.text.trim(),
@@ -381,20 +774,21 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
                           timeSlot: _timeSlot.text.trim(),
                           address: LabAddress(
                             line: _addressLine.text.trim(),
-                            latitude: _defaultLat,
-                            longitude: _defaultLng,
+                            latitude: user.latitude != 0 ? user.latitude : _defaultLat,
+                            longitude: user.longitude != 0 ? user.longitude : _defaultLng,
                             placeId: null,
                           ),
                           createdAt: DateTime.now(),
                           reportDeliveryMethod: _reportDelivery,
-                          catalogTestId: pick.id,
-                          catalogLinePriceMmk: pick.basePriceMmk,
+                          catalogLines: builtLines,
+                          prescriptionBytes: _mode == _OrderMode.prescriptionOnly ? _prescriptionBytes : null,
+                          prescriptionFilename: _mode == _OrderMode.prescriptionOnly ? _prescriptionName : null,
                         );
                         try {
                           await session.submitLabOrder(order);
                           if (!context.mounted) return;
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Order submitted (${_priority.label})')),
+                            const SnackBar(content: Text('Order submitted — status: pending')),
                           );
                           context.go('/order-success');
                         } catch (e) {
@@ -404,15 +798,15 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
                           );
                         }
                       },
-                icon: const Icon(Icons.arrow_forward),
-                label: Text(session.busy ? 'Submitting…' : 'Confirm & Order'),
+                icon: const Icon(Icons.save_outlined),
+                label: Text(
+                  session.busy ? 'Saving…' : 'Save order',
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        fontWeight: FontWeight.w400,
+                        color: Theme.of(context).colorScheme.onPrimary,
+                      ),
+                ),
               ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'By submitting, you agree to our Service Terms & Fees.',
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.onSurfaceVariant),
             ),
           ],
         ),
@@ -420,29 +814,6 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
       bottomNavigationBar: const LabMainBottomNav(current: LabMainTab.orders),
     );
   }
-}
-
-Widget _summaryRow(String label, String value, TextStyle? labelStyle, TextStyle? valueStyle) {
-  return Padding(
-    padding: const EdgeInsets.symmetric(vertical: 2),
-    child: Row(
-      children: [
-        Expanded(
-          child: Text(label, style: labelStyle, maxLines: 2, overflow: TextOverflow.ellipsis),
-        ),
-        const SizedBox(width: 8),
-        Flexible(
-          child: Text(
-            value,
-            style: valueStyle,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.end,
-          ),
-        ),
-      ],
-    ),
-  );
 }
 
 class _SectionCard extends StatelessWidget {
@@ -488,7 +859,7 @@ class _SectionCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(title, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+                    Text(title, style: Theme.of(context).textTheme.titleMedium),
                     if (subtitle != null)
                       Text(
                         subtitle!,

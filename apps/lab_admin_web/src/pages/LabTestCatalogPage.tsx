@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { ConfirmDialog } from '../components/common/ConfirmDialog'
+import { LoadingSpinner } from '../components/common/LoadingSpinner'
 import { LabTestFormModal } from '../components/lab-tests/LabTestFormModal'
 import { PageHeader } from '../components/common/PageHeader'
+import { DEFAULT_TABLE_PAGE_SIZE, TablePagination } from '../components/common/TablePagination'
 import { TableActionMenu } from '../components/common/TableActionMenu'
 import type { LabTestCatalogRow } from '../model/types'
 import { isApiMode } from '../services/apiBase'
@@ -26,6 +28,9 @@ export function LabTestCatalogPage() {
   const [searchText, setSearchText] = useState('')
   const [searchApplied, setSearchApplied] = useState('')
 
+  const [catalogPage, setCatalogPage] = useState(1)
+  const [catalogPageSize, setCatalogPageSize] = useState(DEFAULT_TABLE_PAGE_SIZE)
+
   const [formOpen, setFormOpen] = useState(false)
   const [formMode, setFormMode] = useState<'create' | 'edit'>('create')
   const [editInitial, setEditInitial] = useState<LabTestCatalogRow | null>(null)
@@ -36,6 +41,10 @@ export function LabTestCatalogPage() {
     const handle = window.setTimeout(() => setSearchApplied(searchText.trim()), 350)
     return () => window.clearTimeout(handle)
   }, [searchText])
+
+  useEffect(() => {
+    queueMicrotask(() => setCatalogPage(1))
+  }, [activeFilter, searchApplied])
 
   useEffect(() => {
     if (!hasApi) {
@@ -70,6 +79,11 @@ export function LabTestCatalogPage() {
     [rows],
   )
 
+  const pagedCatalog = useMemo(() => {
+    const start = (catalogPage - 1) * catalogPageSize
+    return sorted.slice(start, start + catalogPageSize)
+  }, [sorted, catalogPage, catalogPageSize])
+
   function openCreate() {
     setFormMode('create')
     setEditInitial(null)
@@ -97,6 +111,12 @@ export function LabTestCatalogPage() {
     } catch (e) {
       window.alert(e instanceof Error ? e.message : 'Delete failed')
     }
+  }
+
+  function clearCatalogFilters() {
+    setActiveFilter('all')
+    setSearchText('')
+    setCatalogPage(1)
   }
 
   const emptyMessage =
@@ -138,54 +158,68 @@ export function LabTestCatalogPage() {
         </div>
       ) : null}
 
-      <div className="card">
-        <div className="catalog-card__toolbar">
-          <div className="catalog-card__filters">
-            <div className="field">
-              <label htmlFor="lab-catalog-status">Status</label>
-              <select
-                id="lab-catalog-status"
-                className="select-chevron-left"
-                value={activeFilter}
-                onChange={(e) => setActiveFilter(e.target.value as 'all' | 'active' | 'inactive')}
-                disabled={loading || !hasApi}
-                aria-label="Filter by active flag"
-              >
-                {STATUS_FILTER_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>
-                    {o.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="field">
-              <label htmlFor="lab-catalog-search">Search by name</label>
-              <input
-                id="lab-catalog-search"
-                type="search"
-                value={searchText}
-                onChange={(e) => setSearchText(e.target.value)}
-                placeholder="Search tests…"
-                disabled={loading || !hasApi}
-                autoComplete="off"
-                aria-label="Filter by test name"
-              />
-            </div>
-          </div>
-          <div className="catalog-card__actions">
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={() => setRefreshTick((t) => t + 1)}
+      <div className="list-tools-row">
+        <div className="list-filters-bar" aria-label="Catalog filters">
+          <div className="list-filters-bar__group">
+            <label className="list-filters-bar__label" htmlFor="lab-catalog-status">
+              Status
+            </label>
+            <select
+              id="lab-catalog-status"
+              className="list-filters-bar__select"
+              value={activeFilter}
+              onChange={(e) => setActiveFilter(e.target.value as 'all' | 'active' | 'inactive')}
               disabled={loading || !hasApi}
             >
-              Refresh
-            </button>
-            <button type="button" className="btn btn-primary" onClick={openCreate} disabled={loading || !hasApi}>
-              Create lab test
-            </button>
+              {STATUS_FILTER_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
           </div>
+          <div className="list-filters-bar__group list-filters-bar__group--text">
+            <label className="list-filters-bar__label" htmlFor="lab-catalog-search">
+              Name
+            </label>
+            <input
+              id="lab-catalog-search"
+              type="search"
+              className="list-filters-bar__input"
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              placeholder="Search tests…"
+              disabled={loading || !hasApi}
+              autoComplete="off"
+            />
+          </div>
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm list-filters-bar__clear"
+            onClick={clearCatalogFilters}
+            disabled={
+              loading || !hasApi || (activeFilter === 'all' && searchText.trim() === '')
+            }
+          >
+            Clear filters
+          </button>
         </div>
+        <div className="list-tools-row__actions">
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => setRefreshTick((t) => t + 1)}
+            disabled={loading || !hasApi}
+          >
+            Refresh
+          </button>
+          <button type="button" className="btn btn-primary" onClick={openCreate} disabled={loading || !hasApi}>
+            Create lab test
+          </button>
+        </div>
+      </div>
+
+      <div className="card">
         <div className="table-wrap">
           <table className="data-table data-table--catalog">
             <thead>
@@ -207,8 +241,8 @@ export function LabTestCatalogPage() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={colSpan} className="data-table__state">
-                    Loading catalog…
+                  <td colSpan={colSpan} className="data-table__state data-table__state--loading">
+                    <LoadingSpinner label="Loading catalog" />
                   </td>
                 </tr>
               ) : sorted.length === 0 ? (
@@ -229,7 +263,7 @@ export function LabTestCatalogPage() {
                   </td>
                 </tr>
               ) : (
-                sorted.map((r) => (
+                pagedCatalog.map((r) => (
                   <tr key={r.id}>
                     <td title={r.description?.trim() ? r.description : undefined}>{r.test_name}</td>
                     <td>
@@ -268,6 +302,20 @@ export function LabTestCatalogPage() {
             </tbody>
           </table>
         </div>
+        {!loading && hasApi && sorted.length > 0 ? (
+          <TablePagination
+            mode="client"
+            page={catalogPage}
+            pageSize={catalogPageSize}
+            totalItems={sorted.length}
+            itemsOnPage={pagedCatalog.length}
+            onPageChange={setCatalogPage}
+            onPageSizeChange={(n) => {
+              setCatalogPageSize(n)
+              setCatalogPage(1)
+            }}
+          />
+        ) : null}
       </div>
 
       <ConfirmDialog

@@ -53,8 +53,23 @@ export async function createUser(body: UserCreateBody): Promise<unknown> {
   return res.json()
 }
 
-export async function fetchUserList(): Promise<UserListRow[]> {
-  const res = await apiFetch('/api/users')
+export type FetchUserListParams = {
+  role?: EndUserRole
+  name?: string
+  phone?: string
+  page?: number
+  limit?: number
+}
+
+export async function fetchUserList(params?: FetchUserListParams): Promise<UserListRow[]> {
+  const sp = new URLSearchParams()
+  if (params?.role) sp.set('role', params.role)
+  if (params?.name?.trim()) sp.set('name', params.name.trim())
+  if (params?.phone?.trim()) sp.set('phone', params.phone.trim())
+  if (params?.page != null && params.page > 0) sp.set('page', String(params.page))
+  if (params?.limit != null && params.limit > 0) sp.set('limit', String(params.limit))
+  const qs = sp.toString()
+  const res = await apiFetch(`/api/users${qs ? `?${qs}` : ''}`)
   if (!res.ok) throw new Error(await readApiErrorBody(res))
   const data = (await res.json()) as Record<string, unknown>[]
   if (!Array.isArray(data)) return []

@@ -1,28 +1,14 @@
 import { type FormEvent, useEffect, useId, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { DatetimeLocalField } from '../common/DatetimeLocalField'
 import {
   createPointSetting,
   type PointSettingRow,
   type PointSettingUpsertBody,
   updatePointSetting,
 } from '../../services/pointSettingService'
+import { datetimeLocalToIso, toDatetimeLocalValue } from '../../utils/datetimeLocal'
 import '../common/ui.css'
-
-function toDatetimeLocalValue(iso: string | undefined | null): string {
-  if (!iso) return ''
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return ''
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
-}
-
-function fromDatetimeLocalValue(v: string): string | null {
-  const t = v.trim()
-  if (!t) return null
-  const d = new Date(t)
-  if (Number.isNaN(d.getTime())) return null
-  return d.toISOString()
-}
 
 type PointSettingFormModalProps = {
   open: boolean
@@ -88,8 +74,8 @@ export function PointSettingFormModal({
       setFormError('Points per batch must be a whole number of at least 1.')
       return
     }
-    const startIso = fromDatetimeLocalValue(startLocal)
-    const endIso = fromDatetimeLocalValue(endLocal)
+    const startIso = datetimeLocalToIso(startLocal)
+    const endIso = datetimeLocalToIso(endLocal)
     if (startIso && endIso && new Date(endIso) < new Date(startIso)) {
       setFormError('End date must be on or after the start date.')
       return
@@ -196,22 +182,22 @@ export function PointSettingFormModal({
               <div className="discount-form-modal__pair">
                 <div className="field">
                   <label htmlFor="ps-start">Start (optional)</label>
-                  <input
+                  <DatetimeLocalField
                     id="ps-start"
-                    type="datetime-local"
                     value={startLocal}
-                    onChange={(e) => setStartLocal(e.target.value)}
+                    onChange={setStartLocal}
                     disabled={submitting}
+                    placeholder="Start date & time"
                   />
                 </div>
                 <div className="field">
                   <label htmlFor="ps-end">End (optional)</label>
-                  <input
+                  <DatetimeLocalField
                     id="ps-end"
-                    type="datetime-local"
                     value={endLocal}
-                    onChange={(e) => setEndLocal(e.target.value)}
+                    onChange={setEndLocal}
                     disabled={submitting}
+                    placeholder="End date & time"
                   />
                 </div>
               </div>
