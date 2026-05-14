@@ -69,13 +69,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(color: AppColors.primary),
                   ),
-                  const SizedBox(height: 6),
-                  Text(
-                    'Sign in with your clinic, doctor, or patient account (email and password). '
-                    'Your role is determined by the server.',
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: AppColors.onSurfaceVariant),
-                  ),
                   const SizedBox(height: 22),
                   Container(
                     width: double.infinity,
