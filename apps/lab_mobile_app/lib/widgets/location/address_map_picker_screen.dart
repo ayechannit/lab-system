@@ -33,8 +33,14 @@ class _AddressMapPickerScreenState extends State<AddressMapPickerScreen> {
   late LatLng _marker;
   late final TextEditingController _address;
   Timer? _reverseDebounce;
+  Timer? _forwardDebounce;
   var _reverseBusy = false;
+  var _forwardBusy = false;
+  int _reverseSeq = 0;
+  int _forwardSeq = 0;
   String? _geoError;
+
+  bool get _lookupBusy => _reverseBusy || _forwardBusy;
 
   @override
   void initState() {
@@ -46,11 +52,25 @@ class _AddressMapPickerScreenState extends State<AddressMapPickerScreen> {
       has ? widget.initialLongitude! : kDefaultMapLng,
     );
     _initialCenter = _marker;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (has) {
+        final id = ++_reverseSeq;
+        _runReverse(_marker, id);
+      } else {
+        final addr = widget.initialAddress.trim();
+        if (addr.length >= 4) {
+          _runForward(addr, fromInitialOpen: true);
+        }
+      }
+    });
   }
 
   @override
   void dispose() {
     _reverseDebounce?.cancel();
+    _forwardDebounce?.cancel();
     _address.dispose();
     _mapController.dispose();
     super.dispose();
@@ -58,30 +78,88 @@ class _AddressMapPickerScreenState extends State<AddressMapPickerScreen> {
 
   void _scheduleReverse(LatLng p) {
     _reverseDebounce?.cancel();
-    _reverseDebounce = Timer(const Duration(milliseconds: 420), () => _reverseAt(p));
+    _reverseDebounce = Timer(const Duration(milliseconds: 420), () {
+      final id = ++_reverseSeq;
+      _runReverse(p, id);
+    });
   }
 
-  Future<void> _reverseAt(LatLng p) async {
+  Future<void> _runReverse(LatLng p, int id) async {
     setState(() {
       _reverseBusy = true;
       _geoError = null;
     });
     try {
       final line = await NominatimGeocode.reverse(p.latitude, p.longitude);
-      if (!mounted) return;
+      if (!mounted || id != _reverseSeq) return;
       if (line != null && line.isNotEmpty) {
         _address.text = line;
         _address.selection = TextSelection.collapsed(offset: _address.text.length);
       }
     } catch (_) {
-      if (mounted) setState(() => _geoError = 'Could not resolve address for this point.');
+      if (!mounted || id != _reverseSeq) return;
+      setState(() => _geoError = 'Could not resolve address for this point.');
     } finally {
-      if (mounted) setState(() => _reverseBusy = false);
+      if (mounted && id == _reverseSeq) {
+        setState(() => _reverseBusy = false);
+      }
+    }
+  }
+
+  void _scheduleForwardFromTypedAddress() {
+    _forwardDebounce?.cancel();
+    _forwardDebounce = Timer(const Duration(milliseconds: 750), () {
+      final q = _address.text.trim();
+      if (q.length < 4) return;
+      _runForward(q, fromInitialOpen: false);
+    });
+  }
+
+  Future<void> _runForward(String query, {required bool fromInitialOpen}) async {
+    final id = ++_forwardSeq;
+    setState(() {
+      _forwardBusy = true;
+      if (fromInitialOpen) _geoError = null;
+    });
+    try {
+      final hit = await NominatimGeocode.search(query);
+      if (!mounted || id != _forwardSeq) return;
+      if (hit == null) {
+        if (fromInitialOpen) {
+          setState(() => _geoError = 'Could not find that address on the map. Try tapping the map or refine the address.');
+        }
+        return;
+      }
+      final p = LatLng(hit.lat, hit.lng);
+      _reverseSeq++;
+      setState(() {
+        _marker = p;
+        _geoError = null;
+        _reverseBusy = false;
+      });
+      _mapController.move(p, 15);
+    } catch (_) {
+      if (!mounted || id != _forwardSeq) return;
+      if (fromInitialOpen) {
+        setState(() => _geoError = 'Could not look up that address. Check your connection and try again.');
+      }
+    } finally {
+      if (mounted && id == _forwardSeq) {
+        setState(() => _forwardBusy = false);
+      }
     }
   }
 
   Future<void> _useMyLocation() async {
-    setState(() => _geoError = null);
+    _forwardDebounce?.cancel();
+    _reverseDebounce?.cancel();
+    _forwardSeq++;
+    _reverseSeq++;
+    setState(() {
+      _geoError = null;
+      _forwardBusy = false;
+      _reverseBusy = false;
+    });
     try {
       var perm = await Geolocator.checkPermission();
       if (perm == LocationPermission.denied) {
@@ -98,7 +176,8 @@ class _AddressMapPickerScreenState extends State<AddressMapPickerScreen> {
       if (!mounted) return;
       setState(() => _marker = p);
       _mapController.move(p, 15);
-      await _reverseAt(p);
+      final id = ++_reverseSeq;
+      await _runReverse(p, id);
     } catch (e) {
       if (mounted) {
         setState(() => _geoError = 'Could not read GPS: $e');
@@ -149,7 +228,15 @@ class _AddressMapPickerScreenState extends State<AddressMapPickerScreen> {
                       ? 15
                       : 12,
                   onTap: (_, p) {
-                    setState(() => _marker = p);
+                    _forwardDebounce?.cancel();
+                    _reverseDebounce?.cancel();
+                    _forwardSeq++;
+                    _reverseSeq++;
+                    setState(() {
+                      _marker = p;
+                      _forwardBusy = false;
+                      _reverseBusy = false;
+                    });
                     _mapController.move(p, _mapController.camera.zoom);
                     _scheduleReverse(p);
                   },
@@ -188,7 +275,8 @@ class _AddressMapPickerScreenState extends State<AddressMapPickerScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Text(
-                      'Tap the map to move the pin. Address is filled automatically when possible.',
+                      'Tap the map to move the pin, or type an address to move the map. '
+                      'The address line updates from the pin when you tap the map.',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: AppColors.onSurfaceVariant,
                             height: 1.35,
@@ -206,12 +294,13 @@ class _AddressMapPickerScreenState extends State<AddressMapPickerScreen> {
                       controller: _address,
                       minLines: 2,
                       maxLines: 4,
+                      onChanged: (_) => _scheduleForwardFromTypedAddress(),
                       decoration: InputDecoration(
                         labelText: 'Address',
                         hintText: 'Street, city, etc.',
                         filled: true,
                         fillColor: Colors.white,
-                        suffixIcon: _reverseBusy
+                        suffixIcon: _lookupBusy
                             ? const Padding(
                                 padding: EdgeInsets.all(12),
                                 child: SizedBox(
@@ -233,7 +322,7 @@ class _AddressMapPickerScreenState extends State<AddressMapPickerScreen> {
                     ],
                     const SizedBox(height: 12),
                     OutlinedButton.icon(
-                      onPressed: _reverseBusy ? null : _useMyLocation,
+                      onPressed: _lookupBusy ? null : _useMyLocation,
                       icon: const Icon(Icons.my_location_outlined, size: 20),
                       label: const Text('Use my location'),
                     ),

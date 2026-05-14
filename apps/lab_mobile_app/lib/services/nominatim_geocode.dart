@@ -39,7 +39,7 @@ class NominatimGeocode {
   }
 
   /// Forward search: free-text query → first hit coordinates (optional helper).
-  static Future<({double lat, double lng})?> search(String query) async {
+  static Future<({double lat, double lng, String? displayName})?> search(String query) async {
     final q = query.trim();
     if (q.length < 4) return null;
     final uri = Uri.parse('https://nominatim.openstreetmap.org/search').replace(
@@ -67,7 +67,9 @@ class NominatimGeocode {
       final lon = double.tryParse('${row['lon'] ?? ''}');
       if (lat == null || lon == null) return null;
       if (!lat.isFinite || !lon.isFinite) return null;
-      return (lat: lat, lng: lon);
+      final dn = row['display_name'];
+      final displayName = dn is String && dn.trim().isNotEmpty ? dn.trim() : null;
+      return (lat: lat, lng: lon, displayName: displayName);
     } catch (_) {
       return null;
     }

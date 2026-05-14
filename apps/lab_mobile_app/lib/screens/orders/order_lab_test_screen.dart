@@ -113,12 +113,13 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
     );
   }
 
-  InputDecoration _inputOutlineNoFloating(BuildContext context, {String? hint}) {
+  InputDecoration _inputOutlineNoFloating(BuildContext context, {String? hint, Widget? prefixIcon}) {
     final cs = Theme.of(context).colorScheme;
     final r = BorderRadius.circular(12);
     return InputDecoration(
       hintText: hint,
       hintStyle: TextStyle(color: cs.onSurfaceVariant.withValues(alpha: 0.72)),
+      prefixIcon: prefixIcon,
       isDense: true,
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       border: OutlineInputBorder(borderRadius: r),
@@ -360,69 +361,84 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
               icon: Icons.person_outline,
               title: 'Patient details',
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  _stackedFieldLabel(context, 'Patient full name'),
                   TextFormField(
                     controller: _patientName,
-                    decoration: const InputDecoration(labelText: 'Patient full name'),
+                    decoration: _inputOutlineNoFloating(context),
                     validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
                   ),
                   const SizedBox(height: 12),
+                  _stackedFieldLabel(context, 'Phone'),
                   TextFormField(
                     controller: _phone,
-                    decoration: const InputDecoration(
-                      labelText: 'Phone',
-                      prefixIcon: Icon(Icons.phone_outlined),
+                    decoration: _inputOutlineNoFloating(
+                      context,
+                      prefixIcon: Icon(Icons.phone_outlined, color: Theme.of(context).colorScheme.onSurfaceVariant),
                     ),
                     keyboardType: TextInputType.phone,
                     validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
                   ),
                   const SizedBox(height: 12),
                   Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Expanded(
-                        child: TextFormField(
-                          controller: _age,
-                          decoration: const InputDecoration(labelText: 'Age'),
-                          keyboardType: TextInputType.number,
-                          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                          validator: (v) {
-                            final age = int.tryParse((v ?? '').trim());
-                            return (age == null || age <= 0) ? 'Enter a valid age' : null;
-                          },
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _stackedFieldLabel(context, 'Age'),
+                            TextFormField(
+                              controller: _age,
+                              decoration: _inputOutlineNoFloating(context),
+                              keyboardType: TextInputType.number,
+                              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                              validator: (v) {
+                                final age = int.tryParse((v ?? '').trim());
+                                return (age == null || age <= 0) ? 'Enter a valid age' : null;
+                              },
+                            ),
+                          ],
                         ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
-                        child: DropdownButtonFormField<String>(
-                          value: _gender,
-                          isExpanded: true,
-                          style: _dropdownBodyStyle(context),
-                          decoration: const InputDecoration(labelText: 'Gender'),
-                          items: ['Male', 'Female', 'Other']
-                              .map(
-                                (e) => DropdownMenuItem<String>(
-                                  value: e,
-                                  child: Text(e, style: _dropdownBodyStyle(context)),
-                                ),
-                              )
-                              .toList(),
-                          onChanged: (v) => setState(() => _gender = v ?? _gender),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _stackedFieldLabel(context, 'Gender'),
+                            DropdownButtonFormField<String>(
+                              value: _gender,
+                              isExpanded: true,
+                              style: _dropdownBodyStyle(context),
+                              decoration: _inputOutlineNoFloating(context),
+                              items: ['Male', 'Female', 'Other']
+                                  .map(
+                                    (e) => DropdownMenuItem<String>(
+                                      value: e,
+                                      child: Text(e, style: _dropdownBodyStyle(context)),
+                                    ),
+                                  )
+                                  .toList(),
+                              onChanged: (v) => setState(() => _gender = v ?? _gender),
+                            ),
+                          ],
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 12),
+                  _stackedFieldLabel(context, 'Blood type (optional)'),
                   TextFormField(
                     controller: _bloodType,
-                    decoration: const InputDecoration(labelText: 'Blood type (optional)'),
+                    decoration: _inputOutlineNoFloating(context),
                   ),
                   const SizedBox(height: 12),
+                  _stackedFieldLabel(context, 'Clinical notes (optional)'),
                   TextFormField(
                     controller: _description,
-                    decoration: const InputDecoration(
-                      labelText: 'Clinical notes (optional)',
-                      alignLabelWithHint: true,
-                    ),
+                    decoration: _inputOutlineNoFloating(context),
                     maxLines: 2,
                   ),
                 ],
