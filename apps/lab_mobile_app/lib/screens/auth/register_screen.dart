@@ -26,7 +26,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _name = TextEditingController();
   final _phone = TextEditingController();
   final _email = TextEditingController();
-  final _address = TextEditingController();
+  String _addressLine = '';
   final _password = TextEditingController();
   final _confirmPassword = TextEditingController();
   final _formKey = GlobalKey<FormState>();
@@ -47,7 +47,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _name.dispose();
     _phone.dispose();
     _email.dispose();
-    _address.dispose();
     _password.dispose();
     _confirmPassword.dispose();
     super.dispose();
@@ -177,44 +176,42 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                       const SizedBox(height: 12),
                       _RegisterLabel(text: 'Address'),
-                      Text(
-                        'Tap “Choose on map”, drop the pin, then save — latitude and longitude are required.',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.onSurfaceVariant, height: 1.35),
-                      ),
                       const SizedBox(height: 8),
-                      _RegisterInputShell(
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.only(left: 14, top: 12, right: 4),
-                              child: Icon(
-                                Icons.home_outlined,
-                                size: 22,
-                                color: Theme.of(context).iconTheme.color ?? AppColors.onSurfaceVariant,
-                              ),
-                            ),
-                            Expanded(
-                              child: TextFormField(
-                                controller: _address,
-                                textAlignVertical: TextAlignVertical.top,
-                                decoration: InputDecoration(
-                                  border: InputBorder.none,
-                                  enabledBorder: InputBorder.none,
-                                  focusedBorder: InputBorder.none,
-                                  filled: false,
-                                  isDense: true,
-                                  contentPadding: const EdgeInsets.fromLTRB(0, 12, 14, 12),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: OutlinedButton.icon(
+                          onPressed: () async {
+                            final r = await Navigator.of(context).push<AddressMapPickResult?>(
+                              MaterialPageRoute(
+                                builder: (_) => AddressMapPickerScreen(
+                                  initialAddress: _addressLine,
+                                  initialLatitude: _addressLat,
+                                  initialLongitude: _addressLng,
                                 ),
-                                minLines: 1,
-                                maxLines: 4,
-                                textInputAction: TextInputAction.next,
                               ),
-                            ),
-                          ],
+                            );
+                            if (!context.mounted || r == null) return;
+                            setState(() {
+                              _addressLine = r.addressLine;
+                              _addressLat = r.latitude;
+                              _addressLng = r.longitude;
+                            });
+                          },
+                          icon: const Icon(Icons.map_outlined, size: 20),
+                          label: const Text('Choose on map'),
                         ),
                       ),
-                      const SizedBox(height: 10),
+                      if (_addressLine.trim().isNotEmpty) ...[
+                        const SizedBox(height: 10),
+                        Text(
+                          _addressLine.trim(),
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: AppColors.onSurface,
+                                height: 1.35,
+                              ),
+                        ),
+                      ],
+                      const SizedBox(height: 12),
                       _RegisterLabel(text: 'Latitude–Longitude'),
                       const SizedBox(height: 6),
                       Text(
@@ -225,31 +222,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               color: AppColors.onSurfaceVariant,
                               fontFeatures: const [FontFeature.tabularFigures()],
                             ),
-                      ),
-                      const SizedBox(height: 8),
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: OutlinedButton.icon(
-                          onPressed: () async {
-                            final r = await Navigator.of(context).push<AddressMapPickResult?>(
-                              MaterialPageRoute(
-                                builder: (_) => AddressMapPickerScreen(
-                                  initialAddress: _address.text,
-                                  initialLatitude: _addressLat,
-                                  initialLongitude: _addressLng,
-                                ),
-                              ),
-                            );
-                            if (!context.mounted || r == null) return;
-                            setState(() {
-                              _address.text = r.addressLine;
-                              _addressLat = r.latitude;
-                              _addressLng = r.longitude;
-                            });
-                          },
-                          icon: const Icon(Icons.map_outlined, size: 20),
-                          label: const Text('Choose on map'),
-                        ),
                       ),
                       const SizedBox(height: 12),
                       _RegisterLabel(text: 'Password'),
@@ -356,11 +328,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               );
                               return;
                             }
-                            if (!hasMeaningfulCoordinates(_addressLat, _addressLng)) {
+                            if (!hasMeaningfulCoordinates(_addressLat, _addressLng) ||
+                                _addressLine.trim().isEmpty) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
                                   content: Text(
-                                    'Choose a location on the map. Latitude and longitude are required to register.',
+                                    'Choose a location on the map and confirm it to set your address.',
                                   ),
                                 ),
                               );
@@ -374,7 +347,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 email: emailTrim,
                                 password: _password.text,
                                 role: _selectedRole.toUserRole(),
-                                address: _address.text.trim(),
+                                address: _addressLine.trim(),
                                 latitude: _addressLat,
                                 longitude: _addressLng,
                               );

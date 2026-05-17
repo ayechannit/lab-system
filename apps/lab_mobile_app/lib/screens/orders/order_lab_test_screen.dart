@@ -381,52 +381,44 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
                     validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
                   ),
                   const SizedBox(height: 12),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _stackedFieldLabel(context, 'Age'),
-                            TextFormField(
-                              controller: _age,
-                              decoration: _inputOutlineNoFloating(context),
-                              keyboardType: TextInputType.number,
-                              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                              validator: (v) {
-                                final age = int.tryParse((v ?? '').trim());
-                                return (age == null || age <= 0) ? 'Enter a valid age' : null;
-                              },
-                            ),
-                          ],
+                  _ResponsiveFieldPair(
+                    first: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _stackedFieldLabel(context, 'Age'),
+                        TextFormField(
+                          controller: _age,
+                          decoration: _inputOutlineNoFloating(context),
+                          keyboardType: TextInputType.number,
+                          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                          validator: (v) {
+                            final age = int.tryParse((v ?? '').trim());
+                            return (age == null || age <= 0) ? 'Enter a valid age' : null;
+                          },
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _stackedFieldLabel(context, 'Gender'),
-                            DropdownButtonFormField<String>(
-                              value: _gender,
-                              isExpanded: true,
-                              style: _dropdownBodyStyle(context),
-                              decoration: _inputOutlineNoFloating(context),
-                              items: ['Male', 'Female', 'Other']
-                                  .map(
-                                    (e) => DropdownMenuItem<String>(
-                                      value: e,
-                                      child: Text(e, style: _dropdownBodyStyle(context)),
-                                    ),
-                                  )
-                                  .toList(),
-                              onChanged: (v) => setState(() => _gender = v ?? _gender),
-                            ),
-                          ],
+                      ],
+                    ),
+                    second: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _stackedFieldLabel(context, 'Gender'),
+                        DropdownButtonFormField<String>(
+                          value: _gender,
+                          isExpanded: true,
+                          style: _dropdownBodyStyle(context),
+                          decoration: _inputOutlineNoFloating(context),
+                          items: ['Male', 'Female', 'Other']
+                              .map(
+                                (e) => DropdownMenuItem<String>(
+                                  value: e,
+                                  child: Text(e, style: _dropdownBodyStyle(context)),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: (v) => setState(() => _gender = v ?? _gender),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 12),
                   _stackedFieldLabel(context, 'Blood type (optional)'),
@@ -489,52 +481,50 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
                     maxLines: 2,
                   ),
                   const SizedBox(height: 16),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _stackedFieldLabel(context, 'Preferred collection date'),
-                            InkWell(
-                              onTap: () async {
-                                final picked = await showDatePicker(
-                                  context: context,
-                                  initialDate: _preferredDate,
-                                  firstDate: DateTime.now(),
-                                  lastDate: DateTime.now().add(const Duration(days: 365)),
-                                );
-                                if (picked != null) setState(() => _preferredDate = picked);
-                              },
-                              borderRadius: BorderRadius.circular(12),
-                              child: InputDecorator(
-                                decoration: _inputOutlineNoFloating(context),
-                                child: Text(
-                                  '${_preferredDate.year}-${_preferredDate.month.toString().padLeft(2, '0')}-${_preferredDate.day.toString().padLeft(2, '0')}',
-                                ),
+                  _ResponsiveFieldPair(
+                    first: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _stackedFieldLabel(context, 'Preferred collection date'),
+                        InkWell(
+                          onTap: () async {
+                            final picked = await showDatePicker(
+                              context: context,
+                              initialDate: _preferredDate,
+                              firstDate: DateTime.now(),
+                              lastDate: DateTime.now().add(const Duration(days: 365)),
+                            );
+                            if (picked != null) setState(() => _preferredDate = picked);
+                          },
+                          borderRadius: BorderRadius.circular(12),
+                          child: InputDecorator(
+                            decoration: _inputOutlineNoFloating(
+                              context,
+                              prefixIcon: Icon(
+                                Icons.calendar_today_outlined,
+                                color: Theme.of(context).colorScheme.onSurfaceVariant,
                               ),
                             ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _stackedFieldLabel(context, 'Time note (optional)'),
-                            TextFormField(
-                              controller: _timeSlot,
-                              decoration: _inputOutlineNoFloating(
-                                context,
-                                hint: 'e.g. Morning, after 2pm',
-                              ),
+                            child: Text(
+                              '${_preferredDate.year}-${_preferredDate.month.toString().padLeft(2, '0')}-${_preferredDate.day.toString().padLeft(2, '0')}',
                             ),
-                          ],
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
+                    second: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _stackedFieldLabel(context, 'Time note (optional)'),
+                        TextFormField(
+                          controller: _timeSlot,
+                          decoration: _inputOutlineNoFloating(
+                            context,
+                            hint: 'e.g. Morning, after 2pm',
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -828,6 +818,47 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
         ),
       ),
       bottomNavigationBar: const LabMainBottomNav(current: LabMainTab.orders),
+    );
+  }
+}
+
+/// Side-by-side fields on wide layouts; stacks vertically when space is tight.
+class _ResponsiveFieldPair extends StatelessWidget {
+  const _ResponsiveFieldPair({
+    required this.first,
+    required this.second,
+  });
+
+  static const double _breakpoint = 520;
+  static const double _spacing = 12;
+
+  final Widget first;
+  final Widget second;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final stack = constraints.maxWidth < _breakpoint;
+        if (stack) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              first,
+              const SizedBox(height: _spacing),
+              second,
+            ],
+          );
+        }
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(child: first),
+            const SizedBox(width: _spacing),
+            Expanded(child: second),
+          ],
+        );
+      },
     );
   }
 }
