@@ -356,11 +356,17 @@ Enum notification_recipient_type {
 
 Table theme_settings {
   id uuid [pk]
+  lab_name varchar [not null, default: 'MedLab Smart']
   mode theme_mode [not null, default: 'light']
   primary_color varchar
   secondary_color varchar
   logo_url varchar
   custom_colors json
+  latitude float
+  longitude float
+  address text
+  contact_phone varchar
+  contact_email varchar
   updated_at timestamp [default: `now()`]
 }
 

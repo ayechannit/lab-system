@@ -1,18 +1,19 @@
 const { OpenAI } = require('openai');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
+const fs = require('fs');
 
 class AiService {
-  static async generate({ config, systemPrompt, message, history = [], stream = false, res }) {
+  static async generate({ config, systemPrompt, message, history = [], stream = false, res, file }) {
     if (config.type === 'openai') {
-      return this._generateOpenAI({ config, systemPrompt, message, history, stream, res });
+      return this._generateOpenAI({ config, systemPrompt, message, history, stream, res, file });
     } else if (config.type === 'gemini') {
-      return this._generateGemini({ config, systemPrompt, message, history, stream, res });
+      return this._generateGemini({ config, systemPrompt, message, history, stream, res, file });
     } else {
       throw new Error('Unsupported AI type');
     }
   }
 
-  static async _generateOpenAI({ config, systemPrompt, message, history, stream, res }) {
+  static async _generateOpenAI({ config, systemPrompt, message, history, stream, res, file }) {
     const openai = new OpenAI({ apiKey: config.api_key });
     
     const messages = [];
@@ -20,12 +21,30 @@ class AiService {
       messages.push({ role: 'system', content: systemPrompt });
     }
     
-    // Add history (assuming standard format: { role: 'user' | 'assistant', content: '...' })
+    // Add history
     if (history && history.length > 0) {
       messages.push(...history);
     }
     
-    messages.push({ role: 'user', content: message });
+    let userContent = message;
+    if (file) {
+      if (file.mimetype.startsWith('image/')) {
+        const base64Image = fs.readFileSync(file.path).toString('base64');
+        userContent = [
+          { type: 'text', text: message },
+          {
+            type: 'image_url',
+            image_url: {
+              url: `data:${file.mimetype};base64,${base64Image}`
+            }
+          }
+        ];
+      } else if (file.mimetype === 'application/pdf') {
+        throw new Error('PDF upload is not directly supported for OpenAI chat completions. Please use Gemini for PDF analysis.');
+      }
+    }
+
+    messages.push({ role: 'user', content: userContent });
 
     if (stream) {
       const response = await openai.chat.completions.create({
@@ -55,10 +74,9 @@ class AiService {
     }
   }
 
-  static async _generateGemini({ config, systemPrompt, message, history, stream, res }) {
+  static async _generateGemini({ config, systemPrompt, message, history, stream, res, file }) {
     const genAI = new GoogleGenerativeAI(config.api_key);
     
-    // Pass system instructions if using gemini-1.5 or compatible models
     const modelOptions = { model: config.model_name };
     if (systemPrompt) {
       modelOptions.systemInstruction = systemPrompt;
@@ -66,7 +84,6 @@ class AiService {
     
     const model = genAI.getGenerativeModel(modelOptions);
 
-    // Map standard history to Gemini format
     const geminiHistory = (history || []).map(msg => ({
       role: msg.role === 'assistant' ? 'model' : 'user',
       parts: [{ text: msg.content }]
@@ -76,8 +93,19 @@ class AiService {
       history: geminiHistory,
     });
 
+    const messageParts = [message];
+    if (file) {
+      const fileData = {
+        inlineData: {
+          data: fs.readFileSync(file.path).toString('base64'),
+          mimeType: file.mimetype
+        }
+      };
+      messageParts.push(fileData);
+    }
+
     if (stream) {
-      const result = await chat.sendMessageStream(message);
+      const result = await chat.sendMessageStream(messageParts);
       
       res.setHeader('Content-Type', 'text/event-stream');
       res.setHeader('Cache-Control', 'no-cache');
@@ -90,7 +118,7 @@ class AiService {
       res.write('data: [DONE]\n\n');
       res.end();
     } else {
-      const result = await chat.sendMessage(message);
+      const result = await chat.sendMessage(messageParts);
       return result.response.text();
     }
   }

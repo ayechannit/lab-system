@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { authMiddleware } = require('../middlewares/authMiddleware');
 const conversationController = require('../controllers/conversationController');
+const upload = require('../middlewares/upload');
 
 // Ensure all routes require authentication
 router.use(authMiddleware);
@@ -17,12 +18,12 @@ router.use(authMiddleware);
  * @swagger
  * /api/conversations:
  *   post:
- *     summary: Send a message to an AI model and get a response
+ *     summary: Send a message to an AI model and get a response (supports optional PDF or image upload)
  *     tags: [Conversations]
  *     requestBody:
  *       required: true
  *       content:
- *         application/json:
+ *         multipart/form-data:
  *           schema:
  *             type: object
  *             required:
@@ -41,20 +42,16 @@ router.use(authMiddleware);
  *                 type: string
  *                 description: The user's input message
  *               history:
- *                 type: array
- *                 description: Optional conversation history
- *                 items:
- *                   type: object
- *                   properties:
- *                     role:
- *                       type: string
- *                       enum: [user, assistant]
- *                     content:
- *                       type: string
+ *                 type: string
+ *                 description: Optional conversation history (JSON string)
  *               stream:
  *                 type: boolean
  *                 description: If true, returns a Server-Sent Events (SSE) stream. If false, returns a standard JSON response.
  *                 default: false
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *                 description: Optional PDF or image file (JPEG, PNG, WEBP)
  *     responses:
  *       200:
  *         description: Successful response. If stream=true, Content-Type is text/event-stream. If stream=false, returns JSON.
@@ -73,6 +70,6 @@ router.use(authMiddleware);
  *       404:
  *         description: AI Config or Prompt not found
  */
-router.post('/', conversationController.chat);
+router.post('/', upload.single('file'), conversationController.chat);
 
 module.exports = router;

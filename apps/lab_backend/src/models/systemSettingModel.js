@@ -1,0 +1,56 @@
+const { sql, poolPromise } = require('../config/db');
+
+class SystemSetting {
+  static async getSettings() {
+    const pool = await poolPromise;
+    const request = pool.request();
+    const result = await request.query('SELECT TOP 1 * FROM theme_settings');
+    return result.recordset[0];
+  }
+
+  static async updateSettings(data, updatedBy = null) {
+    const pool = await poolPromise;
+    const request = pool.request();
+    
+    // Get existing settings first to see if we need to insert or update
+    const existing = await this.getSettings();
+
+    request.input('lab_name', sql.NVarChar(255), data.lab_name);
+    request.input('mode', sql.NVarChar(20), data.mode || 'light');
+    request.input('logo_url', sql.NVarChar(2048), data.logo_url);
+    request.input('primary_color', sql.NVarChar(50), data.primary_color);
+    request.input('secondary_color', sql.NVarChar(50), data.secondary_color);
+    request.input('custom_colors', sql.NVarChar(sql.MAX), data.custom_colors);
+    request.input('latitude', sql.Float, data.latitude);
+    request.input('longitude', sql.Float, data.longitude);
+    request.input('address', sql.NVarChar(sql.MAX), data.address);
+    request.input('contact_phone', sql.NVarChar(50), data.contact_phone);
+    request.input('contact_email', sql.NVarChar(255), data.contact_email);
+    request.input('updated_user', sql.UniqueIdentifier, updatedBy);
+
+    if (existing) {
+      request.input('id', sql.UniqueIdentifier, existing.id);
+      const query = `
+        UPDATE theme_settings
+        SET lab_name = @lab_name, mode = @mode, logo_url = @logo_url, primary_color = @primary_color,
+            secondary_color = @secondary_color, custom_colors = @custom_colors, latitude = @latitude, longitude = @longitude,
+            address = @address, contact_phone = @contact_phone, contact_email = @contact_email,
+            updated_user = @updated_user, updated_at = GETDATE()
+        OUTPUT INSERTED.*
+        WHERE id = @id
+      `;
+      const result = await request.query(query);
+      return result.recordset[0];
+    } else {
+      const query = `
+        INSERT INTO theme_settings (lab_name, mode, logo_url, primary_color, secondary_color, custom_colors, latitude, longitude, address, contact_phone, contact_email, updated_user)
+        OUTPUT INSERTED.*
+        VALUES (@lab_name, @mode, @logo_url, @primary_color, @secondary_color, @custom_colors, @latitude, @longitude, @address, @contact_phone, @contact_email, @updated_user)
+      `;
+      const result = await request.query(query);
+      return result.recordset[0];
+    }
+  }
+}
+
+module.exports = SystemSetting;

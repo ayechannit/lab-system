@@ -16,6 +16,7 @@ const aiConfigRoutes = require('./routes/aiConfigRoutes');
 const promptRoutes = require('./routes/promptRoutes');
 const conversationRoutes = require('./routes/conversationRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
+const systemSettingRoutes = require('./routes/systemSettingRoutes');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpecs = require('./config/swagger');
 const errorHandler = require('./middlewares/errorHandler');
@@ -50,6 +51,7 @@ app.use('/api/ai-configs', aiConfigRoutes);
 app.use('/api/prompts', promptRoutes);
 app.use('/api/conversations', conversationRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/system-settings', systemSettingRoutes);
 
 // Base route
 app.get('/', (req, res) => {

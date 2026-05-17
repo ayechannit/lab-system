@@ -264,3 +264,25 @@ CREATE TABLE ai_prompts (
     created_at DATETIME2 DEFAULT GETDATE(),
     updated_at DATETIME2 DEFAULT GETDATE()
 );
+
+-- THEMING & BRANDING
+CREATE TABLE theme_settings (
+    id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+    lab_name NVARCHAR(255) NOT NULL DEFAULT 'MedLab Smart',
+    mode NVARCHAR(20) NOT NULL DEFAULT 'light' CHECK (mode IN ('light', 'dark', 'custom')),
+    primary_color NVARCHAR(50) DEFAULT '#0055ff',
+    secondary_color NVARCHAR(50) DEFAULT '#00cc66',
+    logo_url NVARCHAR(2048),
+    custom_colors NVARCHAR(MAX), -- JSON string
+    latitude FLOAT,
+    longitude FLOAT,
+    address NVARCHAR(MAX),
+    contact_phone NVARCHAR(50),
+    contact_email NVARCHAR(255),
+    updated_user UNIQUEIDENTIFIER,
+    updated_at DATETIME2 DEFAULT GETDATE()
+);
+
+-- SEED INITIAL DATA
+INSERT INTO theme_settings (lab_name, mode, primary_color, secondary_color, latitude, longitude, address)
+VALUES ('MedLab Smart', 'light', '#0055ff', '#00cc66', 16.8661, 96.1951, 'Yangon, Myanmar');
