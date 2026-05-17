@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../app/session_scope.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/common/app_brand_mark.dart';
+import '../../widgets/navigation/lab_main_bottom_nav.dart';
 
 class RatingFeedbackScreen extends StatefulWidget {
   const RatingFeedbackScreen({super.key});
@@ -13,8 +13,8 @@ class RatingFeedbackScreen extends StatefulWidget {
 }
 
 class _RatingFeedbackScreenState extends State<RatingFeedbackScreen> {
-  int _stars = 4;
-  final _comment = TextEditingController(text: 'Fast service and friendly staff.');
+  int _stars = 0;
+  final _comment = TextEditingController();
 
   @override
   void dispose() {
@@ -62,7 +62,7 @@ class _RatingFeedbackScreenState extends State<RatingFeedbackScreen> {
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w700),
           ),
           Text(
-            'Diagnostic Lab Appointment #7732',
+            'Share feedback for the lab. Ratings are sent to the server with your account.',
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(color: AppColors.onSurfaceVariant),
           ),
@@ -90,49 +90,27 @@ class _RatingFeedbackScreenState extends State<RatingFeedbackScreen> {
                     return IconButton(
                       onPressed: () => setState(() => _stars = i + 1),
                       icon: Icon(
-                        filled ? Icons.star : Icons.star,
+                        Icons.star_rounded,
                         color: filled ? AppColors.primary : const Color(0xFFC8CCE0),
                         size: 38,
                       ),
                     );
                   }),
                 ),
+                const SizedBox(height: 4),
                 Text(
-                  'GREAT EXPERIENCE',
+                  _stars == 0 ? 'Select a star rating' : '$_stars of 5 stars',
                   textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: AppColors.primary,
-                        letterSpacing: 2,
-                        fontWeight: FontWeight.w800,
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        color: AppColors.onSurfaceVariant,
+                        fontWeight: FontWeight.w600,
                       ),
                 ),
                 const SizedBox(height: 14),
                 const Divider(height: 1),
                 const SizedBox(height: 14),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _statCard(
-                        context,
-                        title: 'Wait Time',
-                        value: 'Under 10m',
-                        icon: Icons.schedule,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _statCard(
-                        context,
-                        title: 'Cleanliness',
-                        value: 'Excellent',
-                        icon: Icons.sanitizer_outlined,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
                 Text(
-                  'Detailed Feedback',
+                  'Optional comment',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 8),
@@ -145,7 +123,7 @@ class _RatingFeedbackScreenState extends State<RatingFeedbackScreen> {
                     controller: _comment,
                     maxLines: 4,
                     decoration: const InputDecoration(
-                      hintText: 'Fast service and friendly staff.',
+                      hintText: 'Add details for the lab team',
                       border: InputBorder.none,
                       enabledBorder: InputBorder.none,
                       focusedBorder: InputBorder.none,
@@ -160,19 +138,21 @@ class _RatingFeedbackScreenState extends State<RatingFeedbackScreen> {
           SizedBox(
             height: 62,
             child: FilledButton(
-              onPressed: () {
-                session
-                    .submitRating(
-                      stars: _stars,
-                      remark: _comment.text.trim(),
-                    )
-                    .then((_) {
-                  if (!context.mounted) return;
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Thanks! $_stars stars submitted.')),
-                  );
-                });
-              },
+              onPressed: _stars == 0
+                  ? null
+                  : () {
+                      session
+                          .submitRating(
+                            stars: _stars,
+                            remark: _comment.text.trim(),
+                          )
+                          .then((_) {
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Rating submitted ($_stars stars).')),
+                        );
+                      });
+                    },
               child: const Text('Submit Review'),
             ),
           ),
@@ -190,98 +170,7 @@ class _RatingFeedbackScreenState extends State<RatingFeedbackScreen> {
           ),
         ],
       ),
-      bottomNavigationBar: Container(
-        margin: const EdgeInsets.fromLTRB(14, 0, 14, 14),
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: const Color(0x66E1E2EC)),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            _NavItem(icon: Icons.grid_view_rounded, label: 'HOME', onTap: () => context.go('/home')),
-            _NavItem(icon: Icons.biotech_outlined, label: 'ORDERS', onTap: () => context.push('/order-lab-test')),
-            _NavItem(icon: Icons.assignment_outlined, label: 'RESULTS', active: true, onTap: () {}),
-            _NavItem(icon: Icons.military_tech_outlined, label: 'POINTS', onTap: () => context.push('/loyalty')),
-            _NavItem(icon: Icons.person_outline, label: 'PROFILE', onTap: () => context.push('/profile')),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _statCard(
-    BuildContext context, {
-    required String title,
-    required String value,
-    required IconData icon,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF7F7FC),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title, style: Theme.of(context).textTheme.titleMedium?.copyWith(color: AppColors.onSurfaceVariant)),
-          const SizedBox(height: 4),
-          Row(
-            children: [
-              Icon(icon, size: 16, color: AppColors.primary),
-              const SizedBox(width: 4),
-              Text(value, style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: AppColors.primary)),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _NavItem extends StatelessWidget {
-  const _NavItem({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-    this.active = false,
-  });
-
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-  final bool active;
-
-  @override
-  Widget build(BuildContext context) {
-    final fg = active ? AppColors.primary : AppColors.outline;
-    return Material(
-      color: active ? const Color(0xFFEAF1FF) : Colors.transparent,
-      borderRadius: BorderRadius.circular(12),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 20, color: fg),
-              const SizedBox(height: 2),
-              Text(
-                label,
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: fg,
-                      fontWeight: active ? FontWeight.w700 : FontWeight.w600,
-                    ),
-              ),
-            ],
-          ),
-        ),
-      ),
+      bottomNavigationBar: const LabMainBottomNav(current: LabMainTab.none),
     );
   }
 }

@@ -57,10 +57,33 @@ const createUser = async (req, res) => {
 
 const updateUser = async (req, res) => {
   try {
-    // Only allow specific fields to be updated
-    const { name, phone, address, latitude, longitude, password, password_hash } = req.body;
-    const updateData = { name, phone, address, latitude, longitude, password, password_hash };
-    
+    const existing = await User.getById(req.params.id);
+    if (!existing) return res.status(404).json({ message: 'User not found' });
+
+    const {
+      name,
+      phone,
+      email,
+      address,
+      latitude,
+      longitude,
+      password,
+      password_hash,
+    } = req.body;
+
+    const merge = (next, prev) => (next !== undefined ? next : prev);
+
+    const updateData = {
+      name: merge(name, existing.name),
+      phone: merge(phone, existing.phone),
+      email: merge(email, existing.email),
+      address: merge(address, existing.address),
+      latitude: merge(latitude, existing.latitude),
+      longitude: merge(longitude, existing.longitude),
+      password,
+      password_hash,
+    };
+
     const user = await User.update(req.params.id, updateData, req.user?.id);
     if (!user) return res.status(404).json({ message: 'User not found' });
     res.json(user);

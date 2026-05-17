@@ -1,18 +1,22 @@
 import { useState } from 'react'
-import { Link, Navigate, useNavigate } from 'react-router-dom'
-import { useMockAuth } from '../../hooks/MockAuthContext'
+import { Navigate, useNavigate } from 'react-router-dom'
+import { useAuth } from '../../hooks/AuthContext'
 import { authImages } from './authAssets'
 import { AuthFooter } from './AuthFooter'
 import { AuthMarketingPanel } from './AuthMarketingPanel'
 import './auth-screens.css'
 
 export function LoginPage() {
-  const { signIn, signedIn } = useMockAuth()
+  const { signInWithStaffCredentials, signedIn, initializing } = useAuth()
   const navigate = useNavigate()
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [remember, setRemember] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [submitting, setSubmitting] = useState(false)
 
-  if (signedIn) return <Navigate to="/" replace />
+  if (!initializing && signedIn) return <Navigate to="/" replace />
 
   return (
     <div className="auth-split">
@@ -36,21 +40,36 @@ export function LoginPage() {
             <div className="auth-icon-tile">
               <span className="material-symbols-outlined">shield_person</span>
             </div>
-            <h1 className="auth-title">Welcome Back</h1>
-            <p className="auth-subtitle">Please sign in to access your laboratory workspace.</p>
+            <h1 className="auth-title">Staff sign in</h1>
+            <p className="auth-subtitle">Use your lab staff account (admin, technician, reception, or manager).</p>
 
             <form
               className="auth-stack"
               style={{ marginTop: '2rem' }}
               onSubmit={(e) => {
                 e.preventDefault()
-                signIn()
-                navigate('/')
+                setError(null)
+                setSubmitting(true)
+                void (async () => {
+                  try {
+                    await signInWithStaffCredentials(email, password, remember)
+                    navigate('/')
+                  } catch (err) {
+                    setError(err instanceof Error ? err.message : 'Sign-in failed')
+                  } finally {
+                    setSubmitting(false)
+                  }
+                })()
               }}
             >
+              {error ? (
+                <p style={{ margin: 0, color: '#b91c1c', fontSize: '0.875rem' }} role="alert">
+                  {error}
+                </p>
+              ) : null}
               <div className="auth-field">
                 <label className="auth-label" htmlFor="identity">
-                  Email or Username
+                  Email
                 </label>
                 <div className="auth-input-wrap">
                   <span className="material-symbols-outlined auth-input-icon">mail</span>
@@ -58,10 +77,13 @@ export function LoginPage() {
                     id="identity"
                     name="identity"
                     className="auth-input"
-                    placeholder="Enter your clinical ID"
-                    type="text"
+                    placeholder="you@example.com"
+                    type="email"
                     autoComplete="username"
-                    defaultValue="staff@MedLab Smart .demo"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    disabled={submitting}
+                    required
                   />
                 </div>
               </div>
@@ -84,7 +106,10 @@ export function LoginPage() {
                     placeholder="••••••••"
                     type={showPassword ? 'text' : 'password'}
                     autoComplete="current-password"
-                    defaultValue="demo"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    disabled={submitting}
+                    required
                   />
                   <button
                     type="button"
@@ -106,21 +131,17 @@ export function LoginPage() {
                   type="checkbox"
                   checked={remember}
                   onChange={() => setRemember((v) => !v)}
+                  disabled={submitting}
                 />
                 <label className="auth-checkbox-label" htmlFor="remember">
-                  Keep me logged in for 30 days
+                  Keep me logged in on this device
                 </label>
               </div>
 
-              <button type="submit" className="auth-primary-btn">
-                Sign In to MedLab Smart 
+              <button type="submit" className="auth-primary-btn" disabled={submitting}>
+                {submitting ? 'Signing in…' : 'Sign In to MedLab Smart '}
               </button>
             </form>
-
-            <div className="auth-bottom-link">
-              <span>New to MedLab Smart ? </span>
-              <Link to="/signup">Create Account</Link>
-            </div>
           </div>
         </div>
         <AuthFooter />

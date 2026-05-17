@@ -1,3 +1,8 @@
+import 'dart:typed_data';
+
+/// Two decimal places for `lab_orders` / `lab_order_items` money fields (matches admin rounding).
+double roundPriceMmk(double v) => (v * 100).round() / 100.0;
+
 class OrderTimelineStep {
   const OrderTimelineStep({
     required this.title,
@@ -38,6 +43,32 @@ class LabAddress {
   final String? placeId;
 }
 
+/// One catalog line on the order (maps to `lab_order_items`).
+class CatalogOrderLine {
+  const CatalogOrderLine({
+    required this.testId,
+    required this.testName,
+    required this.testCode,
+    required this.unitPriceMmk,
+    required this.discountPercent,
+    required this.subtotalMmk,
+  });
+
+  final String testId;
+  final String testName;
+  final String testCode;
+  final double unitPriceMmk;
+  final int discountPercent;
+  final double subtotalMmk;
+
+  Map<String, dynamic> toItemJson() => {
+        'test_id': testId,
+        'quantity': 1,
+        'unit_price_mmk': roundPriceMmk(unitPriceMmk),
+        'subtotal_mmk': roundPriceMmk(subtotalMmk),
+      };
+}
+
 class LabOrderRequest {
   const LabOrderRequest({
     required this.testName,
@@ -53,9 +84,16 @@ class LabOrderRequest {
     required this.timeSlot,
     required this.address,
     required this.createdAt,
+    this.reportDeliveryMethod = 'soft_copy',
+    this.catalogLines = const [],
+    this.prescriptionBytes,
+    this.prescriptionFilename,
   });
 
+  /// Local summary for UI only (not a separate API column).
   final String testName;
+
+  /// Maps to API `description` (`lab_orders.description`). Tests are only in `items` JSON — not duplicated here.
   final String description;
   final OrderPriority priority;
   final String patientName;
@@ -68,6 +106,19 @@ class LabOrderRequest {
   final String timeSlot;
   final LabAddress address;
   final DateTime createdAt;
+
+  /// Backend `report_delivery_method`: `soft_copy` | `hard_copy` | `both`.
+  final String reportDeliveryMethod;
+
+  /// Selected catalog tests with per-line pricing (empty when prescription-only).
+  final List<CatalogOrderLine> catalogLines;
+
+  /// Optional prescription image/PDF (`multipart` field `prescription`).
+  final Uint8List? prescriptionBytes;
+  final String? prescriptionFilename;
+
+  bool get isPrescriptionOnly =>
+      (prescriptionBytes != null && prescriptionBytes!.isNotEmpty) && catalogLines.isEmpty;
 }
 
 class UpcomingTest {
@@ -96,6 +147,8 @@ class LabOrderSummary {
     this.collectorName,
     this.runningAt,
     this.reportOutAt,
+    this.scheduleAcceptedByUser = true,
+    this.backendStatus,
   });
 
   final String id;
@@ -113,5 +166,38 @@ class LabOrderSummary {
   final DateTime? runningAt;
   final DateTime? reportOutAt;
 
+  /// From lab schedule: user has confirmed proposed collection times.
+  final bool scheduleAcceptedByUser;
+
+  /// Raw API status when using REST (`pending`, `scheduled`, …).
+  final String? backendStatus;
+
   bool get isReportReady => reportOutAt != null;
+
+  bool get canConfirmSchedule =>
+      !scheduleAcceptedByUser &&
+      (collectionAcceptedAt != null || collectorName != null || runningAt != null);
+
+  LabOrderSummary copyWith({
+    bool? scheduleAcceptedByUser,
+  }) {
+    return LabOrderSummary(
+      id: id,
+      userId: userId,
+      patientName: patientName,
+      testType: testType,
+      description: description,
+      priority: priority,
+      address: address,
+      createdAt: createdAt,
+      timeline: timeline,
+      createdAtLabel: createdAtLabel,
+      collectionAcceptedAt: collectionAcceptedAt,
+      collectorName: collectorName,
+      runningAt: runningAt,
+      reportOutAt: reportOutAt,
+      scheduleAcceptedByUser: scheduleAcceptedByUser ?? this.scheduleAcceptedByUser,
+      backendStatus: backendStatus,
+    );
+  }
 }

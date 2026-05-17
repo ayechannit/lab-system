@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../config/lab_api_config.dart';
 import '../routing/app_router.dart';
-import '../services/mock_lab_user_api.dart';
+import '../services/rest_lab_user_api.dart';
 import '../services/session_controller.dart';
 import '../theme/app_theme.dart';
 import 'session_scope.dart';
@@ -15,7 +16,9 @@ class LabPatientApp extends StatefulWidget {
 }
 
 class _LabPatientAppState extends State<LabPatientApp> {
-  late final SessionController _session = SessionController(api: MockLabUserApi());
+  late final SessionController _session = SessionController(
+    api: RestLabUserApi(baseUrl: LabApiConfig.baseUrl),
+  );
   late final GoRouter _router = createAppRouter(_session);
 
   @override

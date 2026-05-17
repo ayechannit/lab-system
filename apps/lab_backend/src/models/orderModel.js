@@ -47,7 +47,9 @@ class Order {
     const result = await pool.request()
       .input('id', sql.UniqueIdentifier, id)
       .query(`
-        SELECT o.*, 
+        SELECT o.*,
+               u.name AS ordering_user_name,
+               u.role AS ordering_user_role,
                (SELECT * FROM lab_order_items WHERE order_id = o.id FOR JSON PATH) as items,
                (SELECT * FROM order_schedules WHERE order_id = o.id FOR JSON PATH) as schedule,
                (SELECT * FROM payments WHERE order_id = o.id ORDER BY created_at ASC FOR JSON PATH) as payments,
@@ -56,6 +58,7 @@ class Order {
                 FROM payments 
                 WHERE order_id = o.id AND status IN ('received', 'verified')) as total_paid_mmk
         FROM lab_orders o
+        LEFT JOIN users u ON u.id = o.user_id
         WHERE o.id = @id AND o.is_deleted = 0
       `);
     

@@ -1,511 +1,1850 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import { DatetimeLocalField } from '../components/common/DatetimeLocalField'
+import { LoadingSpinner } from '../components/common/LoadingSpinner'
+import { ConfirmDialog } from '../components/common/ConfirmDialog'
 import { PageHeader } from '../components/common/PageHeader'
-import { OrderQrModal } from '../components/orders/OrderQrModal'
-import { useOrderLab } from '../context/OrderLabContext'
-import type { OrderRow, OrderSource, OrderStatus, PaymentStatus } from '../mock-data/types'
+import { TableActionMenu } from '../components/common/TableActionMenu'
+import { DEFAULT_TABLE_PAGE_SIZE, TablePagination } from '../components/common/TablePagination'
+import { formatCoordPair, LocationMapPicker } from '../components/users/LocationMapPicker'
+import type { EndUserRole, LabTestCatalogRow, StaffListRow, StaffRole, UserListRow } from '../model/types'
+import { getApiBaseUrl, isApiMode } from '../services/apiBase'
+import { fetchAllDiscounts, type TestDiscountListRow } from '../services/discountService'
+import { fetchLabTestsList } from '../services/labTestCatalogService'
+import {
+  addOrderItems,
+  createOrder,
+  deleteOrder,
+  fetchOrderById,
+  fetchOrders,
+  type ApiOrderDetail,
+  type ApiOrderListRow,
+  type ApiOrderStatus,
+  type FetchOrdersParams,
+  updateOrderStatus,
+} from '../services/orderService'
+import { upsertSchedule, type ApiOrderSchedule } from '../services/scheduleService'
+import { fetchStaffList } from '../services/staffService'
+import { datetimeLocalToIso, toDatetimeLocalValue } from '../utils/datetimeLocal'
+import { nominatimSearch } from '../services/nominatimGeocode'
+import { fetchUserList } from '../services/userService'
 import '../components/common/ui.css'
 
-function statusBadge(status: OrderStatus) {
-  const map: Record<OrderStatus, string> = {
+const ADDRESS_GEOCODE_DEBOUNCE_MS = 900
+const ADDRESS_GEOCODE_MIN_LEN = 4
+
+const ORDER_STATUS_OPTIONS: ApiOrderStatus[] = [
+  'pending',
+  'scheduled',
+  'collecting',
+  'running',
+  'completed',
+  'delivered',
+]
+
+function statusBadgeClass(status: ApiOrderStatus): string {
+  const map: Record<ApiOrderStatus, string> = {
     pending: 'badge badge--warn',
-    collection: 'badge badge--neutral',
-    testing: 'badge badge--neutral',
+    scheduled: 'badge badge--neutral',
+    collecting: 'badge badge--neutral',
+    running: 'badge badge--neutral',
     completed: 'badge badge--success',
-    cancelled: 'badge badge--danger',
+    delivered: 'badge badge--success',
   }
   return map[status]
 }
 
-function payClass(p: PaymentStatus) {
-  if (p === 'paid') return 'badge badge--success'
-  if (p === 'unpaid') return 'badge badge--danger'
-  return 'badge badge--warn'
+function priorityBadgeClass(priority: 'urgent' | 'elective'): string {
+  return priority === 'urgent' ? 'badge badge--danger' : 'badge badge--neutral'
 }
 
-function sourceLabel(s: OrderSource) {
-  const map: Record<OrderSource, string> = {
-    patient_app: 'Patient app',
-    doctor_app: 'Doctor app',
-    clinic_portal: 'Clinic portal',
-    walk_in: 'Walk-in',
+function staffRoleShort(role: StaffRole): string {
+  const map: Record<StaffRole, string> = {
+    admin: 'Admin',
+    lab_technician: 'Lab tech',
+    reception: 'Reception',
+    manager: 'Manager',
   }
-  return map[s]
+  return map[role] ?? role
 }
 
-function sourceBadgeClass(s: OrderSource) {
-  if (s === 'patient_app') return 'badge badge--neutral'
-  if (s === 'doctor_app') return 'badge badge--success'
-  if (s === 'clinic_portal') return 'badge badge--warn'
-  return 'badge badge--neutral'
+/** Active staff for pickers; if none active, fall back to non-deleted. */
+function collectorStaffDropdownList(st: StaffListRow[]): StaffListRow[] {
+  const active = st.filter((s) => !s.is_deleted && s.is_active)
+  return active.length > 0 ? active : st.filter((s) => !s.is_deleted)
+}
+
+const COLLECTOR_OTHER_VALUE = '__other__'
+
+function fmtDateTime(raw: string | undefined): string {
+  if (!raw) return '—'
+  const d = new Date(raw)
+  if (!Number.isFinite(d.getTime())) return raw
+  return d.toLocaleString()
+}
+
+/** Role for discounts: prefer value from order detail (join), else admin user list. */
+function resolveOrderingUserRole(
+  order: Pick<ApiOrderDetail, 'user_id' | 'ordering_user_role'>,
+  userMap: Map<string, UserListRow>,
+): EndUserRole | undefined {
+  const uid = order.user_id
+  if (!uid) return undefined
+  const r = order.ordering_user_role?.trim()
+  if (r === 'clinic' || r === 'doctor' || r === 'patient') return r
+  return userMap.get(uid)?.role
+}
+
+function renderOrderingUser(
+  userId: string | undefined,
+  orderingUserName: string | null | undefined,
+  userMap: Map<string, UserListRow>,
+) {
+  if (!userId) {
+    return <span className="order-detail-value">—</span>
+  }
+  const fromOrder = orderingUserName?.trim()
+  const fromList = userMap.get(userId)?.name?.trim()
+  const name = fromOrder || fromList || ''
+  if (!name) {
+    return <span className="order-detail-value order-detail-value--id">{userId}</span>
+  }
+  return (
+    <div className="order-detail-ordering-user">
+      <span className="order-detail-value">{name}</span>
+      <span className="order-detail-ordering-user__id" title={userId}>
+        {userId}
+      </span>
+    </div>
+  )
+}
+
+/** SQL `bit` and JSON may arrive as 0/1; treat any truthy as assigned. */
+function testsAssignedFlag(v: boolean | number | null | undefined): boolean {
+  return v === true || v === 1
+}
+
+function prescriptionLooksPdf(url: string): boolean {
+  const base = url.split('?')[0].toLowerCase()
+  return base.endsWith('.pdf') || base.includes('.pdf')
+}
+
+function prescriptionLooksImage(url: string): boolean {
+  return /\.(png|jpe?g|gif|webp|bmp)$/i.test(url.split('?')[0])
+}
+
+/** Same-origin path for dev embeds so PDF iframes load via Vite `/uploads` → API proxy. */
+function prescriptionEmbedSrc(downloadUrl: string): string {
+  if (!import.meta.env.DEV) return downloadUrl
+  const api = getApiBaseUrl()
+  if (!api) return downloadUrl
+  try {
+    const file = new URL(downloadUrl)
+    const base = new URL(api)
+    if (file.origin === base.origin && file.pathname.startsWith('/uploads/')) {
+      return `${file.pathname}${file.search}${file.hash}`
+    }
+  } catch {
+    /* ignore */
+  }
+  return downloadUrl
+}
+
+/** Prefer signed download URL for preview; fall back to stored path/URL. */
+function orderPrescriptionAttachmentUrl(order: {
+  prescription_download_url?: string | null
+  prescription_url?: string | null
+}): string | null {
+  const d = order.prescription_download_url?.trim()
+  if (d) return d
+  const u = order.prescription_url?.trim()
+  return u || null
+}
+
+function PrescriptionPreviewBlock({ url, compact }: { url: string; compact?: boolean }) {
+  const u = url.trim()
+  if (!u) return null
+  return (
+    <div
+      className="order-detail-section order-detail-section--prescription"
+      style={compact ? { marginBottom: '0.65rem' } : undefined}
+    >
+      <h3 className="order-detail-section__title">Prescription</h3>
+      {prescriptionLooksImage(u) ? (
+        <div className="order-prescription-preview order-prescription-preview--image-only">
+          <img className="order-prescription-preview__img" src={prescriptionEmbedSrc(u)} alt="Prescription" />
+          <div className="order-prescription-preview__foot">
+            <a className="btn btn-secondary" href={u} target="_blank" rel="noopener noreferrer">
+              Open in new tab
+            </a>
+          </div>
+        </div>
+      ) : prescriptionLooksPdf(u) ? (
+        <div className="order-prescription-pdf-card">
+          <p className="order-prescription-pdf-card__text">
+            PDF prescription — open in a new tab to view (inline preview is off).
+          </p>
+          <a className="btn btn-primary" href={u} target="_blank" rel="noopener noreferrer">
+            Open PDF
+          </a>
+        </div>
+      ) : (
+        <a className="btn btn-secondary" href={u} target="_blank" rel="noopener noreferrer">
+          Open prescription file
+        </a>
+      )}
+    </div>
+  )
+}
+
+/** Embedded PDF / image preview while assigning tests (right column uses default tall panel). */
+function PrescriptionPanelEmbed({ url }: { url: string }) {
+  const u = url.trim()
+  if (!u) return null
+  const src = prescriptionEmbedSrc(u)
+  return (
+    <div className="assign-tests-prescription-panel">
+      <div className="assign-tests-prescription-panel__header">Prescription preview</div>
+      <div className="assign-tests-prescription-panel__body">
+        {prescriptionLooksImage(u) ? (
+          <img src={src} alt="Prescription" />
+        ) : prescriptionLooksPdf(u) ? (
+          <iframe title="Prescription PDF" src={src} />
+        ) : (
+          <div style={{ padding: '1rem', fontSize: '0.875rem', color: 'var(--muted)' }}>
+            <p style={{ margin: '0 0 0.65rem' }}>Inline preview isn’t available for this file type.</p>
+            <a className="btn btn-secondary" href={u} target="_blank" rel="noopener noreferrer">
+              Open in new tab
+            </a>
+          </div>
+        )}
+      </div>
+      <div className="assign-tests-prescription-panel__foot">
+        <a className="btn btn-ghost" href={u} target="_blank" rel="noopener noreferrer">
+          Open in new tab
+        </a>
+      </div>
+    </div>
+  )
+}
+
+function coordsForOrderApi(lat: number | '', lng: number | ''): { latitude: number | null; longitude: number | null } {
+  const la = typeof lat === 'number' ? lat : Number.parseFloat(String(lat))
+  const ln = typeof lng === 'number' ? lng : Number.parseFloat(String(lng))
+  if (!Number.isFinite(la) || !Number.isFinite(ln)) return { latitude: null, longitude: null }
+  if (la === 0 && ln === 0) return { latitude: null, longitude: null }
+  return { latitude: la, longitude: ln }
+}
+
+/** Max options in test dropdowns per filter (keeps UI fast for large catalogs). */
+const ORDER_TEST_PICKER_LIMIT = 100
+
+/** Tests matching `query`, excluding `excludeIds`, capped at `limit`; `totalMatches` is before cap. */
+function filterTestsForOrderDropdown(
+  allTests: LabTestCatalogRow[],
+  query: string,
+  excludeIds: ReadonlySet<string>,
+  limit: number,
+): { rows: LabTestCatalogRow[]; totalMatches: number } {
+  const q = query.trim().toLowerCase()
+  const matched = allTests.filter((t) => !excludeIds.has(t.id)).filter((t) => {
+    if (!q) return true
+    return (
+      t.test_name.toLowerCase().includes(q) ||
+      t.test_code.toLowerCase().includes(q) ||
+      (t.description?.toLowerCase().includes(q) ?? false)
+    )
+  })
+  return { rows: matched.slice(0, limit), totalMatches: matched.length }
+}
+
+/** Active test discount for an end-user role; prefers a specific role row over `all`. */
+function activeDiscountPercentForOrder(
+  discounts: TestDiscountListRow[],
+  testId: string,
+  userRole: EndUserRole | undefined,
+): number {
+  if (!testId || !userRole) return 0
+  const active = discounts.filter((d) => d.test_id === testId && !d.is_deleted && d.is_active)
+  const roleRow = active.find((d) => d.role === userRole)
+  if (roleRow) return Math.max(0, Math.min(100, roleRow.discount_percent))
+  const allRow = active.find((d) => d.role === 'all')
+  if (allRow) return Math.max(0, Math.min(100, allRow.discount_percent))
+  return 0
+}
+
+type OrderTestCheckboxPickerProps = {
+  disabled: boolean
+  open: boolean
+  onOpenChange: (next: boolean) => void
+  rows: LabTestCatalogRow[]
+  totalMatches: number
+  selectedIds: string[]
+  onToggle: (testId: string) => void
+  userRole: EndUserRole | undefined
+  testDiscounts: TestDiscountListRow[]
+  triggerId: string
+  listId: string
+  filterValue: string
+  onFilterChange: (value: string) => void
+  filterInputId: string
+}
+
+/** Select-style trigger that opens a panel with search + checkboxes (native `<select>` cannot). */
+function OrderTestCheckboxPicker({
+  disabled,
+  open,
+  onOpenChange,
+  rows,
+  totalMatches,
+  selectedIds,
+  onToggle,
+  userRole,
+  testDiscounts,
+  triggerId,
+  listId,
+  filterValue,
+  onFilterChange,
+  filterInputId,
+}: OrderTestCheckboxPickerProps) {
+  const wrapRef = useRef<HTMLDivElement>(null)
+  const filterInputRef = useRef<HTMLInputElement>(null)
+  const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds])
+  const n = selectedIds.length
+  const summary = n === 0 ? 'Choose tests…' : `${n} test${n === 1 ? '' : 's'} selected`
+
+  useEffect(() => {
+    if (!open || disabled) return
+    const id = requestAnimationFrame(() => {
+      filterInputRef.current?.focus()
+    })
+    return () => cancelAnimationFrame(id)
+  }, [open, disabled])
+
+  useEffect(() => {
+    if (!open) return
+    function onDocMouseDown(e: MouseEvent) {
+      if (!wrapRef.current?.contains(e.target as Node)) onOpenChange(false)
+    }
+    document.addEventListener('mousedown', onDocMouseDown)
+    return () => document.removeEventListener('mousedown', onDocMouseDown)
+  }, [open, onOpenChange])
+
+  useEffect(() => {
+    if (!open) return
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') onOpenChange(false)
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [open, onOpenChange])
+
+  return (
+    <div
+      ref={wrapRef}
+      className={`field order-test-multiselect${open && !disabled ? ' order-test-multiselect--open' : ''}`}
+      style={{ marginBottom: 0 }}
+    >
+      <label htmlFor={triggerId}>Test</label>
+      <div className="order-test-multiselect__anchor">
+        <button
+          type="button"
+          id={triggerId}
+          className={`order-test-multiselect-trigger${n === 0 ? ' order-test-multiselect-trigger--placeholder' : ''}`}
+          disabled={disabled}
+          aria-expanded={open}
+          aria-controls={listId}
+          aria-haspopup="listbox"
+          onClick={() => {
+            if (!disabled) onOpenChange(!open)
+          }}
+        >
+          {summary}
+        </button>
+        {open && !disabled ? (
+          <div id={listId} className="order-test-multiselect-panel" role="listbox" aria-multiselectable="true">
+          <div className="order-test-multiselect-panel__search">
+            <label htmlFor={filterInputId} className="order-test-multiselect-panel__search-label">
+              Search tests
+            </label>
+            <input
+              ref={filterInputRef}
+              id={filterInputId}
+              type="text"
+              className="order-test-multiselect-panel__search-input"
+              placeholder="Name or code…"
+              value={filterValue}
+              onChange={(e) => onFilterChange(e.target.value)}
+              autoComplete="off"
+              spellCheck={false}
+              onMouseDown={(e) => e.stopPropagation()}
+            />
+          </div>
+          {totalMatches > ORDER_TEST_PICKER_LIMIT ? (
+            <p className="order-test-multiselect-panel__hint">
+              Showing {ORDER_TEST_PICKER_LIMIT} of {totalMatches} matches — narrow your search.
+            </p>
+          ) : null}
+          {rows.length === 0 ? (
+            <p style={{ margin: '0.6rem 0.75rem', fontSize: '0.85rem', color: 'var(--muted)' }}>
+              No matches — try different keywords.
+            </p>
+          ) : (
+            rows.map((t) => {
+              const pct = activeDiscountPercentForOrder(testDiscounts, t.id, userRole)
+              const unit = t.base_price_mmk
+              const lineFinal =
+                Math.round(unit * (1 - Math.max(0, Math.min(100, pct)) / 100) * 100) / 100
+              const checked = selectedSet.has(t.id)
+              return (
+                <label key={t.id} className="order-test-multiselect-row">
+                  <input
+                    type="checkbox"
+                    className="order-test-multiselect-row__check"
+                    checked={checked}
+                    onChange={() => onToggle(t.id)}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                  <span className="order-test-multiselect-row__body">
+                    <span className="order-test-multiselect-row__title">
+                      <span className="order-test-multiselect-row__name">{t.test_name}</span>
+                      <span className="order-test-multiselect-row__code">{t.test_code}</span>
+                    </span>
+                    <span className="order-test-multiselect-row__foot">
+                      <span className="order-test-multiselect-row__discount">
+                        {pct > 0 ? `${pct}% off` : 'No discount'}
+                      </span>
+                      <span className="order-test-multiselect-row__price">
+                        {lineFinal.toLocaleString()} MMK
+                      </span>
+                    </span>
+                  </span>
+                </label>
+              )
+            })
+          )}
+        </div>
+      ) : null}
+      </div>
+    </div>
+  )
 }
 
 export function OrderManagementPage() {
-  const { orders, patchOrder, addOrder } = useOrderLab()
-  const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [detailId, setDetailId] = useState<string | null>(null)
-  const [qrFor, setQrFor] = useState<string | null>(null)
+  const hasApi = isApiMode()
+  const [rows, setRows] = useState<ApiOrderListRow[]>([])
+  const [users, setUsers] = useState<UserListRow[]>([])
+  const [staff, setStaff] = useState<StaffListRow[]>([])
+  const [tests, setTests] = useState<LabTestCatalogRow[]>([])
+  const [testDiscounts, setTestDiscounts] = useState<TestDiscountListRow[]>([])
+  const [loading, setLoading] = useState(hasApi)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [refreshTick, setRefreshTick] = useState(0)
+
+  const [orderFilterStatus, setOrderFilterStatus] = useState<'' | ApiOrderStatus>('')
+  const [orderFilterPriority, setOrderFilterPriority] = useState<'' | 'urgent' | 'elective'>('')
+  const [orderFilterPatientInput, setOrderFilterPatientInput] = useState('')
+  const [orderFilterPatient, setOrderFilterPatient] = useState('')
+  const [orderFilterTests, setOrderFilterTests] = useState<'' | 'assigned' | 'missing'>('')
+
+  const [ordersPage, setOrdersPage] = useState(1)
+  const [ordersPageSize, setOrdersPageSize] = useState(DEFAULT_TABLE_PAGE_SIZE)
+
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
-  const closeQr = useCallback(() => setQrFor(null), [])
+  const [detailOrder, setDetailOrder] = useState<ApiOrderDetail | null>(null)
+  const [detailLoading, setDetailLoading] = useState(false)
+  const [detailError, setDetailError] = useState<string | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<ApiOrderListRow | null>(null)
 
-  const selected = useMemo(
-    () => orders.find((o) => o.orderId === selectedId) ?? null,
-    [orders, selectedId],
-  )
+  const [createOpen, setCreateOpen] = useState(false)
+  const [createSubmitting, setCreateSubmitting] = useState(false)
+  const [createError, setCreateError] = useState<string | null>(null)
+  const [createUserId, setCreateUserId] = useState('')
+  const [createPriority, setCreatePriority] = useState<'urgent' | 'elective'>('elective')
+  const [createPatientName, setCreatePatientName] = useState('')
+  const [createPatientAge, setCreatePatientAge] = useState<number | ''>('')
+  const [createPatientPhone, setCreatePatientPhone] = useState('')
+  const [createAddress, setCreateAddress] = useState('')
+  const [createDescription, setCreateDescription] = useState('')
+  const [createSelectedTestIds, setCreateSelectedTestIds] = useState<string[]>([])
+  const [createTestSearch, setCreateTestSearch] = useState('')
+  const [createTestPickerOpen, setCreateTestPickerOpen] = useState(false)
+  const [createLatitude, setCreateLatitude] = useState<number | ''>(0)
+  const [createLongitude, setCreateLongitude] = useState<number | ''>(0)
+  const [createGeocodeHint, setCreateGeocodeHint] = useState<string | null>(null)
 
-  const qrOrder = qrFor ? orders.find((o) => o.orderId === qrFor) : null
-  const closeEditor = useCallback(() => setSelectedId(null), [])
-  const closeDetail = useCallback(() => setDetailId(null), [])
-  const detailOrder = useMemo(
-    () => orders.find((o) => o.orderId === detailId) ?? null,
-    [detailId, orders],
-  )
+  const [statusOpen, setStatusOpen] = useState(false)
+  const [statusTarget, setStatusTarget] = useState<ApiOrderListRow | null>(null)
+  const [statusValue, setStatusValue] = useState<ApiOrderStatus>('pending')
+  const [statusStaffId, setStatusStaffId] = useState('')
+  const [statusNote, setStatusNote] = useState('')
+  const [statusSubmitting, setStatusSubmitting] = useState(false)
+  const [statusError, setStatusError] = useState<string | null>(null)
+  const [schCollectingPerson, setSchCollectingPerson] = useState('')
+  const [schCollectorSelect, setSchCollectorSelect] = useState('')
+  const [schCollectionTime, setSchCollectionTime] = useState('')
+  const [schRunningTime, setSchRunningTime] = useState('')
+  const [schReportOutTime, setSchReportOutTime] = useState('')
+  const [schAcceptedByUser, setSchAcceptedByUser] = useState(false)
 
-  const hasSchedule = useCallback(
-    (orderId: string) => {
-      const order = orders.find((o) => o.orderId === orderId)
-      if (!order) return false
-      return Boolean(
-        order.collectionTime &&
-          order.labRunningCompleteAt &&
-          order.reportOutTime &&
-          order.collectingPerson &&
-          order.collectingPerson !== 'Unassigned',
-      )
-    },
-    [orders],
-  )
-  const nextOrderId = useMemo(() => {
-    const max = orders.reduce((acc, o) => {
-      const n = Number.parseInt(o.orderId.replace(/\D/g, ''), 10)
-      return Number.isNaN(n) ? acc : Math.max(acc, n)
-    }, 1020)
-    return `LAB${String(max + 1).padStart(4, '0')}`
-  }, [orders])
-
-  const createNewOrder = useCallback(() => {
-    const now = new Date()
-    const today = now.toISOString().slice(0, 10)
-    const defaultDateTime = `${today}T09:00`
-    const newOrder: OrderRow = {
-      orderId: nextOrderId,
-      patientName: 'New patient',
-      patientPhone: '',
-      testType: 'New lab test',
-      orderDate: today,
-      status: 'pending',
-      paymentStatus: 'unpaid',
-      technician: undefined,
-      source: 'walk_in',
-      patientAddress: '',
-      amountMmk: 0,
-      collectionTime: defaultDateTime,
-      collectingPerson: 'Unassigned',
-      labRunningCompleteAt: defaultDateTime,
-      reportOutTime: defaultDateTime,
-      resultPdfFileName: null,
-      aiReviewPassed: null,
-      aiReviewNotes: null,
-      resultSentToUserApp: false,
-    }
-    addOrder(newOrder)
-    setSelectedId(newOrder.orderId)
-  }, [addOrder, nextOrderId])
+  const [assignOpen, setAssignOpen] = useState(false)
+  /** Order loaded for the assign-tests modal (from detail or from row “Add test”). */
+  const [assignOrderDetail, setAssignOrderDetail] = useState<ApiOrderDetail | null>(null)
+  const [assignOrderId, setAssignOrderId] = useState<string | null>(null)
+  const [assignSelectedIds, setAssignSelectedIds] = useState<string[]>([])
+  const [assignTestSearch, setAssignTestSearch] = useState('')
+  const [assignTestPickerOpen, setAssignTestPickerOpen] = useState(false)
+  const [assignSubmitting, setAssignSubmitting] = useState(false)
+  const [assignError, setAssignError] = useState<string | null>(null)
 
   useEffect(() => {
-    const onDocumentMouseDown = (event: MouseEvent) => {
-      const target = event.target
-      if (!(target instanceof Element)) return
-      if (target.closest('.action-menu')) return
-      setOpenMenuId(null)
-    }
+    const id = window.setTimeout(() => setOrderFilterPatient(orderFilterPatientInput.trim()), 350)
+    return () => window.clearTimeout(id)
+  }, [orderFilterPatientInput])
 
-    const onDocumentKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setOpenMenuId(null)
-    }
+  const orderFetchParams = useMemo((): FetchOrdersParams | undefined => {
+    const p: FetchOrdersParams = {}
+    if (orderFilterStatus) p.status = orderFilterStatus
+    if (orderFilterPriority) p.priority = orderFilterPriority
+    if (orderFilterPatient) p.patient_name = orderFilterPatient
+    if (orderFilterTests === 'assigned') p.is_tests_assigned = true
+    if (orderFilterTests === 'missing') p.is_tests_assigned = false
+    return Object.keys(p).length ? p : undefined
+  }, [orderFilterStatus, orderFilterPriority, orderFilterPatient, orderFilterTests])
 
-    document.addEventListener('mousedown', onDocumentMouseDown)
-    document.addEventListener('keydown', onDocumentKeyDown)
+  const ordersListQuery = useMemo(
+    (): FetchOrdersParams => ({
+      ...(orderFetchParams ?? {}),
+      page: ordersPage,
+      limit: ordersPageSize,
+    }),
+    [orderFetchParams, ordersPage, ordersPageSize],
+  )
+
+  useEffect(() => {
+    queueMicrotask(() => setOrdersPage(1))
+  }, [orderFilterStatus, orderFilterPriority, orderFilterPatient, orderFilterTests])
+
+  useEffect(() => {
+    if (!hasApi) {
+      setRows([])
+      setUsers([])
+      setStaff([])
+      setTests([])
+      setTestDiscounts([])
+      setLoading(false)
+      return
+    }
+    let cancelled = false
+    setLoading(true)
+    setLoadError(null)
+    void (async () => {
+      try {
+        const [ordersRes, usersRes, staffRes, testsRes, discountsRes] = await Promise.all([
+          fetchOrders(ordersListQuery),
+          fetchUserList(),
+          fetchStaffList(),
+          fetchLabTestsList(),
+          fetchAllDiscounts(),
+        ])
+        if (cancelled) return
+        setRows(ordersRes)
+        if (ordersRes.length === 0 && ordersPage > 1) {
+          setOrdersPage((p) => Math.max(1, p - 1))
+        }
+        setUsers(usersRes.filter((u) => !u.is_deleted))
+        setStaff(staffRes.filter((s) => !s.is_deleted))
+        setTests(testsRes.filter((t) => t.is_active && !t.is_deleted))
+        setTestDiscounts(discountsRes)
+      } catch (e) {
+        if (!cancelled) setLoadError(e instanceof Error ? e.message : 'Failed to load orders')
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    })()
     return () => {
-      document.removeEventListener('mousedown', onDocumentMouseDown)
-      document.removeEventListener('keydown', onDocumentKeyDown)
+      cancelled = true
     }
-  }, [])
+  }, [hasApi, refreshTick, ordersListQuery, ordersPage])
 
-  const exportCsv = useCallback(() => {
-    const header = [
-      'order_id',
-      'source',
-      'patient_name',
-      'patient_phone',
-      'patient_address',
-      'test_type',
-      'order_date',
-      'amount_mmk',
-      'status',
-      'payment_status',
-      'technician',
-      'collection_time',
-      'collecting_person',
-      'lab_running_complete_at',
-      'report_out_time',
-      'result_pdf',
-      'ai_review_passed',
-      'ai_review_notes',
-      'result_sent_to_user_app',
-    ]
-    const esc = (v: string | number | boolean | null | undefined) =>
-      `"${String(v ?? '').replaceAll('"', '""')}"`
-    const rows = orders.map((o) =>
-      [
-        o.orderId,
-        o.source,
-        o.patientName,
-        o.patientPhone,
-        o.patientAddress,
-        o.testType,
-        o.orderDate,
-        o.amountMmk,
-        o.status,
-        o.paymentStatus,
-        o.technician ?? '',
-        o.collectionTime,
-        o.collectingPerson,
-        o.labRunningCompleteAt,
-        o.reportOutTime,
-        o.resultPdfFileName ?? '',
-        o.aiReviewPassed === null ? '' : o.aiReviewPassed,
-        o.aiReviewNotes ?? '',
-        o.resultSentToUserApp,
-      ].map(esc).join(','),
-    )
-    const csv = [header.join(','), ...rows].join('\n')
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `lab_orders_${new Date().toISOString().slice(0, 10)}.csv`
-    document.body.appendChild(a)
-    a.click()
-    a.remove()
-    URL.revokeObjectURL(url)
-  }, [orders])
+  useEffect(() => {
+    if (!createOpen) return
+
+    const trimmed = createAddress.trim()
+    if (trimmed.length < ADDRESS_GEOCODE_MIN_LEN) {
+      setCreateGeocodeHint(null)
+      return
+    }
+
+    let alive = true
+    const ac = new AbortController()
+    const timer = window.setTimeout(() => {
+      setCreateGeocodeHint('Looking up address…')
+      void (async () => {
+        try {
+          const hit = await nominatimSearch(trimmed, ac.signal)
+          if (!alive || ac.signal.aborted) return
+          if (hit) {
+            setCreateLatitude(hit.lat)
+            setCreateLongitude(hit.lng)
+            setCreateGeocodeHint(null)
+          } else {
+            setCreateGeocodeHint('No match for that address. Try a fuller line or set the pin on the map.')
+          }
+        } catch {
+          if (!alive || ac.signal.aborted) return
+          setCreateGeocodeHint('Could not look up address. Set the pin on the map or try again.')
+        }
+      })()
+    }, ADDRESS_GEOCODE_DEBOUNCE_MS)
+
+    return () => {
+      alive = false
+      ac.abort()
+      window.clearTimeout(timer)
+    }
+  }, [createOpen, createAddress])
+
+  useEffect(() => {
+    if (!createOpen) setCreateTestPickerOpen(false)
+  }, [createOpen])
+
+  useEffect(() => {
+    if (!assignOpen) {
+      setAssignTestPickerOpen(false)
+      setAssignOrderDetail(null)
+      setAssignOrderId(null)
+      setAssignSelectedIds([])
+      setAssignTestSearch('')
+      setAssignError(null)
+    }
+  }, [assignOpen])
+
+  const userMap = useMemo(() => new Map(users.map((u) => [u.id, u])), [users])
+  const collectorStaffOptions = useMemo(() => collectorStaffDropdownList(staff), [staff])
+  const testMap = useMemo(() => new Map(tests.map((t) => [t.id, t])), [tests])
+
+  /** While updating an order that is still `pending`, only allow `pending` or `scheduled` in the UI. */
+  const statusUpdateSelectOptions = useMemo((): ApiOrderStatus[] => {
+    if (statusTarget?.status === 'pending') return ['pending', 'scheduled']
+    return ORDER_STATUS_OPTIONS
+  }, [statusTarget?.status])
+
+  const createPickerPanel = useMemo(
+    () => filterTestsForOrderDropdown(tests, createTestSearch, new Set(), ORDER_TEST_PICKER_LIMIT),
+    [tests, createTestSearch],
+  )
+
+  const createOrderUser = useMemo(
+    () => (createUserId ? userMap.get(createUserId) : undefined),
+    [createUserId, userMap],
+  )
+
+  const createSelection = useMemo(() => {
+    const role = createOrderUser?.role
+    const lines: { testId: string; unit: number; pct: number; sub: number }[] = []
+    for (const id of createSelectedTestIds) {
+      const t = testMap.get(id)
+      if (!t) continue
+      const pct = activeDiscountPercentForOrder(testDiscounts, id, role)
+      const unit = Math.round(t.base_price_mmk * 100) / 100
+      const sub = Math.round(unit * (1 - Math.max(0, Math.min(100, pct)) / 100) * 100) / 100
+      lines.push({ testId: id, unit, pct, sub })
+    }
+    const originalSum = lines.reduce((s, l) => s + l.unit, 0)
+    const finalSum = lines.reduce((s, l) => s + l.sub, 0)
+    const blendedDisc = originalSum > 0 ? Math.round((1 - finalSum / originalSum) * 10000) / 100 : 0
+    return { lines, originalSum, finalSum, blendedDisc }
+  }, [createSelectedTestIds, testMap, testDiscounts, createOrderUser?.role])
+
+  const assignPickerPanel = useMemo(
+    () => filterTestsForOrderDropdown(tests, assignTestSearch, new Set(), ORDER_TEST_PICKER_LIMIT),
+    [tests, assignTestSearch],
+  )
+
+  const sorted = useMemo(
+    () => [...rows].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()),
+    [rows],
+  )
+
+  function bumpOrderViews() {
+    setRefreshTick((t) => t + 1)
+  }
+
+  function openCreateOrder() {
+    const firstUser = users[0]
+    const firstTest = tests[0]
+    setCreateUserId(firstUser?.id ?? '')
+    setCreatePriority('elective')
+    setCreatePatientName(firstUser?.name ?? '')
+    setCreatePatientAge('')
+    setCreatePatientPhone(firstUser?.phone ?? '')
+    setCreateAddress(firstUser?.address ?? '')
+    setCreateDescription('')
+    setCreateSelectedTestIds([])
+    setCreateTestSearch('')
+    setCreateTestPickerOpen(false)
+    setCreateLatitude(firstUser ? firstUser.latitude : 0)
+    setCreateLongitude(firstUser ? firstUser.longitude : 0)
+    setCreateGeocodeHint(null)
+    if (!firstUser && !firstTest) {
+      setCreateError('No users and no lab tests found. Create users/tests first.')
+    } else if (!firstUser) {
+      setCreateError('No users found. Create at least one user first.')
+    } else if (!firstTest) {
+      setCreateError('No lab tests found. Create at least one lab test first.')
+    } else {
+      setCreateError(null)
+    }
+    setCreateOpen(true)
+  }
+
+  function onCreateUserChange(userId: string) {
+    setCreateUserId(userId)
+    const u = userMap.get(userId)
+    if (!u) return
+    setCreatePatientName(u.name)
+    setCreatePatientPhone(u.phone)
+    setCreateAddress(u.address)
+    setCreateLatitude(u.latitude)
+    setCreateLongitude(u.longitude)
+  }
+
+  function toggleCreateTest(testId: string) {
+    setCreateSelectedTestIds((prev) => (prev.includes(testId) ? prev.filter((id) => id !== testId) : [...prev, testId]))
+  }
+
+  function removeCreateTest(testId: string) {
+    setCreateSelectedTestIds((prev) => prev.filter((id) => id !== testId))
+  }
+
+  async function submitCreateOrder(e: FormEvent) {
+    e.preventDefault()
+    setCreateError(null)
+    setCreateTestPickerOpen(false)
+    if (!createUserId) return setCreateError('Select a user.')
+    if (createSelection.lines.length === 0) return setCreateError('Select at least one test.')
+    if (!createPatientName.trim()) return setCreateError('Enter patient name.')
+    if (!createPatientPhone.trim()) return setCreateError('Enter patient phone.')
+    if (!createAddress.trim()) return setCreateError('Enter address.')
+    const age = typeof createPatientAge === 'number' ? createPatientAge : Number.parseInt(String(createPatientAge), 10)
+    if (!Number.isFinite(age) || age < 0) return setCreateError('Enter valid patient age.')
+    const { lines, originalSum, finalSum, blendedDisc } = createSelection
+    const items = lines.map((l) => ({
+      test_id: l.testId,
+      quantity: 1,
+      unit_price_mmk: l.unit,
+      subtotal_mmk: l.sub,
+    }))
+    const { latitude: latApi, longitude: lngApi } = coordsForOrderApi(createLatitude, createLongitude)
+    setCreateSubmitting(true)
+    try {
+      await createOrder({
+        user_id: createUserId,
+        description: createDescription.trim() || null,
+        priority: createPriority,
+        patient_name: createPatientName.trim(),
+        patient_age: age,
+        patient_phone: createPatientPhone.trim(),
+        address: createAddress.trim(),
+        latitude: latApi,
+        longitude: lngApi,
+        status: 'pending',
+        original_price_mmk: Math.round(originalSum * 100) / 100,
+        discount_percent: blendedDisc,
+        final_price_mmk: Math.round(finalSum * 100) / 100,
+        items,
+      })
+      setCreateOpen(false)
+      bumpOrderViews()
+    } catch (e) {
+      setCreateError(e instanceof Error ? e.message : 'Create failed')
+    } finally {
+      setCreateSubmitting(false)
+    }
+  }
+
+  async function openDetail(id: string) {
+    setDetailOrder(null)
+    setDetailError(null)
+    setDetailLoading(true)
+    try {
+      const order = await fetchOrderById(id)
+      if (!order) {
+        setDetailError('Order not found.')
+      } else {
+        setDetailOrder(order)
+      }
+    } catch (e) {
+      setDetailError(e instanceof Error ? e.message : 'Failed to load detail')
+    } finally {
+      setDetailLoading(false)
+    }
+  }
+
+  async function openAddTestsFromListRow(o: ApiOrderListRow) {
+    setAssignSelectedIds([])
+    setAssignTestSearch('')
+    setAssignTestPickerOpen(false)
+    setAssignError(null)
+    setOpenMenuId(null)
+    try {
+      const order = await fetchOrderById(o.id)
+      if (!order) {
+        window.alert('Order not found.')
+        return
+      }
+      setAssignOrderDetail(order)
+      setAssignOrderId(order.id)
+      setAssignOpen(true)
+    } catch (e) {
+      window.alert(e instanceof Error ? e.message : 'Failed to load order')
+    }
+  }
+
+  function canAddTestFromListRow(o: ApiOrderListRow): boolean {
+    return o.status === 'pending' && !testsAssignedFlag(o.is_tests_assigned)
+  }
+
+  async function refreshDetailOrder(orderId?: string) {
+    const id = orderId ?? detailOrder?.id
+    if (!id) return
+    try {
+      const next = await fetchOrderById(id)
+      if (next) setDetailOrder(next)
+    } catch {
+      /* keep existing */
+    }
+  }
+
+  async function openStatusUpdate(row: ApiOrderListRow, schedulePrefill?: ApiOrderSchedule | null) {
+    setStatusTarget(row)
+    setStatusValue(row.status)
+    setStatusStaffId(staff[0]?.id ?? '')
+    setStatusNote('')
+    setStatusError(null)
+    let pre: ApiOrderSchedule | null = schedulePrefill ?? null
+    if (schedulePrefill === undefined && row.status === 'scheduled') {
+      try {
+        const d = await fetchOrderById(row.id)
+        pre = d?.schedule ?? null
+      } catch {
+        pre = null
+      }
+    }
+    const opts = collectorStaffDropdownList(staff)
+    const raw = (pre?.collecting_person ?? '').trim()
+    if (opts.length === 0) {
+      setSchCollectorSelect(COLLECTOR_OTHER_VALUE)
+      setSchCollectingPerson(raw)
+    } else {
+      const match = opts.find((s) => s.name.trim().toLowerCase() === raw.toLowerCase())
+      if (match) {
+        setSchCollectorSelect(match.id)
+        setSchCollectingPerson('')
+      } else if (raw) {
+        setSchCollectorSelect(COLLECTOR_OTHER_VALUE)
+        setSchCollectingPerson(raw)
+      } else {
+        setSchCollectorSelect(opts[0]?.id ?? '')
+        setSchCollectingPerson('')
+      }
+    }
+    setSchCollectionTime(toDatetimeLocalValue(pre?.collection_time ?? null))
+    setSchRunningTime(toDatetimeLocalValue(pre?.running_time ?? null))
+    setSchReportOutTime(toDatetimeLocalValue(pre?.report_out_time ?? null))
+    setSchAcceptedByUser(Boolean(pre?.accepted_by_user))
+    setStatusOpen(true)
+  }
+
+  async function submitAssignTests(e: FormEvent) {
+    e.preventDefault()
+    setAssignError(null)
+    setAssignTestPickerOpen(false)
+    if (!assignOrderId || !assignOrderDetail || assignOrderDetail.id !== assignOrderId) {
+      setAssignError('Order context lost. Close this dialog and try again.')
+      return
+    }
+    if (assignSelectedIds.length === 0) {
+      setAssignError('Select at least one test.')
+      return
+    }
+    const role = resolveOrderingUserRole(assignOrderDetail, userMap)
+    const items: { test_id: string; quantity: number; unit_price_mmk: number; subtotal_mmk: number }[] = []
+    for (const testId of assignSelectedIds) {
+      const t = testMap.get(testId)
+      if (!t) continue
+      const pct = activeDiscountPercentForOrder(testDiscounts, testId, role)
+      const unit = Math.round(t.base_price_mmk * 100) / 100
+      const sub = Math.round(unit * (1 - Math.max(0, Math.min(100, pct)) / 100) * 100) / 100
+      items.push({ test_id: testId, quantity: 1, unit_price_mmk: unit, subtotal_mmk: sub })
+    }
+    if (items.length === 0) {
+      setAssignError('No valid tests selected.')
+      return
+    }
+    const originalSum = items.reduce((s, it) => s + it.unit_price_mmk * it.quantity, 0)
+    const finalSum = items.reduce((s, it) => s + it.subtotal_mmk, 0)
+    const blendedDisc =
+      originalSum > 0 ? Math.round((1 - finalSum / originalSum) * 10000) / 100 : 0
+    setAssignSubmitting(true)
+    try {
+      await addOrderItems(assignOrderId, {
+        items,
+        original_price_mmk: Math.round(originalSum * 100) / 100,
+        discount_percent: blendedDisc,
+        final_price_mmk: Math.round(finalSum * 100) / 100,
+      })
+      const next = await fetchOrderById(assignOrderId)
+      if (next) {
+        setDetailOrder((d) => (d?.id === assignOrderId ? next : d))
+      }
+      setAssignOpen(false)
+      bumpOrderViews()
+    } catch (err) {
+      setAssignError(err instanceof Error ? err.message : 'Failed to assign tests')
+    } finally {
+      setAssignSubmitting(false)
+    }
+  }
+
+  function toggleAssignTest(testId: string) {
+    setAssignSelectedIds((prev) => (prev.includes(testId) ? prev.filter((id) => id !== testId) : [...prev, testId]))
+  }
+
+  function removeAssignTest(testId: string) {
+    setAssignSelectedIds((prev) => prev.filter((id) => id !== testId))
+  }
+
+  async function submitStatusUpdate(e: FormEvent) {
+    e.preventDefault()
+    if (!statusTarget) return
+    setStatusError(null)
+    if (!statusStaffId) return setStatusError('Select staff.')
+
+    let scheduleCollectingPerson = ''
+    if (statusValue === 'scheduled') {
+      const opts = collectorStaffDropdownList(staff)
+      if (opts.length === 0 || schCollectorSelect === COLLECTOR_OTHER_VALUE) {
+        scheduleCollectingPerson = schCollectingPerson.trim()
+      } else if (schCollectorSelect) {
+        scheduleCollectingPerson = opts.find((s) => s.id === schCollectorSelect)?.name.trim() ?? ''
+      }
+      if (!scheduleCollectingPerson) {
+        return setStatusError(
+          opts.length === 0
+            ? 'Enter who will perform collection (no staff accounts yet).'
+            : schCollectorSelect === COLLECTOR_OTHER_VALUE
+              ? 'Enter a name or team for collection.'
+              : 'Select who will perform collection.',
+        )
+      }
+      if (!schCollectionTime.trim()) return setStatusError('Enter collection date and time.')
+      const cIso = datetimeLocalToIso(schCollectionTime)
+      if (!cIso) return setStatusError('Collection date and time is invalid.')
+    }
+
+    setStatusSubmitting(true)
+    try {
+      if (statusValue === 'scheduled') {
+        await upsertSchedule({
+          order_id: statusTarget.id,
+          collecting_person: scheduleCollectingPerson,
+          collection_time: datetimeLocalToIso(schCollectionTime)!,
+          running_time: schRunningTime.trim() ? datetimeLocalToIso(schRunningTime) : null,
+          report_out_time: schReportOutTime.trim() ? datetimeLocalToIso(schReportOutTime) : null,
+          accepted_by_user: schAcceptedByUser,
+        })
+      }
+      await updateOrderStatus(statusTarget.id, {
+        status: statusValue,
+        staff_id: statusStaffId,
+        note: statusNote.trim() || null,
+      })
+      setStatusOpen(false)
+      bumpOrderViews()
+      if (detailOrder && detailOrder.id === statusTarget.id) void refreshDetailOrder(statusTarget.id)
+    } catch (e) {
+      setStatusError(e instanceof Error ? e.message : 'Status update failed')
+    } finally {
+      setStatusSubmitting(false)
+    }
+  }
+
+  async function confirmDelete() {
+    if (!deleteTarget) return
+    const row = deleteTarget
+    setDeleteTarget(null)
+    try {
+      await deleteOrder(row.id)
+      bumpOrderViews()
+    } catch (e) {
+      window.alert(e instanceof Error ? e.message : 'Delete failed')
+    }
+  }
+
+  function clearOrderFilters() {
+    setOrderFilterStatus('')
+    setOrderFilterPriority('')
+    setOrderFilterPatientInput('')
+    setOrderFilterPatient('')
+    setOrderFilterTests('')
+    setOrdersPage(1)
+  }
 
   return (
     <div className="stack">
       <PageHeader
         title="Order management"
-        description="Receive lab tests from user apps, verify payment, schedule collection / lab / report times, print sample QR codes, and assign staff."
+        description="Review orders from the mobile app: confirm prescription, assign lab tests with role-based discounts, set collection schedule, then advance status through delivery."
       />
-      <div className="row-actions" style={{ justifyContent: 'flex-end' }}>
-        <button type="button" className="btn btn-export-csv" onClick={exportCsv}>
-          <span aria-hidden>⤓</span>
-          Export CSV
-        </button>
-        <button
-          type="button"
-          className="btn btn-primary"
-          style={{ minWidth: 92, paddingInline: '1rem' }}
-          onClick={createNewOrder}
-        >
-          Create New Order
-        </button>
-      </div>
-      <div className="table-wrap">
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Order ID</th>
-              <th>Source</th>
-              <th>Patient / client</th>
-              <th>Test</th>
-              <th>Date</th>
-              <th>Amount</th>
-              <th>Status</th>
-              <th>Payment</th>
-              <th className="action-col">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {orders.map((o) => (
-              <tr key={o.orderId}>
-                <td>
-                  <strong>{o.orderId}</strong>
-                </td>
-                <td>
-                  <span className={sourceBadgeClass(o.source)}>{sourceLabel(o.source)}</span>
-                </td>
-                <td>{o.patientName}</td>
-                <td>{o.testType}</td>
-                <td>{o.orderDate}</td>
-                <td>{o.amountMmk.toLocaleString()} MMK</td>
-                <td>
-                  <span className={statusBadge(o.status)}>{o.status}</span>
-                </td>
-                <td>
-                  <span className={payClass(o.paymentStatus)}>{o.paymentStatus}</span>
-                </td>
-                <td className="action-cell">
-                  <div className="action-menu">
-                    <button
-                      type="button"
-                      className="btn btn-secondary action-menu-trigger"
-                      aria-label="Open actions menu"
-                      aria-expanded={openMenuId === o.orderId}
-                      onClick={() =>
-                        setOpenMenuId((current) => (current === o.orderId ? null : o.orderId))
-                      }
-                    >
-                      ⋯
-                    </button>
-                    {openMenuId === o.orderId ? (
-                      <div className="action-menu-list">
-                        <button
-                          type="button"
-                          className="action-menu-item"
-                          onClick={() => {
-                            setDetailId(o.orderId)
-                            setOpenMenuId(null)
-                          }}
-                        >
-                          Detail
-                        </button>
-                        <button
-                          type="button"
-                          className="action-menu-item"
-                          onClick={() => {
-                            setSelectedId(o.orderId)
-                            setOpenMenuId(null)
-                          }}
-                        >
-                          Update
-                        </button>
-                        <button
-                          type="button"
-                          className="action-menu-item"
-                          onClick={() => {
-                            setQrFor(o.orderId)
-                            setOpenMenuId(null)
-                          }}
-                        >
-                          QR
-                        </button>
-                      </div>
-                    ) : null}
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+
+      {!hasApi ? (
+        <div className="card" style={{ borderColor: '#dfe5f0', background: '#f8fafc' }}>
+          <p style={{ margin: 0, fontSize: '0.9rem' }}>
+            Set <code>VITE_API_BASE_URL</code> in <code>apps/lab_admin_web</code> (e.g. <code>http://localhost:3000</code>) and restart the dev server.
+          </p>
+        </div>
+      ) : null}
+
+      {loadError ? (
+        <div className="card" style={{ borderColor: '#f0c4c4', background: '#fff8f8' }}>
+          <p style={{ margin: 0, color: '#ba1a1a', fontSize: '0.9rem' }}>{loadError}</p>
+        </div>
+      ) : null}
+
+      <div className="list-tools-row">
+        <div className="list-filters-bar" aria-label="Order filters">
+          <div className="list-filters-bar__group list-filters-bar__group--text">
+            <label className="list-filters-bar__label" htmlFor="order-filter-patient">
+              Patient
+            </label>
+            <input
+              id="order-filter-patient"
+              className="list-filters-bar__input"
+              placeholder="Name contains…"
+              value={orderFilterPatientInput}
+              onChange={(e) => setOrderFilterPatientInput(e.target.value)}
+              disabled={!hasApi || loading}
+              autoComplete="off"
+            />
+          </div>
+          <div className="list-filters-bar__group">
+            <label className="list-filters-bar__label" htmlFor="order-filter-status">
+              Status
+            </label>
+            <select
+              id="order-filter-status"
+              className="list-filters-bar__select"
+              value={orderFilterStatus}
+              onChange={(e) => setOrderFilterStatus(e.target.value as '' | ApiOrderStatus)}
+              disabled={!hasApi || loading}
+            >
+              <option value="">All</option>
+              {ORDER_STATUS_OPTIONS.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="list-filters-bar__group">
+            <label className="list-filters-bar__label" htmlFor="order-filter-priority">
+              Priority
+            </label>
+            <select
+              id="order-filter-priority"
+              className="list-filters-bar__select"
+              value={orderFilterPriority}
+              onChange={(e) => setOrderFilterPriority(e.target.value as '' | 'urgent' | 'elective')}
+              disabled={!hasApi || loading}
+            >
+              <option value="">All</option>
+              <option value="elective">Elective</option>
+              <option value="urgent">Urgent</option>
+            </select>
+          </div>
+          <div className="list-filters-bar__group">
+            <label className="list-filters-bar__label" htmlFor="order-filter-tests">
+              Tests
+            </label>
+            <select
+              id="order-filter-tests"
+              className="list-filters-bar__select"
+              value={orderFilterTests}
+              onChange={(e) => setOrderFilterTests(e.target.value as '' | 'assigned' | 'missing')}
+              disabled={!hasApi || loading}
+            >
+              <option value="">All</option>
+              <option value="assigned">Assigned</option>
+              <option value="missing">Missing</option>
+            </select>
+          </div>
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm list-filters-bar__clear"
+            onClick={clearOrderFilters}
+            disabled={!hasApi || loading}
+          >
+            Clear filters
+          </button>
+        </div>
+        <div className="list-tools-row__actions">
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => setRefreshTick((t) => t + 1)}
+            disabled={!hasApi || loading}
+          >
+            Refresh
+          </button>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={openCreateOrder}
+            disabled={!hasApi || loading}
+          >
+            Create order
+          </button>
+        </div>
       </div>
 
-      {selected ? (
+      <div className="card">
+        <div className="table-wrap">
+          <table className="data-table data-table--catalog">
+            <thead>
+              <tr>
+                <th scope="col">Patient</th>
+                <th scope="col">Phone</th>
+                <th scope="col">Priority</th>
+                <th scope="col">Status</th>
+                <th scope="col" title="Prescription file uploaded">
+                  Rx
+                </th>
+                <th scope="col">Tests</th>
+                <th scope="col" className="col-num">
+                  Original (MMK)
+                </th>
+                <th scope="col" className="col-num">
+                  Final (MMK)
+                </th>
+                <th scope="col" className="action-col">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td colSpan={9} className="data-table__state data-table__state--loading">
+                    <LoadingSpinner label="Loading orders" />
+                  </td>
+                </tr>
+              ) : sorted.length === 0 ? (
+                <tr>
+                  <td colSpan={9} className="data-table__state">
+                    <div className="data-table__empty-panel">
+                      <div className="data-table__empty-icon" aria-hidden>
+                        <span className="material-symbols-outlined">receipt_long</span>
+                      </div>
+                      <p className="data-table__empty-title">No orders yet</p>
+                      <p className="data-table__empty-text">
+                        When patients place orders they will appear here. Use filters above to narrow the list.
+                      </p>
+                      {hasApi ? (
+                        <button type="button" className="btn btn-primary" onClick={openCreateOrder}>
+                          Create order
+                        </button>
+                      ) : null}
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                sorted.map((o) => (
+                  <tr key={o.id}>
+                    <td>{o.patient_name}</td>
+                    <td className="data-table__cell--phone" title={o.patient_phone?.trim() || undefined}>
+                      {o.patient_phone?.trim() ? (
+                        <a className="data-table__phone-link" href={`tel:${o.patient_phone.replace(/\s+/g, '')}`}>
+                          {o.patient_phone.trim()}
+                        </a>
+                      ) : (
+                        '—'
+                      )}
+                    </td>
+                    <td>
+                      <span className={priorityBadgeClass(o.priority)}>{o.priority}</span>
+                    </td>
+                    <td>
+                      <span className={statusBadgeClass(o.status)}>{o.status}</span>
+                    </td>
+                    <td>
+                      {o.prescription_url ? (
+                        <span className="badge badge--success" title={o.prescription_url}>
+                          Yes
+                        </span>
+                      ) : (
+                        <span className="badge badge--neutral">No</span>
+                      )}
+                    </td>
+                    <td>
+                      {testsAssignedFlag(o.is_tests_assigned) ? (
+                        <span className="badge badge--success">Assigned</span>
+                      ) : (
+                        <span className="badge badge--warn">Missing</span>
+                      )}
+                    </td>
+                    <td className="col-num">{o.original_price_mmk.toLocaleString()}</td>
+                    <td className="col-num">{o.final_price_mmk.toLocaleString()}</td>
+                    <td className="action-cell">
+                      <TableActionMenu
+                        open={openMenuId === o.id}
+                        onOpenChange={(next) => setOpenMenuId(next ? o.id : null)}
+                        items={[
+                          {
+                            label: 'Detail',
+                            onSelect: () => {
+                              void openDetail(o.id)
+                            },
+                          },
+                          ...(canAddTestFromListRow(o)
+                            ? [
+                                {
+                                  label: 'Add test',
+                                  onSelect: () => {
+                                    void openAddTestsFromListRow(o)
+                                  },
+                                },
+                              ]
+                            : [
+                                {
+                                  label: 'Update status',
+                                  onSelect: () => {
+                                    void openStatusUpdate(o)
+                                  },
+                                },
+                              ]),
+                          {
+                            label: 'Delete',
+                            onSelect: () => setDeleteTarget(o),
+                          },
+                        ]}
+                      />
+                    </td>
+                </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+        {!loading && hasApi && sorted.length > 0 ? (
+          <TablePagination
+            mode="server"
+            page={ordersPage}
+            pageSize={ordersPageSize}
+            itemsOnPage={sorted.length}
+            onPageChange={setOrdersPage}
+            onPageSizeChange={(n) => {
+              setOrdersPageSize(n)
+              setOrdersPage(1)
+            }}
+          />
+        ) : null}
+      </div>
+
+      {createOpen ? (
         <div
           className="modal-backdrop"
           role="dialog"
           aria-modal="true"
-          aria-labelledby="order-editor-title"
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget) closeEditor()
-          }}
+          onMouseDown={(e) => e.target === e.currentTarget && !createSubmitting && setCreateOpen(false)}
         >
-          <div className="modal-card modal-card--order" onMouseDown={(e) => e.stopPropagation()}>
-            <div className="modal-head order-modal-head">
-              <h3 id="order-editor-title" className="modal-title">
-                {hasSchedule(selected.orderId) ? 'Update order setup' : 'Add order setup'} · {selected.orderId}
-              </h3>
-              <button type="button" className="btn btn-ghost modal-close" onClick={closeEditor} aria-label="Close">
-                ×
-              </button>
-            </div>
-            <p className="modal-sub order-modal-sub">
-              {selected.patientName} · {selected.patientPhone} · {selected.patientAddress}
-            </p>
-
-            <div className="order-detail-top-grid">
-              <div className="field">
-                <label htmlFor="st">Workflow status</label>
-                <select
-                  id="st"
-                  value={selected.status}
-                  onChange={(e) => patchOrder(selected.orderId, { status: e.target.value as OrderStatus })}
+          <div className="modal-card modal-card--order-create" onMouseDown={(e) => e.stopPropagation()}>
+            <div className="order-create-modal__head">
+              <div className="modal-head">
+                <h2 className="modal-title">Create order</h2>
+                <button
+                  type="button"
+                  className="btn btn-ghost modal-close"
+                  onClick={() => !createSubmitting && setCreateOpen(false)}
+                  aria-label="Close"
+                  disabled={createSubmitting}
                 >
-                  {(['pending', 'collection', 'testing', 'completed', 'cancelled'] as const).map((s) => (
+                  ×
+                </button>
+              </div>
+            </div>
+            <form className="order-create-modal__form" onSubmit={(e) => void submitCreateOrder(e)}>
+              <div className="order-create-modal__body">
+                <div className="order-create-modal__stack">
+              <div className="field">
+                <label htmlFor="om-user">Ordering user</label>
+                <select id="om-user" className="select-chevron-left" value={createUserId} onChange={(e) => onCreateUserChange(e.target.value)} disabled={createSubmitting}>
+                  {users.length === 0 ? (
+                    <option value="">No users available</option>
+                  ) : (
+                    users.map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {u.name} ({u.role})
+                      </option>
+                    ))
+                  )}
+                </select>
+                <p style={{ margin: '0.35rem 0 0', fontSize: '0.78rem', color: 'var(--muted)' }}>
+                  Per-test discounts use this user’s role (same rules as mobile / Assign tests).
+                </p>
+              </div>
+              <div className="field">
+                <div id="om-tests-label" style={{ fontWeight: 600, fontSize: '0.875rem', marginBottom: '0.35rem', color: 'var(--heading)' }}>
+                  Tests on this order
+                </div>
+                {tests.length > ORDER_TEST_PICKER_LIMIT && !createTestSearch.trim() ? (
+                  <p style={{ margin: '0 0 0.5rem', fontSize: '0.78rem', color: '#9a6700' }}>
+                    Many tests in the catalog. Open <strong>Test</strong> and use the search box — the list shows at most{' '}
+                    {ORDER_TEST_PICKER_LIMIT} matches at a time.
+                  </p>
+                ) : null}
+                <p style={{ margin: '0 0 0.45rem', fontSize: '0.82rem', color: 'var(--muted)' }}>
+                  Open <strong>Test</strong> for search and checkboxes (multi-select). Selected lines also appear in the
+                  table below — use Remove there if a test is not in the current search results.
+                </p>
+                <OrderTestCheckboxPicker
+                  disabled={createSubmitting || tests.length === 0}
+                  open={createTestPickerOpen}
+                  onOpenChange={setCreateTestPickerOpen}
+                  rows={createPickerPanel.rows}
+                  totalMatches={createPickerPanel.totalMatches}
+                  selectedIds={createSelectedTestIds}
+                  onToggle={toggleCreateTest}
+                  userRole={createOrderUser?.role}
+                  testDiscounts={testDiscounts}
+                  triggerId="om-test-multiselect"
+                  listId="om-test-multiselect-list"
+                  filterValue={createTestSearch}
+                  onFilterChange={setCreateTestSearch}
+                  filterInputId="om-test-filter"
+                />
+                {createSelectedTestIds.length > 0 ? (
+                  <div className="table-wrap" style={{ marginTop: '0.65rem' }}>
+                    <table className="data-table">
+                      <thead>
+                        <tr>
+                          <th>Test</th>
+                          <th>Discount</th>
+                          <th>Final (MMK)</th>
+                          <th className="action-col"> </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {createSelectedTestIds.map((id) => {
+                          const t = testMap.get(id)
+                          if (!t) return null
+                          const pct = activeDiscountPercentForOrder(testDiscounts, id, createOrderUser?.role)
+                          const unit = Math.round(t.base_price_mmk * 100) / 100
+                          const sub =
+                            Math.round(unit * (1 - Math.max(0, Math.min(100, pct)) / 100) * 100) / 100
+                          return (
+                            <tr key={id}>
+                              <td>
+                                {t.test_name} <span style={{ color: 'var(--muted)' }}>({t.test_code})</span>
+                              </td>
+                              <td>{pct}%</td>
+                              <td>{sub.toLocaleString()}</td>
+                              <td className="action-cell">
+                                <button
+                                  type="button"
+                                  className="btn btn-ghost"
+                                  style={{ fontSize: '0.8rem' }}
+                                  onClick={() => removeCreateTest(id)}
+                                  disabled={createSubmitting}
+                                >
+                                  Remove
+                                </button>
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <p style={{ margin: '0.55rem 0 0', fontSize: '0.82rem', color: 'var(--muted)' }}>No tests added yet.</p>
+                )}
+              </div>
+              <div className="grid-2">
+                <div className="field">
+                  <label htmlFor="om-name">Patient name</label>
+                  <input id="om-name" value={createPatientName} onChange={(e) => setCreatePatientName(e.target.value)} disabled={createSubmitting} />
+                </div>
+                <div className="field">
+                  <label htmlFor="om-age">Age</label>
+                  <input id="om-age" type="number" min={0} value={createPatientAge === '' ? '' : createPatientAge} onChange={(e) => setCreatePatientAge(e.target.value === '' ? '' : Number(e.target.value))} disabled={createSubmitting} />
+                </div>
+              </div>
+              <div className="grid-2">
+                <div className="field">
+                  <label htmlFor="om-phone">Phone</label>
+                  <input id="om-phone" value={createPatientPhone} onChange={(e) => setCreatePatientPhone(e.target.value)} disabled={createSubmitting} />
+                </div>
+                <div className="field">
+                  <label htmlFor="om-pri">Priority</label>
+                  <select id="om-pri" className="select-chevron-left" value={createPriority} onChange={(e) => setCreatePriority(e.target.value as 'urgent' | 'elective')} disabled={createSubmitting}>
+                    <option value="elective">Elective</option>
+                    <option value="urgent">Urgent</option>
+                  </select>
+                </div>
+              </div>
+              <div className="field">
+                <label htmlFor="om-address">Address</label>
+                <textarea id="om-address" value={createAddress} onChange={(e) => setCreateAddress(e.target.value)} disabled={createSubmitting} />
+              </div>
+              <div className="user-form-modal__location-card">
+                <LocationMapPicker
+                  latitude={createLatitude}
+                  longitude={createLongitude}
+                  mapHeight={220}
+                  onPick={(lat, lng) => {
+                    setCreateLatitude(lat)
+                    setCreateLongitude(lng)
+                  }}
+                  onAddressFromMap={(addr) => {
+                    setCreateAddress(addr)
+                    setCreateGeocodeHint(null)
+                  }}
+                />
+                <p className="user-form-modal__coords" aria-live="polite">
+                  {formatCoordPair(createLatitude, createLongitude)}
+                </p>
+                {createGeocodeHint ? <p className="user-form-modal__geocode-hint">{createGeocodeHint}</p> : null}
+              </div>
+              <div className="field">
+                <label htmlFor="om-desc">Description</label>
+                <textarea id="om-desc" value={createDescription} onChange={(e) => setCreateDescription(e.target.value)} disabled={createSubmitting} />
+              </div>
+              <div className="order-create-modal__grid-three">
+                <div className="field">
+                  <label>Original total (MMK)</label>
+                  <input readOnly disabled value={createSelection.originalSum.toLocaleString()} className="lab-test-modal__input-computed" />
+                </div>
+                <div className="field">
+                  <label>Blended discount %</label>
+                  <input readOnly disabled value={String(createSelection.blendedDisc)} className="lab-test-modal__input-computed" />
+                </div>
+                <div className="field">
+                  <label>Final total (MMK)</label>
+                  <input readOnly disabled value={createSelection.finalSum.toLocaleString()} className="lab-test-modal__input-computed" />
+                </div>
+              </div>
+                </div>
+              </div>
+              <div className="order-create-modal__footer">
+              {createError ? (
+                <div className="form-alert form-alert--error" role="alert">
+                  {createError}
+                </div>
+              ) : null}
+              <div className="order-create-modal__footer-actions">
+                <div className="row-actions">
+                <button type="button" className="btn btn-secondary" onClick={() => setCreateOpen(false)} disabled={createSubmitting}>
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={createSubmitting || users.length === 0 || tests.length === 0 || createSelection.lines.length === 0}
+                >
+                  {createSubmitting ? 'Saving…' : 'Create'}
+                </button>
+                </div>
+              </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
+
+      {statusOpen && statusTarget ? (
+        <div className="modal-backdrop" role="dialog" aria-modal="true" onMouseDown={(e) => e.target === e.currentTarget && !statusSubmitting && setStatusOpen(false)}>
+          <div className="modal-card modal-card--status-update" onMouseDown={(e) => e.stopPropagation()}>
+            <div className="modal-head">
+              <h2 className="modal-title">Update status</h2>
+              <button type="button" className="btn btn-ghost modal-close" onClick={() => !statusSubmitting && setStatusOpen(false)} aria-label="Close" disabled={statusSubmitting}>×</button>
+            </div>
+            <div className="modal-card--status-update__body">
+            <form className="form-grid status-update-form" onSubmit={(e) => void submitStatusUpdate(e)}>
+              <div className="field">
+                <label htmlFor="os-status">Status</label>
+                <select id="os-status" className="select-chevron-left" value={statusValue} onChange={(e) => setStatusValue(e.target.value as ApiOrderStatus)} disabled={statusSubmitting}>
+                  {statusUpdateSelectOptions.map((s) => (
                     <option key={s} value={s}>
                       {s}
                     </option>
                   ))}
                 </select>
               </div>
+              {statusValue === 'scheduled' ? (
+                <div className="status-update-schedule">
+                  <div className="status-update-schedule__heading">
+                    <h3 className="status-update-schedule__title">Schedule details</h3>
+                    <p className="status-update-schedule__intro">
+                      Saved to <code>order_schedules</code> (collector, collection time, optional lab / report times) before
+                      the order moves to <strong>scheduled</strong>.
+                    </p>
+                  </div>
+                  <div className="field">
+                    <label htmlFor="os-collector">Collecting person / team</label>
+                    {collectorStaffOptions.length === 0 ? (
+                      <>
+                        <p className="status-update-hint status-update-hint--above-field">
+                          No staff profiles yet — type who will collect (you can add staff under Staff).
+                        </p>
+                        <input
+                          id="os-collector"
+                          value={schCollectingPerson}
+                          onChange={(e) => setSchCollectingPerson(e.target.value)}
+                          disabled={statusSubmitting}
+                          placeholder="e.g. Partner lab — driver"
+                          autoComplete="off"
+                        />
+                      </>
+                    ) : (
+                      <>
+                        <select
+                          id="os-collector"
+                          className="select-chevron-left"
+                          value={schCollectorSelect}
+                          onChange={(e) => {
+                            const v = e.target.value
+                            setSchCollectorSelect(v)
+                            if (v !== COLLECTOR_OTHER_VALUE) setSchCollectingPerson('')
+                          }}
+                          disabled={statusSubmitting}
+                          aria-describedby="os-collector-hint"
+                        >
+                          <option value="">Select team member…</option>
+                          {collectorStaffOptions.map((s) => (
+                            <option key={s.id} value={s.id}>
+                              {s.name} ({staffRoleShort(s.role)})
+                            </option>
+                          ))}
+                          <option value={COLLECTOR_OTHER_VALUE}>Other name or team…</option>
+                        </select>
+                        <p id="os-collector-hint" className="status-update-hint">
+                          Stored on the schedule as display text. Choose <strong>Other</strong> for drivers or partners not
+                          in the staff list.
+                        </p>
+                        {schCollectorSelect === COLLECTOR_OTHER_VALUE ? (
+                          <input
+                            id="os-collector-custom"
+                            type="text"
+                            className="status-update-custom-collector"
+                            value={schCollectingPerson}
+                            onChange={(e) => setSchCollectingPerson(e.target.value)}
+                            disabled={statusSubmitting}
+                            placeholder="e.g. City courier — Aung"
+                            autoComplete="off"
+                            aria-label="Custom collecting person or team"
+                          />
+                        ) : null}
+                      </>
+                    )}
+                  </div>
+                  <div className="status-update-datetime-row">
+                    <div className="field">
+                      <label htmlFor="os-collect-at">Collection time</label>
+                      <DatetimeLocalField
+                        id="os-collect-at"
+                        value={schCollectionTime}
+                        onChange={setSchCollectionTime}
+                        disabled={statusSubmitting}
+                        allowClear={false}
+                        schedule
+                      />
+                    </div>
+                    <div className="field">
+                      <label htmlFor="os-running">Running / processing time (optional)</label>
+                      <DatetimeLocalField
+                        id="os-running"
+                        value={schRunningTime}
+                        onChange={setSchRunningTime}
+                        disabled={statusSubmitting}
+                        schedule
+                      />
+                    </div>
+                  </div>
+                  <div className="field">
+                    <label htmlFor="os-report">Report out time (optional)</label>
+                    <DatetimeLocalField
+                      id="os-report"
+                      value={schReportOutTime}
+                      onChange={setSchReportOutTime}
+                      disabled={statusSubmitting}
+                      schedule
+                    />
+                  </div>
+                  <div className="auth-checkbox-row auth-checkbox-row--center status-update-accepted">
+                    <input
+                      id="os-accepted"
+                      className="auth-checkbox"
+                      type="checkbox"
+                      checked={schAcceptedByUser}
+                      onChange={() => setSchAcceptedByUser((v) => !v)}
+                      disabled={statusSubmitting}
+                    />
+                    <label className="auth-checkbox-label" htmlFor="os-accepted">
+                      Accepted by patient / requester
+                    </label>
+                  </div>
+                </div>
+              ) : null}
+              {statusValue === 'scheduled' &&
+              statusTarget &&
+              !orderPrescriptionAttachmentUrl(statusTarget) &&
+              !testsAssignedFlag(statusTarget.is_tests_assigned) ? (
+                <p className="status-update-triage-hint">
+                  This order has no prescription on file and no tests assigned yet. You can still schedule, but triage is incomplete.
+                </p>
+              ) : null}
               <div className="field">
-                <label htmlFor="paymentStatus">Payment received</label>
-                <select
-                  id="paymentStatus"
-                  value={selected.paymentStatus}
-                  onChange={(e) =>
-                    patchOrder(selected.orderId, { paymentStatus: e.target.value as PaymentStatus })
-                  }
-                >
-                  <option value="paid">Paid</option>
-                  <option value="unpaid">Unpaid</option>
-                  <option value="partial">Partial</option>
+                <label htmlFor="os-staff">Changed by staff</label>
+                <select id="os-staff" className="select-chevron-left" value={statusStaffId} onChange={(e) => setStatusStaffId(e.target.value)} disabled={statusSubmitting}>
+                  <option value="">Select staff</option>
+                  {staff.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name} ({s.role})
+                    </option>
+                  ))}
                 </select>
               </div>
               <div className="field">
-                <label htmlFor="tech">Technician</label>
-                <input
-                  id="tech"
-                  value={selected.technician ?? ''}
-                  placeholder="Assign name"
-                  onChange={(e) => patchOrder(selected.orderId, { technician: e.target.value || undefined })}
-                />
+                <label htmlFor="os-note">Note (optional)</label>
+                <textarea id="os-note" value={statusNote} onChange={(e) => setStatusNote(e.target.value)} disabled={statusSubmitting} />
               </div>
+              {statusError ? (
+                <div className="form-alert form-alert--error" role="alert">
+                  {statusError}
+                </div>
+              ) : null}
+              <div className="row-actions" style={{ justifyContent: 'flex-end' }}>
+                <button type="button" className="btn btn-secondary" onClick={() => setStatusOpen(false)} disabled={statusSubmitting}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary" disabled={statusSubmitting}>
+                  {statusSubmitting ? 'Saving…' : 'Update'}
+                </button>
+              </div>
+            </form>
             </div>
+          </div>
+        </div>
+      ) : null}
 
-            <h4 className="order-detail-schedule-title order-modal-section-title">Collection & report schedule</h4>
-            <p className="order-detail-meta" style={{ marginTop: '-0.15rem', marginBottom: '0.75rem' }}>
-              Fill new details or update existing details. Changes save automatically.
-            </p>
-            <div className="order-detail-schedule-grid">
-              <div className="field">
-                <label htmlFor="collTime">Collection time</label>
-                <input
-                  id="collTime"
-                  type="datetime-local"
-                  value={selected.collectionTime}
-                  onChange={(e) => patchOrder(selected.orderId, { collectionTime: e.target.value })}
-                />
-              </div>
-              <div className="field">
-                <label htmlFor="collector">Collecting person</label>
-                <input
-                  id="collector"
-                  value={selected.collectingPerson}
-                  onChange={(e) => patchOrder(selected.orderId, { collectingPerson: e.target.value })}
-                />
-              </div>
-              <div className="field">
-                <label htmlFor="runEnd">Lab running complete (target)</label>
-                <input
-                  id="runEnd"
-                  type="datetime-local"
-                  value={selected.labRunningCompleteAt}
-                  onChange={(e) => patchOrder(selected.orderId, { labRunningCompleteAt: e.target.value })}
-                />
-              </div>
-              <div className="field">
-                <label htmlFor="reportOut">Report out time</label>
-                <input
-                  id="reportOut"
-                  type="datetime-local"
-                  value={selected.reportOutTime}
-                  onChange={(e) => patchOrder(selected.orderId, { reportOutTime: e.target.value })}
-                />
-              </div>
+      {detailLoading ? (
+        <div className="modal-backdrop" role="dialog" aria-modal="true">
+          <div className="modal-card" style={{ maxWidth: 560 }}>
+            <div className="modal-head">
+              <h2 className="modal-title">Order detail</h2>
             </div>
+            <div className="card-body-loading">
+              <LoadingSpinner label="Loading order detail" />
+            </div>
+          </div>
+        </div>
+      ) : null}
 
-            <div className="row-actions order-detail-actions">
-              <button type="button" className="btn btn-primary" onClick={closeEditor}>
-                Update
-              </button>
+      {detailError ? (
+        <div className="modal-backdrop" role="dialog" aria-modal="true" onMouseDown={(e) => e.target === e.currentTarget && setDetailError(null)}>
+          <div className="modal-card" style={{ maxWidth: 520 }} onMouseDown={(e) => e.stopPropagation()}>
+            <div className="modal-head">
+              <h2 className="modal-title">Order detail</h2>
+              <button type="button" className="btn btn-ghost modal-close" onClick={() => setDetailError(null)} aria-label="Close">×</button>
+            </div>
+            <div style={{ padding: '1.25rem' }}>
+              <div className="form-alert form-alert--error">{detailError}</div>
             </div>
           </div>
         </div>
       ) : null}
 
       {detailOrder ? (
-        <div
-          className="modal-backdrop"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="order-detail-title"
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget) closeDetail()
-          }}
-        >
-          <div className="modal-card modal-card--order" onMouseDown={(e) => e.stopPropagation()}>
-            <div className="modal-head order-modal-head">
-              <h3 id="order-detail-title" className="modal-title">
-                Order detail · {detailOrder.orderId}
-              </h3>
-              <button type="button" className="btn btn-ghost modal-close" onClick={closeDetail} aria-label="Close">
-                ×
-              </button>
+        <div className="modal-backdrop" role="dialog" aria-modal="true" onMouseDown={(e) => e.target === e.currentTarget && setDetailOrder(null)}>
+          <div className="modal-card modal-card--order-detail" onMouseDown={(e) => e.stopPropagation()}>
+            <div className="modal-card--order-detail__head modal-head">
+              <h2 className="modal-title">Order detail</h2>
+              <button type="button" className="btn btn-ghost modal-close" onClick={() => setDetailOrder(null)} aria-label="Close">×</button>
             </div>
-            <p className="modal-sub order-modal-sub">
-              {detailOrder.patientName} · {detailOrder.patientPhone} · {detailOrder.patientAddress}
-            </p>
+            <div className="modal-card--order-detail__body">
+              <div className="order-detail-summary">
+                <section className="order-detail-summary__card" aria-labelledby="od-summary-people">
+                  <h3 id="od-summary-people" className="order-detail-summary__title">
+                    Order &amp; people
+                  </h3>
+                  <div className="order-detail-grid order-detail-grid--in-card">
+                    <div className="order-detail-item order-detail-item--span">
+                      <span className="order-detail-label">Order ID</span>
+                      <span className="order-detail-value order-detail-value--id">{detailOrder.id}</span>
+                    </div>
+                    <div className="order-detail-item">
+                      <span className="order-detail-label">Ordering user</span>
+                      {renderOrderingUser(detailOrder.user_id, detailOrder.ordering_user_name, userMap)}
+                    </div>
+                    <div className="order-detail-item">
+                      <span className="order-detail-label">Patient</span>
+                      <span className="order-detail-value">{detailOrder.patient_name}</span>
+                    </div>
+                    <div className="order-detail-item">
+                      <span className="order-detail-label">Patient age</span>
+                      <span className="order-detail-value">{detailOrder.patient_age ?? '—'}</span>
+                    </div>
+                    <div className="order-detail-item">
+                      <span className="order-detail-label">Phone</span>
+                      <span className="order-detail-value">{detailOrder.patient_phone}</span>
+                    </div>
+                    <div className="order-detail-item order-detail-item--span">
+                      <span className="order-detail-label">Address</span>
+                      <span className="order-detail-value">{detailOrder.address}</span>
+                    </div>
+                    {detailOrder.description ? (
+                      <div className="order-detail-item order-detail-item--span order-detail-item--notes">
+                        <span className="order-detail-label">Notes</span>
+                        <span className="order-detail-value order-detail-value--notes">{detailOrder.description}</span>
+                      </div>
+                    ) : null}
+                  </div>
+                </section>
 
-            <div className="order-detail-grid">
-              <div className="order-detail-item">
-                <span className="order-detail-label">Source</span>
-                <span>{sourceLabel(detailOrder.source)}</span>
+                <section className="order-detail-summary__card" aria-labelledby="od-summary-care">
+                  <h3 id="od-summary-care" className="order-detail-summary__title">
+                    Status &amp; delivery
+                  </h3>
+                  <div className="order-detail-grid order-detail-grid--in-card">
+                    <div className="order-detail-item">
+                      <span className="order-detail-label">Status</span>
+                      <span className={statusBadgeClass(detailOrder.status)}>{detailOrder.status}</span>
+                    </div>
+                    <div className="order-detail-item">
+                      <span className="order-detail-label">Priority</span>
+                      <span className="order-detail-value">{detailOrder.priority}</span>
+                    </div>
+                    <div className="order-detail-item order-detail-item--span">
+                      <span className="order-detail-label">Report delivery</span>
+                      <span className="order-detail-value">{detailOrder.report_delivery_method ?? '—'}</span>
+                    </div>
+                  </div>
+                </section>
+
+                <section className="order-detail-summary__card" aria-labelledby="od-summary-money">
+                  <h3 id="od-summary-money" className="order-detail-summary__title">
+                    Pricing &amp; activity
+                  </h3>
+                  <div className="order-detail-grid order-detail-grid--in-card">
+                    <div className="order-detail-item">
+                      <span className="order-detail-label">Original</span>
+                      <span className="order-detail-value">{detailOrder.original_price_mmk.toLocaleString()} MMK</span>
+                    </div>
+                    <div className="order-detail-item">
+                      <span className="order-detail-label">Discount</span>
+                      <span className="order-detail-value">{detailOrder.discount_percent}%</span>
+                    </div>
+                    <div className="order-detail-item">
+                      <span className="order-detail-label">Final</span>
+                      <span className="order-detail-value order-detail-value--emphasis">
+                        {detailOrder.final_price_mmk.toLocaleString()} MMK
+                      </span>
+                    </div>
+                    <div className="order-detail-item">
+                      <span className="order-detail-label">Total paid</span>
+                      <span className="order-detail-value">{(detailOrder.total_paid_mmk ?? 0).toLocaleString()} MMK</span>
+                    </div>
+                    <div className="order-detail-item">
+                      <span className="order-detail-label">Balance</span>
+                      <span className="order-detail-value order-detail-value--emphasis">
+                        {(detailOrder.balance_mmk ?? detailOrder.final_price_mmk).toLocaleString()} MMK
+                      </span>
+                    </div>
+                    <div className="order-detail-item">
+                      <span className="order-detail-label">Created</span>
+                      <span className="order-detail-value order-detail-value--muted">{fmtDateTime(detailOrder.created_at)}</span>
+                    </div>
+                    <div className="order-detail-item order-detail-item--span">
+                      <span className="order-detail-label">Updated</span>
+                      <span className="order-detail-value order-detail-value--muted">{fmtDateTime(detailOrder.updated_at)}</span>
+                    </div>
+                  </div>
+                </section>
               </div>
-              <div className="order-detail-item">
-                <span className="order-detail-label">Test type</span>
-                <span>{detailOrder.testType}</span>
-              </div>
-              <div className="order-detail-item">
-                <span className="order-detail-label">Order date</span>
-                <span>{detailOrder.orderDate}</span>
-              </div>
-              <div className="order-detail-item">
-                <span className="order-detail-label">Amount</span>
-                <span>{detailOrder.amountMmk.toLocaleString()} MMK</span>
-              </div>
-              <div className="order-detail-item">
-                <span className="order-detail-label">Workflow status</span>
-                <span className={statusBadge(detailOrder.status)}>{detailOrder.status}</span>
-              </div>
-              <div className="order-detail-item">
-                <span className="order-detail-label">Payment status</span>
-                <span className={payClass(detailOrder.paymentStatus)}>{detailOrder.paymentStatus}</span>
-              </div>
-              <div className="order-detail-item">
-                <span className="order-detail-label">Technician</span>
-                <span>{detailOrder.technician ?? 'Unassigned'}</span>
-              </div>
-              <div className="order-detail-item">
-                <span className="order-detail-label">Collecting person</span>
-                <span>{detailOrder.collectingPerson || 'Unassigned'}</span>
-              </div>
-              <div className="order-detail-item">
-                <span className="order-detail-label">Collection time</span>
-                <span>{detailOrder.collectionTime.replace('T', ' ')}</span>
-              </div>
-              <div className="order-detail-item">
-                <span className="order-detail-label">Lab running complete</span>
-                <span>{detailOrder.labRunningCompleteAt.replace('T', ' ')}</span>
-              </div>
-              <div className="order-detail-item">
-                <span className="order-detail-label">Report out time</span>
-                <span>{detailOrder.reportOutTime.replace('T', ' ')}</span>
-              </div>
-              <div className="order-detail-item">
-                <span className="order-detail-label">PDF report</span>
-                <span>{detailOrder.resultPdfFileName ?? 'Not attached'}</span>
-              </div>
-              <div className="order-detail-item">
-                <span className="order-detail-label">AI review</span>
-                <span>
-                  {detailOrder.aiReviewPassed === null
-                    ? 'Not run'
-                    : detailOrder.aiReviewPassed
-                      ? 'Passed'
-                      : 'Flagged'}
-                </span>
-              </div>
-              <div className="order-detail-item">
-                <span className="order-detail-label">Result sent to app</span>
-                <span>{detailOrder.resultSentToUserApp ? 'Yes' : 'No'}</span>
+
+              {orderPrescriptionAttachmentUrl(detailOrder) ? (
+                <PrescriptionPreviewBlock url={orderPrescriptionAttachmentUrl(detailOrder)!} />
+              ) : null}
+
+              {detailOrder.schedule ? (
+                <div className="order-detail-section">
+                  <h3 className="order-detail-section__title">Schedule</h3>
+                  <div className="order-detail-schedule-grid">
+                    <div className="order-detail-item">
+                      <span className="order-detail-label">Collecting person</span>
+                      <span className="order-detail-value">{detailOrder.schedule.collecting_person ?? '—'}</span>
+                    </div>
+                    <div className="order-detail-item">
+                      <span className="order-detail-label">Collection time</span>
+                      <span className="order-detail-value">{fmtDateTime(detailOrder.schedule.collection_time ?? undefined)}</span>
+                    </div>
+                    <div className="order-detail-item">
+                      <span className="order-detail-label">Running time</span>
+                      <span className="order-detail-value">{fmtDateTime(detailOrder.schedule.running_time ?? undefined)}</span>
+                    </div>
+                    <div className="order-detail-item">
+                      <span className="order-detail-label">Report out</span>
+                      <span className="order-detail-value">{fmtDateTime(detailOrder.schedule.report_out_time ?? undefined)}</span>
+                    </div>
+                  </div>
+                  <p className="order-detail-section__footer-note">
+                    Accepted by user: {detailOrder.schedule.accepted_by_user ? 'Yes' : 'No'}
+                  </p>
+                </div>
+              ) : (
+                <div className="order-detail-section order-detail-section--muted">
+                  <p className="order-detail-section__empty">
+                    No schedule yet. It is created when you set status to <strong>scheduled</strong> (with collector and times).
+                  </p>
+                </div>
+              )}
+
+              <div className="order-detail-section order-detail-section--flush">
+                <h3 className="order-detail-section__title">Line items (tests)</h3>
+                {detailOrder.items.length === 0 ? (
+                  <p style={{ margin: 0, color: 'var(--muted)' }}>No tests on this order yet.</p>
+                ) : (
+                  <div className="table-wrap">
+                    <table className="data-table">
+                      <thead>
+                        <tr>
+                          <th>Test</th>
+                          <th>Qty</th>
+                          <th>Unit (MMK)</th>
+                          <th>Subtotal (MMK)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {detailOrder.items.map((it, idx) => {
+                          const t = testMap.get(it.test_id)
+                          return (
+                            <tr key={`${it.test_id}-${idx}`}>
+                              <td>{t ? `${t.test_name} (${t.test_code})` : it.test_id}</td>
+                              <td>{it.quantity}</td>
+                              <td>{it.unit_price_mmk.toLocaleString()}</td>
+                              <td>{it.subtotal_mmk.toLocaleString()}</td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             </div>
-
-            <div className="row-actions order-detail-actions">
-              <button type="button" className="btn btn-secondary" onClick={() => setQrFor(detailOrder.orderId)}>
-                QR
-              </button>
-              <button type="button" className="btn btn-primary" onClick={closeDetail}>
+            <div className="modal-card--order-detail__footer row-actions">
+              <button type="button" className="btn btn-primary" onClick={() => setDetailOrder(null)}>
                 Close
               </button>
             </div>
@@ -513,14 +1852,212 @@ export function OrderManagementPage() {
         </div>
       ) : null}
 
-      {qrOrder ? (
-        <OrderQrModal
-          orderId={qrOrder.orderId}
-          patientName={qrOrder.patientName}
-          testType={qrOrder.testType}
-          onClose={closeQr}
-        />
+      {assignOpen && assignOrderDetail && assignOrderId === assignOrderDetail.id ? (
+        <div
+          className="modal-backdrop"
+          style={{ zIndex: 10001 }}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="assign-tests-title"
+          onMouseDown={(e) => e.target === e.currentTarget && !assignSubmitting && setAssignOpen(false)}
+        >
+          <div className="modal-card modal-card--assign-tests" onMouseDown={(e) => e.stopPropagation()}>
+            <div className="modal-head">
+              <h2 id="assign-tests-title" className="modal-title">Add tests to order</h2>
+              <button type="button" className="btn btn-ghost modal-close" onClick={() => !assignSubmitting && setAssignOpen(false)} aria-label="Close" disabled={assignSubmitting}>
+                ×
+              </button>
+            </div>
+            <form className="modal-card--assign-tests__form" onSubmit={(e) => void submitAssignTests(e)}>
+              <div className="assign-tests-body-split">
+                <div className="assign-tests-body-split__left assign-tests-tests-section">
+                  <div className="assign-tests-left-meta">
+                    <div className="assign-tests-order-summary">
+                      <span className="assign-tests-order-summary__patient">{assignOrderDetail.patient_name}</span>
+                      {assignOrderDetail.user_id ? (
+                        <span className="assign-tests-order-summary__user">
+                          Ordering:{' '}
+                          {assignOrderDetail.ordering_user_name?.trim() ||
+                            userMap.get(assignOrderDetail.user_id)?.name ||
+                            assignOrderDetail.user_id}
+                          <span className="assign-tests-order-summary__role">
+                            {' '}
+                            (
+                            {resolveOrderingUserRole(assignOrderDetail, userMap) ??
+                              userMap.get(assignOrderDetail.user_id)?.role ??
+                              '—'}
+                            )
+                          </span>
+                        </span>
+                      ) : null}
+                    </div>
+                    {assignOrderDetail.description?.trim() ? (
+                      <div className="assign-tests-clinical-card">
+                        <div className="assign-tests-clinical-card__title">Clinical notes</div>
+                        <div className="assign-tests-clinical-card__body">{assignOrderDetail.description.trim()}</div>
+                      </div>
+                    ) : (
+                      <div className="assign-tests-clinical-card assign-tests-clinical-card--muted">
+                        <div className="assign-tests-clinical-card__title">Clinical notes</div>
+                        <div className="assign-tests-clinical-card__body assign-tests-clinical-card__body--placeholder">
+                          None provided for this order.
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="assign-tests-left-body">
+                    <div className="assign-tests-catalog-block">
+                      <p className="assign-tests-dialog__hint">
+                        Choose tests from the catalog (multi-select). Open <strong>Test</strong> and use the search box
+                        there. Discounts follow the ordering user&apos;s role (
+                        {assignOrderDetail.user_id
+                          ? resolveOrderingUserRole(assignOrderDetail, userMap) ??
+                            userMap.get(assignOrderDetail.user_id)?.role ??
+                            '—'
+                          : '—'}
+                        ). Up to{' '}
+                        {ORDER_TEST_PICKER_LIMIT} matches per search.
+                      </p>
+                      {tests.length > ORDER_TEST_PICKER_LIMIT && !assignTestSearch.trim() ? (
+                        <p className="assign-tests-banner assign-tests-banner--warn">
+                          Large catalog: open <strong>Test</strong> and search — the list shows at most{' '}
+                          {ORDER_TEST_PICKER_LIMIT} matches at a time.
+                        </p>
+                      ) : null}
+                      <OrderTestCheckboxPicker
+                        disabled={assignSubmitting || tests.length === 0}
+                        open={assignTestPickerOpen}
+                        onOpenChange={setAssignTestPickerOpen}
+                        rows={assignPickerPanel.rows}
+                        totalMatches={assignPickerPanel.totalMatches}
+                        selectedIds={assignSelectedIds}
+                        onToggle={toggleAssignTest}
+                        userRole={resolveOrderingUserRole(assignOrderDetail, userMap)}
+                        testDiscounts={testDiscounts}
+                        triggerId="assign-test-multiselect"
+                        listId="assign-test-multiselect-list"
+                        filterValue={assignTestSearch}
+                        onFilterChange={setAssignTestSearch}
+                        filterInputId="assign-test-filter"
+                      />
+                    </div>
+
+                    <div className="assign-tests-queue-section">
+                      <div className="assign-tests-queue-section__head">
+                        <span className="assign-tests-queue-section__title">Tests queued for save</span>
+                        {assignSelectedIds.length > 0 ? (
+                          <span className="assign-tests-queue-section__count">{assignSelectedIds.length}</span>
+                        ) : null}
+                      </div>
+                      {assignSelectedIds.length > 0 ? (
+                        <div className="table-wrap assign-tests-queue-table">
+                          <table className="data-table">
+                            <thead>
+                              <tr>
+                                <th>Test</th>
+                                <th>Discount</th>
+                                <th>Final (MMK)</th>
+                                <th className="action-col"> </th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {assignSelectedIds.map((id) => {
+                                const t = testMap.get(id)
+                                if (!t) return null
+                                const pct = activeDiscountPercentForOrder(
+                                  testDiscounts,
+                                  id,
+                                  resolveOrderingUserRole(assignOrderDetail, userMap),
+                                )
+                                const unit = Math.round(t.base_price_mmk * 100) / 100
+                                const sub =
+                                  Math.round(unit * (1 - Math.max(0, Math.min(100, pct)) / 100) * 100) / 100
+                                return (
+                                  <tr key={id}>
+                                    <td>
+                                      {t.test_name} <span style={{ color: 'var(--muted)' }}>({t.test_code})</span>
+                                    </td>
+                                    <td>{pct}%</td>
+                                    <td>{sub.toLocaleString()}</td>
+                                    <td className="action-cell">
+                                      <button
+                                        type="button"
+                                        className="btn btn-ghost"
+                                        style={{ fontSize: '0.8rem' }}
+                                        onClick={() => removeAssignTest(id)}
+                                        disabled={assignSubmitting}
+                                      >
+                                        Remove
+                                      </button>
+                                    </td>
+                                  </tr>
+                                )
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      ) : (
+                        <div className="assign-tests-queue-empty" role="status">
+                          <p className="assign-tests-queue-empty__lead">No tests selected yet</p>
+                          <p className="assign-tests-queue-empty__hint">
+                            Use <strong>Test</strong> → search, then tick tests to queue. Selected tests and discounted
+                            totals appear here before you save.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
+                    {assignError ? (
+                      <div className="form-alert form-alert--error assign-tests-left-error" role="alert">
+                        {assignError}
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+
+                <div className="assign-tests-body-split__preview" aria-label="Prescription preview">
+                  {(() => {
+                    const rxUrl = orderPrescriptionAttachmentUrl(assignOrderDetail)
+                    return rxUrl ? (
+                      <PrescriptionPanelEmbed url={rxUrl} />
+                    ) : (
+                      <div className="assign-tests-prescription-panel assign-tests-prescription-panel--empty-side">
+                        <p>No prescription file on this order.</p>
+                      </div>
+                    )
+                  })()}
+                </div>
+              </div>
+
+              <div className="modal-card--assign-tests__footer row-actions">
+                <button type="button" className="btn btn-secondary" onClick={() => setAssignOpen(false)} disabled={assignSubmitting}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary" disabled={assignSubmitting || tests.length === 0 || assignSelectedIds.length === 0}>
+                  {assignSubmitting ? 'Saving…' : 'Save to order'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       ) : null}
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        title="Delete order?"
+        message={
+          deleteTarget
+            ? `Delete order "${deleteTarget.id}" for ${deleteTarget.patient_name}?`
+            : ''
+        }
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        danger
+        onConfirm={() => void confirmDelete()}
+        onCancel={() => setDeleteTarget(null)}
+      />
+
     </div>
   )
 }

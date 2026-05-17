@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../app/session_scope.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/common/app_brand_mark.dart';
+import '../../widgets/navigation/lab_main_bottom_nav.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -80,7 +81,7 @@ class ProfileScreen extends StatelessWidget {
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w700),
           ),
           Text(
-            'Premium Member',
+            user.role.label,
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(color: AppColors.onSurfaceVariant),
           ),
@@ -167,25 +168,7 @@ class ProfileScreen extends StatelessWidget {
           ),
         ],
       ),
-      bottomNavigationBar: Container(
-        margin: const EdgeInsets.fromLTRB(14, 0, 14, 14),
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: const Color(0x66E1E2EC)),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            _NavItem(icon: Icons.grid_view_rounded, label: 'HOME', onTap: () => context.go('/home')),
-            _NavItem(icon: Icons.biotech_outlined, label: 'ORDERS', onTap: () => context.push('/order-lab-test')),
-            _NavItem(icon: Icons.assignment_outlined, label: 'RESULTS', onTap: () => context.push('/lab-results')),
-            _NavItem(icon: Icons.military_tech_outlined, label: 'POINTS', onTap: () => context.push('/loyalty')),
-            _NavItem(icon: Icons.person, label: 'PROFILE', active: true, onTap: () {}),
-          ],
-        ),
-      ),
+      bottomNavigationBar: const LabMainBottomNav(current: LabMainTab.profile),
     );
   }
 }
@@ -284,50 +267,6 @@ class _SettingTile extends StatelessWidget {
                 ),
               ),
               const Icon(Icons.chevron_right, color: AppColors.outline),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _NavItem extends StatelessWidget {
-  const _NavItem({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-    this.active = false,
-  });
-
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-  final bool active;
-
-  @override
-  Widget build(BuildContext context) {
-    final fg = active ? AppColors.primary : AppColors.outline;
-    return Material(
-      color: active ? const Color(0xFFEAF1FF) : Colors.transparent,
-      borderRadius: BorderRadius.circular(12),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 20, color: fg),
-              const SizedBox(height: 2),
-              Text(
-                label,
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: fg,
-                      fontWeight: active ? FontWeight.w700 : FontWeight.w600,
-                    ),
-              ),
             ],
           ),
         ),

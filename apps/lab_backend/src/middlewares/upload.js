@@ -21,13 +21,27 @@ const storage = multer.diskStorage({
   }
 });
 
+const extToMime = {
+  '.pdf': 'application/pdf',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.png': 'image/png',
+  '.webp': 'image/webp',
+};
+
 const fileFilter = (req, file, cb) => {
   const allowedMimeTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'];
   if (allowedMimeTypes.includes(file.mimetype)) {
     cb(null, true);
-  } else {
-    cb(new Error('Only PDF and Image (JPEG, PNG, WEBP) files are allowed!'), false);
+    return;
   }
+
+  const ext = path.extname(file.originalname || '').toLowerCase();
+  if (file.mimetype === 'application/octet-stream' && extToMime[ext]) {
+    cb(null, true);
+    return;
+  }
+  cb(new Error('Only PDF and Image (JPEG, PNG, WEBP) files are allowed!'), false);
 };
 
 const upload = multer({ 

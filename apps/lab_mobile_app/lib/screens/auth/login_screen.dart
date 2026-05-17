@@ -2,23 +2,41 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/session_scope.dart';
-import '../../models/user_role.dart';
+import '../../models/post_register_login_hint.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/common/app_brand_mark.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  const LoginScreen({super.key, this.routeExtra});
+
+  /// e.g. [PostRegisterLoginHint] after successful signup.
+  final Object? routeExtra;
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  late final TextEditingController _email = TextEditingController(text: 'john.doe@example.com');
-  late final TextEditingController _password = TextEditingController(text: 'password');
+  final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _email;
+  late final TextEditingController _password;
   bool _remember = false;
   bool _obscurePassword = true;
-  UserRole _roleHint = UserRole.patient;
+
+  @override
+  void initState() {
+    super.initState();
+    _email = TextEditingController();
+    _password = TextEditingController();
+    final ex = widget.routeExtra;
+    if (ex is PostRegisterLoginHint) {
+      _email.text = ex.email;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(ex.message)));
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -51,12 +69,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(color: AppColors.primary),
                   ),
-                  const SizedBox(height: 6),
-                  Text(
-                    'Secure access to your medical diagnostics',
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: AppColors.onSurfaceVariant),
-                  ),
                   const SizedBox(height: 22),
                   Container(
                     width: double.infinity,
@@ -73,129 +85,133 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ],
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        _FieldLabel(label: 'Email Address'),
-                        _InputShell(
-                          child: TextField(
-                            controller: _email,
-                            decoration: const InputDecoration(
-                              hintText: 'john@example.com',
-                              prefixIcon: Icon(Icons.mail_outline),
-                              border: InputBorder.none,
-                              enabledBorder: InputBorder.none,
-                              focusedBorder: InputBorder.none,
-                              filled: false,
-                            ),
-                            keyboardType: TextInputType.emailAddress,
-                            textInputAction: TextInputAction.next,
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-                        Row(
-                          children: [
-                            const Expanded(child: _FieldLabel(label: 'Password')),
-                            TextButton(onPressed: () {}, child: const Text('Forgot?')),
-                          ],
-                        ),
-                        _InputShell(
-                          child: TextField(
-                            controller: _password,
-                            obscureText: _obscurePassword,
-                            decoration: InputDecoration(
-                              hintText: '••••••••',
-                              prefixIcon: const Icon(Icons.lock_outline),
-                              suffixIcon: IconButton(
-                                onPressed: () {
-                                  setState(() {
-                                    _obscurePassword = !_obscurePassword;
-                                  });
-                                },
-                                icon: Icon(
-                                  _obscurePassword
-                                      ? Icons.visibility_outlined
-                                      : Icons.visibility_off_outlined,
-                                ),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          const _FieldLabel(label: 'Email'),
+                          _InputShell(
+                            child: TextFormField(
+                              controller: _email,
+                              autovalidateMode: AutovalidateMode.onUserInteraction,
+                              decoration: const InputDecoration(
+                                prefixIcon: Icon(Icons.mail_outline),
+                                border: InputBorder.none,
+                                enabledBorder: InputBorder.none,
+                                focusedBorder: InputBorder.none,
+                                filled: false,
                               ),
-                              border: InputBorder.none,
-                              enabledBorder: InputBorder.none,
-                              focusedBorder: InputBorder.none,
-                              filled: false,
+                              keyboardType: TextInputType.emailAddress,
+                              textInputAction: TextInputAction.next,
+                              validator: (v) {
+                                final t = (v ?? '').trim();
+                                if (t.isEmpty) return 'Enter your email';
+                                if (!t.contains('@')) return 'Enter a valid email';
+                                return null;
+                              },
                             ),
-                            textInputAction: TextInputAction.done,
                           ),
-                        ),
-                        const SizedBox(height: 10),
-                        DropdownButtonFormField<UserRole>(
-                          value: _roleHint,
-                          decoration: const InputDecoration(
-                            labelText: 'Login as',
+                          const SizedBox(height: 14),
+                          Row(
+                            children: [
+                              const Expanded(child: _FieldLabel(label: 'Password')),
+                              TextButton(onPressed: () {}, child: const Text('Forgot?')),
+                            ],
                           ),
-                          items: UserRole.values
-                              .map(
-                                (r) => DropdownMenuItem<UserRole>(
-                                  value: r,
-                                  child: Text(r.label),
+                          _InputShell(
+                            child: TextFormField(
+                              controller: _password,
+                              obscureText: _obscurePassword,
+                              autovalidateMode: AutovalidateMode.onUserInteraction,
+                              decoration: InputDecoration(
+                                prefixIcon: const Icon(Icons.lock_outline),
+                                suffixIcon: IconButton(
+                                  onPressed: () {
+                                    setState(() {
+                                      _obscurePassword = !_obscurePassword;
+                                    });
+                                  },
+                                  icon: Icon(
+                                    _obscurePassword
+                                        ? Icons.visibility_outlined
+                                        : Icons.visibility_off_outlined,
+                                  ),
                                 ),
-                              )
-                              .toList(),
-                          onChanged: (v) => setState(() => _roleHint = v ?? _roleHint),
-                        ),
-                        const SizedBox(height: 10),
-                        CheckboxListTile(
-                          value: _remember,
-                          onChanged: (value) => setState(() => _remember = value ?? false),
-                          contentPadding: EdgeInsets.zero,
-                          controlAffinity: ListTileControlAffinity.leading,
-                          title: Text(
-                            'Remember this device',
+                                border: InputBorder.none,
+                                enabledBorder: InputBorder.none,
+                                focusedBorder: InputBorder.none,
+                                filled: false,
+                              ),
+                              textInputAction: TextInputAction.done,
+                              validator: (v) {
+                                if ((v ?? '').isEmpty) return 'Enter your password';
+                                return null;
+                              },
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          CheckboxListTile(
+                            value: _remember,
+                            onChanged: (value) => setState(() => _remember = value ?? false),
+                            contentPadding: EdgeInsets.zero,
+                            controlAffinity: ListTileControlAffinity.leading,
+                            title: Text(
+                              'Remember this device',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyLarge
+                                  ?.copyWith(color: AppColors.onSurfaceVariant),
+                            ),
+                            checkboxShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                            side: const BorderSide(color: AppColors.outline),
+                          ),
+                          const SizedBox(height: 10),
+                          SizedBox(
+                            height: 58,
+                            child: FilledButton.icon(
+                              onPressed: () async {
+                                if (!_formKey.currentState!.validate()) return;
+                                try {
+                                  await session.login(
+                                    email: _email.text.trim(),
+                                    password: _password.text,
+                                  );
+                                  if (!context.mounted) return;
+                                  context.go(session.homeRoute);
+                                } catch (e) {
+                                  if (!context.mounted) return;
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('$e')),
+                                  );
+                                }
+                              },
+                              iconAlignment: IconAlignment.end,
+                              icon: const Icon(Icons.arrow_forward, size: 20),
+                              label: const Text('Login'),
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          const Divider(height: 1),
+                          const SizedBox(height: 18),
+                          Text(
+                            "Don't have an account?",
+                            textAlign: TextAlign.center,
                             style: Theme.of(context)
                                 .textTheme
-                                .bodyLarge
-                                ?.copyWith(color: AppColors.onSurfaceVariant),
+                                .headlineSmall
+                                ?.copyWith(color: AppColors.onSurfaceVariant, fontSize: 34 / 2),
                           ),
-                          checkboxShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                          side: const BorderSide(color: AppColors.outline),
-                        ),
-                        const SizedBox(height: 10),
-                        SizedBox(
-                          height: 58,
-                          child: FilledButton.icon(
-                            onPressed: () async {
-                              await session.login(
-                                email: _email.text.trim(),
-                                password: _password.text,
-                                roleHint: _roleHint,
-                              );
-                              if (!context.mounted) return;
-                              context.go(session.homeRoute);
-                            },
-                            iconAlignment: IconAlignment.end,
-                            icon: const Icon(Icons.arrow_forward, size: 20),
-                            label: const Text('Login'),
+                          const SizedBox(height: 12),
+                          SizedBox(
+                            height: 58,
+                            child: OutlinedButton(
+                              onPressed: () => context.push('/register'),
+                              child: const Text('Create New Account'),
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 20),
-                        const Divider(height: 1),
-                        const SizedBox(height: 18),
-                        Text(
-                          "Don't have an account?",
-                          textAlign: TextAlign.center,
-                          style: Theme.of(context)
-                              .textTheme
-                              .headlineSmall
-                              ?.copyWith(color: AppColors.onSurfaceVariant, fontSize: 34 / 2),
-                        ),
-                        const SizedBox(height: 12),
-                        SizedBox(
-                          height: 58,
-                          child: OutlinedButton(
-                            onPressed: () => context.push('/register'),
-                            child: const Text('Create New Account'),
-                          ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                   const SizedBox(height: 18),

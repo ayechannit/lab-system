@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/session_scope.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/common/app_brand_mark.dart';
 
 class OrderSuccessConfirmationScreen extends StatelessWidget {
   const OrderSuccessConfirmationScreen({super.key});
@@ -10,176 +12,225 @@ class OrderSuccessConfirmationScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final session = SessionScope.of(context);
-    final orderId = session.trackingOrder?.id ?? 'LAB1021';
+    final order = session.trackingOrder;
+
     return Scaffold(
+      backgroundColor: AppColors.surface,
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        titleSpacing: 4,
-        title: Text(
-          'MediConfirm',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: AppColors.primary,
-                fontWeight: FontWeight.w700,
-              ),
+        titleSpacing: 12,
+        backgroundColor: AppColors.surface,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        title: Row(
+          children: [
+            const AppBrandMark(size: 32, iconSize: 16, borderRadius: 8),
+            const SizedBox(width: 10),
+            Text(
+              'MedLab Smart',
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.w800,
+                  ),
+            ),
+          ],
         ),
       ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
-        children: [
-          Center(
-            child: Container(
-              width: 86,
-              height: 86,
-              decoration: BoxDecoration(
-                color: const Color(0xFFEAF8F1),
-                borderRadius: BorderRadius.circular(18),
-              ),
-              child: const Center(
-                child: CircleAvatar(
-                  radius: 27,
-                  backgroundColor: Color(0xFF12B76A),
-                  child: Icon(Icons.check, color: Colors.white, size: 30),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 14),
-          Text(
-            'Order Placed Successfully!',
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Your lab test order #$orderId has been confirmed.',
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(color: AppColors.onSurfaceVariant),
-          ),
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0x66E1E2EC)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      body: SafeArea(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            const maxContent = 420.0;
+            final hPad = constraints.maxWidth > maxContent + 48
+                ? (constraints.maxWidth - maxContent) / 2
+                : 20.0;
+            return ListView(
+              padding: EdgeInsets.fromLTRB(hPad, 12, hPad, 28),
               children: [
-                Row(
-                  children: [
-                    const Icon(Icons.assignment_turned_in_outlined, color: AppColors.primary),
-                    const SizedBox(width: 8),
-                    Text('Next Steps', style: Theme.of(context).textTheme.titleMedium),
-                  ],
-                ),
                 const SizedBox(height: 12),
-                _nextStep(
-                  context,
-                  icon: Icons.home_outlined,
-                  title: 'Home Sample Collection',
-                  subtitle: 'A health technician will arrive at your address between 08:00 AM - 10:00 AM.',
+                Center(
+                  child: Container(
+                    width: 76,
+                    height: 76,
+                    decoration: BoxDecoration(
+                      color: AppColors.accentGreen.withValues(alpha: 0.12),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: AppColors.accentGreen.withValues(alpha: 0.28)),
+                    ),
+                    child: Icon(Icons.check_rounded, color: AppColors.accentGreen, size: 38),
+                  ),
                 ),
-                const Divider(height: 22),
-                _nextStep(
-                  context,
-                  icon: Icons.badge_outlined,
-                  title: 'Verification Required',
-                  subtitle: 'Keep your original ID ready for verification upon technician arrival.',
+                const SizedBox(height: 22),
+                Text(
+                  'Order submitted',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                        color: AppColors.onSurface,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: -0.25,
+                      ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  'Thanks — the lab has your request. You can follow progress from Orders or below.',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        color: AppColors.onSurfaceVariant,
+                        height: 1.45,
+                        fontWeight: FontWeight.w400,
+                      ),
+                ),
+                if (order != null) ...[
+                  const SizedBox(height: 26),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.fromLTRB(18, 18, 18, 14),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0x66E1E2EC)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.05),
+                          blurRadius: 24,
+                          offset: const Offset(0, 10),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Summary',
+                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                        ),
+                        const SizedBox(height: 16),
+                        _SuccessField(label: 'Patient', value: order.patientName),
+                        _SuccessDivider(),
+                        _SuccessField(label: 'Test', value: order.testType),
+                        _SuccessDivider(),
+                        _SuccessField(label: 'Address', value: order.address.line),
+                        if (order.backendStatus != null) ...[
+                          _SuccessDivider(),
+                          _SuccessField(label: 'Status', value: order.backendStatus!),
+                        ],
+                        _SuccessDivider(),
+                        Text(
+                          'Reference (for support)',
+                          style: Theme.of(context).textTheme.labelMedium?.copyWith(color: AppColors.onSurfaceVariant),
+                        ),
+                        const SizedBox(height: 6),
+                        SelectableText(
+                          order.id,
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: AppColors.onSurfaceVariant,
+                                height: 1.4,
+                              ),
+                        ),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton.icon(
+                            onPressed: () async {
+                              await Clipboard.setData(ClipboardData(text: order.id));
+                              if (!context.mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Reference copied')),
+                              );
+                            },
+                            icon: const Icon(Icons.copy_outlined, size: 18),
+                            label: const Text('Copy'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 26),
+                SizedBox(
+                  height: 52,
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    style: FilledButton.styleFrom(
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    ),
+                    onPressed: () => context.go('/order-tracking'),
+                    icon: const Icon(Icons.local_shipping_outlined, size: 20),
+                    label: Text(
+                      'Track order',
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                            fontWeight: FontWeight.w500,
+                            color: Theme.of(context).colorScheme.onPrimary,
+                          ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                SizedBox(
+                  height: 52,
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    ),
+                    onPressed: () => context.go(session.homeRoute),
+                    icon: Icon(Icons.grid_view_rounded, size: 20, color: AppColors.primary),
+                    label: Text(
+                      'Back to home',
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                            fontWeight: FontWeight.w500,
+                            color: AppColors.primary,
+                          ),
+                    ),
+                  ),
                 ),
               ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          Container(
-            height: 100,
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              gradient: const LinearGradient(
-                colors: [Color(0xFF0B4BB3), Color(0xFF2B7BCD)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  'MEDICONFIRM PLUS',
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(color: Colors.white, letterSpacing: 1.2),
-                ),
-                Text(
-                  'Get 20% off your next wellness scan',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.white),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            height: 56,
-            child: FilledButton.icon(
-              onPressed: () => context.go('/lab-results'),
-              icon: const Icon(Icons.assignment_outlined),
-              label: const Text('View Result'),
-            ),
-          ),
-          const SizedBox(height: 10),
-          SizedBox(
-            height: 56,
-            child: OutlinedButton.icon(
-              onPressed: () => context.go('/home'),
-              icon: const Icon(Icons.grid_view_rounded),
-              label: const Text('Return to Dashboard'),
-            ),
-          ),
-          TextButton.icon(
-            onPressed: () => context.go('/order-tracking'),
-            icon: const Icon(Icons.close, color: AppColors.error),
-            label: const Text('Track Order', style: TextStyle(color: AppColors.error)),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            'Need help? Contact Support',
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(color: AppColors.onSurfaceVariant),
-          ),
-        ],
+            );
+          },
+        ),
       ),
     );
   }
+}
 
-  Widget _nextStep(
-    BuildContext context, {
-    required IconData icon,
-    required String title,
-    required String subtitle,
-  }) {
-    return Row(
+class _SuccessField extends StatelessWidget {
+  const _SuccessField({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          width: 34,
-          height: 34,
-          decoration: BoxDecoration(
-            color: const Color(0xFFEAF1FF),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(icon, color: AppColors.primary),
+        Text(
+          label,
+          style: Theme.of(context).textTheme.labelMedium?.copyWith(color: AppColors.onSurfaceVariant),
         ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
-              Text(subtitle, style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.onSurfaceVariant)),
-            ],
-          ),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                color: AppColors.onSurface,
+                fontWeight: FontWeight.w400,
+                height: 1.35,
+              ),
         ),
       ],
+    );
+  }
+}
+
+class _SuccessDivider extends StatelessWidget {
+  const _SuccessDivider();
+  @override
+  Widget build(BuildContext context) {
+    return const Padding(
+      padding: EdgeInsets.symmetric(vertical: 14),
+      child: Divider(height: 1, thickness: 1),
     );
   }
 }

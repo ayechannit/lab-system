@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../app/session_scope.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/common/app_brand_mark.dart';
+import '../../widgets/navigation/lab_main_bottom_nav.dart';
 
 class AiAnalysisScreen extends StatelessWidget {
   const AiAnalysisScreen({super.key});
@@ -11,8 +11,15 @@ class AiAnalysisScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final session = SessionScope.of(context);
-    final analysis = session.aiAnalysis;
+    final ai = session.aiAnalysis;
     final report = session.latestResult;
+    final hasReport = report != null;
+    final summaryCardText = ai == null
+        ? (hasReport
+            ? 'Run analysis to request a plain-language summary from the lab AI service (uses your report data from the server).'
+            : 'Load a completed order with results, then run analysis.')
+        : (ai.summary.isNotEmpty ? ai.summary : 'No summary text returned.');
+
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
@@ -60,232 +67,70 @@ class AiAnalysisScreen extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           Text(
-            'Smart Analysis',
+            'AI summary',
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
           ),
           Text(
-            report == null
-                ? 'Result not available yet.'
-                : 'Analyzing ${report.sampleId} • ${analysis == null ? 'Pending' : 'Ready'}',
+            !hasReport
+                ? 'No lab report is loaded for your account yet.'
+                : 'Order ${report.orderId.length >= 8 ? report.orderId.substring(0, 8) : report.orderId} · ${ai != null ? 'Analysis on file' : 'Run analysis to fetch text from the lab API'}',
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.onSurfaceVariant),
           ),
           const SizedBox(height: 14),
-          _simpleCard(
-            analysis?.summary ??
-                'Tap "Run Analysis" to get AI interpretation after report-out from the lab.',
-          ),
+          _plainCard(context, summaryCardText),
           const SizedBox(height: 12),
           SizedBox(
             height: 48,
             child: FilledButton.icon(
-              onPressed: report == null
+              onPressed: !hasReport
                   ? null
                   : () {
                       session.runAiAnalysis();
                     },
               icon: const Icon(Icons.bolt_outlined),
-              label: const Text('Run Analysis'),
+              label: const Text('Run analysis'),
             ),
           ),
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: AppColors.primary.withValues(alpha: 0.55)),
+          if (ai != null) ...[
+            const SizedBox(height: 16),
+            Text(
+              'Details',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    _pill('Observation\nFound', const Color(0xFFFEE4E2), const Color(0xFFB42318)),
-                    const SizedBox(width: 8),
-                    _pill('ACTION RECOMMENDED', const Color(0xFFFFE9E0), const Color(0xFF9A3412)),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  '"${analysis?.observation ?? 'Waiting for AI output...'}"',
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontStyle: FontStyle.italic),
-                ),
-                const SizedBox(height: 10),
-                const Divider(height: 1),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        'YOUR\nHEMOGLOBIN\n11.2 g/dL',
-                        style: Theme.of(context).textTheme.labelLarge?.copyWith(color: AppColors.onSurfaceVariant),
-                      ),
-                    ),
-                    Expanded(
-                      child: Text(
-                        'REFERENCE\nRANGE\n13.5 - 17.5 g/dL',
-                        style: Theme.of(context).textTheme.labelLarge?.copyWith(color: AppColors.onSurfaceVariant),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+            const SizedBox(height: 8),
+            _plainCard(
+              context,
+              ai.observation.isNotEmpty ? ai.observation : 'No observation text returned.',
             ),
-          ),
-          const SizedBox(height: 12),
-          _simpleCard(
-            analysis?.recommendation ??
-                "After lab report-out, AI recommendation will appear here.",
-          ),
-          const SizedBox(height: 14),
-          Text('Suggested Next Steps', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
-          const SizedBox(height: 8),
-          _nextStepTile(context, Icons.calendar_month_outlined, 'Book GP Consultation', 'Telehealth or in-person'),
-          const SizedBox(height: 8),
-          _nextStepTile(context, Icons.description_outlined, 'View Full Lab Report', 'PDF Download available'),
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: AppColors.primaryLight,
-              borderRadius: BorderRadius.circular(12),
+            const SizedBox(height: 12),
+            Text(
+              'Recommendation',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
             ),
-            child: Stack(
-              children: [
-                Positioned(
-                  right: -6,
-                  bottom: -6,
-                  child: Icon(Icons.biotech, size: 56, color: Colors.white.withValues(alpha: 0.12)),
-                ),
-                Text(
-                  'What is Hemoglobin?\nHemoglobin is a protein in your red blood cells that carries oxygen from your lungs to the rest of your body. Low levels can sometimes make you feel tired or short of breath.',
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.white),
-                ),
-              ],
+            const SizedBox(height: 8),
+            _plainCard(
+              context,
+              ai.recommendation.isNotEmpty ? ai.recommendation : 'No recommendation text returned.',
             ),
-          ),
+          ],
         ],
       ),
-      bottomNavigationBar: Container(
-        margin: const EdgeInsets.fromLTRB(14, 0, 14, 14),
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: const Color(0x66E1E2EC)),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            _NavItem(icon: Icons.grid_view_rounded, label: 'HOME', onTap: () => context.go('/home')),
-            _NavItem(icon: Icons.biotech_outlined, label: 'ORDERS', onTap: () => context.push('/order-lab-test')),
-            _NavItem(icon: Icons.assignment_outlined, label: 'RESULTS', active: true, onTap: () {}),
-            _NavItem(icon: Icons.military_tech_outlined, label: 'POINTS', onTap: () => context.push('/loyalty')),
-            _NavItem(icon: Icons.person_outline, label: 'PROFILE', onTap: () => context.push('/profile')),
-          ],
-        ),
-      ),
+      bottomNavigationBar: const LabMainBottomNav(current: LabMainTab.results),
     );
   }
 
-  Widget _simpleCard(String text) => Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0x66E1E2EC)),
-        ),
-        child: Text(
-          text,
-          style: const TextStyle(height: 1.35),
-        ),
-      );
-
-  Widget _pill(String text, Color bg, Color fg) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(999)),
-        child: Text(
-          text,
-          style: TextStyle(color: fg, fontSize: 10.5, fontWeight: FontWeight.w700),
-        ),
-      );
-
-  Widget _nextStepTile(BuildContext context, IconData icon, String title, String subtitle) => Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0x66E1E2EC)),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                color: const Color(0xFFEAF1FF),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(icon, color: AppColors.primary),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: Theme.of(context).textTheme.titleMedium),
-                  Text(subtitle, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.onSurfaceVariant)),
-                ],
-              ),
-            ),
-            const Icon(Icons.chevron_right, color: AppColors.outline),
-          ],
-        ),
-      );
-}
-
-class _NavItem extends StatelessWidget {
-  const _NavItem({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-    this.active = false,
-  });
-
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-  final bool active;
-
-  @override
-  Widget build(BuildContext context) {
-    final fg = active ? AppColors.primary : AppColors.outline;
-    return Material(
-      color: active ? const Color(0xFFEAF1FF) : Colors.transparent,
-      borderRadius: BorderRadius.circular(12),
-      child: InkWell(
-        onTap: onTap,
+  Widget _plainCard(BuildContext context, String text) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 20, color: fg),
-              const SizedBox(height: 2),
-              Text(
-                label,
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: fg,
-                      fontWeight: active ? FontWeight.w700 : FontWeight.w600,
-                    ),
-              ),
-            ],
-          ),
-        ),
+        border: Border.all(color: const Color(0x66E1E2EC)),
       ),
+      child: Text(text, style: const TextStyle(height: 1.35)),
     );
   }
 }
