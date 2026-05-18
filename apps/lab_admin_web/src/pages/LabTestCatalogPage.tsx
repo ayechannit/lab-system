@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { ConfirmDialog } from '../components/common/ConfirmDialog'
 import { LoadingSpinner } from '../components/common/LoadingSpinner'
 import { LabTestFormModal } from '../components/lab-tests/LabTestFormModal'
+import { ListFilterSearchField } from '../components/common/ListFilterSearchField'
 import { PageHeader } from '../components/common/PageHeader'
 import { DEFAULT_TABLE_PAGE_SIZE, TablePagination } from '../components/common/TablePagination'
 import { TableActionMenu } from '../components/common/TableActionMenu'
@@ -178,21 +179,13 @@ export function LabTestCatalogPage() {
               ))}
             </select>
           </div>
-          <div className="list-filters-bar__group list-filters-bar__group--text">
-            <label className="list-filters-bar__label" htmlFor="lab-catalog-search">
-              Name
-            </label>
-            <input
-              id="lab-catalog-search"
-              type="search"
-              className="list-filters-bar__input"
-              value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
-              placeholder="Search tests…"
-              disabled={loading || !hasApi}
-              autoComplete="off"
-            />
-          </div>
+          <ListFilterSearchField
+            id="lab-catalog-search"
+            label="Tests"
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            disabled={loading || !hasApi}
+          />
           <button
             type="button"
             className="btn btn-ghost btn-sm list-filters-bar__clear"

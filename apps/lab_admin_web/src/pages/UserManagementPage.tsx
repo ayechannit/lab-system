@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { ConfirmDialog } from '../components/common/ConfirmDialog'
 import { LoadingSpinner } from '../components/common/LoadingSpinner'
 import { UserFormModal } from '../components/users/UserFormModal'
+import { ListFilterSearchField } from '../components/common/ListFilterSearchField'
 import { PageHeader } from '../components/common/PageHeader'
 import { DEFAULT_TABLE_PAGE_SIZE, TablePagination } from '../components/common/TablePagination'
 import { TableActionMenu } from '../components/common/TableActionMenu'
@@ -172,34 +173,20 @@ export function UserManagementPage() {
       <div className="card">
         <div className="list-tools-row">
           <div className="list-filters-bar" aria-label="User filters">
-            <div className="list-filters-bar__group list-filters-bar__group--text">
-              <label className="list-filters-bar__label" htmlFor="user-filter-name">
-                Name
-              </label>
-              <input
-                id="user-filter-name"
-                className="list-filters-bar__input"
-                placeholder="Contains…"
-                value={userFilterNameInput}
-                onChange={(e) => setUserFilterNameInput(e.target.value)}
-                disabled={loading || !hasApi}
-                autoComplete="off"
-              />
-            </div>
-            <div className="list-filters-bar__group list-filters-bar__group--text">
-              <label className="list-filters-bar__label" htmlFor="user-filter-phone">
-                Phone
-              </label>
-              <input
-                id="user-filter-phone"
-                className="list-filters-bar__input"
-                placeholder="Contains…"
-                value={userFilterPhoneInput}
-                onChange={(e) => setUserFilterPhoneInput(e.target.value)}
-                disabled={loading || !hasApi}
-                autoComplete="off"
-              />
-            </div>
+            <ListFilterSearchField
+              id="user-filter-name"
+              label="Name"
+              value={userFilterNameInput}
+              onChange={(e) => setUserFilterNameInput(e.target.value)}
+              disabled={loading || !hasApi}
+            />
+            <ListFilterSearchField
+              id="user-filter-phone"
+              label="Phone"
+              value={userFilterPhoneInput}
+              onChange={(e) => setUserFilterPhoneInput(e.target.value)}
+              disabled={loading || !hasApi}
+            />
             <div className="list-filters-bar__group">
               <label className="list-filters-bar__label" htmlFor="user-filter-role">
                 Role

@@ -3,10 +3,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../app/session_scope.dart';
 import '../../config/map_defaults.dart';
-import '../../models/address_map_pick_result.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/common/app_brand_mark.dart';
-import '../../widgets/location/address_map_picker_screen.dart';
+import '../../widgets/location/address_location_fields.dart';
 import '../../widgets/navigation/lab_main_bottom_nav.dart';
 
 class EditProfileScreen extends StatefulWidget {
@@ -303,71 +302,18 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         },
                       ),
                       const SizedBox(height: 14),
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          'Address',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: AppColors.onSurfaceVariant,
-                                fontWeight: FontWeight.w600,
-                              ),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: OutlinedButton.icon(
-                          onPressed: _saving
-                              ? null
-                              : () async {
-                                  final r = await Navigator.of(context).push<AddressMapPickResult?>(
-                                    MaterialPageRoute(
-                                      fullscreenDialog: true,
-                                      builder: (_) => AddressMapPickerScreen(
-                                        initialAddress: _addressLine,
-                                        initialLatitude: _addressLat,
-                                        initialLongitude: _addressLng,
-                                      ),
-                                    ),
-                                  );
-                                  if (!mounted || r == null) return;
-                                  setState(() {
-                                    _addressLine = r.addressLine;
-                                    _addressLat = r.latitude;
-                                    _addressLng = r.longitude;
-                                  });
-                                },
-                          icon: const Icon(Icons.map_outlined, size: 20),
-                          label: const Text('Choose on map'),
-                        ),
-                      ),
-                      if (_addressLine.trim().isNotEmpty) ...[
-                        const SizedBox(height: 10),
-                        Text(
-                          _addressLine.trim(),
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: AppColors.onSurface,
-                                height: 1.35,
-                              ),
-                        ),
-                      ],
-                      const SizedBox(height: 14),
-                      Text(
-                        'Latitude–Longitude',
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                              color: AppColors.onSurface,
-                              fontWeight: FontWeight.w600,
-                            ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        hasMeaningfulCoordinates(_addressLat, _addressLng)
-                            ? '${_addressLat.toStringAsFixed(5)}, ${_addressLng.toStringAsFixed(5)}'
-                            : '—',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: AppColors.onSurfaceVariant,
-                              fontFeatures: const [FontFeature.tabularFigures()],
-                            ),
+                      AddressLocationFields(
+                        addressLine: _addressLine,
+                        latitude: _addressLat,
+                        longitude: _addressLng,
+                        enabled: !_saving,
+                        onChanged: (line, lat, lng) {
+                          setState(() {
+                            _addressLine = line;
+                            _addressLat = lat;
+                            _addressLng = lng;
+                          });
+                        },
                       ),
                       const SizedBox(height: 22),
                       FilledButton(

@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { DatetimeLocalField } from '../components/common/DatetimeLocalField'
 import { LoadingSpinner } from '../components/common/LoadingSpinner'
 import { ConfirmDialog } from '../components/common/ConfirmDialog'
+import { ListFilterSearchField } from '../components/common/ListFilterSearchField'
 import { PageHeader } from '../components/common/PageHeader'
 import { TableActionMenu } from '../components/common/TableActionMenu'
 import { DEFAULT_TABLE_PAGE_SIZE, TablePagination } from '../components/common/TablePagination'
@@ -25,12 +26,9 @@ import {
 import { upsertSchedule, type ApiOrderSchedule } from '../services/scheduleService'
 import { fetchStaffList } from '../services/staffService'
 import { datetimeLocalToIso, toDatetimeLocalValue } from '../utils/datetimeLocal'
-import { nominatimSearch } from '../services/nominatimGeocode'
+import { useAddressGeocode } from '../hooks/useAddressGeocode'
 import { fetchUserList } from '../services/userService'
 import '../components/common/ui.css'
-
-const ADDRESS_GEOCODE_DEBOUNCE_MS = 900
-const ADDRESS_GEOCODE_MIN_LEN = 4
 
 const ORDER_STATUS_OPTIONS: ApiOrderStatus[] = [
   'pending',
@@ -470,7 +468,17 @@ export function OrderManagementPage() {
   const [createTestPickerOpen, setCreateTestPickerOpen] = useState(false)
   const [createLatitude, setCreateLatitude] = useState<number | ''>(0)
   const [createLongitude, setCreateLongitude] = useState<number | ''>(0)
-  const [createGeocodeHint, setCreateGeocodeHint] = useState<string | null>(null)
+
+  const onCreateGeocodeCoords = useCallback((lat: number, lng: number) => {
+    setCreateLatitude(lat)
+    setCreateLongitude(lng)
+  }, [])
+
+  const createGeocodeHint = useAddressGeocode({
+    enabled: createOpen,
+    address: createAddress,
+    onCoords: onCreateGeocodeCoords,
+  })
 
   const [statusOpen, setStatusOpen] = useState(false)
   const [statusTarget, setStatusTarget] = useState<ApiOrderListRow | null>(null)
@@ -565,44 +573,6 @@ export function OrderManagementPage() {
       cancelled = true
     }
   }, [hasApi, refreshTick, ordersListQuery, ordersPage])
-
-  useEffect(() => {
-    if (!createOpen) return
-
-    const trimmed = createAddress.trim()
-    if (trimmed.length < ADDRESS_GEOCODE_MIN_LEN) {
-      setCreateGeocodeHint(null)
-      return
-    }
-
-    let alive = true
-    const ac = new AbortController()
-    const timer = window.setTimeout(() => {
-      setCreateGeocodeHint('Looking up address…')
-      void (async () => {
-        try {
-          const hit = await nominatimSearch(trimmed, ac.signal)
-          if (!alive || ac.signal.aborted) return
-          if (hit) {
-            setCreateLatitude(hit.lat)
-            setCreateLongitude(hit.lng)
-            setCreateGeocodeHint(null)
-          } else {
-            setCreateGeocodeHint('No match for that address. Try a fuller line or set the pin on the map.')
-          }
-        } catch {
-          if (!alive || ac.signal.aborted) return
-          setCreateGeocodeHint('Could not look up address. Set the pin on the map or try again.')
-        }
-      })()
-    }, ADDRESS_GEOCODE_DEBOUNCE_MS)
-
-    return () => {
-      alive = false
-      ac.abort()
-      window.clearTimeout(timer)
-    }
-  }, [createOpen, createAddress])
 
   useEffect(() => {
     if (!createOpen) setCreateTestPickerOpen(false)
@@ -1014,20 +984,13 @@ export function OrderManagementPage() {
 
       <div className="list-tools-row">
         <div className="list-filters-bar" aria-label="Order filters">
-          <div className="list-filters-bar__group list-filters-bar__group--text">
-            <label className="list-filters-bar__label" htmlFor="order-filter-patient">
-              Patient
-            </label>
-            <input
-              id="order-filter-patient"
-              className="list-filters-bar__input"
-              placeholder="Name contains…"
-              value={orderFilterPatientInput}
-              onChange={(e) => setOrderFilterPatientInput(e.target.value)}
-              disabled={!hasApi || loading}
-              autoComplete="off"
-            />
-          </div>
+          <ListFilterSearchField
+            id="order-filter-patient"
+            label="Patient"
+            value={orderFilterPatientInput}
+            onChange={(e) => setOrderFilterPatientInput(e.target.value)}
+            disabled={!hasApi || loading}
+          />
           <div className="list-filters-bar__group">
             <label className="list-filters-bar__label" htmlFor="order-filter-status">
               Status
@@ -1110,7 +1073,7 @@ export function OrderManagementPage() {
 
       <div className="card">
         <div className="table-wrap">
-          <table className="data-table data-table--catalog">
+          <table className="data-table data-table--catalog data-table--align-center">
             <thead>
               <tr>
                 <th scope="col">Patient</th>
@@ -1406,10 +1369,7 @@ export function OrderManagementPage() {
                     setCreateLatitude(lat)
                     setCreateLongitude(lng)
                   }}
-                  onAddressFromMap={(addr) => {
-                    setCreateAddress(addr)
-                    setCreateGeocodeHint(null)
-                  }}
+                  onAddressFromMap={setCreateAddress}
                 />
                 <p className="user-form-modal__coords" aria-live="polite">
                   {formatCoordPair(createLatitude, createLongitude)}

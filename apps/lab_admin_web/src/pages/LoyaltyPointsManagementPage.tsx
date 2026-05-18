@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { ConfirmDialog } from '../components/common/ConfirmDialog'
 import { LoadingSpinner } from '../components/common/LoadingSpinner'
+import {
+  ListFilterSearchField,
+  listFilterSearchPlaceholder,
+} from '../components/common/ListFilterSearchField'
 import { PageHeader } from '../components/common/PageHeader'
 import { DEFAULT_TABLE_PAGE_SIZE, TablePagination } from '../components/common/TablePagination'
 import { TableActionMenu } from '../components/common/TableActionMenu'
@@ -376,21 +380,14 @@ export function LoyaltyPointsManagementPage() {
             </p>
             <div className="list-tools-row">
               <div className="list-filters-bar" aria-label="User points search">
-                <div className="list-filters-bar__group list-filters-bar__group--text">
-                  <label className="list-filters-bar__label" htmlFor="user-search">
-                    Search
-                  </label>
-                  <input
-                    id="user-search"
-                    type="search"
-                    className="list-filters-bar__input"
-                    placeholder="Name, email, role…"
-                    value={userSearch}
-                    onChange={(e) => setUserSearch(e.target.value)}
-                    disabled={!hasApi || loading}
-                    autoComplete="off"
-                  />
-                </div>
+                <ListFilterSearchField
+                  id="user-search"
+                  label="User"
+                  placeholder={listFilterSearchPlaceholder('User', 'name, email, role')}
+                  value={userSearch}
+                  onChange={(e) => setUserSearch(e.target.value)}
+                  disabled={!hasApi || loading}
+                />
                 <button
                   type="button"
                   className="btn btn-ghost btn-sm list-filters-bar__clear"

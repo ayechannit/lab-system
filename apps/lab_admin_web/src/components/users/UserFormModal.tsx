@@ -1,13 +1,10 @@
-import { type FormEvent, useEffect, useId, useState } from 'react'
+import { type FormEvent, useCallback, useEffect, useId, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { EndUserRole, UserListRow } from '../../model/types'
-import { nominatimSearch } from '../../services/nominatimGeocode'
+import { useAddressGeocode } from '../../hooks/useAddressGeocode'
 import { createUser, updateUser, type UserCreateBody, type UserUpdateBody } from '../../services/userService'
 import { formatCoordPair, LocationMapPicker } from './LocationMapPicker'
 import '../common/ui.css'
-
-const ADDRESS_GEOCODE_DEBOUNCE_MS = 900
-const ADDRESS_GEOCODE_MIN_LEN = 4
 /** Minimum length for initial password on create (plain value sent as `password_hash` in this admin build). */
 const MIN_INITIAL_PASSWORD_LENGTH = 8
 
@@ -44,14 +41,13 @@ export function UserFormModal({
   const [longitude, setLongitude] = useState<number | ''>(0)
   const [totalPoints, setTotalPoints] = useState<number | ''>(0)
   const [formError, setFormError] = useState<string | null>(null)
-  const [geocodeHint, setGeocodeHint] = useState<string | null>(null)
   const [password, setPassword] = useState('')
+  const [addressBaseline, setAddressBaseline] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
     if (!open) return
     setFormError(null)
-    setGeocodeHint(null)
     setPassword('')
     setSubmitting(false)
     if (mode === 'edit' && initial) {
@@ -63,7 +59,11 @@ export function UserFormModal({
       setLatitude(initial.latitude)
       setLongitude(initial.longitude)
       setTotalPoints(initial.total_points)
+      const addr = initial.address.trim()
+      const hasCoords = !(initial.latitude === 0 && initial.longitude === 0)
+      setAddressBaseline(addr && hasCoords ? addr : null)
     } else {
+      setAddressBaseline(null)
       setName('')
       setEmail('')
       setPhone('')
@@ -93,48 +93,17 @@ export function UserFormModal({
     return () => window.removeEventListener('keydown', onKey)
   }, [open, onClose, submitting])
 
-  useEffect(() => {
-    if (!open) return
+  const onGeocodeCoords = useCallback((lat: number, lng: number) => {
+    setLatitude(lat)
+    setLongitude(lng)
+  }, [])
 
-    const trimmed = address.trim()
-    if (trimmed.length < ADDRESS_GEOCODE_MIN_LEN) {
-      setGeocodeHint(null)
-      return
-    }
-
-    if (mode === 'edit' && initial && trimmed === initial.address.trim()) {
-      setGeocodeHint(null)
-      return
-    }
-
-    let alive = true
-    const ac = new AbortController()
-    const timer = window.setTimeout(() => {
-      setGeocodeHint('Looking up address…')
-      void (async () => {
-        try {
-          const hit = await nominatimSearch(trimmed, ac.signal)
-          if (!alive || ac.signal.aborted) return
-          if (hit) {
-            setLatitude(hit.lat)
-            setLongitude(hit.lng)
-            setGeocodeHint(null)
-          } else {
-            setGeocodeHint('No match for that address. Try a fuller line or set the pin on the map.')
-          }
-        } catch {
-          if (!alive || ac.signal.aborted) return
-          setGeocodeHint('Could not look up address. Set the pin on the map or try again.')
-        }
-      })()
-    }, ADDRESS_GEOCODE_DEBOUNCE_MS)
-
-    return () => {
-      alive = false
-      ac.abort()
-      window.clearTimeout(timer)
-    }
-  }, [open, address, mode, initial])
+  const geocodeHint = useAddressGeocode({
+    enabled: open,
+    address,
+    onCoords: onGeocodeCoords,
+    baselineAddress: addressBaseline ?? undefined,
+  })
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -384,10 +353,11 @@ export function UserFormModal({
                     onPick={(lat, lng) => {
                       setLatitude(lat)
                       setLongitude(lng)
+                      setAddressBaseline(null)
                     }}
                     onAddressFromMap={(addr) => {
                       setAddress(addr)
-                      setGeocodeHint(null)
+                      setAddressBaseline(null)
                     }}
                   />
                   <p className="user-form-modal__coords" aria-live="polite">

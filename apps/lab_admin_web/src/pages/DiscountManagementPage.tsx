@@ -2,6 +2,10 @@ import { useEffect, useMemo, useState } from 'react'
 import { ConfirmDialog } from '../components/common/ConfirmDialog'
 import { LoadingSpinner } from '../components/common/LoadingSpinner'
 import { DiscountFormModal } from '../components/discounts/DiscountFormModal'
+import {
+  ListFilterSearchField,
+  listFilterSearchPlaceholder,
+} from '../components/common/ListFilterSearchField'
 import { PageHeader } from '../components/common/PageHeader'
 import { DEFAULT_TABLE_PAGE_SIZE, TablePagination } from '../components/common/TablePagination'
 import { TableActionMenu } from '../components/common/TableActionMenu'
@@ -190,20 +194,14 @@ export function DiscountManagementPage() {
       <div className="card">
         <div className="list-tools-row">
           <div className="list-filters-bar" aria-label="Discount filters">
-            <div className="list-filters-bar__group list-filters-bar__group--text">
-              <label className="list-filters-bar__label" htmlFor="discount-filter-test">
-                Test
-              </label>
-              <input
-                id="discount-filter-test"
-                className="list-filters-bar__input"
-                placeholder="Name or code contains…"
-                value={discountSearchInput}
-                onChange={(e) => setDiscountSearchInput(e.target.value)}
-                disabled={loading || !hasApi}
-                autoComplete="off"
-              />
-            </div>
+            <ListFilterSearchField
+              id="discount-filter-test"
+              label="Test"
+              placeholder={listFilterSearchPlaceholder('Test', 'name or code')}
+              value={discountSearchInput}
+              onChange={(e) => setDiscountSearchInput(e.target.value)}
+              disabled={loading || !hasApi}
+            />
             <div className="list-filters-bar__group">
               <label className="list-filters-bar__label" htmlFor="discount-filter-role">
                 Role

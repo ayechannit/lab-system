@@ -34,11 +34,27 @@ function hasUsableCoords(lat: number | '', lng: number | ''): boolean {
 function MapResizeFix() {
   const map = useMap()
   useEffect(() => {
+    const run = () => map.invalidateSize()
     const id = requestAnimationFrame(() => {
-      map.invalidateSize()
-      requestAnimationFrame(() => map.invalidateSize())
+      run()
+      requestAnimationFrame(run)
     })
     return () => cancelAnimationFrame(id)
+  }, [map])
+  return null
+}
+
+/** Re-measure when the map viewport is resized (e.g. responsive layout). */
+function MapResizeObserver() {
+  const map = useMap()
+  useEffect(() => {
+    const viewport = map.getContainer().parentElement
+    if (!viewport) return
+    const ro = new ResizeObserver(() => {
+      map.invalidateSize()
+    })
+    ro.observe(viewport)
+    return () => ro.disconnect()
   }, [map])
   return null
 }
@@ -157,32 +173,30 @@ export function LocationMapPicker({
   const zoom = usable ? 15 : 12
 
   return (
-    <div className="location-map-picker">
-      <MapContainer
-        center={center}
-        zoom={zoom}
-        style={{ height: mapHeight, width: '100%', borderRadius: 10, zIndex: 0 }}
-        scrollWheelZoom
-      >
+    <div
+      className="location-map-picker"
+      style={{ ['--location-map-height' as string]: `${mapHeight}px` }}
+    >
+      <div className="location-map-picker__viewport">
+        <MapContainer
+          center={center}
+          zoom={zoom}
+          className="location-map-picker__map"
+          style={{ height: '100%', width: '100%', zIndex: 0 }}
+          scrollWheelZoom
+        >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         <MapResizeFix />
-        <RecenterOnCoords latitude={latitude} longitude={longitude} />
+          <MapResizeObserver />
+          <RecenterOnCoords latitude={latitude} longitude={longitude} />
         <MapClickHandler onPick={handlePick} />
         {usable ? <Marker position={[parseCoord(latitude)!, parseCoord(longitude)!]} /> : null}
-      </MapContainer>
-      <div
-        className="location-map-picker__toolbar"
-        style={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          alignItems: 'center',
-          gap: '0.5rem',
-          marginTop: '0.55rem',
-        }}
-      >
+        </MapContainer>
+      </div>
+      <div className="location-map-picker__toolbar">
         <button
           type="button"
           className="btn btn-secondary"

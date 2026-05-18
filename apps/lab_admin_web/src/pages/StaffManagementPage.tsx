@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { ConfirmDialog } from '../components/common/ConfirmDialog'
 import { LoadingSpinner } from '../components/common/LoadingSpinner'
 import { StaffFormModal } from '../components/staff/StaffFormModal'
+import { ListFilterSearchField } from '../components/common/ListFilterSearchField'
 import { PageHeader } from '../components/common/PageHeader'
 import { DEFAULT_TABLE_PAGE_SIZE, TablePagination } from '../components/common/TablePagination'
 import { TableActionMenu } from '../components/common/TableActionMenu'
@@ -167,20 +168,13 @@ export function StaffManagementPage() {
       <div className="card">
         <div className="list-tools-row">
           <div className="list-filters-bar" aria-label="Staff filters">
-            <div className="list-filters-bar__group list-filters-bar__group--text">
-              <label className="list-filters-bar__label" htmlFor="staff-filter-name">
-                Name
-              </label>
-              <input
-                id="staff-filter-name"
-                className="list-filters-bar__input"
-                placeholder="Contains…"
-                value={staffFilterNameInput}
-                onChange={(e) => setStaffFilterNameInput(e.target.value)}
-                disabled={loading || !hasApi}
-                autoComplete="off"
-              />
-            </div>
+            <ListFilterSearchField
+              id="staff-filter-name"
+              label="Name"
+              value={staffFilterNameInput}
+              onChange={(e) => setStaffFilterNameInput(e.target.value)}
+              disabled={loading || !hasApi}
+            />
             <div className="list-filters-bar__group">
               <label className="list-filters-bar__label" htmlFor="staff-filter-role">
                 Role

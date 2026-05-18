@@ -18,6 +18,7 @@ export async function nominatimSearch(query: string, signal?: AbortSignal): Prom
     headers: {
       Accept: 'application/json',
       'Accept-Language': 'en',
+      'User-Agent': 'MedLabSmartAdmin/1.0 (lab_admin_web)',
     },
   })
 
@@ -51,6 +52,7 @@ export async function nominatimReverse(
     headers: {
       Accept: 'application/json',
       'Accept-Language': 'en',
+      'User-Agent': 'MedLabSmartAdmin/1.0 (lab_admin_web)',
     },
   })
 

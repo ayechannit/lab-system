@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type ChangeEventHandler, type FormEvent } from 'react'
+import { ListFilterSearchField } from '../components/common/ListFilterSearchField'
 import { PageHeader } from '../components/common/PageHeader'
 import { LoadingSpinner } from '../components/common/LoadingSpinner'
 import { DEFAULT_TABLE_PAGE_SIZE, TablePagination } from '../components/common/TablePagination'
@@ -226,20 +227,13 @@ export function LabResultManagementPage() {
 
       <div className="list-tools-row">
         <div className="list-filters-bar" aria-label="Filter orders">
-          <div className="list-filters-bar__group list-filters-bar__group--text">
-            <label className="list-filters-bar__label" htmlFor="lab-result-patient">
-              Patient
-            </label>
-            <input
-              id="lab-result-patient"
-              className="list-filters-bar__input"
-              placeholder="Name contains…"
-              value={patientInput}
-              onChange={(e) => setPatientInput(e.target.value)}
-              disabled={!hasApi || listLoading}
-              autoComplete="off"
-            />
-          </div>
+          <ListFilterSearchField
+            id="lab-result-patient"
+            label="Patient"
+            value={patientInput}
+            onChange={(e) => setPatientInput(e.target.value)}
+            disabled={!hasApi || listLoading}
+          />
           <div className="list-filters-bar__group">
             <label className="list-filters-bar__label" htmlFor="lab-result-status">
               Status
