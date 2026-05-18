@@ -4,6 +4,8 @@ import { LoadingSpinner } from '../components/common/LoadingSpinner'
 import { ConfirmDialog } from '../components/common/ConfirmDialog'
 import { ListFilterSearchField } from '../components/common/ListFilterSearchField'
 import { PageHeader } from '../components/common/PageHeader'
+import { useToast } from '../hooks/ToastContext'
+import { messageFromError, useErrorToast } from '../hooks/usePageNotify'
 import { TableActionMenu } from '../components/common/TableActionMenu'
 import { DEFAULT_TABLE_PAGE_SIZE, TablePagination } from '../components/common/TablePagination'
 import { formatCoordPair, LocationMapPicker } from '../components/users/LocationMapPicker'
@@ -429,6 +431,7 @@ function OrderTestCheckboxPicker({
 
 export function OrderManagementPage() {
   const hasApi = isApiMode()
+  const { showSuccess, showError } = useToast()
   const [rows, setRows] = useState<ApiOrderListRow[]>([])
   const [users, setUsers] = useState<UserListRow[]>([])
   const [staff, setStaff] = useState<StaffListRow[]>([])
@@ -437,6 +440,8 @@ export function OrderManagementPage() {
   const [loading, setLoading] = useState(hasApi)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [refreshTick, setRefreshTick] = useState(0)
+
+  useErrorToast(loadError)
 
   const [orderFilterStatus, setOrderFilterStatus] = useState<'' | ApiOrderStatus>('')
   const [orderFilterPriority, setOrderFilterPriority] = useState<'' | 'urgent' | 'elective'>('')
@@ -760,14 +765,14 @@ export function OrderManagementPage() {
     try {
       const order = await fetchOrderById(o.id)
       if (!order) {
-        window.alert('Order not found.')
+        showError('Order not found.')
         return
       }
       setAssignOrderDetail(order)
       setAssignOrderId(order.id)
       setAssignOpen(true)
     } catch (e) {
-      window.alert(e instanceof Error ? e.message : 'Failed to load order')
+      showError(messageFromError(e, 'Failed to load order'))
     }
   }
 
@@ -946,9 +951,10 @@ export function OrderManagementPage() {
     setDeleteTarget(null)
     try {
       await deleteOrder(row.id)
+      showSuccess('Order deleted.')
       bumpOrderViews()
     } catch (e) {
-      window.alert(e instanceof Error ? e.message : 'Delete failed')
+      showError(messageFromError(e, 'Delete failed'))
     }
   }
 
@@ -973,12 +979,6 @@ export function OrderManagementPage() {
           <p style={{ margin: 0, fontSize: '0.9rem' }}>
             Set <code>VITE_API_BASE_URL</code> in <code>apps/lab_admin_web</code> (e.g. <code>http://localhost:3000</code>) and restart the dev server.
           </p>
-        </div>
-      ) : null}
-
-      {loadError ? (
-        <div className="card" style={{ borderColor: '#f0c4c4', background: '#fff8f8' }}>
-          <p style={{ margin: 0, color: '#ba1a1a', fontSize: '0.9rem' }}>{loadError}</p>
         </div>
       ) : null}
 
@@ -1268,7 +1268,7 @@ export function OrderManagementPage() {
                 ) : null}
                 <p style={{ margin: '0 0 0.45rem', fontSize: '0.82rem', color: 'var(--muted)' }}>
                   Open <strong>Test</strong> for search and checkboxes (multi-select). Selected lines also appear in the
-                  table below — use Remove there if a test is not in the current search results.
+                  table below — use Delete there if a test is not in the current search results.
                 </p>
                 <OrderTestCheckboxPicker
                   disabled={createSubmitting || tests.length === 0}
@@ -1320,7 +1320,7 @@ export function OrderManagementPage() {
                                   onClick={() => removeCreateTest(id)}
                                   disabled={createSubmitting}
                                 >
-                                  Remove
+                                  Delete
                                 </button>
                               </td>
                             </tr>
@@ -1948,7 +1948,7 @@ export function OrderManagementPage() {
                                         onClick={() => removeAssignTest(id)}
                                         disabled={assignSubmitting}
                                       >
-                                        Remove
+                                        Delete
                                       </button>
                                     </td>
                                   </tr>

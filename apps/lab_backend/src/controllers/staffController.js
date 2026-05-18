@@ -97,6 +97,9 @@ const updateStaff = async (req, res) => {
 
 const deleteStaff = async (req, res) => {
   try {
+    if (req.user?.id && req.params.id === req.user.id) {
+      return res.status(403).json({ message: 'You cannot delete your own account' });
+    }
     const success = await Staff.delete(req.params.id, req.user?.id);
     if (!success) return res.status(404).json({ message: 'Staff not found' });
     res.json({ message: 'Staff deleted successfully' });

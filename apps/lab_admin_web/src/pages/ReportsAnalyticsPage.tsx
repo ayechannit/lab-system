@@ -14,6 +14,7 @@ import {
   YAxis,
 } from 'recharts'
 import { PageHeader } from '../components/common/PageHeader'
+import { useErrorToast } from '../hooks/usePageNotify'
 import { LoadingSpinner } from '../components/common/LoadingSpinner'
 import { isApiMode } from '../services/apiBase'
 import { fetchOrders, type ApiOrderListRow } from '../services/orderService'
@@ -35,6 +36,8 @@ export function ReportsAnalyticsPage() {
   const [users, setUsers] = useState<UserListRow[]>([])
   const [loading, setLoading] = useState(hasApi)
   const [loadError, setLoadError] = useState<string | null>(null)
+
+  useErrorToast(loadError)
 
   useEffect(() => {
     if (!hasApi) {
@@ -138,12 +141,6 @@ export function ReportsAnalyticsPage() {
           <p style={{ margin: 0, fontSize: '0.9rem' }}>
             Set <code>VITE_API_BASE_URL</code> and sign in to load reporting data.
           </p>
-        </div>
-      ) : null}
-
-      {loadError ? (
-        <div className="card" style={{ borderColor: '#f0c4c4', background: '#fff8f8' }}>
-          <p style={{ margin: 0, color: '#ba1a1a', fontSize: '0.9rem' }}>{loadError}</p>
         </div>
       ) : null}
 

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { MyProfileModal } from '../components/profile/MyProfileModal'
 import { useAuth } from '../hooks/AuthContext'
+import { useToast } from '../hooks/ToastContext'
 import type { SessionRole } from '../model/types'
 import './admin-layout.css'
 
@@ -67,6 +68,7 @@ function readSidebarCollapsed(): boolean {
 }
 
 export function AdminLayout() {
+  const { showSuccess } = useToast()
   const { signOut, account, role, refreshAccount } = useAuth()
   const navigate = useNavigate()
   const { pathname } = useLocation()
@@ -257,7 +259,10 @@ export function AdminLayout() {
                   account={account}
                   sessionRole={role}
                   onClose={() => setProfileOpen(false)}
-                  onSuccess={() => refreshAccount()}
+                  onSuccess={() => {
+                    void refreshAccount()
+                    showSuccess('Profile updated.')
+                  }}
                 />
               </>
             ) : null}

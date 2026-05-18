@@ -4,6 +4,7 @@ import {
   listFilterSearchPlaceholder,
 } from '../components/common/ListFilterSearchField'
 import { PageHeader } from '../components/common/PageHeader'
+import { useErrorToast } from '../hooks/usePageNotify'
 import { LoadingSpinner } from '../components/common/LoadingSpinner'
 import { DEFAULT_TABLE_PAGE_SIZE, TablePagination } from '../components/common/TablePagination'
 import { isApiMode } from '../services/apiBase'
@@ -31,6 +32,9 @@ export function RatingsFeedbackPage() {
   const [rows, setRows] = useState<RatingListRow[]>([])
   const [loading, setLoading] = useState(hasApi)
   const [loadError, setLoadError] = useState<string | null>(null)
+
+  useErrorToast(loadError)
+
   const [ratingFilterInput, setRatingFilterInput] = useState('')
   const [ratingFilter, setRatingFilter] = useState('')
   const [ratingPage, setRatingPage] = useState(1)
@@ -114,12 +118,6 @@ export function RatingsFeedbackPage() {
             <code>http://localhost:3000</code>) and restart the dev server. Data is loaded only from the
             backend.
           </p>
-        </div>
-      ) : null}
-
-      {loadError ? (
-        <div className="card" style={{ borderColor: '#f0c4c4', background: '#fff8f8' }}>
-          <p style={{ margin: 0, color: '#ba1a1a', fontSize: '0.9rem' }}>{loadError}</p>
         </div>
       ) : null}
 

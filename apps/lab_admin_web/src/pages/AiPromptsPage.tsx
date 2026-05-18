@@ -3,6 +3,8 @@ import { ConfirmDialog } from '../components/common/ConfirmDialog'
 import { LoadingSpinner } from '../components/common/LoadingSpinner'
 import { ListFilterSearchField } from '../components/common/ListFilterSearchField'
 import { PageHeader } from '../components/common/PageHeader'
+import { useToast } from '../hooks/ToastContext'
+import { useErrorToast } from '../hooks/usePageNotify'
 import { DEFAULT_TABLE_PAGE_SIZE, TablePagination } from '../components/common/TablePagination'
 import { TableActionMenu } from '../components/common/TableActionMenu'
 import { PromptFormModal } from '../components/ai/PromptFormModal'
@@ -27,11 +29,11 @@ function formatWhen(iso?: string): string {
 
 export function AiPromptsPage() {
   const hasApi = isApiMode()
+  const { showSuccess, showError } = useToast()
   const [rows, setRows] = useState<PromptRow[]>([])
   const [loading, setLoading] = useState(hasApi)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [refreshTick, setRefreshTick] = useState(0)
-  const [banner, setBanner] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null)
 
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(DEFAULT_TABLE_PAGE_SIZE)
@@ -47,11 +49,7 @@ export function AiPromptsPage() {
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<PromptRow | null>(null)
 
-  useEffect(() => {
-    if (!banner) return
-    const t = window.setTimeout(() => setBanner(null), 6000)
-    return () => window.clearTimeout(t)
-  }, [banner])
+  useErrorToast(loadError)
 
   useEffect(() => {
     if (!hasApi) {
@@ -138,10 +136,10 @@ export function AiPromptsPage() {
     setDeleteTarget(null)
     try {
       await deletePrompt(row.id)
-      setBanner({ kind: 'ok', text: `Removed prompt "${row.name}".` })
+      showSuccess(`Deleted prompt "${row.name}".`)
       setRefreshTick((t) => t + 1)
     } catch (e) {
-      setBanner({ kind: 'err', text: e instanceof Error ? e.message : 'Delete failed' })
+      showError(e instanceof Error ? e.message : 'Delete failed')
     }
   }
 
@@ -158,26 +156,6 @@ export function AiPromptsPage() {
             Set <code>VITE_API_BASE_URL</code> in <code>apps/lab_admin_web</code> (e.g.{' '}
             <code>http://localhost:3000</code>) and restart the dev server. Prompts load from the backend only.
           </p>
-        </div>
-      ) : null}
-
-      {banner ? (
-        <div
-          className="card"
-          style={{
-            borderColor: banner.kind === 'ok' ? '#b8e0c4' : '#f0c4c4',
-            background: banner.kind === 'ok' ? '#f4fbf6' : '#fff8f8',
-          }}
-        >
-          <p style={{ margin: 0, color: banner.kind === 'ok' ? '#1a6b38' : '#ba1a1a', fontSize: '0.9rem' }}>
-            {banner.text}
-          </p>
-        </div>
-      ) : null}
-
-      {loadError ? (
-        <div className="card" style={{ borderColor: '#f0c4c4', background: '#fff8f8' }}>
-          <p style={{ margin: 0, color: '#ba1a1a', fontSize: '0.9rem' }}>{loadError}</p>
         </div>
       ) : null}
 
@@ -313,7 +291,7 @@ export function AiPromptsPage() {
       <ConfirmDialog
         open={deleteTarget !== null}
         title="Delete prompt?"
-        message={deleteTarget ? `Remove prompt "${deleteTarget.name}"?` : ''}
+        message={deleteTarget ? `Delete prompt "${deleteTarget.name}"?` : ''}
         confirmLabel="Delete"
         cancelLabel="Cancel"
         danger
@@ -327,10 +305,7 @@ export function AiPromptsPage() {
         initial={editRow}
         onClose={closeForm}
         onSuccess={() => {
-          setBanner({
-            kind: 'ok',
-            text: formMode === 'edit' ? 'Prompt updated.' : 'Prompt created.',
-          })
+          showSuccess(formMode === 'edit' ? 'Prompt updated.' : 'Prompt created.')
           setRefreshTick((t) => t + 1)
         }}
       />

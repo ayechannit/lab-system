@@ -4,6 +4,8 @@ import { LoadingSpinner } from '../components/common/LoadingSpinner'
 import { UserFormModal } from '../components/users/UserFormModal'
 import { ListFilterSearchField } from '../components/common/ListFilterSearchField'
 import { PageHeader } from '../components/common/PageHeader'
+import { useToast } from '../hooks/ToastContext'
+import { messageFromError, useErrorToast } from '../hooks/usePageNotify'
 import { DEFAULT_TABLE_PAGE_SIZE, TablePagination } from '../components/common/TablePagination'
 import { TableActionMenu } from '../components/common/TableActionMenu'
 import type { EndUserRole, UserListRow } from '../model/types'
@@ -24,10 +26,13 @@ const USER_ROLES: EndUserRole[] = ['clinic', 'doctor', 'patient']
 
 export function UserManagementPage() {
   const hasApi = isApiMode()
+  const { showSuccess, showError } = useToast()
   const [rows, setRows] = useState<UserListRow[]>([])
   const [loading, setLoading] = useState(hasApi)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [refreshTick, setRefreshTick] = useState(0)
+
+  useErrorToast(loadError)
 
   const [userFilterNameInput, setUserFilterNameInput] = useState('')
   const [userFilterName, setUserFilterName] = useState('')
@@ -130,9 +135,10 @@ export function UserManagementPage() {
     setDeleteTarget(null)
     try {
       await deleteUser(row.id)
+      showSuccess(`Deleted user "${row.name}".`)
       setRefreshTick((t) => t + 1)
     } catch (e) {
-      window.alert(e instanceof Error ? e.message : 'Delete failed')
+      showError(messageFromError(e, 'Delete failed'))
     }
   }
 
@@ -161,12 +167,6 @@ export function UserManagementPage() {
             <code>http://localhost:3000</code>) and restart the dev server. Data is loaded only from the
             backend.
           </p>
-        </div>
-      ) : null}
-
-      {loadError ? (
-        <div className="card" style={{ borderColor: '#f0c4c4', background: '#fff8f8' }}>
-          <p style={{ margin: 0, color: '#ba1a1a', fontSize: '0.9rem' }}>{loadError}</p>
         </div>
       ) : null}
 
@@ -329,7 +329,10 @@ export function UserManagementPage() {
         initial={editInitial}
         existingRows={rows}
         onClose={closeForm}
-        onSuccess={() => setRefreshTick((t) => t + 1)}
+        onSuccess={() => {
+          showSuccess(formMode === 'edit' ? 'User updated.' : 'User created.')
+          setRefreshTick((t) => t + 1)
+        }}
       />
     </div>
   )

@@ -4,11 +4,14 @@ import './index.css'
 import './components/common/ui.css'
 import App from './App.tsx'
 import { AuthProvider } from './hooks/AuthContext'
+import { ToastProvider } from './hooks/ToastContext'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <AuthProvider>
-      <App />
-    </AuthProvider>
+    <ToastProvider>
+      <AuthProvider>
+        <App />
+      </AuthProvider>
+    </ToastProvider>
   </StrictMode>,
 )

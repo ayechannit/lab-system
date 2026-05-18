@@ -2,7 +2,10 @@ import { type FormEvent, useCallback, useEffect, useState } from 'react'
 import { ConfirmDialog } from '../components/common/ConfirmDialog'
 import { ColorField } from '../components/common/ColorField'
 import { LoadingSpinner } from '../components/common/LoadingSpinner'
+import { PageBanner } from '../components/common/PageBanner'
 import { PageHeader } from '../components/common/PageHeader'
+import { useToast } from '../hooks/ToastContext'
+import { messageFromError, useErrorToast } from '../hooks/usePageNotify'
 import { LogoUrlField } from '../components/settings/LogoUrlField'
 import { LOGO_URL_MAX_LENGTH } from '../services/systemSettingService'
 import { formatCoordPair, LocationMapPicker } from '../components/users/LocationMapPicker'
@@ -59,10 +62,9 @@ function applyRowToState(
 
 export function SystemSettingsPage() {
   const hasApi = isApiMode()
+  const { showSuccess, showError } = useToast()
   const [loading, setLoading] = useState(hasApi)
   const [loadError, setLoadError] = useState<string | null>(null)
-  const [formError, setFormError] = useState<string | null>(null)
-  const [banner, setBanner] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [resetting, setResetting] = useState(false)
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false)
@@ -110,11 +112,7 @@ export function SystemSettingsPage() {
     setContactEmail,
   }
 
-  useEffect(() => {
-    if (!banner) return
-    const t = window.setTimeout(() => setBanner(null), 6000)
-    return () => window.clearTimeout(t)
-  }, [banner])
+  useErrorToast(loadError)
 
   useEffect(() => {
     if (!hasApi) {
@@ -151,15 +149,14 @@ export function SystemSettingsPage() {
   async function confirmResetToDefaults() {
     if (!hasApi) return
     setResetConfirmOpen(false)
-    setFormError(null)
     setResetting(true)
     try {
       const next = await resetSystemSettingsToDefaults()
       applyRowToState(next, setters)
       setLoadedAddressBaseline('')
-      setBanner({ kind: 'ok', text: 'Settings reset to defaults.' })
+      showSuccess('Settings reset to defaults.')
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : 'Reset failed')
+      showError(messageFromError(err, 'Reset failed'))
     } finally {
       setResetting(false)
     }
@@ -168,23 +165,24 @@ export function SystemSettingsPage() {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     if (!hasApi) return
-    setFormError(null)
     const nameTrim = labName.trim()
     if (!nameTrim) {
-      setFormError('Lab name is required.')
+      showError('Lab name is required.')
       return
     }
     if (customColors.trim()) {
       try {
         JSON.parse(customColors)
       } catch {
-        setFormError('Custom colors must be valid JSON (or leave empty).')
+        showError('Custom colors must be valid JSON (or leave empty).')
         return
       }
     }
     const logoTrim = logoUrl.trim()
     if (logoTrim.length > LOGO_URL_MAX_LENGTH) {
-      setFormError(`Logo must be at most ${LOGO_URL_MAX_LENGTH} characters. Upload a smaller image or use a shorter URL.`)
+      showError(
+        `Logo must be at most ${LOGO_URL_MAX_LENGTH} characters. Upload a smaller image or use a shorter URL.`,
+      )
       return
     }
     const lat = latitude === '' ? null : Number(latitude)
@@ -206,9 +204,9 @@ export function SystemSettingsPage() {
     try {
       const next = await updateSystemSettings(body)
       applyRowToState(next, setters)
-      setBanner({ kind: 'ok', text: 'System settings saved.' })
+      showSuccess('System settings saved.')
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : 'Save failed')
+      showError(messageFromError(err, 'Save failed'))
     } finally {
       setSubmitting(false)
     }
@@ -222,31 +220,9 @@ export function SystemSettingsPage() {
       />
 
       {!hasApi ? (
-        <div className="card" style={{ borderColor: '#dfe5f0', background: '#f8fafc' }}>
-          <p style={{ margin: 0, fontSize: '0.9rem' }}>
-            Set <code>VITE_API_BASE_URL</code> to load and save settings from the backend.
-          </p>
-        </div>
-      ) : null}
-
-      {banner ? (
-        <div
-          className="card"
-          style={{
-            borderColor: banner.kind === 'ok' ? '#b8e0c4' : '#f0c4c4',
-            background: banner.kind === 'ok' ? '#f4fbf6' : '#fff8f8',
-          }}
-        >
-          <p style={{ margin: 0, color: banner.kind === 'ok' ? '#1a6b38' : '#ba1a1a', fontSize: '0.9rem' }}>
-            {banner.text}
-          </p>
-        </div>
-      ) : null}
-
-      {loadError ? (
-        <div className="card" style={{ borderColor: '#f0c4c4', background: '#fff8f8' }}>
-          <p style={{ margin: 0, color: '#ba1a1a', fontSize: '0.9rem' }}>{loadError}</p>
-        </div>
+        <PageBanner kind="info">
+          Set <code>VITE_API_BASE_URL</code> to load and save settings from the backend.
+        </PageBanner>
       ) : null}
 
       <div className="card system-settings-panel">
@@ -294,7 +270,10 @@ export function SystemSettingsPage() {
                   id="sys-logo"
                   value={logoUrl}
                   onChange={setLogoUrl}
-                  onUploaded={(row) => applyRowToState(row, setters)}
+                  onUploaded={(row) => {
+                    applyRowToState(row, setters)
+                    showSuccess('Logo uploaded.')
+                  }}
                   disabled={submitting || resetting || !hasApi}
                 />
                 <div className="settings-form__pair">
@@ -392,12 +371,6 @@ export function SystemSettingsPage() {
               </div>
             </section>
             </div>
-
-            {formError ? (
-              <div className="form-alert form-alert--error" role="alert">
-                {formError}
-              </div>
-            ) : null}
 
             <div className="system-settings-form__footer">
               <button
