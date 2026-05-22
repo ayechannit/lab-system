@@ -39,6 +39,10 @@ const userController = require('../controllers/userController');
  *           type: number
  *         total_points:
  *           type: integer
+ *         license_number:
+ *           type: string
+ *         is_approved:
+ *           type: boolean
  *         is_deleted:
  *           type: boolean
  *         created_at:
@@ -79,6 +83,11 @@ const userController = require('../controllers/userController');
  *         schema:
  *           type: string
  *         description: Search by partial phone number
+ *       - in: query
+ *         name: is_approved
+ *         schema:
+ *           type: boolean
+ *         description: Filter by approval status
  *       - in: query
  *         name: page
  *         schema:
@@ -163,6 +172,8 @@ const userController = require('../controllers/userController');
  *                 type: number
  *               longitude:
  *                 type: number
+ *               license_number:
+ *                 type: string
  *     responses:
  *       201:
  *         description: User created
@@ -207,6 +218,8 @@ const userController = require('../controllers/userController');
  *                 type: number
  *               longitude:
  *                 type: number
+ *               license_number:
+ *                 type: string
  *     responses:
  *       200:
  *         description: User updated
@@ -214,6 +227,27 @@ const userController = require('../controllers/userController');
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/User'
+ *       404:
+ *         description: User not found
+ */
+
+/**
+ * @swagger
+ * /api/users/{id}/approve:
+ *   put:
+ *     summary: Approve a pending doctor or clinic user
+ *     tags: [Users]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: The unique identifier of the user to approve
+ *     responses:
+ *       200:
+ *         description: User approved successfully
  *       404:
  *         description: User not found
  */
@@ -291,6 +325,7 @@ router.get('/:id',authMiddleware, userController.getUserById);
 
 router.post('/', userController.createUser);
 router.put('/:id', userController.updateUser);
+router.put('/:id/approve', authMiddleware, userController.approveUser);
 router.delete('/:id', userController.deleteUser);
 
 module.exports = router;

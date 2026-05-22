@@ -11,6 +11,10 @@ const loginUser = async (req, res) => {
       return res.status(401).json({ message: 'Invalid email or password' });
     }
 
+    if (!user.is_approved) {
+      return res.status(403).json({ message: 'Account is pending approval from lab staff.' });
+    }
+
     const token = jwt.sign(
       { id: user.id, email: user.email, role: user.role, type: 'user' },
       process.env.JWT_SECRET || 'your_default_secret',
@@ -23,7 +27,8 @@ const loginUser = async (req, res) => {
         id: user.id,
         name: user.name,
         email: user.email,
-        role: user.role
+        role: user.role,
+        is_approved: user.is_approved
       }
     });
   } catch (error) {

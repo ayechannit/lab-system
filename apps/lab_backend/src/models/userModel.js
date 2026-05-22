@@ -5,7 +5,7 @@ class User {
   static async getAll(filters = {}) {
     const pool = await poolPromise;
     const request = pool.request();
-    let query = 'SELECT id, name, email, phone, role, address, latitude, longitude, total_points, created_user, updated_user, created_at, updated_at FROM users WHERE is_deleted = 0';
+    let query = 'SELECT id, name, email, phone, role, address, latitude, longitude, total_points, license_number, is_approved, created_user, updated_user, created_at, updated_at FROM users WHERE is_deleted = 0';
 
     if (filters.role) {
       query += ' AND role = @role';
@@ -18,6 +18,10 @@ class User {
     if (filters.phone) {
       query += ' AND phone LIKE @phone';
       request.input('phone', sql.VarChar, `%${filters.phone}%`);
+    }
+    if (filters.is_approved !== undefined) {
+      query += ' AND is_approved = @is_approved';
+      request.input('is_approved', sql.Bit, filters.is_approved === 'true' || filters.is_approved === true ? 1 : 0);
     }
 
     query += ' ORDER BY created_at DESC';
@@ -39,7 +43,7 @@ class User {
     const pool = await poolPromise;
     const result = await pool.request()
       .input('id', sql.UniqueIdentifier, id)
-      .query('SELECT id, name, email, phone, role, address, latitude, longitude, total_points, created_user, updated_user, created_at, updated_at FROM users WHERE id = @id AND is_deleted = 0');
+      .query('SELECT id, name, email, phone, role, address, latitude, longitude, total_points, license_number, is_approved, created_user, updated_user, created_at, updated_at FROM users WHERE id = @id AND is_deleted = 0');
     return result.recordset[0];
   }
 
@@ -54,6 +58,8 @@ class User {
   static async create(data, createdBy = null) {
     const pool = await poolPromise;
     const hashedPassword = await bcrypt.hash(data.password_hash || data.password, 10);
+    const isApproved = data.role === 'patient' ? 1 : 0; // Require approval for doctors and clinics
+
     const result = await pool.request()
       .input('name', sql.VarChar, data.name)
       .input('email', sql.VarChar, data.email)
@@ -63,11 +69,13 @@ class User {
       .input('address', sql.Text, data.address)
       .input('latitude', sql.Float, data.latitude)
       .input('longitude', sql.Float, data.longitude)
+      .input('license_number', sql.NVarChar, data.license_number || null)
+      .input('is_approved', sql.Bit, isApproved)
       .input('created_user', sql.UniqueIdentifier, createdBy)
       .query(`
-        INSERT INTO users (id, name, email, phone, password_hash, role, address, latitude, longitude, total_points, created_user, updated_user, is_deleted)
-        OUTPUT INSERTED.id, INSERTED.name, INSERTED.email, INSERTED.phone, INSERTED.role, INSERTED.address, INSERTED.latitude, INSERTED.longitude, INSERTED.total_points, INSERTED.created_user, INSERTED.updated_user, INSERTED.created_at, INSERTED.updated_at
-        VALUES (NEWID(), @name, @email, @phone, @password_hash, @role, @address, @latitude, @longitude, 0, @created_user, @created_user, 0)
+        INSERT INTO users (id, name, email, phone, password_hash, role, address, latitude, longitude, total_points, license_number, is_approved, created_user, updated_user, is_deleted)
+        OUTPUT INSERTED.id, INSERTED.name, INSERTED.email, INSERTED.phone, INSERTED.role, INSERTED.address, INSERTED.latitude, INSERTED.longitude, INSERTED.total_points, INSERTED.license_number, INSERTED.is_approved, INSERTED.created_user, INSERTED.updated_user, INSERTED.created_at, INSERTED.updated_at
+        VALUES (NEWID(), @name, @email, @phone, @password_hash, @role, @address, @latitude, @longitude, 0, @license_number, @is_approved, @created_user, @created_user, 0)
       `);
     return result.recordset[0];
   }
@@ -83,6 +91,7 @@ class User {
       .input('address', sql.Text, data.address)
       .input('latitude', sql.Float, data.latitude)
       .input('longitude', sql.Float, data.longitude)
+      .input('license_number', sql.NVarChar, data.license_number || null)
       .input('updated_user', sql.UniqueIdentifier, updatedBy);
 
     const newPassword = data.password || data.password_hash;
@@ -96,9 +105,10 @@ class User {
       UPDATE users
       SET name = @name, phone = @phone, 
           address = @address, latitude = @latitude, longitude = @longitude, 
+          license_number = ISNULL(@license_number, license_number),
           updated_user = @updated_user, updated_at = GETDATE()
           ${passwordFragment}
-      OUTPUT INSERTED.id, INSERTED.name, INSERTED.email, INSERTED.phone, INSERTED.role, INSERTED.address, INSERTED.latitude, INSERTED.longitude, INSERTED.total_points, INSERTED.created_user, INSERTED.updated_user, INSERTED.created_at, INSERTED.updated_at
+      OUTPUT INSERTED.id, INSERTED.name, INSERTED.email, INSERTED.phone, INSERTED.role, INSERTED.address, INSERTED.latitude, INSERTED.longitude, INSERTED.total_points, INSERTED.license_number, INSERTED.is_approved, INSERTED.created_user, INSERTED.updated_user, INSERTED.created_at, INSERTED.updated_at
       WHERE id = @id AND is_deleted = 0
     `);
     return result.recordset[0];
@@ -113,7 +123,21 @@ class User {
       .query(`
         UPDATE users 
         SET total_points = total_points + @points, updated_user = @updated_user, updated_at = GETDATE()
-        OUTPUT INSERTED.id, INSERTED.name, INSERTED.email, INSERTED.phone, INSERTED.role, INSERTED.address, INSERTED.latitude, INSERTED.longitude, INSERTED.total_points, INSERTED.created_user, INSERTED.updated_user, INSERTED.created_at, INSERTED.updated_at
+        OUTPUT INSERTED.id, INSERTED.name, INSERTED.email, INSERTED.phone, INSERTED.role, INSERTED.address, INSERTED.latitude, INSERTED.longitude, INSERTED.total_points, INSERTED.license_number, INSERTED.is_approved, INSERTED.created_user, INSERTED.updated_user, INSERTED.created_at, INSERTED.updated_at
+        WHERE id = @id AND is_deleted = 0
+      `);
+    return result.recordset[0];
+  }
+
+  static async approve(id, updatedBy = null) {
+    const pool = await poolPromise;
+    const result = await pool.request()
+      .input('id', sql.UniqueIdentifier, id)
+      .input('updated_user', sql.UniqueIdentifier, updatedBy)
+      .query(`
+        UPDATE users 
+        SET is_approved = 1, updated_user = @updated_user, updated_at = GETDATE()
+        OUTPUT INSERTED.id, INSERTED.name, INSERTED.email, INSERTED.phone, INSERTED.role, INSERTED.is_approved, INSERTED.updated_at
         WHERE id = @id AND is_deleted = 0
       `);
     return result.recordset[0];
@@ -130,4 +154,5 @@ class User {
 }
 
 module.exports = User;
+
 

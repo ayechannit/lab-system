@@ -21,11 +21,11 @@ const getTestById = async (req, res) => {
 
 const createTest = async (req, res) => {
   try {
-    const { test_name, test_code, description, base_price_mmk, category, is_active } = req.body;
+    const { test_name, test_code, description, base_price_mmk, category, is_active, is_package, package_items } = req.body;
     if (!test_name || !test_code || base_price_mmk === undefined) {
        return res.status(400).json({ message: 'test_name, test_code, and base_price_mmk are required' });
     }
-    const testData = { test_name, test_code, description, base_price_mmk, category, is_active };
+    const testData = { test_name, test_code, description, base_price_mmk, category, is_active, is_package, package_items };
     const test = await LabTest.create(testData, req.user?.id);
     res.status(201).json(test);
   } catch (error) {
@@ -38,8 +38,8 @@ const createTest = async (req, res) => {
 
 const updateTest = async (req, res) => {
   try {
-    const { test_name, test_code, description, base_price_mmk, category, is_active } = req.body;
-    const testData = { test_name, test_code, description, base_price_mmk, category, is_active };
+    const { test_name, test_code, description, base_price_mmk, category, is_active, is_package, package_items } = req.body;
+    const testData = { test_name, test_code, description, base_price_mmk, category, is_active, is_package, package_items };
     const test = await LabTest.update(req.params.id, testData, req.user?.id);
     if (!test) return res.status(404).json({ message: 'Test not found' });
     res.json(test);

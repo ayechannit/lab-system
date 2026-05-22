@@ -37,14 +37,18 @@ const getOrdersByUser = async (req, res) => {
 
 const createUser = async (req, res) => {
   try {
-    const { name, email, phone, role, password, password_hash, address, latitude, longitude } = req.body;
+    const { name, email, phone, role, password, password_hash, address, latitude, longitude, license_number } = req.body;
     
     // Basic validation
     if (!name || !email || !phone || !role || (!password && !password_hash)) {
       return res.status(400).json({ message: 'name, email, phone, role, and password are required' });
     }
 
-    const userData = { name, email, phone, role, password, password_hash, address, latitude, longitude };
+    if ((role === 'doctor' || role === 'clinic') && !license_number) {
+      return res.status(400).json({ message: 'license_number is required for doctor and clinic roles' });
+    }
+
+    const userData = { name, email, phone, role, password, password_hash, address, latitude, longitude, license_number };
     const user = await User.create(userData, req.user?.id);
     res.status(201).json(user);
   } catch (error) {
@@ -69,6 +73,7 @@ const updateUser = async (req, res) => {
       longitude,
       password,
       password_hash,
+      license_number,
     } = req.body;
 
     const merge = (next, prev) => (next !== undefined ? next : prev);
@@ -80,6 +85,7 @@ const updateUser = async (req, res) => {
       address: merge(address, existing.address),
       latitude: merge(latitude, existing.latitude),
       longitude: merge(longitude, existing.longitude),
+      license_number: merge(license_number, existing.license_number),
       password,
       password_hash,
     };
@@ -87,6 +93,18 @@ const updateUser = async (req, res) => {
     const user = await User.update(req.params.id, updateData, req.user?.id);
     if (!user) return res.status(404).json({ message: 'User not found' });
     res.json(user);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+const approveUser = async (req, res) => {
+  try {
+    const user = await User.getById(req.params.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    const updatedUser = await User.approve(req.params.id, req.user?.id);
+    res.json({ message: 'User approved successfully', user: updatedUser });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -108,5 +126,6 @@ module.exports = {
   getOrdersByUser,
   createUser,
   updateUser,
+  approveUser,
   deleteUser,
 };

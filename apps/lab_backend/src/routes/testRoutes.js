@@ -29,6 +29,13 @@ router.use(authMiddleware);
  *           type: number
  *         category:
  *           type: string
+ *         is_package:
+ *           type: boolean
+ *         package_items:
+ *           type: array
+ *           items:
+ *             type: string
+ *             format: uuid
  *         is_active:
  *           type: boolean
  *         is_deleted:
@@ -75,6 +82,11 @@ router.use(authMiddleware);
  *         schema:
  *           type: boolean
  *         description: Filter by active status
+ *       - in: query
+ *         name: is_package
+ *         schema:
+ *           type: boolean
+ *         description: Filter by whether it is a package
  *       - in: query
  *         name: test_name
  *         schema:
@@ -159,6 +171,13 @@ router.use(authMiddleware);
  *                 type: number
  *               category:
  *                 type: string
+ *               is_package:
+ *                 type: boolean
+ *               package_items:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: uuid
  *               is_active:
  *                 type: boolean
  *     responses:
@@ -202,6 +221,13 @@ router.use(authMiddleware);
  *                 type: number
  *               category:
  *                 type: string
+ *               is_package:
+ *                 type: boolean
+ *               package_items:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: uuid
  *               is_active:
  *                 type: boolean
  *     responses:

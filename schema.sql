@@ -24,6 +24,8 @@ CREATE TABLE users (
     latitude FLOAT,
     longitude FLOAT,
     total_points INT DEFAULT 0,
+    license_number NVARCHAR(100) NULL,
+    is_approved BIT DEFAULT 1,
     created_user UNIQUEIDENTIFIER,
     updated_user UNIQUEIDENTIFIER,
     is_deleted BIT DEFAULT 0, -- Soft Delete
@@ -54,6 +56,8 @@ CREATE TABLE lab_test_catalog (
     description NVARCHAR(MAX),
     base_price_mmk DECIMAL(18, 2) NOT NULL,
     category NVARCHAR(100),
+    is_package BIT DEFAULT 0,
+    package_items NVARCHAR(MAX) NULL, -- JSON array of test IDs if this is a package
     is_active BIT DEFAULT 1,
     created_user UNIQUEIDENTIFIER,
     updated_user UNIQUEIDENTIFIER,

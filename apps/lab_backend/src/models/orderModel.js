@@ -1,6 +1,53 @@
 const { sql, poolPromise } = require('../config/db');
 
 class Order {
+  static async _expandPackageItems(items, transaction) {
+    if (!items || items.length === 0) return [];
+    
+    let expandedItems = [];
+    
+    for (const item of items) {
+      const testReq = new sql.Request(transaction);
+      const testResult = await testReq
+        .input('test_id', sql.UniqueIdentifier, item.test_id)
+        .query('SELECT is_package, package_items FROM lab_test_catalog WHERE id = @test_id');
+        
+      if (testResult.recordset.length === 0) continue; // Test doesn't exist, skip or throw error
+      
+      const testInfo = testResult.recordset[0];
+      
+      if (testInfo.is_package && testInfo.package_items) {
+        let subTestIds = [];
+        try {
+          subTestIds = JSON.parse(testInfo.package_items);
+        } catch (e) {
+          console.error("Failed to parse package_items", e);
+        }
+        
+        // Distribute price logic:
+        // We will assign the full price to the first sub-test, and 0 to the rest.
+        // This ensures the order total remains exactly what the frontend calculated,
+        // while expanding the tests for the lab staff.
+        
+        for (let i = 0; i < subTestIds.length; i++) {
+          const subId = subTestIds[i];
+          expandedItems.push({
+            test_id: subId,
+            quantity: item.quantity,
+            unit_price_mmk: i === 0 ? item.unit_price_mmk : 0,
+            subtotal_mmk: i === 0 ? item.subtotal_mmk : 0,
+            from_package_id: item.test_id // optional tracking
+          });
+        }
+      } else {
+        // Not a package, push as is
+        expandedItems.push(item);
+      }
+    }
+    
+    return expandedItems;
+  }
+
   static async getAll(filters = {}) {
     const pool = await poolPromise;
     const request = pool.request();
@@ -50,7 +97,13 @@ class Order {
         SELECT o.*,
                u.name AS ordering_user_name,
                u.role AS ordering_user_role,
-               (SELECT * FROM lab_order_items WHERE order_id = o.id FOR JSON PATH) as items,
+               (
+                 SELECT oi.*, tc.test_name, tc.test_code
+                 FROM lab_order_items oi
+                 JOIN lab_test_catalog tc ON oi.test_id = tc.id
+                 WHERE oi.order_id = o.id 
+                 FOR JSON PATH
+               ) as items,
                (SELECT * FROM order_schedules WHERE order_id = o.id FOR JSON PATH) as schedule,
                (SELECT * FROM payments WHERE order_id = o.id ORDER BY created_at ASC FOR JSON PATH) as payments,
                (SELECT 
@@ -117,7 +170,9 @@ class Order {
       const newOrder = orderResult.recordset[0];
 
       if (data.items && data.items.length > 0) {
-        for (const item of data.items) {
+        const expandedItems = await this._expandPackageItems(data.items, transaction);
+        
+        for (const item of expandedItems) {
           const itemRequest = new sql.Request(transaction);
           await itemRequest
             .input('order_id', sql.UniqueIdentifier, newOrder.id)
@@ -169,8 +224,14 @@ class Order {
 
       // Add new items
       if (items && items.length > 0) {
-        for (const item of items) {
+        const expandedItems = await this._expandPackageItems(items, transaction);
+        
+        for (const item of expandedItems) {
           const itemRequest = new sql.Request(transaction);
+          
+          // Use IF NOT EXISTS to prevent duplicates if adding the same package/test twice,
+          // though usually they just update quantity. For simplicity, we just insert. 
+          // If UQ_Order_Test constraint hits, we catch it.
           await itemRequest
             .input('order_id', sql.UniqueIdentifier, orderId)
             .input('test_id', sql.UniqueIdentifier, item.test_id)
@@ -179,8 +240,11 @@ class Order {
             .input('subtotal_mmk', sql.Decimal(18, 2), item.subtotal_mmk)
             .input('created_user', sql.UniqueIdentifier, updatedBy)
             .query(`
-              INSERT INTO lab_order_items (id, order_id, test_id, quantity, unit_price_mmk, subtotal_mmk, created_user, updated_user)
-              VALUES (NEWID(), @order_id, @test_id, @quantity, @unit_price_mmk, @subtotal_mmk, @created_user, @created_user)
+              IF NOT EXISTS (SELECT 1 FROM lab_order_items WHERE order_id = @order_id AND test_id = @test_id)
+              BEGIN
+                INSERT INTO lab_order_items (id, order_id, test_id, quantity, unit_price_mmk, subtotal_mmk, created_user, updated_user)
+                VALUES (NEWID(), @order_id, @test_id, @quantity, @unit_price_mmk, @subtotal_mmk, @created_user, @created_user)
+              END
             `);
         }
       }
@@ -271,21 +335,47 @@ class Order {
     return result.rowsAffected[0] > 0;
   }
 
-  static async getQrDetails(orderId, testId) {
+  static async areAllResultsUploaded(orderId) {
     const pool = await poolPromise;
     const result = await pool.request()
       .input('order_id', sql.UniqueIdentifier, orderId)
-      .input('test_id', sql.UniqueIdentifier, testId)
+      .query(`
+        SELECT COUNT(*) as total, 
+               SUM(CASE WHEN result_file_url IS NOT NULL THEN 1 ELSE 0 END) as uploaded
+        FROM lab_order_items
+        WHERE order_id = @order_id
+      `);
+    
+    if (result.recordset.length === 0) return false;
+    
+    const { total, uploaded } = result.recordset[0];
+    return total > 0 && total === uploaded;
+  }
+
+  static async getQrDetails(orderId) {
+    const pool = await poolPromise;
+    const result = await pool.request()
+      .input('order_id', sql.UniqueIdentifier, orderId)
       .query(`
         SELECT 
           o.patient_name, o.patient_age, o.patient_phone, o.address,
-          t.test_name, t.test_code
+          (
+            SELECT t.test_name, t.test_code
+            FROM lab_order_items oi
+            JOIN lab_test_catalog t ON oi.test_id = t.id
+            WHERE oi.order_id = o.id AND t.is_deleted = 0
+            FOR JSON PATH
+          ) as tests
         FROM lab_orders o
-        JOIN lab_order_items oi ON o.id = oi.order_id
-        JOIN lab_test_catalog t ON oi.test_id = t.id
-        WHERE o.id = @order_id AND t.id = @test_id AND o.is_deleted = 0 AND t.is_deleted = 0
+        WHERE o.id = @order_id AND o.is_deleted = 0
       `);
-    return result.recordset[0];
+      
+    if (result.recordset[0]) {
+      const details = result.recordset[0];
+      details.tests = details.tests ? JSON.parse(details.tests) : [];
+      return details;
+    }
+    return null;
   }
 }
 

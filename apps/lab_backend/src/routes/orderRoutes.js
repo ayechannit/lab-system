@@ -339,9 +339,9 @@ router.use(authMiddleware);
 
 /**
  * @swagger
- * /api/orders/{id}/tests/{testId}/qrcode:
+ * /api/orders/{id}/qrcode:
  *   get:
- *     summary: Generate a QR code for a specific test in an order
+ *     summary: Generate a QR code for an order containing all tests
  *     tags: [Orders]
  *     parameters:
  *       - in: path
@@ -351,13 +351,6 @@ router.use(authMiddleware);
  *           type: string
  *           format: uuid
  *         description: The order ID
- *       - in: path
- *         name: testId
- *         required: true
- *         schema:
- *           type: string
- *           format: uuid
- *         description: The test ID
  *     responses:
  *       200:
  *         description: QR code generated successfully
@@ -380,12 +373,17 @@ router.use(authMiddleware);
  *                       type: string
  *                     address:
  *                       type: string
- *                     test_name:
- *                       type: string
- *                     test_code:
- *                       type: string
+ *                     tests:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           test_name:
+ *                             type: string
+ *                           test_code:
+ *                             type: string
  *       404:
- *         description: Order or test not found
+ *         description: Order not found
  */
 
 /**
@@ -446,7 +444,7 @@ router.post('/', upload.single('prescription'), orderController.createOrder);
 router.post('/:id/items', orderController.addOrderItems);
 router.put('/:id/status', orderController.updateOrderStatus);
 router.delete('/:id', orderController.deleteOrder);
-router.get('/:id/tests/:testId/qrcode', orderController.generateQrCode);
+router.get('/:id/qrcode', orderController.generateQrCode);
 router.post('/:id/tests/:testId/upload-result', upload.single('file'), orderController.uploadTestResult);
 
 module.exports = router;

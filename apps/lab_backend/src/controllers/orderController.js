@@ -107,14 +107,15 @@ const deleteOrder = async (req, res) => {
 
 const generateQrCode = async (req, res) => {
   try {
-    const { id, testId } = req.params;
-    const details = await Order.getQrDetails(id, testId);
+    const { id } = req.params;
+    const details = await Order.getQrDetails(id);
 
     if (!details) {
-      return res.status(404).json({ message: 'Order or test not found' });
+      return res.status(404).json({ message: 'Order not found' });
     }
 
-    const qrData = `Patient Name: ${details.patient_name}\nAge: ${details.patient_age}\nPhone: ${details.patient_phone}\nAddress: ${details.address}\nTest Name: ${details.test_name}\nTest Code: ${details.test_code}`;
+    const testsStr = details.tests.map(t => `${t.test_name} (${t.test_code})`).join(', ');
+    const qrData = `Patient Name: ${details.patient_name}\nAge: ${details.patient_age}\nPhone: ${details.patient_phone}\nAddress: ${details.address}\nTests: ${testsStr}`;
 
     const qrCodeImage = await QRCode.toDataURL(qrData);
     res.json({ qrCodeImage, details });
@@ -142,6 +143,25 @@ const uploadTestResult = async (req, res) => {
 
     if (!success) {
       return res.status(404).json({ message: 'Test not found in this order' });
+    }
+
+    // Check if all results are uploaded for this order
+    const allUploaded = await Order.areAllResultsUploaded(id);
+    if (allUploaded) {
+      // Automatically update order status to delivered
+      try {
+        await Order.updateStatus(
+          id, 
+          'delivered', 
+          req.user?.id, 
+          'All test results uploaded - automatically marked as delivered',
+          req.user?.id
+        );
+      } catch (statusError) {
+        console.error('Failed to auto-update order status:', statusError);
+        // We don't want to fail the whole request if only status update fails, 
+        // but maybe we should? The result IS uploaded.
+      }
     }
 
     const downloadUrl = await StorageService.getFileUrl(fileUrl);
