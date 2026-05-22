@@ -1,8 +1,11 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { DatetimeLocalField } from '../components/common/DatetimeLocalField'
 import { LoadingSpinner } from '../components/common/LoadingSpinner'
 import { ConfirmDialog } from '../components/common/ConfirmDialog'
+import { ListFilterSearchField } from '../components/common/ListFilterSearchField'
 import { PageHeader } from '../components/common/PageHeader'
+import { useToast } from '../hooks/ToastContext'
+import { messageFromError, useErrorToast } from '../hooks/usePageNotify'
 import { TableActionMenu } from '../components/common/TableActionMenu'
 import { DEFAULT_TABLE_PAGE_SIZE, TablePagination } from '../components/common/TablePagination'
 import { formatCoordPair, LocationMapPicker } from '../components/users/LocationMapPicker'
@@ -25,12 +28,9 @@ import {
 import { upsertSchedule, type ApiOrderSchedule } from '../services/scheduleService'
 import { fetchStaffList } from '../services/staffService'
 import { datetimeLocalToIso, toDatetimeLocalValue } from '../utils/datetimeLocal'
-import { nominatimSearch } from '../services/nominatimGeocode'
+import { useAddressGeocode } from '../hooks/useAddressGeocode'
 import { fetchUserList } from '../services/userService'
 import '../components/common/ui.css'
-
-const ADDRESS_GEOCODE_DEBOUNCE_MS = 900
-const ADDRESS_GEOCODE_MIN_LEN = 4
 
 const ORDER_STATUS_OPTIONS: ApiOrderStatus[] = [
   'pending',
@@ -431,6 +431,7 @@ function OrderTestCheckboxPicker({
 
 export function OrderManagementPage() {
   const hasApi = isApiMode()
+  const { showSuccess, showError } = useToast()
   const [rows, setRows] = useState<ApiOrderListRow[]>([])
   const [users, setUsers] = useState<UserListRow[]>([])
   const [staff, setStaff] = useState<StaffListRow[]>([])
@@ -439,6 +440,8 @@ export function OrderManagementPage() {
   const [loading, setLoading] = useState(hasApi)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [refreshTick, setRefreshTick] = useState(0)
+
+  useErrorToast(loadError)
 
   const [orderFilterStatus, setOrderFilterStatus] = useState<'' | ApiOrderStatus>('')
   const [orderFilterPriority, setOrderFilterPriority] = useState<'' | 'urgent' | 'elective'>('')
@@ -470,7 +473,17 @@ export function OrderManagementPage() {
   const [createTestPickerOpen, setCreateTestPickerOpen] = useState(false)
   const [createLatitude, setCreateLatitude] = useState<number | ''>(0)
   const [createLongitude, setCreateLongitude] = useState<number | ''>(0)
-  const [createGeocodeHint, setCreateGeocodeHint] = useState<string | null>(null)
+
+  const onCreateGeocodeCoords = useCallback((lat: number, lng: number) => {
+    setCreateLatitude(lat)
+    setCreateLongitude(lng)
+  }, [])
+
+  const createGeocodeHint = useAddressGeocode({
+    enabled: createOpen,
+    address: createAddress,
+    onCoords: onCreateGeocodeCoords,
+  })
 
   const [statusOpen, setStatusOpen] = useState(false)
   const [statusTarget, setStatusTarget] = useState<ApiOrderListRow | null>(null)
@@ -565,44 +578,6 @@ export function OrderManagementPage() {
       cancelled = true
     }
   }, [hasApi, refreshTick, ordersListQuery, ordersPage])
-
-  useEffect(() => {
-    if (!createOpen) return
-
-    const trimmed = createAddress.trim()
-    if (trimmed.length < ADDRESS_GEOCODE_MIN_LEN) {
-      setCreateGeocodeHint(null)
-      return
-    }
-
-    let alive = true
-    const ac = new AbortController()
-    const timer = window.setTimeout(() => {
-      setCreateGeocodeHint('Looking up address…')
-      void (async () => {
-        try {
-          const hit = await nominatimSearch(trimmed, ac.signal)
-          if (!alive || ac.signal.aborted) return
-          if (hit) {
-            setCreateLatitude(hit.lat)
-            setCreateLongitude(hit.lng)
-            setCreateGeocodeHint(null)
-          } else {
-            setCreateGeocodeHint('No match for that address. Try a fuller line or set the pin on the map.')
-          }
-        } catch {
-          if (!alive || ac.signal.aborted) return
-          setCreateGeocodeHint('Could not look up address. Set the pin on the map or try again.')
-        }
-      })()
-    }, ADDRESS_GEOCODE_DEBOUNCE_MS)
-
-    return () => {
-      alive = false
-      ac.abort()
-      window.clearTimeout(timer)
-    }
-  }, [createOpen, createAddress])
 
   useEffect(() => {
     if (!createOpen) setCreateTestPickerOpen(false)
@@ -790,14 +765,14 @@ export function OrderManagementPage() {
     try {
       const order = await fetchOrderById(o.id)
       if (!order) {
-        window.alert('Order not found.')
+        showError('Order not found.')
         return
       }
       setAssignOrderDetail(order)
       setAssignOrderId(order.id)
       setAssignOpen(true)
     } catch (e) {
-      window.alert(e instanceof Error ? e.message : 'Failed to load order')
+      showError(messageFromError(e, 'Failed to load order'))
     }
   }
 
@@ -976,9 +951,10 @@ export function OrderManagementPage() {
     setDeleteTarget(null)
     try {
       await deleteOrder(row.id)
+      showSuccess('Order deleted.')
       bumpOrderViews()
     } catch (e) {
-      window.alert(e instanceof Error ? e.message : 'Delete failed')
+      showError(messageFromError(e, 'Delete failed'))
     }
   }
 
@@ -1006,28 +982,15 @@ export function OrderManagementPage() {
         </div>
       ) : null}
 
-      {loadError ? (
-        <div className="card" style={{ borderColor: '#f0c4c4', background: '#fff8f8' }}>
-          <p style={{ margin: 0, color: '#ba1a1a', fontSize: '0.9rem' }}>{loadError}</p>
-        </div>
-      ) : null}
-
       <div className="list-tools-row">
         <div className="list-filters-bar" aria-label="Order filters">
-          <div className="list-filters-bar__group list-filters-bar__group--text">
-            <label className="list-filters-bar__label" htmlFor="order-filter-patient">
-              Patient
-            </label>
-            <input
-              id="order-filter-patient"
-              className="list-filters-bar__input"
-              placeholder="Name contains…"
-              value={orderFilterPatientInput}
-              onChange={(e) => setOrderFilterPatientInput(e.target.value)}
-              disabled={!hasApi || loading}
-              autoComplete="off"
-            />
-          </div>
+          <ListFilterSearchField
+            id="order-filter-patient"
+            label="Patient"
+            value={orderFilterPatientInput}
+            onChange={(e) => setOrderFilterPatientInput(e.target.value)}
+            disabled={!hasApi || loading}
+          />
           <div className="list-filters-bar__group">
             <label className="list-filters-bar__label" htmlFor="order-filter-status">
               Status
@@ -1110,7 +1073,7 @@ export function OrderManagementPage() {
 
       <div className="card">
         <div className="table-wrap">
-          <table className="data-table data-table--catalog">
+          <table className="data-table data-table--catalog data-table--align-center">
             <thead>
               <tr>
                 <th scope="col">Patient</th>
@@ -1305,7 +1268,7 @@ export function OrderManagementPage() {
                 ) : null}
                 <p style={{ margin: '0 0 0.45rem', fontSize: '0.82rem', color: 'var(--muted)' }}>
                   Open <strong>Test</strong> for search and checkboxes (multi-select). Selected lines also appear in the
-                  table below — use Remove there if a test is not in the current search results.
+                  table below — use Delete there if a test is not in the current search results.
                 </p>
                 <OrderTestCheckboxPicker
                   disabled={createSubmitting || tests.length === 0}
@@ -1357,7 +1320,7 @@ export function OrderManagementPage() {
                                   onClick={() => removeCreateTest(id)}
                                   disabled={createSubmitting}
                                 >
-                                  Remove
+                                  Delete
                                 </button>
                               </td>
                             </tr>
@@ -1406,10 +1369,7 @@ export function OrderManagementPage() {
                     setCreateLatitude(lat)
                     setCreateLongitude(lng)
                   }}
-                  onAddressFromMap={(addr) => {
-                    setCreateAddress(addr)
-                    setCreateGeocodeHint(null)
-                  }}
+                  onAddressFromMap={setCreateAddress}
                 />
                 <p className="user-form-modal__coords" aria-live="polite">
                   {formatCoordPair(createLatitude, createLongitude)}
@@ -1988,7 +1948,7 @@ export function OrderManagementPage() {
                                         onClick={() => removeAssignTest(id)}
                                         disabled={assignSubmitting}
                                       >
-                                        Remove
+                                        Delete
                                       </button>
                                     </td>
                                   </tr>

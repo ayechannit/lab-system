@@ -2,10 +2,14 @@ import { useEffect, useMemo, useState } from 'react'
 import { ConfirmDialog } from '../components/common/ConfirmDialog'
 import { LoadingSpinner } from '../components/common/LoadingSpinner'
 import { StaffFormModal } from '../components/staff/StaffFormModal'
+import { ListFilterSearchField } from '../components/common/ListFilterSearchField'
 import { PageHeader } from '../components/common/PageHeader'
+import { useToast } from '../hooks/ToastContext'
+import { messageFromError, useErrorToast } from '../hooks/usePageNotify'
 import { DEFAULT_TABLE_PAGE_SIZE, TablePagination } from '../components/common/TablePagination'
 import { TableActionMenu } from '../components/common/TableActionMenu'
 import type { StaffListRow, StaffRole } from '../model/types'
+import { useAuth } from '../hooks/AuthContext'
 import { isApiMode } from '../services/apiBase'
 import { deleteStaff, fetchStaffList, type FetchStaffListParams } from '../services/staffService'
 import '../components/common/ui.css'
@@ -24,10 +28,15 @@ const STAFF_ROLES: StaffRole[] = ['admin', 'lab_technician', 'reception', 'manag
 
 export function StaffManagementPage() {
   const hasApi = isApiMode()
+  const { account } = useAuth()
+  const { showSuccess, showError } = useToast()
+  const currentStaffId = account?.type === 'staff' ? account.id : null
   const [rows, setRows] = useState<StaffListRow[]>([])
   const [loading, setLoading] = useState(hasApi)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [refreshTick, setRefreshTick] = useState(0)
+
+  useErrorToast(loadError)
 
   const [staffFilterNameInput, setStaffFilterNameInput] = useState('')
   const [staffFilterName, setStaffFilterName] = useState('')
@@ -125,11 +134,16 @@ export function StaffManagementPage() {
     if (!deleteTarget || !hasApi) return
     const row = deleteTarget
     setDeleteTarget(null)
+    if (currentStaffId && row.id === currentStaffId) {
+      showError('You cannot delete your own account.')
+      return
+    }
     try {
       await deleteStaff(row.id)
+      showSuccess(`Deleted staff member "${row.name}".`)
       setRefreshTick((t) => t + 1)
     } catch (e) {
-      window.alert(e instanceof Error ? e.message : 'Delete failed')
+      showError(messageFromError(e, 'Delete failed'))
     }
   }
 
@@ -158,29 +172,16 @@ export function StaffManagementPage() {
         </div>
       ) : null}
 
-      {loadError ? (
-        <div className="card" style={{ borderColor: '#f0c4c4', background: '#fff8f8' }}>
-          <p style={{ margin: 0, color: '#ba1a1a', fontSize: '0.9rem' }}>{loadError}</p>
-        </div>
-      ) : null}
-
       <div className="card">
         <div className="list-tools-row">
           <div className="list-filters-bar" aria-label="Staff filters">
-            <div className="list-filters-bar__group list-filters-bar__group--text">
-              <label className="list-filters-bar__label" htmlFor="staff-filter-name">
-                Name
-              </label>
-              <input
-                id="staff-filter-name"
-                className="list-filters-bar__input"
-                placeholder="Contains…"
-                value={staffFilterNameInput}
-                onChange={(e) => setStaffFilterNameInput(e.target.value)}
-                disabled={loading || !hasApi}
-                autoComplete="off"
-              />
-            </div>
+            <ListFilterSearchField
+              id="staff-filter-name"
+              label="Name"
+              value={staffFilterNameInput}
+              onChange={(e) => setStaffFilterNameInput(e.target.value)}
+              disabled={loading || !hasApi}
+            />
             <div className="list-filters-bar__group">
               <label className="list-filters-bar__label" htmlFor="staff-filter-role">
                 Role
@@ -289,13 +290,17 @@ export function StaffManagementPage() {
                         onOpenChange={(next) => setOpenMenuId(next ? r.id : null)}
                         items={[
                           { label: 'Edit', onSelect: () => openEdit(r) },
-                          {
-                            label: 'Delete',
-                            onSelect: () => {
-                              setDeleteTarget(r)
-                              setOpenMenuId(null)
-                            },
-                          },
+                          ...(currentStaffId === r.id
+                            ? []
+                            : [
+                                {
+                                  label: 'Delete',
+                                  onSelect: () => {
+                                    setDeleteTarget(r)
+                                    setOpenMenuId(null)
+                                  },
+                                },
+                              ]),
                         ]}
                       />
                     </td>
@@ -341,7 +346,10 @@ export function StaffManagementPage() {
         initial={editInitial}
         existingRows={rows}
         onClose={closeForm}
-        onSuccess={() => setRefreshTick((t) => t + 1)}
+        onSuccess={() => {
+          showSuccess(formMode === 'edit' ? 'Staff member updated.' : 'Staff member created.')
+          setRefreshTick((t) => t + 1)
+        }}
       />
     </div>
   )

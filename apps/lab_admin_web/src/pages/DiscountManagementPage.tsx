@@ -2,7 +2,13 @@ import { useEffect, useMemo, useState } from 'react'
 import { ConfirmDialog } from '../components/common/ConfirmDialog'
 import { LoadingSpinner } from '../components/common/LoadingSpinner'
 import { DiscountFormModal } from '../components/discounts/DiscountFormModal'
+import {
+  ListFilterSearchField,
+  listFilterSearchPlaceholder,
+} from '../components/common/ListFilterSearchField'
 import { PageHeader } from '../components/common/PageHeader'
+import { useToast } from '../hooks/ToastContext'
+import { messageFromError, useErrorToast } from '../hooks/usePageNotify'
 import { DEFAULT_TABLE_PAGE_SIZE, TablePagination } from '../components/common/TablePagination'
 import { TableActionMenu } from '../components/common/TableActionMenu'
 import type { LabTestCatalogRow } from '../model/types'
@@ -37,11 +43,14 @@ function roleLabel(role: string): string {
 
 export function DiscountManagementPage() {
   const hasApi = isApiMode()
+  const { showSuccess, showError } = useToast()
   const [rows, setRows] = useState<TestDiscountListRow[]>([])
   const [tests, setTests] = useState<LabTestCatalogRow[]>([])
   const [loading, setLoading] = useState(hasApi)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [refreshTick, setRefreshTick] = useState(0)
+
+  useErrorToast(loadError)
 
   const [discountPage, setDiscountPage] = useState(1)
   const [discountPageSize, setDiscountPageSize] = useState(DEFAULT_TABLE_PAGE_SIZE)
@@ -147,9 +156,10 @@ export function DiscountManagementPage() {
     setDeleteTarget(null)
     try {
       await deleteDiscountById(row.id)
+      showSuccess('Discount rule deleted.')
       setRefreshTick((t) => t + 1)
     } catch (e) {
-      window.alert(e instanceof Error ? e.message : 'Delete failed')
+      showError(messageFromError(e, 'Delete failed'))
     }
   }
 
@@ -181,29 +191,17 @@ export function DiscountManagementPage() {
         </div>
       ) : null}
 
-      {loadError ? (
-        <div className="card" style={{ borderColor: '#f0c4c4', background: '#fff8f8' }}>
-          <p style={{ margin: 0, color: '#ba1a1a', fontSize: '0.9rem' }}>{loadError}</p>
-        </div>
-      ) : null}
-
       <div className="card">
         <div className="list-tools-row">
           <div className="list-filters-bar" aria-label="Discount filters">
-            <div className="list-filters-bar__group list-filters-bar__group--text">
-              <label className="list-filters-bar__label" htmlFor="discount-filter-test">
-                Test
-              </label>
-              <input
-                id="discount-filter-test"
-                className="list-filters-bar__input"
-                placeholder="Name or code contains…"
-                value={discountSearchInput}
-                onChange={(e) => setDiscountSearchInput(e.target.value)}
-                disabled={loading || !hasApi}
-                autoComplete="off"
-              />
-            </div>
+            <ListFilterSearchField
+              id="discount-filter-test"
+              label="Test"
+              placeholder={listFilterSearchPlaceholder('Test', 'name or code')}
+              value={discountSearchInput}
+              onChange={(e) => setDiscountSearchInput(e.target.value)}
+              disabled={loading || !hasApi}
+            />
             <div className="list-filters-bar__group">
               <label className="list-filters-bar__label" htmlFor="discount-filter-role">
                 Role
@@ -383,7 +381,10 @@ export function DiscountManagementPage() {
         initial={editInitial}
         tests={tests}
         onClose={closeForm}
-        onSuccess={() => setRefreshTick((t) => t + 1)}
+        onSuccess={() => {
+          showSuccess(formMode === 'edit' ? 'Discount rule updated.' : 'Discount rule created.')
+          setRefreshTick((t) => t + 1)
+        }}
       />
     </div>
   )

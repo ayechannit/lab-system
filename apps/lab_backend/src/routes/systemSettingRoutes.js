@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const systemSettingController = require('../controllers/systemSettingController');
 const { authMiddleware } = require('../middlewares/authMiddleware');
+const upload = require('../middlewares/upload');
 
 /**
  * @swagger
@@ -95,5 +96,49 @@ router.get('/', systemSettingController.getSettings);
  *         description: Unauthorized
  */
 router.put('/', authMiddleware, systemSettingController.updateSettings);
+
+/**
+ * @swagger
+ * /api/system-settings/logo:
+ *   post:
+ *     summary: Upload lab logo image (updates logo_url)
+ *     tags: [SystemSettings]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               logo:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       200:
+ *         description: Updated system settings with new logo_url
+ *       400:
+ *         description: No file uploaded
+ *       401:
+ *         description: Unauthorized
+ */
+router.post('/logo', authMiddleware, upload.uploadLogo.single('logo'), systemSettingController.uploadLogo);
+
+/**
+ * @swagger
+ * /api/system-settings/reset:
+ *   post:
+ *     summary: Reset all system settings to application defaults
+ *     tags: [SystemSettings]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Settings reset to defaults
+ *       401:
+ *         description: Unauthorized
+ */
+router.post('/reset', authMiddleware, systemSettingController.resetToDefaults);
 
 module.exports = router;

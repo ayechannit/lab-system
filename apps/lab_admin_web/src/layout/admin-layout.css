@@ -394,6 +394,7 @@ button.brand.admin-brand-trigger:focus-visible {
 .admin-content {
   padding: 1.5rem 1.75rem 2.5rem;
   flex: 1;
+  min-width: 0;
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;

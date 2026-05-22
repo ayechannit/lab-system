@@ -19,11 +19,12 @@ class StorageService {
    * @param {Object} file - The file object from multer.
    * @returns {Promise<string>} - The URL or key to access the file.
    */
-  static async uploadFile(file) {
+  static async uploadFile(file, folder = 'results') {
+    const safeFolder = String(folder || 'results').replace(/^\/+|\/+$/g, '') || 'results';
     if (process.env.NODE_ENV === 'production') {
       // S3 Upload
       const fileStream = fs.createReadStream(file.path);
-      const key = `results/${file.filename}`;
+      const key = `${safeFolder}/${file.filename}`;
       
       const uploadParams = {
         Bucket: bucketName,

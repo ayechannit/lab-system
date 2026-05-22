@@ -1,7 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import { ConfirmDialog } from '../components/common/ConfirmDialog'
 import { LoadingSpinner } from '../components/common/LoadingSpinner'
+import {
+  ListFilterSearchField,
+  listFilterSearchPlaceholder,
+} from '../components/common/ListFilterSearchField'
 import { PageHeader } from '../components/common/PageHeader'
+import { useToast } from '../hooks/ToastContext'
+import { useErrorToast } from '../hooks/usePageNotify'
 import { DEFAULT_TABLE_PAGE_SIZE, TablePagination } from '../components/common/TablePagination'
 import { TableActionMenu } from '../components/common/TableActionMenu'
 import { PointSettingFormModal } from '../components/loyalty/PointSettingFormModal'
@@ -41,13 +47,13 @@ const usersColSpan = 4
 
 export function LoyaltyPointsManagementPage() {
   const hasApi = isApiMode()
+  const { showSuccess, showError } = useToast()
   const [rules, setRules] = useState<PointSettingRow[]>([])
   const [users, setUsers] = useState<UserListRow[]>([])
   const [loading, setLoading] = useState(hasApi)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [refreshTick, setRefreshTick] = useState(0)
   const [userSearch, setUserSearch] = useState('')
-  const [banner, setBanner] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null)
 
   const [rulesPage, setRulesPage] = useState(1)
   const [rulesPageSize, setRulesPageSize] = useState(DEFAULT_TABLE_PAGE_SIZE)
@@ -63,11 +69,7 @@ export function LoyaltyPointsManagementPage() {
   const [deleting, setDeleting] = useState(false)
   const [loyaltyTab, setLoyaltyTab] = useState<'rules' | 'users'>('rules')
 
-  useEffect(() => {
-    if (!banner) return
-    const t = window.setTimeout(() => setBanner(null), 6000)
-    return () => window.clearTimeout(t)
-  }, [banner])
+  useErrorToast(loadError)
 
   useEffect(() => {
     if (!hasApi) {
@@ -153,13 +155,10 @@ export function LoyaltyPointsManagementPage() {
     setDeleting(true)
     try {
       await deletePointSetting(deleteRule.id)
-      setBanner({ kind: 'ok', text: 'Earn rule removed.' })
+      showSuccess('Earn rule deleted.')
       setRefreshTick((x) => x + 1)
     } catch (e) {
-      setBanner({
-        kind: 'err',
-        text: e instanceof Error ? e.message : 'Could not delete rule',
-      })
+      showError(e instanceof Error ? e.message : 'Could not delete rule')
     } finally {
       setDeleting(false)
       setDeleteRule(null)
@@ -183,38 +182,13 @@ export function LoyaltyPointsManagementPage() {
         </div>
       ) : null}
 
-      {banner ? (
-        <div
-          className="card"
-          style={{
-            borderColor: banner.kind === 'ok' ? '#b6e2c9' : '#f0c4c4',
-            background: banner.kind === 'ok' ? '#f3fcf6' : '#fff8f8',
-          }}
-        >
-          <p
-            style={{
-              margin: 0,
-              fontSize: '0.9rem',
-              color: banner.kind === 'ok' ? '#1b5e2a' : '#ba1a1a',
-            }}
-          >
-            {banner.text}
-          </p>
-        </div>
-      ) : null}
-
-      {loadError ? (
-        <div className="card" style={{ borderColor: '#f0c4c4', background: '#fff8f8' }}>
-          <p style={{ margin: 0, color: '#ba1a1a', fontSize: '0.9rem' }}>{loadError}</p>
-        </div>
-      ) : (
-        <div
-          className="card"
-          style={{
-            boxShadow: '0 1px 3px rgba(15, 23, 42, 0.06)',
-            border: '1px solid var(--border, #e8ecf4)',
-          }}
-        >
+      <div
+        className="card"
+        style={{
+          boxShadow: '0 1px 3px rgba(15, 23, 42, 0.06)',
+          border: '1px solid var(--border, #e8ecf4)',
+        }}
+      >
           <div className="segment-tabs" role="tablist" aria-label="Loyalty sections">
             <button
               type="button"
@@ -376,21 +350,14 @@ export function LoyaltyPointsManagementPage() {
             </p>
             <div className="list-tools-row">
               <div className="list-filters-bar" aria-label="User points search">
-                <div className="list-filters-bar__group list-filters-bar__group--text">
-                  <label className="list-filters-bar__label" htmlFor="user-search">
-                    Search
-                  </label>
-                  <input
-                    id="user-search"
-                    type="search"
-                    className="list-filters-bar__input"
-                    placeholder="Name, email, role…"
-                    value={userSearch}
-                    onChange={(e) => setUserSearch(e.target.value)}
-                    disabled={!hasApi || loading}
-                    autoComplete="off"
-                  />
-                </div>
+                <ListFilterSearchField
+                  id="user-search"
+                  label="User"
+                  placeholder={listFilterSearchPlaceholder('User', 'name, email, role')}
+                  value={userSearch}
+                  onChange={(e) => setUserSearch(e.target.value)}
+                  disabled={!hasApi || loading}
+                />
                 <button
                   type="button"
                   className="btn btn-ghost btn-sm list-filters-bar__clear"
@@ -480,7 +447,6 @@ export function LoyaltyPointsManagementPage() {
             ) : null}
           </div>
         </div>
-      )}
 
       <PointSettingFormModal
         key={formNonce}
@@ -490,10 +456,7 @@ export function LoyaltyPointsManagementPage() {
         onClose={() => setFormOpen(false)}
         onSuccess={() => {
           setLoyaltyTab('rules')
-          setBanner({
-            kind: 'ok',
-            text: formMode === 'edit' ? 'Earn rule updated.' : 'Earn rule created.',
-          })
+          showSuccess(formMode === 'edit' ? 'Earn rule updated.' : 'Earn rule created.')
           setRefreshTick((x) => x + 1)
         }}
       />

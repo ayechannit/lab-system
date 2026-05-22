@@ -9,8 +9,10 @@ import '../../app/session_scope.dart';
 import '../../models/lab_order.dart';
 import '../../models/lab_test_pick.dart';
 import '../../models/user_role.dart';
+import '../../config/map_defaults.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/common/app_brand_mark.dart';
+import '../../widgets/location/address_location_fields.dart';
 import '../../widgets/navigation/lab_main_bottom_nav.dart';
 
 enum _OrderMode { catalogTests, prescriptionOnly }
@@ -35,8 +37,9 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
   final _addressLine = TextEditingController();
   final _testFilter = TextEditingController();
   OrderPriority _priority = OrderPriority.elective;
-  static const double _defaultLat = 0;
-  static const double _defaultLng = 0;
+  double _collectionLat = 0;
+  double _collectionLng = 0;
+  bool _collectionCoordsInit = false;
 
   Future<List<LabTestPick>>? _testsFuture;
   List<LabTestPick> _tests = const [];
@@ -57,8 +60,15 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
     super.didChangeDependencies();
     if (!_prefilledProfileAddress) {
       final u = SessionScope.of(context).user;
-      if (u != null && u.address.isNotEmpty && _addressLine.text.trim().isEmpty) {
-        _addressLine.text = u.address;
+      if (u != null) {
+        if (u.address.isNotEmpty && _addressLine.text.trim().isEmpty) {
+          _addressLine.text = u.address;
+        }
+        if (!_collectionCoordsInit) {
+          _collectionLat = u.latitude;
+          _collectionLng = u.longitude;
+          _collectionCoordsInit = true;
+        }
       }
       _prefilledProfileAddress = true;
     }
@@ -533,13 +543,38 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
             _SectionCard(
               icon: Icons.location_on_outlined,
               title: 'Collection address',
-              child: TextFormField(
-                controller: _addressLine,
-                decoration: const InputDecoration(
-                  labelText: 'Full address for sample collection',
+              child: FormField<String>(
+                validator: (_) =>
+                    _addressLine.text.trim().isEmpty ? 'Enter collection address' : null,
+                builder: (state) => Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    AddressLocationFields(
+                      addressLine: _addressLine.text,
+                      latitude: _collectionLat,
+                      longitude: _collectionLng,
+                      addressLabel: 'Full address for sample collection',
+                      onChanged: (line, lat, lng) {
+                        _addressLine.text = line;
+                        setState(() {
+                          _collectionLat = lat;
+                          _collectionLng = lng;
+                        });
+                        state.didChange(line);
+                      },
+                    ),
+                    if (state.hasError)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Text(
+                          state.errorText!,
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: Theme.of(context).colorScheme.error,
+                              ),
+                        ),
+                      ),
+                  ],
                 ),
-                maxLines: 3,
-                validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
               ),
             ),
             const SizedBox(height: 12),
@@ -756,6 +791,16 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
                           );
                           return;
                         }
+                        if (!hasMeaningfulCoordinates(_collectionLat, _collectionLng)) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Set collection coordinates — type the address or choose on the map.',
+                              ),
+                            ),
+                          );
+                          return;
+                        }
 
                         final ageYears = int.tryParse(_age.text.trim());
                         if (ageYears == null || ageYears <= 0) {
@@ -780,8 +825,8 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
                           timeSlot: _timeSlot.text.trim(),
                           address: LabAddress(
                             line: _addressLine.text.trim(),
-                            latitude: user.latitude != 0 ? user.latitude : _defaultLat,
-                            longitude: user.longitude != 0 ? user.longitude : _defaultLng,
+                            latitude: _collectionLat,
+                            longitude: _collectionLng,
                             placeId: null,
                           ),
                           createdAt: DateTime.now(),

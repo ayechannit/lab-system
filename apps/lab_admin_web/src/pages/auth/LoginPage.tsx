@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/AuthContext'
+import { useToast } from '../../hooks/ToastContext'
+import { messageFromError } from '../../hooks/usePageNotify'
 import { authImages } from './authAssets'
 import { AuthFooter } from './AuthFooter'
 import { AuthMarketingPanel } from './AuthMarketingPanel'
@@ -8,12 +10,12 @@ import './auth-screens.css'
 
 export function LoginPage() {
   const { signInWithStaffCredentials, signedIn, initializing } = useAuth()
+  const { showError } = useToast()
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [remember, setRemember] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
   if (!initializing && signedIn) return <Navigate to="/" replace />
@@ -48,25 +50,19 @@ export function LoginPage() {
               style={{ marginTop: '2rem' }}
               onSubmit={(e) => {
                 e.preventDefault()
-                setError(null)
                 setSubmitting(true)
                 void (async () => {
                   try {
                     await signInWithStaffCredentials(email, password, remember)
                     navigate('/')
                   } catch (err) {
-                    setError(err instanceof Error ? err.message : 'Sign-in failed')
+                    showError(messageFromError(err, 'Sign-in failed'))
                   } finally {
                     setSubmitting(false)
                   }
                 })()
               }}
             >
-              {error ? (
-                <p style={{ margin: 0, color: '#b91c1c', fontSize: '0.875rem' }} role="alert">
-                  {error}
-                </p>
-              ) : null}
               <div className="auth-field">
                 <label className="auth-label" htmlFor="identity">
                   Email

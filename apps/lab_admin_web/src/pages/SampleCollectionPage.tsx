@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
+import { ListFilterSearchField } from '../components/common/ListFilterSearchField'
 import { PageHeader } from '../components/common/PageHeader'
+import { useToast } from '../hooks/ToastContext'
+import { useErrorToast } from '../hooks/usePageNotify'
 import { LoadingSpinner } from '../components/common/LoadingSpinner'
 import { DEFAULT_TABLE_PAGE_SIZE, TablePagination } from '../components/common/TablePagination'
 import { isApiMode } from '../services/apiBase'
@@ -33,9 +36,12 @@ function fmtWhen(iso: string | undefined): string {
 
 export function SampleCollectionPage() {
   const hasApi = isApiMode()
+  const { showError, showSuccess } = useToast()
   const [orders, setOrders] = useState<ApiOrderListRow[]>([])
   const [loading, setLoading] = useState(hasApi)
   const [loadError, setLoadError] = useState<string | null>(null)
+
+  useErrorToast(loadError)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set())
   const [routeResult, setRouteResult] = useState<ReturnType<typeof suggestCollectionRoute> | null>(null)
   const [patientInput, setPatientInput] = useState('')
@@ -120,11 +126,12 @@ export function SampleCollectionPage() {
   const runAiRoute = () => {
     const picked = routable.filter((o) => selectedIds.has(o.id))
     if (picked.length < 2) {
-      window.alert('Select at least two orders to build a multi-stop collection route.')
+      showError('Select at least two orders to build a multi-stop collection route.')
       return
     }
     const addresses = picked.map((o) => `${o.id}: ${o.address ?? '—'}`)
     setRouteResult(suggestCollectionRoute(addresses))
+    showSuccess('Collection route generated.')
   }
 
   return (
@@ -142,28 +149,15 @@ export function SampleCollectionPage() {
         </div>
       ) : null}
 
-      {loadError ? (
-        <div className="card" style={{ borderColor: '#f0c4c4', background: '#fff8f8' }}>
-          <p style={{ margin: 0, color: '#ba1a1a', fontSize: '0.9rem' }}>{loadError}</p>
-        </div>
-      ) : null}
-
       <div className="list-tools-row">
         <div className="list-filters-bar" aria-label="Filter orders for collection">
-          <div className="list-filters-bar__group list-filters-bar__group--text">
-            <label className="list-filters-bar__label" htmlFor="collection-patient">
-              Patient
-            </label>
-            <input
-              id="collection-patient"
-              className="list-filters-bar__input"
-              placeholder="Name contains…"
-              value={patientInput}
-              onChange={(e) => setPatientInput(e.target.value)}
-              disabled={!hasApi || loading}
-              autoComplete="off"
-            />
-          </div>
+          <ListFilterSearchField
+            id="collection-patient"
+            label="Patient"
+            value={patientInput}
+            onChange={(e) => setPatientInput(e.target.value)}
+            disabled={!hasApi || loading}
+          />
           <div className="list-filters-bar__group">
             <label className="list-filters-bar__label" htmlFor="collection-status">
               Status

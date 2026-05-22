@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { MyProfileModal } from '../components/profile/MyProfileModal'
 import { useAuth } from '../hooks/AuthContext'
+import { useToast } from '../hooks/ToastContext'
 import type { SessionRole } from '../model/types'
 import './admin-layout.css'
 
@@ -47,6 +48,9 @@ const nav: NavItem[] = [
   { to: '/ratings', label: 'Ratings & feedback', icon: 'reviews' },
   { to: '/discounts', label: 'Discounts', icon: 'sell' },
   { to: '/loyalty', label: 'Loyalty points', icon: 'card_giftcard' },
+  { to: '/ai-config', label: 'AI configuration', icon: 'smart_toy' },
+  { to: '/ai-prompts', label: 'AI prompts', icon: 'chat' },
+  { to: '/system-settings', label: 'System settings', icon: 'settings' },
   { to: '/reports', label: 'Reports', icon: 'bar_chart' },
 ]
 
@@ -64,6 +68,7 @@ function readSidebarCollapsed(): boolean {
 }
 
 export function AdminLayout() {
+  const { showSuccess } = useToast()
   const { signOut, account, role, refreshAccount } = useAuth()
   const navigate = useNavigate()
   const { pathname } = useLocation()
@@ -254,7 +259,10 @@ export function AdminLayout() {
                   account={account}
                   sessionRole={role}
                   onClose={() => setProfileOpen(false)}
-                  onSuccess={() => refreshAccount()}
+                  onSuccess={() => {
+                    void refreshAccount()
+                    showSuccess('Profile updated.')
+                  }}
                 />
               </>
             ) : null}

@@ -1,5 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
+import {
+  ListFilterSearchField,
+  listFilterSearchPlaceholder,
+} from '../components/common/ListFilterSearchField'
 import { PageHeader } from '../components/common/PageHeader'
+import { useErrorToast } from '../hooks/usePageNotify'
 import { LoadingSpinner } from '../components/common/LoadingSpinner'
 import { DEFAULT_TABLE_PAGE_SIZE, TablePagination } from '../components/common/TablePagination'
 import { isApiMode } from '../services/apiBase'
@@ -27,6 +32,9 @@ export function RatingsFeedbackPage() {
   const [rows, setRows] = useState<RatingListRow[]>([])
   const [loading, setLoading] = useState(hasApi)
   const [loadError, setLoadError] = useState<string | null>(null)
+
+  useErrorToast(loadError)
+
   const [ratingFilterInput, setRatingFilterInput] = useState('')
   const [ratingFilter, setRatingFilter] = useState('')
   const [ratingPage, setRatingPage] = useState(1)
@@ -113,28 +121,16 @@ export function RatingsFeedbackPage() {
         </div>
       ) : null}
 
-      {loadError ? (
-        <div className="card" style={{ borderColor: '#f0c4c4', background: '#fff8f8' }}>
-          <p style={{ margin: 0, color: '#ba1a1a', fontSize: '0.9rem' }}>{loadError}</p>
-        </div>
-      ) : null}
-
       <div className="list-tools-row">
         <div className="list-filters-bar" aria-label="Filter ratings">
-          <div className="list-filters-bar__group list-filters-bar__group--text">
-            <label className="list-filters-bar__label" htmlFor="rating-filter-search">
-              Search
-            </label>
-            <input
-              id="rating-filter-search"
-              className="list-filters-bar__input"
-              placeholder="User, role, stars, remark…"
-              value={ratingFilterInput}
-              onChange={(e) => setRatingFilterInput(e.target.value)}
-              disabled={!hasApi || loading}
-              autoComplete="off"
-            />
-          </div>
+          <ListFilterSearchField
+            id="rating-filter-search"
+            label="Feedback"
+            placeholder={listFilterSearchPlaceholder('Feedback', 'user, role, stars, remark')}
+            value={ratingFilterInput}
+            onChange={(e) => setRatingFilterInput(e.target.value)}
+            disabled={!hasApi || loading}
+          />
           <button
             type="button"
             className="btn btn-ghost btn-sm list-filters-bar__clear"

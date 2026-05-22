@@ -3,12 +3,11 @@ import 'package:go_router/go_router.dart';
 
 import '../../app/session_scope.dart';
 import '../../config/map_defaults.dart';
-import '../../models/address_map_pick_result.dart';
 import '../../models/post_register_login_hint.dart';
 import '../../models/user_role.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/common/app_brand_mark.dart';
-import '../../widgets/location/address_map_picker_screen.dart';
+import '../../widgets/location/address_location_fields.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key, this.initialRole});
@@ -175,53 +174,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         ),
                       ),
                       const SizedBox(height: 12),
-                      _RegisterLabel(text: 'Address'),
-                      const SizedBox(height: 8),
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: OutlinedButton.icon(
-                          onPressed: () async {
-                            final r = await Navigator.of(context).push<AddressMapPickResult?>(
-                              MaterialPageRoute(
-                                builder: (_) => AddressMapPickerScreen(
-                                  initialAddress: _addressLine,
-                                  initialLatitude: _addressLat,
-                                  initialLongitude: _addressLng,
-                                ),
-                              ),
-                            );
-                            if (!context.mounted || r == null) return;
-                            setState(() {
-                              _addressLine = r.addressLine;
-                              _addressLat = r.latitude;
-                              _addressLng = r.longitude;
-                            });
-                          },
-                          icon: const Icon(Icons.map_outlined, size: 20),
-                          label: const Text('Choose on map'),
-                        ),
-                      ),
-                      if (_addressLine.trim().isNotEmpty) ...[
-                        const SizedBox(height: 10),
-                        Text(
-                          _addressLine.trim(),
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: AppColors.onSurface,
-                                height: 1.35,
-                              ),
-                        ),
-                      ],
-                      const SizedBox(height: 12),
-                      _RegisterLabel(text: 'Latitude–Longitude'),
-                      const SizedBox(height: 6),
-                      Text(
-                        hasMeaningfulCoordinates(_addressLat, _addressLng)
-                            ? '${_addressLat.toStringAsFixed(5)}, ${_addressLng.toStringAsFixed(5)}'
-                            : '—',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: AppColors.onSurfaceVariant,
-                              fontFeatures: const [FontFeature.tabularFigures()],
-                            ),
+                      AddressLocationFields(
+                        addressLine: _addressLine,
+                        latitude: _addressLat,
+                        longitude: _addressLng,
+                        onChanged: (line, lat, lng) {
+                          setState(() {
+                            _addressLine = line;
+                            _addressLat = lat;
+                            _addressLng = lng;
+                          });
+                        },
                       ),
                       const SizedBox(height: 12),
                       _RegisterLabel(text: 'Password'),

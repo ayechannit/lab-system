@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useState, type ChangeEventHandler, type FormEvent } from 'react'
+import { ListFilterSearchField } from '../components/common/ListFilterSearchField'
 import { PageHeader } from '../components/common/PageHeader'
+import { useToast } from '../hooks/ToastContext'
+import { messageFromError, useErrorToast } from '../hooks/usePageNotify'
 import { LoadingSpinner } from '../components/common/LoadingSpinner'
 import { DEFAULT_TABLE_PAGE_SIZE, TablePagination } from '../components/common/TablePagination'
 import { isApiMode } from '../services/apiBase'
@@ -27,20 +30,25 @@ const ORDER_STATUS_OPTIONS: { value: '' | ApiOrderStatus; label: string }[] = [
 
 export function LabResultManagementPage() {
   const hasApi = isApiMode()
+  const { showSuccess, showError, showInfo } = useToast()
   const [orders, setOrders] = useState<ApiOrderListRow[]>([])
   const [listLoading, setListLoading] = useState(hasApi)
   const [listError, setListError] = useState<string | null>(null)
+
+  useErrorToast(listError)
+
   const [orderId, setOrderId] = useState('')
   const [detail, setDetail] = useState<ApiOrderDetail | null>(null)
   const [detailLoading, setDetailLoading] = useState(false)
   const [detailError, setDetailError] = useState<string | null>(null)
+
+  useErrorToast(detailError)
 
   const [hb, setHb] = useState('')
   const [wbc, setWbc] = useState('')
   const [plt, setPlt] = useState('')
   const [aiResult, setAiResult] = useState<{ passed: boolean; notes: string } | null>(null)
   const [uploadBusy, setUploadBusy] = useState(false)
-  const [uploadError, setUploadError] = useState<string | null>(null)
   const [localPdfName, setLocalPdfName] = useState<string | null>(null)
   const [patientInput, setPatientInput] = useState('')
   const [patientName, setPatientName] = useState('')
@@ -156,7 +164,6 @@ export function LabResultManagementPage() {
   const onPdf: ChangeEventHandler<HTMLInputElement> = (e) => {
     const f = e.target.files?.[0]
     setLocalPdfName(f ? f.name : null)
-    setUploadError(null)
   }
 
   async function submitUpload(ev: FormEvent) {
@@ -165,19 +172,19 @@ export function LabResultManagementPage() {
     const input = (ev.target as HTMLFormElement).querySelector('input[type=file]') as HTMLInputElement | null
     const file = input?.files?.[0]
     if (!file) {
-      setUploadError('Choose a PDF first.')
+      showError('Choose a PDF first.')
       return
     }
     setUploadBusy(true)
-    setUploadError(null)
     try {
       await uploadOrderTestResult(detail.id, firstTestItem.test_id, file)
       const next = await fetchOrderById(detail.id)
       setDetail(next)
       setLocalPdfName(null)
       if (input) input.value = ''
+      showSuccess('Result file uploaded.')
     } catch (err) {
-      setUploadError(err instanceof Error ? err.message : 'Upload failed')
+      showError(messageFromError(err, 'Upload failed'))
     } finally {
       setUploadBusy(false)
     }
@@ -186,19 +193,19 @@ export function LabResultManagementPage() {
   const sendToUser = () => {
     if (!detail) return
     if (detail.status !== 'completed') {
-      window.alert('Set the order status to completed in Order management when the lab run is finished.')
+      showError('Set the order status to completed in Order management when the lab run is finished.')
       return
     }
     const hasServerFile = detail.items.some((it) => Boolean(it.download_url || it.result_file_url))
     if (!hasServerFile) {
-      window.alert('Upload a result file for at least one test line item so it exists on the server.')
+      showError('Upload a result file for at least one test line item so it exists on the server.')
       return
     }
     if (aiResult && !aiResult.passed) {
       const ok = window.confirm('AI flagged issues on the numeric check. Continue anyway?')
       if (!ok) return
     }
-    window.alert(
+    showInfo(
       'Uploaded files are stored on the server; patient apps typically load them via your mobile/backend integration. Confirm your release process with operations.',
     )
   }
@@ -218,28 +225,15 @@ export function LabResultManagementPage() {
         </div>
       ) : null}
 
-      {listError ? (
-        <div className="card" style={{ borderColor: '#f0c4c4', background: '#fff8f8' }}>
-          <p style={{ margin: 0, color: '#ba1a1a', fontSize: '0.9rem' }}>{listError}</p>
-        </div>
-      ) : null}
-
       <div className="list-tools-row">
         <div className="list-filters-bar" aria-label="Filter orders">
-          <div className="list-filters-bar__group list-filters-bar__group--text">
-            <label className="list-filters-bar__label" htmlFor="lab-result-patient">
-              Patient
-            </label>
-            <input
-              id="lab-result-patient"
-              className="list-filters-bar__input"
-              placeholder="Name contains…"
-              value={patientInput}
-              onChange={(e) => setPatientInput(e.target.value)}
-              disabled={!hasApi || listLoading}
-              autoComplete="off"
-            />
-          </div>
+          <ListFilterSearchField
+            id="lab-result-patient"
+            label="Patient"
+            value={patientInput}
+            onChange={(e) => setPatientInput(e.target.value)}
+            disabled={!hasApi || listLoading}
+          />
           <div className="list-filters-bar__group">
             <label className="list-filters-bar__label" htmlFor="lab-result-status">
               Status
@@ -313,9 +307,6 @@ export function LabResultManagementPage() {
               : 'No orders returned from the server.'}
           </p>
         ) : null}
-        {detailError ? (
-          <p style={{ margin: '0.75rem 0 0', color: '#b91c1c', fontSize: '0.875rem' }}>{detailError}</p>
-        ) : null}
         {!listLoading && hasApi ? (
           <TablePagination
             mode="server"
@@ -379,9 +370,6 @@ export function LabResultManagementPage() {
                   {uploadBusy ? 'Uploading…' : 'Upload to server'}
                 </button>
               </form>
-              {uploadError ? (
-                <p style={{ margin: '0.35rem 0 0', fontSize: '0.85rem', color: '#b91c1c' }}>{uploadError}</p>
-              ) : null}
               {firstTestItem?.download_url ? (
                 <p style={{ margin: '0.35rem 0 0', fontSize: '0.85rem', color: 'var(--accent-green)' }}>
                   <a href={firstTestItem.download_url} target="_blank" rel="noreferrer">

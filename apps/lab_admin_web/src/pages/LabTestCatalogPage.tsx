@@ -2,7 +2,10 @@ import { useEffect, useMemo, useState } from 'react'
 import { ConfirmDialog } from '../components/common/ConfirmDialog'
 import { LoadingSpinner } from '../components/common/LoadingSpinner'
 import { LabTestFormModal } from '../components/lab-tests/LabTestFormModal'
+import { ListFilterSearchField } from '../components/common/ListFilterSearchField'
 import { PageHeader } from '../components/common/PageHeader'
+import { useToast } from '../hooks/ToastContext'
+import { messageFromError, useErrorToast } from '../hooks/usePageNotify'
 import { DEFAULT_TABLE_PAGE_SIZE, TablePagination } from '../components/common/TablePagination'
 import { TableActionMenu } from '../components/common/TableActionMenu'
 import type { LabTestCatalogRow } from '../model/types'
@@ -20,10 +23,13 @@ const STATUS_FILTER_OPTIONS: { value: 'all' | 'active' | 'inactive'; label: stri
 
 export function LabTestCatalogPage() {
   const hasApi = isApiMode()
+  const { showSuccess, showError } = useToast()
   const [rows, setRows] = useState<LabTestCatalogRow[]>([])
   const [loading, setLoading] = useState(hasApi)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [refreshTick, setRefreshTick] = useState(0)
+
+  useErrorToast(loadError)
   const [activeFilter, setActiveFilter] = useState<'all' | 'active' | 'inactive'>('all')
   const [searchText, setSearchText] = useState('')
   const [searchApplied, setSearchApplied] = useState('')
@@ -107,9 +113,10 @@ export function LabTestCatalogPage() {
     setDeleteTarget(null)
     try {
       await deleteLabTest(row.id)
+      showSuccess(`Deleted test "${row.test_name}".`)
       setRefreshTick((t) => t + 1)
     } catch (e) {
-      window.alert(e instanceof Error ? e.message : 'Delete failed')
+      showError(messageFromError(e, 'Delete failed'))
     }
   }
 
@@ -152,12 +159,6 @@ export function LabTestCatalogPage() {
         </div>
       ) : null}
 
-      {loadError ? (
-        <div className="card" style={{ borderColor: '#f0c4c4', background: '#fff8f8' }}>
-          <p style={{ margin: 0, color: '#ba1a1a', fontSize: '0.9rem' }}>{loadError}</p>
-        </div>
-      ) : null}
-
       <div className="list-tools-row">
         <div className="list-filters-bar" aria-label="Catalog filters">
           <div className="list-filters-bar__group">
@@ -178,21 +179,13 @@ export function LabTestCatalogPage() {
               ))}
             </select>
           </div>
-          <div className="list-filters-bar__group list-filters-bar__group--text">
-            <label className="list-filters-bar__label" htmlFor="lab-catalog-search">
-              Name
-            </label>
-            <input
-              id="lab-catalog-search"
-              type="search"
-              className="list-filters-bar__input"
-              value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
-              placeholder="Search tests…"
-              disabled={loading || !hasApi}
-              autoComplete="off"
-            />
-          </div>
+          <ListFilterSearchField
+            id="lab-catalog-search"
+            label="Tests"
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            disabled={loading || !hasApi}
+          />
           <button
             type="button"
             className="btn btn-ghost btn-sm list-filters-bar__clear"
@@ -339,7 +332,10 @@ export function LabTestCatalogPage() {
         initial={editInitial}
         existingRows={rows}
         onClose={closeForm}
-        onSuccess={() => setRefreshTick((t) => t + 1)}
+        onSuccess={() => {
+          showSuccess(formMode === 'edit' ? 'Lab test updated.' : 'Lab test created.')
+          setRefreshTick((t) => t + 1)
+        }}
       />
     </div>
   )

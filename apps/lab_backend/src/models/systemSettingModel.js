@@ -1,6 +1,39 @@
 const { sql, poolPromise } = require('../config/db');
 
 class SystemSetting {
+  static toUpdatePayload(row) {
+    return {
+      lab_name: row.lab_name,
+      mode: row.mode,
+      logo_url: row.logo_url,
+      primary_color: row.primary_color,
+      secondary_color: row.secondary_color,
+      custom_colors: row.custom_colors,
+      latitude: row.latitude,
+      longitude: row.longitude,
+      address: row.address,
+      contact_phone: row.contact_phone,
+      contact_email: row.contact_email,
+    };
+  }
+
+  static defaultUpdatePayload(overrides = {}) {
+    return {
+      lab_name: 'MedLab Smart',
+      mode: 'light',
+      logo_url: null,
+      primary_color: '#0055ff',
+      secondary_color: '#00cc66',
+      custom_colors: null,
+      latitude: null,
+      longitude: null,
+      address: null,
+      contact_phone: null,
+      contact_email: null,
+      ...overrides,
+    };
+  }
+
   static async getSettings() {
     const pool = await poolPromise;
     const request = pool.request();
