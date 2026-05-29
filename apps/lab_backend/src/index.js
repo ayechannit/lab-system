@@ -17,6 +17,8 @@ const promptRoutes = require('./routes/promptRoutes');
 const conversationRoutes = require('./routes/conversationRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 const systemSettingRoutes = require('./routes/systemSettingRoutes');
+const reportRoutes = require('./routes/reportRoutes');
+const labResultRoutes = require('./routes/labResultRoutes');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpecs = require('./config/swagger');
 const errorHandler = require('./middlewares/errorHandler');
@@ -52,6 +54,8 @@ app.use('/api/prompts', promptRoutes);
 app.use('/api/conversations', conversationRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/system-settings', systemSettingRoutes);
+app.use('/api/reports', reportRoutes);
+app.use('/api/lab-results', labResultRoutes);
 
 // Base route
 app.get('/', (req, res) => {
