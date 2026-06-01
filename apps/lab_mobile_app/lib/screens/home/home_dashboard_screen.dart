@@ -5,7 +5,8 @@ import '../../app/session_scope.dart';
 import '../../models/lab_order.dart';
 import '../../models/lab_result.dart';
 import '../../theme/app_colors.dart';
-import '../../widgets/common/app_brand_mark.dart';
+import '../../theme/theme_extensions.dart';
+import '../../widgets/common/app_branding_row.dart';
 import '../../widgets/common/quick_action_button.dart';
 import '../../widgets/navigation/lab_main_bottom_nav.dart';
 import '../../widgets/results/lab_result_insight_cards.dart';
@@ -39,29 +40,12 @@ class HomeDashboardScreen extends StatelessWidget {
         (latestReport?.resultPdfUrl ?? '').isNotEmpty;
 
     return Scaffold(
-      backgroundColor: AppColors.surface,
       appBar: AppBar(
         automaticallyImplyLeading: false,
         titleSpacing: 16,
-        title: Row(
-          children: [
-            GestureDetector(
-              onTap: () => context.push('/profile'),
-              child: const AppBrandMark(
-                size: 36,
-                iconSize: 18,
-                borderRadius: 9,
-              ),
-            ),
-            const SizedBox(width: 10),
-            Text(
-              'MedLab Smart',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.w800,
-                  ),
-            ),
-          ],
+        title: GestureDetector(
+          onTap: () => context.push('/profile'),
+          child: const AppBrandingRow(markSize: 36, iconSize: 18, borderRadius: 9),
         ),
       ),
       body: LayoutBuilder(
@@ -82,7 +66,6 @@ class HomeDashboardScreen extends StatelessWidget {
                 'Your workspace',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w700,
-                      color: AppColors.onSurface,
                     ),
               ),
               const SizedBox(height: 10),
@@ -110,7 +93,7 @@ class HomeDashboardScreen extends StatelessWidget {
                         Text(
                           'RESULTS & INSIGHTS',
                           style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                color: AppColors.onSurfaceVariant,
+                                color: context.cs.onSurfaceVariant,
                                 letterSpacing: 1.0,
                               ),
                         ),
@@ -124,13 +107,13 @@ class HomeDashboardScreen extends StatelessWidget {
                         const SizedBox(height: 4),
                         Text(
                           'Sample ID: ${latestReport?.sampleId ?? 'Pending'}',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.onSurfaceVariant),
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: context.cs.onSurfaceVariant),
                         ),
                         if (!hasReportPayload) ...[
                           const SizedBox(height: 8),
                           Text(
                             'Results are not available yet.',
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.onSurfaceVariant),
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: context.cs.onSurfaceVariant),
                           ),
                         ],
                       ],
@@ -149,7 +132,6 @@ class HomeDashboardScreen extends StatelessWidget {
                 'Quick actions',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w700,
-                      color: AppColors.onSurface,
                     ),
               ),
               const SizedBox(height: 10),
@@ -336,8 +318,9 @@ class _GlanceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = context.cs;
     return Material(
-      color: Colors.white,
+      color: context.cardFill,
       borderRadius: BorderRadius.circular(14),
       child: InkWell(
         onTap: onTap,
@@ -346,10 +329,7 @@ class _GlanceCard extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(12, 12, 12, 14),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: const Color(0x66E1E2EC)),
-            boxShadow: const [
-              BoxShadow(color: Color(0x06000000), blurRadius: 8, offset: Offset(0, 2)),
-            ],
+            border: Border.all(color: cs.outline.withValues(alpha: 0.4)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -367,7 +347,6 @@ class _GlanceCard extends StatelessWidget {
                 title,
                 style: Theme.of(context).textTheme.labelLarge?.copyWith(
                       fontWeight: FontWeight.w700,
-                      color: AppColors.onSurface,
                     ),
               ),
               const SizedBox(height: 4),
@@ -376,7 +355,7 @@ class _GlanceCard extends StatelessWidget {
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppColors.onSurfaceVariant,
+                      color: cs.onSurfaceVariant,
                       height: 1.3,
                     ),
               ),
@@ -395,22 +374,16 @@ class _WelcomeHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = context.cs;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(18, 18, 18, 20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.cardFill,
         borderRadius: BorderRadius.circular(18),
         border: Border(
-          left: BorderSide(color: AppColors.primaryLight, width: 4),
+          left: BorderSide(color: cs.primary, width: 4),
         ),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x120052CC),
-            blurRadius: 20,
-            offset: Offset(0, 8),
-          ),
-        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -418,7 +391,7 @@ class _WelcomeHeader extends StatelessWidget {
           Text(
             'Welcome back',
             style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  color: AppColors.onSurfaceVariant,
+                  color: cs.onSurfaceVariant,
                   letterSpacing: 0.2,
                 ),
           ),
@@ -426,7 +399,7 @@ class _WelcomeHeader extends StatelessWidget {
           Text(
             name,
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  color: AppColors.primary,
+                  color: cs.primary,
                   fontWeight: FontWeight.w700,
                 ),
           ),
@@ -434,7 +407,7 @@ class _WelcomeHeader extends StatelessWidget {
           Text(
             'Figures below come from your account on the lab server. Tap a card to open details.',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppColors.onSurfaceVariant,
+                  color: cs.onSurfaceVariant,
                   height: 1.45,
                 ),
           ),

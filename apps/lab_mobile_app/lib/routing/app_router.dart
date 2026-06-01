@@ -12,6 +12,7 @@ import '../screens/orders/order_success_confirmation_screen.dart';
 import '../screens/orders/order_tracking_screen.dart';
 import '../screens/profile/edit_profile_screen.dart';
 import '../screens/profile/profile_screen.dart';
+import '../screens/settings/lab_info_screen.dart';
 import '../screens/results/ai_analysis_screen.dart';
 import '../screens/results/lab_results_screen.dart';
 import '../models/user_role.dart';
@@ -56,6 +57,7 @@ GoRouter createAppRouter(SessionController session) {
       GoRoute(path: '/rating-feedback', builder: (_, __) => const RatingFeedbackScreen()),
       GoRoute(path: '/profile', builder: (_, __) => const ProfileScreen()),
       GoRoute(path: '/edit-profile', builder: (_, __) => const EditProfileScreen()),
+      GoRoute(path: '/lab-info', builder: (_, __) => const LabInfoScreen()),
     ],
   );
 }

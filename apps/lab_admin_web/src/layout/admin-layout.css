@@ -17,7 +17,7 @@
   min-height: 0;
   overflow-x: hidden;
   overflow-y: auto;
-  background: #fff;
+  background: var(--card-bg);
   border-right: 1px solid var(--border);
   padding: 1.25rem 1rem;
   display: flex;
@@ -72,6 +72,18 @@ button.brand.admin-brand-trigger:focus-visible {
 
 .brand-mark .material-symbols-outlined {
   font-size: 1.25rem;
+}
+
+/* Custom lab logo — shown as-is (no gradient tile behind the image). */
+.brand-logo {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  display: block;
+  object-fit: contain;
+  background: transparent;
+  border: none;
+  border-radius: 0;
 }
 
 .brand-title {
@@ -187,7 +199,7 @@ button.brand.admin-brand-trigger:focus-visible {
 }
 
 .admin-nav-link--active {
-  background: rgba(0, 61, 155, 0.08);
+  background: var(--nav-active-bg);
   color: var(--primary);
   font-weight: 600;
 }
@@ -242,6 +254,11 @@ button.brand.admin-brand-trigger:focus-visible {
   font-size: 1.15rem;
 }
 
+.admin-header-logo-btn .brand-logo {
+  width: 38px;
+  height: 38px;
+}
+
 .admin-header {
   display: flex;
   align-items: flex-start;
@@ -249,7 +266,7 @@ button.brand.admin-brand-trigger:focus-visible {
   gap: 1rem;
   padding: 1.25rem 1.75rem;
   border-bottom: 1px solid var(--border);
-  background: #fff;
+  background: var(--card-bg);
   flex-shrink: 0;
 }
 
@@ -287,7 +304,7 @@ button.brand.admin-brand-trigger:focus-visible {
   margin: 0;
   padding: 0.35rem 0.4rem 0.35rem 0.45rem;
   border: 1px solid var(--border);
-  background: #fff;
+  background: var(--card-bg);
   font: inherit;
   text-align: left;
   cursor: pointer;
@@ -298,8 +315,8 @@ button.brand.admin-brand-trigger:focus-visible {
 }
 
 .admin-profile:hover {
-  border-color: rgba(0, 61, 155, 0.22);
-  background: #fff;
+  border-color: var(--primary);
+  background: var(--panel-muted);
 }
 
 .admin-profile:active {

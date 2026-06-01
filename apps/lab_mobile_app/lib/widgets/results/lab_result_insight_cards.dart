@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../models/lab_result.dart';
 import '../../theme/app_colors.dart';
+import '../../theme/theme_extensions.dart';
 
 /// AI Check + lab PDF actions — shared by [LabResultsScreen] and home dashboard.
 class LabResultInsightCards extends StatelessWidget {
@@ -49,7 +50,7 @@ class LabResultInsightCards extends StatelessWidget {
               Text(
                 'AI Check',
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      color: Colors.white,
+                      color: context.cardFill,
                       fontWeight: FontWeight.w700,
                     ),
               ),
@@ -67,7 +68,7 @@ class LabResultInsightCards extends StatelessWidget {
                   label: const Text('AI Check'),
                   style: FilledButton.styleFrom(
                     backgroundColor: Colors.white,
-                    foregroundColor: AppColors.primary,
+                    foregroundColor: context.cs.primary,
                   ),
                 ),
               ),
@@ -77,7 +78,7 @@ class LabResultInsightCards extends StatelessWidget {
         const SizedBox(height: 10),
         Container(
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: context.cardFill,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: const Color(0x66E1E2EC)),
           ),
@@ -92,7 +93,7 @@ class LabResultInsightCards extends StatelessWidget {
               const SizedBox(height: 4),
               Text(
                 'Share these results with your doctor or keep a local copy.',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.onSurfaceVariant),
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: context.cs.onSurfaceVariant),
               ),
               const SizedBox(height: 12),
               SizedBox(

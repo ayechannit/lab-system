@@ -109,7 +109,7 @@ class Order {
                (SELECT 
                   ISNULL(SUM(amount_mmk), 0) 
                 FROM payments 
-                WHERE order_id = o.id AND status IN ('received', 'verified')) as total_paid_mmk
+                WHERE order_id = o.id AND status IN ('pending', 'received', 'verified')) as total_paid_mmk
         FROM lab_orders o
         LEFT JOIN users u ON u.id = o.user_id
         WHERE o.id = @id AND o.is_deleted = 0

@@ -49,16 +49,17 @@ export function DiscountFormModal({
 }: DiscountFormModalProps) {
   const titleId = useId()
   const discountActiveId = useId()
-  const discountTestTriggerId = useId()
   const discountTestFilterId = useId()
-  const discountTestPanelId = useId()
-  const testPickerWrapRef = useRef<HTMLDivElement>(null)
+  const discountRoleTriggerId = useId()
+  const discountRolePanelId = useId()
   const testFilterInputRef = useRef<HTMLInputElement>(null)
-  const [testPickerOpen, setTestPickerOpen] = useState(false)
+  const selectAllVisibleRef = useRef<HTMLInputElement>(null)
+  const rolePickerWrapRef = useRef<HTMLDivElement>(null)
+  const [rolesPickerOpen, setRolesPickerOpen] = useState(false)
   const [testId, setTestId] = useState('')
   const [selectedTestIds, setSelectedTestIds] = useState<string[]>([])
+  const [selectedRoles, setSelectedRoles] = useState<DiscountUpsertBody['role'][]>([])
   const [testSearch, setTestSearch] = useState('')
-  const [role, setRole] = useState<DiscountUpsertBody['role']>('clinic')
   const [discountPercent, setDiscountPercent] = useState<number | ''>(0)
   const [isActive, setIsActive] = useState(true)
   const [formError, setFormError] = useState<string | null>(null)
@@ -72,16 +73,16 @@ export function DiscountFormModal({
       setTestId(initial.test_id)
       setSelectedTestIds([])
       setTestSearch('')
-      setTestPickerOpen(false)
-      setRole(initial.role as DiscountUpsertBody['role'])
+      setRolesPickerOpen(false)
+      setSelectedRoles([initial.role as DiscountUpsertBody['role']])
       setDiscountPercent(initial.discount_percent)
       setIsActive(initial.is_active)
     } else {
       setTestId('')
       setSelectedTestIds([])
       setTestSearch('')
-      setTestPickerOpen(false)
-      setRole('clinic')
+      setRolesPickerOpen(false)
+      setSelectedRoles([])
       setDiscountPercent(0)
       setIsActive(true)
     }
@@ -100,32 +101,32 @@ export function DiscountFormModal({
     if (!open) return
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape' || submitting) return
-      if (testPickerOpen) {
-        setTestPickerOpen(false)
+      if (mode === 'create' && rolesPickerOpen) {
+        setRolesPickerOpen(false)
         return
       }
       onClose()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [open, onClose, submitting, testPickerOpen])
+  }, [open, onClose, submitting, mode, rolesPickerOpen])
 
   useEffect(() => {
-    if (!testPickerOpen || submitting) return
+    if (!rolesPickerOpen) return
+    const onDocMouseDown = (e: MouseEvent) => {
+      if (!rolePickerWrapRef.current?.contains(e.target as Node)) setRolesPickerOpen(false)
+    }
+    document.addEventListener('mousedown', onDocMouseDown)
+    return () => document.removeEventListener('mousedown', onDocMouseDown)
+  }, [rolesPickerOpen])
+
+  useEffect(() => {
+    if (!open || submitting || mode !== 'create') return
     const id = requestAnimationFrame(() => {
       testFilterInputRef.current?.focus()
     })
     return () => cancelAnimationFrame(id)
-  }, [testPickerOpen, submitting])
-
-  useEffect(() => {
-    if (!testPickerOpen) return
-    function onDocMouseDown(e: MouseEvent) {
-      if (!testPickerWrapRef.current?.contains(e.target as Node)) setTestPickerOpen(false)
-    }
-    document.addEventListener('mousedown', onDocMouseDown)
-    return () => document.removeEventListener('mousedown', onDocMouseDown)
-  }, [testPickerOpen])
+  }, [open, submitting, mode])
 
   const testsSorted = useMemo(
     () => [...tests].sort((a, b) => a.test_name.localeCompare(b.test_name)),
@@ -146,14 +147,16 @@ export function DiscountFormModal({
   )
 
   const selectedSet = useMemo(() => new Set(selectedTestIds), [selectedTestIds])
-  const testPickerSummary =
-    tests.length === 0
-      ? 'No tests in catalog'
-      : selectedTestIds.length === 0
-        ? 'Choose tests…'
-        : selectedTestIds.length === tests.length
-          ? `All ${tests.length} tests selected`
-          : `${selectedTestIds.length} test${selectedTestIds.length === 1 ? '' : 's'} selected`
+
+  const visibleTestIds = useMemo(() => testsPickerRows.map((t) => t.id), [testsPickerRows])
+  const allVisibleTestsSelected =
+    visibleTestIds.length > 0 && visibleTestIds.every((id) => selectedSet.has(id))
+  const someVisibleTestsSelected = visibleTestIds.some((id) => selectedSet.has(id))
+
+  useEffect(() => {
+    const el = selectAllVisibleRef.current
+    if (el) el.indeterminate = someVisibleTestsSelected && !allVisibleTestsSelected
+  }, [someVisibleTestsSelected, allVisibleTestsSelected])
 
   function toggleTestId(id: string) {
     setSelectedTestIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
@@ -167,11 +170,49 @@ export function DiscountFormModal({
     setSelectedTestIds([])
   }
 
+  function toggleAllVisibleTests() {
+    if (allVisibleTestsSelected) {
+      const visible = new Set(visibleTestIds)
+      setSelectedTestIds((prev) => prev.filter((id) => !visible.has(id)))
+      return
+    }
+    setSelectedTestIds((prev) => [...new Set([...prev, ...visibleTestIds])])
+  }
+
+  const selectedRoleSet = useMemo(() => new Set(selectedRoles), [selectedRoles])
+
+  const rolePickerSummary = useMemo(() => {
+    if (selectedRoles.length === 0) return 'Choose roles…'
+    if (selectedRoles.includes('all')) return 'All roles (same %)'
+    if (selectedRoles.length === 1) {
+      return ROLE_OPTIONS.find((o) => o.value === selectedRoles[0])?.label ?? '1 role selected'
+    }
+    const individual: DiscountUpsertBody['role'][] = ['clinic', 'doctor', 'patient']
+    if (individual.every((r) => selectedRoles.includes(r))) return 'Clinic, doctor, patient'
+    return `${selectedRoles.length} roles selected`
+  }, [selectedRoles])
+
+  function toggleRole(value: DiscountUpsertBody['role']) {
+    if (value === 'all') {
+      setSelectedRoles((prev) => (prev.includes('all') ? [] : ['all']))
+      return
+    }
+    setSelectedRoles((prev) => {
+      const next = prev.filter((r) => r !== 'all')
+      if (next.includes(value)) return next.filter((r) => r !== value)
+      return [...next, value]
+    })
+  }
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setFormError(null)
     if (mode === 'create' && selectedTestIds.length === 0) {
       setFormError('Select at least one lab test.')
+      return
+    }
+    if (mode === 'create' && selectedRoles.length === 0) {
+      setFormError('Select at least one role.')
       return
     }
     const discRaw =
@@ -181,15 +222,13 @@ export function DiscountFormModal({
       return
     }
     const discN = Math.round(discRaw * 100) / 100
-    const roleForBody: DiscountUpsertBody['role'] =
-      mode === 'edit' && initial ? (initial.role as DiscountUpsertBody['role']) : role
 
     setSubmitting(true)
     try {
       if (mode === 'edit' && initial) {
         const body: DiscountUpsertBody = {
           test_id: testId,
-          role: roleForBody,
+          role: initial.role as DiscountUpsertBody['role'],
           discount_percent: discN,
           is_active: isActive,
         }
@@ -200,12 +239,20 @@ export function DiscountFormModal({
       }
 
       const ids = selectedTestIds
-      const discounts: DiscountUpsertBody[] = ids.map((test_id) => ({
-        test_id,
-        role: roleForBody,
-        discount_percent: discN,
-        is_active: isActive,
-      }))
+      const rolesForBulk: DiscountUpsertBody['role'][] = selectedRoles.includes('all')
+        ? ['all']
+        : selectedRoles
+      const discounts: DiscountUpsertBody[] = []
+      for (const test_id of ids) {
+        for (const role of rolesForBulk) {
+          discounts.push({
+            test_id,
+            role,
+            discount_percent: discN,
+            is_active: isActive,
+          })
+        }
+      }
       await bulkUpsertTestDiscounts({ discounts })
       onSuccess()
       onClose()
@@ -243,7 +290,12 @@ export function DiscountFormModal({
       : null
 
   const createSubmitDisabled =
-    submitting || (mode === 'create' && (tests.length === 0 || selectedTestIds.length === 0))
+    submitting ||
+    (mode === 'create' &&
+      (tests.length === 0 || selectedTestIds.length === 0 || selectedRoles.length === 0))
+
+  const createDiscountCount =
+    mode === 'create' ? selectedTestIds.length * (selectedRoles.includes('all') ? 1 : selectedRoles.length) : 0
 
   const modal = (
     <div
@@ -327,156 +379,195 @@ export function DiscountFormModal({
                       Lab tests
                     </span>
                     <p className="discount-form-modal__hint">
-                      Select one or more tests. The same role, discount %, and active setting apply to each selected
-                      test.
+                      Select one or more tests. The same roles, discount %, and active setting apply to each
+                      combination.
+                    </p>
+                    {tests.length === 0 ? (
+                      <p className="discount-form-modal__panel-note">No tests in catalog.</p>
+                    ) : (
+                      <div className="discount-form-modal__test-panel">
+                        <div className="discount-form-modal__test-toolbar">
+                          <label htmlFor={discountTestFilterId} className="visually-hidden">
+                            Search tests
+                          </label>
+                          <input
+                            ref={testFilterInputRef}
+                            id={discountTestFilterId}
+                            type="search"
+                            placeholder="Search by name or code…"
+                            value={testSearch}
+                            onChange={(e) => setTestSearch(e.target.value)}
+                            disabled={submitting}
+                            autoComplete="off"
+                            spellCheck={false}
+                          />
+                          <span className="discount-form-modal__count-badge">
+                            {selectedTestIds.length} selected
+                          </span>
+                        </div>
+                        {filteredTestsSorted.length > DISCOUNT_TEST_PICKER_MAX ? (
+                          <p className="discount-form-modal__panel-note">
+                            Showing {DISCOUNT_TEST_PICKER_MAX} of {filteredTestsSorted.length} matches — narrow your
+                            search.
+                          </p>
+                        ) : null}
+                        <div className="discount-form-modal__test-table-wrap table-wrap">
+                          <table className="data-table data-table--align-left discount-form-modal__test-table">
+                            <thead>
+                              <tr>
+                                <th className="discount-form-modal__test-table-check" scope="col">
+                                  <span className="visually-hidden">Select</span>
+                                  <input
+                                    ref={selectAllVisibleRef}
+                                    type="checkbox"
+                                    checked={allVisibleTestsSelected}
+                                    onChange={toggleAllVisibleTests}
+                                    disabled={submitting || visibleTestIds.length === 0}
+                                    aria-label={
+                                      allVisibleTestsSelected
+                                        ? 'Clear selection for visible tests'
+                                        : 'Select all visible tests'
+                                    }
+                                  />
+                                </th>
+                                <th scope="col">Test</th>
+                                <th scope="col">Code</th>
+                                <th className="col-num" scope="col">
+                                  Base (MMK)
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {filteredTestsSorted.length === 0 ? (
+                                <tr>
+                                  <td colSpan={4} className="data-table__state">
+                                    No tests match your search.
+                                  </td>
+                                </tr>
+                              ) : (
+                                testsPickerRows.map((t) => {
+                                  const checked = selectedSet.has(t.id)
+                                  return (
+                                    <tr
+                                      key={t.id}
+                                      className={checked ? 'discount-form-modal__test-table-row--selected' : undefined}
+                                      onClick={() => !submitting && toggleTestId(t.id)}
+                                    >
+                                      <td className="discount-form-modal__test-table-check">
+                                        <input
+                                          type="checkbox"
+                                          checked={checked}
+                                          onChange={() => toggleTestId(t.id)}
+                                          onClick={(e) => e.stopPropagation()}
+                                          disabled={submitting}
+                                          aria-label={`Select ${t.test_name}`}
+                                        />
+                                      </td>
+                                      <td>{t.test_name}</td>
+                                      <td>
+                                        <code>{t.test_code}</code>
+                                      </td>
+                                      <td className="col-num">{t.base_price_mmk.toLocaleString()}</td>
+                                    </tr>
+                                  )
+                                })
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                        <div className="discount-form-modal__test-quick">
+                          <button
+                            type="button"
+                            className="btn btn-secondary btn-sm"
+                            onClick={selectAllTests}
+                            disabled={submitting || tests.length === 0}
+                          >
+                            Select all
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-secondary btn-sm"
+                            onClick={clearTestSelection}
+                            disabled={submitting || selectedTestIds.length === 0}
+                          >
+                            Clear
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="discount-form-modal__fieldset">
+                    <p className="discount-form-modal__hint" style={{ marginTop: 0 }}>
+                      Select one or more roles. &quot;All roles&quot; uses one rule for clinic, doctor, and patient.
                     </p>
                     <div
-                      ref={testPickerWrapRef}
-                      className={`field order-test-multiselect${testPickerOpen && !submitting ? ' order-test-multiselect--open' : ''}`}
+                      ref={rolePickerWrapRef}
+                      className={`field order-test-multiselect discount-form-modal__roles-picker order-test-multiselect--drop-up${rolesPickerOpen && !submitting ? ' order-test-multiselect--open' : ''}`}
                       style={{ marginBottom: 0 }}
                     >
+                      <label htmlFor={discountRoleTriggerId}>Roles</label>
                       <div className="order-test-multiselect__anchor">
                         <button
                           type="button"
-                          id={discountTestTriggerId}
-                          className={`order-test-multiselect-trigger${selectedTestIds.length === 0 ? ' order-test-multiselect-trigger--placeholder' : ''}`}
-                          disabled={submitting || tests.length === 0}
-                          aria-expanded={testPickerOpen}
-                          aria-controls={discountTestPanelId}
+                          id={discountRoleTriggerId}
+                          className={`order-test-multiselect-trigger${selectedRoles.length === 0 ? ' order-test-multiselect-trigger--placeholder' : ''}`}
+                          disabled={submitting}
+                          aria-expanded={rolesPickerOpen}
+                          aria-controls={discountRolePanelId}
                           aria-haspopup="listbox"
-                          aria-label="Search and select lab tests for this discount"
-                          onClick={() => {
-                            if (!submitting && tests.length > 0) setTestPickerOpen((o) => !o)
-                          }}
+                          onClick={() => !submitting && setRolesPickerOpen((o) => !o)}
                         >
-                          {testPickerSummary}
+                          {rolePickerSummary}
                         </button>
-                        {testPickerOpen && !submitting && tests.length > 0 ? (
+                        {rolesPickerOpen && !submitting ? (
                           <div
-                            id={discountTestPanelId}
-                            className="order-test-multiselect-panel"
+                            id={discountRolePanelId}
+                            className="order-test-multiselect-panel order-test-multiselect-panel--compact order-test-multiselect-panel--drop-up"
                             role="listbox"
                             aria-multiselectable="true"
                           >
-                            <div className="order-test-multiselect-panel__search">
-                              <label htmlFor={discountTestFilterId} className="order-test-multiselect-panel__search-label">
-                                Search tests
-                              </label>
-                              <input
-                                ref={testFilterInputRef}
-                                id={discountTestFilterId}
-                                type="text"
-                                className="order-test-multiselect-panel__search-input"
-                                placeholder="Name or code…"
-                                value={testSearch}
-                                onChange={(e) => setTestSearch(e.target.value)}
-                                autoComplete="off"
-                                spellCheck={false}
-                                onMouseDown={(e) => e.stopPropagation()}
-                              />
-                            </div>
-                            {filteredTestsSorted.length > DISCOUNT_TEST_PICKER_MAX ? (
-                              <p className="order-test-multiselect-panel__hint">
-                                Showing {DISCOUNT_TEST_PICKER_MAX} of {filteredTestsSorted.length} matches — narrow your
-                                search.
-                              </p>
-                            ) : null}
-                            {filteredTestsSorted.length === 0 ? (
-                              <p className="discount-form-modal__test-list-empty" style={{ margin: '0.65rem 0.85rem' }}>
-                                No tests match your search.
-                              </p>
-                            ) : (
-                              testsPickerRows.map((t) => {
-                                const checked = selectedSet.has(t.id)
-                                return (
-                                  <label key={t.id} className="order-test-multiselect-row">
-                                    <input
-                                      type="checkbox"
-                                      className="order-test-multiselect-row__check"
-                                      checked={checked}
-                                      onChange={() => toggleTestId(t.id)}
-                                      onClick={(e) => e.stopPropagation()}
-                                    />
-                                    <span className="order-test-multiselect-row__body">
-                                      <span className="order-test-multiselect-row__title">
-                                        <span className="order-test-multiselect-row__name">{t.test_name}</span>
-                                        <span className="order-test-multiselect-row__code">{t.test_code}</span>
-                                      </span>
-                                      <span className="order-test-multiselect-row__foot">
-                                        <span className="order-test-multiselect-row__discount">Base price</span>
-                                        <span className="order-test-multiselect-row__price">
-                                          {t.base_price_mmk.toLocaleString()} MMK
-                                        </span>
-                                      </span>
+                            {ROLE_OPTIONS.map((o) => {
+                              const checked = selectedRoleSet.has(o.value)
+                              return (
+                                <label key={o.value} className="order-test-multiselect-row">
+                                  <input
+                                    type="checkbox"
+                                    className="order-test-multiselect-row__check"
+                                    checked={checked}
+                                    onChange={() => toggleRole(o.value)}
+                                    onClick={(e) => e.stopPropagation()}
+                                    disabled={submitting}
+                                  />
+                                  <span className="order-test-multiselect-row__body">
+                                    <span className="order-test-multiselect-row__title">
+                                      <span className="order-test-multiselect-row__name">{o.label}</span>
                                     </span>
-                                  </label>
-                                )
-                              })
-                            )}
-                            <div
-                              className="discount-form-modal__test-quick"
-                              style={{
-                                padding: '0.55rem 0.75rem',
-                                borderTop: '1px solid var(--border)',
-                                background: '#fafbfd',
-                              }}
-                            >
-                              <button
-                                type="button"
-                                className="btn btn-secondary btn-sm"
-                                onClick={selectAllTests}
-                                disabled={submitting || tests.length === 0}
-                              >
-                                Select all
-                              </button>
-                              <button
-                                type="button"
-                                className="btn btn-secondary btn-sm"
-                                onClick={clearTestSelection}
-                                disabled={submitting || selectedTestIds.length === 0}
-                              >
-                                Clear
-                              </button>
-                            </div>
+                                  </span>
+                                </label>
+                              )
+                            })}
                           </div>
                         ) : null}
                       </div>
                     </div>
                   </div>
 
-                  <div className="discount-form-modal__pair">
-                    <div className="field">
-                      <label htmlFor="df-role">Role</label>
-                      <select
-                        id="df-role"
-                        className="select-chevron-left"
-                        value={role}
-                        onChange={(e) => setRole(e.target.value as DiscountUpsertBody['role'])}
-                        disabled={submitting}
-                      >
-                        {ROLE_OPTIONS.map((o) => (
-                          <option key={o.value} value={o.value}>
-                            {o.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="field">
-                      <label htmlFor="df-pct">Discount %</label>
-                      <input
-                        id="df-pct"
-                        type="number"
-                        min={0}
-                        max={100}
-                        step={0.5}
-                        value={discountPercent === '' ? '' : discountPercent}
-                        onChange={(e) => {
-                          const v = e.target.value
-                          setDiscountPercent(v === '' ? '' : Number(v))
-                        }}
-                        disabled={submitting}
-                      />
-                    </div>
+                  <div className="field">
+                    <label htmlFor="df-pct">Discount %</label>
+                    <input
+                      id="df-pct"
+                      type="number"
+                      min={0}
+                      max={100}
+                      step={0.5}
+                      value={discountPercent === '' ? '' : discountPercent}
+                      onChange={(e) => {
+                        const v = e.target.value
+                        setDiscountPercent(v === '' ? '' : Number(v))
+                      }}
+                      disabled={submitting}
+                    />
                   </div>
 
                   {selectedTestsCreate.length > 0 && pctForPreview !== null && Number.isFinite(pctForPreview) ? (
@@ -539,8 +630,8 @@ export function DiscountFormModal({
                       ? 'Creating discount…'
                       : 'Saving discount…'
                     : mode === 'create'
-                      ? selectedTestIds.length > 1
-                        ? `Create discount (${selectedTestIds.length} tests)`
+                      ? createDiscountCount > 1
+                        ? `Create ${createDiscountCount} discounts`
                         : 'Create discount'
                       : 'Save discount'}
                 </button>

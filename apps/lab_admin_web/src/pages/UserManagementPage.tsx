@@ -10,7 +10,12 @@ import { DEFAULT_TABLE_PAGE_SIZE, TablePagination } from '../components/common/T
 import { TableActionMenu } from '../components/common/TableActionMenu'
 import type { EndUserRole, UserListRow } from '../model/types'
 import { isApiMode } from '../services/apiBase'
-import { deleteUser, fetchUserList, type FetchUserListParams } from '../services/userService'
+import {
+  approveUser,
+  deleteUser,
+  fetchUserList,
+  type FetchUserListParams,
+} from '../services/userService'
 import '../components/common/ui.css'
 
 function roleLabel(r: EndUserRole): string {
@@ -39,6 +44,7 @@ export function UserManagementPage() {
   const [userFilterPhoneInput, setUserFilterPhoneInput] = useState('')
   const [userFilterPhone, setUserFilterPhone] = useState('')
   const [userFilterRole, setUserFilterRole] = useState<'' | EndUserRole>('')
+  const [userFilterApproval, setUserFilterApproval] = useState<'' | 'pending' | 'approved'>('')
 
   const [userPage, setUserPage] = useState(1)
   const [userPageSize, setUserPageSize] = useState(DEFAULT_TABLE_PAGE_SIZE)
@@ -62,8 +68,10 @@ export function UserManagementPage() {
     if (userFilterName) p.name = userFilterName
     if (userFilterPhone) p.phone = userFilterPhone
     if (userFilterRole) p.role = userFilterRole
+    if (userFilterApproval === 'pending') p.is_approved = false
+    if (userFilterApproval === 'approved') p.is_approved = true
     return Object.keys(p).length ? p : undefined
-  }, [userFilterName, userFilterPhone, userFilterRole])
+  }, [userFilterName, userFilterPhone, userFilterRole, userFilterApproval])
 
   const userListQuery = useMemo(
     (): FetchUserListParams => ({
@@ -76,7 +84,7 @@ export function UserManagementPage() {
 
   useEffect(() => {
     queueMicrotask(() => setUserPage(1))
-  }, [userFilterName, userFilterPhone, userFilterRole])
+  }, [userFilterName, userFilterPhone, userFilterRole, userFilterApproval])
 
   useEffect(() => {
     if (!hasApi) {
@@ -142,16 +150,29 @@ export function UserManagementPage() {
     }
   }
 
+  async function confirmApprove(row: UserListRow) {
+    if (!hasApi) return
+    setOpenMenuId(null)
+    try {
+      await approveUser(row.id)
+      showSuccess(`Approved "${row.name}". They can sign in on the mobile app now.`)
+      setRefreshTick((t) => t + 1)
+    } catch (e) {
+      showError(messageFromError(e, 'Approve failed'))
+    }
+  }
+
   function clearUserFilters() {
     setUserFilterNameInput('')
     setUserFilterName('')
     setUserFilterPhoneInput('')
     setUserFilterPhone('')
     setUserFilterRole('')
+    setUserFilterApproval('')
     setUserPage(1)
   }
 
-  const colSpan = 8
+  const colSpan = 9
 
   return (
     <div className="stack">
@@ -161,7 +182,7 @@ export function UserManagementPage() {
       />
 
       {!hasApi ? (
-        <div className="card" style={{ borderColor: '#dfe5f0', background: '#f8fafc' }}>
+        <div className="card card--muted">
           <p style={{ margin: 0, fontSize: '0.9rem' }}>
             Set <code>VITE_API_BASE_URL</code> in <code>apps/lab_admin_web</code> (e.g.{' '}
             <code>http://localhost:3000</code>) and restart the dev server. Data is loaded only from the
@@ -206,6 +227,24 @@ export function UserManagementPage() {
                 ))}
               </select>
             </div>
+            <div className="list-filters-bar__group">
+              <label className="list-filters-bar__label" htmlFor="user-filter-approval">
+                Status
+              </label>
+              <select
+                id="user-filter-approval"
+                className="list-filters-bar__select"
+                value={userFilterApproval}
+                onChange={(e) =>
+                  setUserFilterApproval(e.target.value as '' | 'pending' | 'approved')
+                }
+                disabled={loading || !hasApi}
+              >
+                <option value="">All</option>
+                <option value="pending">Pending approval</option>
+                <option value="approved">Approved</option>
+              </select>
+            </div>
             <button
               type="button"
               className="btn btn-ghost btn-sm list-filters-bar__clear"
@@ -240,6 +279,7 @@ export function UserManagementPage() {
                 <th>Email</th>
                 <th>Phone</th>
                 <th>Role</th>
+                <th>Status</th>
                 <th>Address</th>
                 <th>Lat / Lng</th>
                 <th>Points</th>
@@ -266,6 +306,13 @@ export function UserManagementPage() {
                     <td>{r.email}</td>
                     <td style={{ whiteSpace: 'nowrap' }}>{r.phone || '—'}</td>
                     <td>{roleLabel(r.role)}</td>
+                    <td>
+                      {r.is_approved ? (
+                        <span className="badge badge--ok">Approved</span>
+                      ) : (
+                        <span className="badge badge--warn">Pending</span>
+                      )}
+                    </td>
                     <td style={{ maxWidth: 180, whiteSpace: 'normal' }}>{r.address || '—'}</td>
                     <td style={{ fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
                       {r.latitude}, {r.longitude}
@@ -276,6 +323,14 @@ export function UserManagementPage() {
                         open={openMenuId === r.id}
                         onOpenChange={(next) => setOpenMenuId(next ? r.id : null)}
                         items={[
+                          ...(!r.is_approved
+                            ? [
+                                {
+                                  label: 'Approve account',
+                                  onSelect: () => void confirmApprove(r),
+                                },
+                              ]
+                            : []),
                           { label: 'Edit', onSelect: () => openEdit(r) },
                           {
                             label: 'Delete',

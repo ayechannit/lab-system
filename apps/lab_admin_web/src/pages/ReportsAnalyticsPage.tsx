@@ -137,7 +137,7 @@ export function ReportsAnalyticsPage() {
       />
 
       {!hasApi ? (
-        <div className="card" style={{ borderColor: '#dfe5f0', background: '#f8fafc' }}>
+        <div className="card card--muted">
           <p style={{ margin: 0, fontSize: '0.9rem' }}>
             Set <code>VITE_API_BASE_URL</code> and sign in to load reporting data.
           </p>

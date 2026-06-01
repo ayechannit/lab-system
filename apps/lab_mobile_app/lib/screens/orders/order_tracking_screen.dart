@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../app/session_scope.dart';
-import '../../theme/app_colors.dart';
+import '../../theme/theme_extensions.dart';
 import '../../widgets/common/section_card.dart';
 import '../../widgets/common/status_timeline.dart';
 
@@ -31,7 +31,7 @@ class OrderTrackingScreen extends StatelessWidget {
                   Text(
                     'No active orders yet. Place an order to see collection times and status from the lab.',
                     textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: AppColors.onSurfaceVariant),
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: context.cs.onSurfaceVariant),
                   ),
                 ],
               ),
@@ -71,10 +71,10 @@ class OrderTrackingScreen extends StatelessWidget {
                       width: 40,
                       height: 40,
                       decoration: BoxDecoration(
-                        color: AppColors.primary.withValues(alpha: 0.1),
+                        color: context.cs.primary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: const Icon(Icons.local_shipping_outlined, color: AppColors.primary),
+                      child: Icon(Icons.local_shipping_outlined, color: context.cs.primary),
                     ),
                     title: const Text('Lab schedule'),
                     subtitle: Text(
@@ -86,7 +86,7 @@ class OrderTrackingScreen extends StatelessWidget {
                     trailing: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: AppColors.primary.withValues(alpha: 0.1),
+                        color: context.cs.primary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(999),
                       ),
                       child: Text(order.isReportReady ? 'Completed' : 'In progress'),
@@ -97,7 +97,7 @@ class OrderTrackingScreen extends StatelessWidget {
                   const SizedBox(height: 12),
                   Text(
                     'The lab proposed a collection schedule. Confirm so the collector can proceed.',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.onSurfaceVariant),
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: context.cs.onSurfaceVariant),
                   ),
                   const SizedBox(height: 8),
                   FilledButton(
@@ -125,7 +125,7 @@ class OrderTrackingScreen extends StatelessWidget {
                   'Status',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w700,
-                        color: AppColors.primary,
+                        color: context.cs.primary,
                       ),
                 ),
                 const SizedBox(height: 12),

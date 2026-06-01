@@ -14,6 +14,16 @@ import { getApiBaseUrl, isApiMode } from '../services/apiBase'
 import { fetchAllDiscounts, type TestDiscountListRow } from '../services/discountService'
 import { fetchLabTestsList } from '../services/labTestCatalogService'
 import {
+  createPayment,
+  fetchPaymentsByOrderId,
+  PAYMENT_METHOD_OPTIONS,
+  updatePaymentStatus,
+  type ApiPayment,
+  type ApiPaymentMethod,
+  type ApiPaymentOrderSummary,
+  type ApiPaymentStatus,
+} from '../services/paymentService'
+import {
   addOrderItems,
   createOrder,
   deleteOrder,
@@ -55,6 +65,144 @@ function statusBadgeClass(status: ApiOrderStatus): string {
 
 function priorityBadgeClass(priority: 'urgent' | 'elective'): string {
   return priority === 'urgent' ? 'badge badge--danger' : 'badge badge--neutral'
+}
+
+function paymentBadgeClass(status: ApiPaymentStatus | 'unpaid', fullyPaid = false): string {
+  if (fullyPaid && status === 'received') return 'badge badge--success'
+  const map: Record<ApiPaymentStatus | 'unpaid', string> = {
+    unpaid: 'badge badge--neutral',
+    pending: 'badge badge--warn',
+    received: 'badge badge--neutral',
+    verified: 'badge badge--success',
+    failed: 'badge badge--danger',
+  }
+  return map[status]
+}
+
+function orderPaymentAmounts(
+  payData: ApiPaymentOrderSummary | undefined,
+  finalPriceMmk: number,
+): { total: number; paid: number; balance: number; percentPaid: number } {
+  if (payData) {
+    const total = payData.summary.total_price
+    const paid = payData.summary.total_paid
+    const balance = Math.max(0, payData.summary.balance)
+    const percentPaid = total > 0 ? Math.min(100, Math.round((paid / total) * 100)) : 0
+    return { total, paid, balance, percentPaid }
+  }
+  const total = finalPriceMmk
+  const balance = Math.max(0, finalPriceMmk)
+  return { total, paid: 0, balance, percentPaid: 0 }
+}
+
+const ADMIN_PAYMENT_UPDATE_STATUSES: ApiPaymentStatus[] = ['received', 'verified', 'failed']
+
+type PaymentModalFocus = 'add' | 'fix'
+
+function PaymentModalSummary({ amounts }: { amounts: ReturnType<typeof orderPaymentAmounts> }) {
+  const due = amounts.balance > 0 ? amounts.balance : 0
+  const fullyPaid = amounts.total > 0 && due <= 0
+  return (
+    <div className="payment-modal-summary">
+      <div className="payment-modal-summary__head">
+        <span className="payment-modal-summary__title">Balance</span>
+        {fullyPaid ? <span className="payment-modal-summary__badge">Fully paid</span> : null}
+      </div>
+      <div className="payment-modal-stats" role="group" aria-label="Order payment summary">
+        <div className="payment-modal-stat">
+          <span className="payment-modal-stat__label">Total</span>
+          <span className="payment-modal-stat__value">{amounts.total.toLocaleString()}</span>
+          <span className="payment-modal-stat__unit">MMK</span>
+        </div>
+        <div className="payment-modal-stat">
+          <span className="payment-modal-stat__label">Paid</span>
+          <span className="payment-modal-stat__value">{amounts.paid.toLocaleString()}</span>
+          <span className="payment-modal-stat__unit">MMK</span>
+        </div>
+        <div
+          className={`payment-modal-stat${due > 0 ? ' payment-modal-stat--due' : ' payment-modal-stat--clear'}`}
+        >
+          <span className="payment-modal-stat__label">Due</span>
+          <span className="payment-modal-stat__value">{due.toLocaleString()}</span>
+          <span className="payment-modal-stat__unit">MMK</span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+type OrderPaymentListDisplay = {
+  label: string
+  status: ApiPaymentStatus | 'unpaid'
+  /** Order fully paid — used for green badge on `received` */
+  fullyPaid?: boolean
+}
+
+/** Label + badge for the order list payment column. */
+function orderPaymentListDisplay(
+  data: ApiPaymentOrderSummary | undefined,
+  finalPriceMmk: number,
+): OrderPaymentListDisplay {
+  if (!data) return { label: '—', status: 'unpaid' }
+  const { balance, total_price, total_paid } = data.summary
+  const history = data.history
+  const total = total_price > 0 ? total_price : finalPriceMmk
+  const fullyPaid = total > 0 && balance <= 0 && total_paid > 0
+
+  if (history.length === 0) {
+    return balance <= 0 && total <= 0
+      ? { label: 'unpaid', status: 'unpaid' }
+      : { label: 'unpaid', status: 'unpaid' }
+  }
+
+  const failedOnly = history.every((p) => p.status === 'failed')
+  if (failedOnly) return { label: 'failed', status: 'failed' }
+
+  if (fullyPaid) {
+    // Verified = staff confirmed (optional). Received = money recorded at the lab.
+    if (history.some((p) => p.status === 'verified')) {
+      return { label: 'verified', status: 'verified', fullyPaid: true }
+    }
+    return { label: 'received', status: 'received', fullyPaid: true }
+  }
+
+  if (balance > 0) {
+    const pending = history.find((p) => p.status === 'pending')
+    if (pending) return { label: 'pending', status: 'pending' }
+    const latest = history[history.length - 1]
+    return { label: latest.status, status: latest.status }
+  }
+
+  const latest = history[history.length - 1]
+  return { label: latest.status, status: latest.status }
+}
+
+function paymentSummaryForOrder(
+  orderId: string,
+  paymentMap: Map<string, ApiPaymentOrderSummary>,
+  detail?: ApiOrderDetail | null,
+  listRow?: Pick<ApiOrderListRow, 'final_price_mmk'>,
+): ApiPaymentOrderSummary | undefined {
+  const fromMap = paymentMap.get(orderId)
+  if (fromMap) return fromMap
+  if (detail?.id === orderId && detail.payments) {
+    return {
+      summary: {
+        total_price: detail.final_price_mmk,
+        total_paid: detail.total_paid_mmk ?? 0,
+        balance:
+          detail.balance_mmk ?? detail.final_price_mmk - (detail.total_paid_mmk ?? 0),
+      },
+      history: detail.payments,
+    }
+  }
+  if (listRow) {
+    return {
+      summary: { total_price: listRow.final_price_mmk, total_paid: 0, balance: listRow.final_price_mmk },
+      history: [],
+    }
+  }
+  return undefined
 }
 
 function staffRoleShort(role: StaffRole): string {
@@ -509,6 +657,22 @@ export function OrderManagementPage() {
   const [assignSubmitting, setAssignSubmitting] = useState(false)
   const [assignError, setAssignError] = useState<string | null>(null)
 
+  const [paymentByOrderId, setPaymentByOrderId] = useState<Map<string, ApiPaymentOrderSummary>>(new Map())
+  const [paymentsLoading, setPaymentsLoading] = useState(false)
+
+  const [paymentUpdateOpen, setPaymentUpdateOpen] = useState(false)
+  const [paymentUpdateOrder, setPaymentUpdateOrder] = useState<ApiOrderListRow | null>(null)
+  const [paymentUpdateSelectedId, setPaymentUpdateSelectedId] = useState('')
+  const [paymentUpdateStatus, setPaymentUpdateStatus] = useState<ApiPaymentStatus>('pending')
+  const [paymentUpdateStaffId, setPaymentUpdateStaffId] = useState('')
+  const [paymentUpdateAmount, setPaymentUpdateAmount] = useState<number | ''>('')
+  const [paymentUpdateMethod, setPaymentUpdateMethod] = useState<ApiPaymentMethod>('cash')
+  const [paymentUpdateReference, setPaymentUpdateReference] = useState('')
+  const [paymentUpdateSubmitting, setPaymentUpdateSubmitting] = useState(false)
+  const [paymentSubmitAction, setPaymentSubmitAction] = useState<'record' | 'fix' | null>(null)
+  const [paymentUpdateFocus, setPaymentUpdateFocus] = useState<PaymentModalFocus>('add')
+  const [paymentUpdateError, setPaymentUpdateError] = useState<string | null>(null)
+
   useEffect(() => {
     const id = window.setTimeout(() => setOrderFilterPatient(orderFilterPatientInput.trim()), 350)
     return () => window.clearTimeout(id)
@@ -580,6 +744,38 @@ export function OrderManagementPage() {
   }, [hasApi, refreshTick, ordersListQuery, ordersPage])
 
   useEffect(() => {
+    if (!hasApi || rows.length === 0) {
+      setPaymentByOrderId(new Map())
+      setPaymentsLoading(false)
+      return
+    }
+    let cancelled = false
+    setPaymentsLoading(true)
+    void (async () => {
+      const entries = await Promise.all(
+        rows.map(async (o) => {
+          try {
+            const data = await fetchPaymentsByOrderId(o.id)
+            return [o.id, data] as const
+          } catch {
+            return null
+          }
+        }),
+      )
+      if (cancelled) return
+      const map = new Map<string, ApiPaymentOrderSummary>()
+      for (const entry of entries) {
+        if (entry) map.set(entry[0], entry[1])
+      }
+      setPaymentByOrderId(map)
+      setPaymentsLoading(false)
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [hasApi, rows])
+
+  useEffect(() => {
     if (!createOpen) setCreateTestPickerOpen(false)
   }, [createOpen])
 
@@ -645,6 +841,101 @@ export function OrderManagementPage() {
     setRefreshTick((t) => t + 1)
   }
 
+  async function refreshPaymentForOrder(orderId: string) {
+    try {
+      const data = await fetchPaymentsByOrderId(orderId)
+      setPaymentByOrderId((prev) => new Map(prev).set(orderId, data))
+    } catch {
+      /* keep existing */
+    }
+  }
+
+  function openPaymentUpdate(row: ApiOrderListRow, focus: PaymentModalFocus = 'add') {
+    const data = paymentSummaryForOrder(row.id, paymentByOrderId, detailOrder, row)
+    const history = data?.history ?? []
+    const latest = history[history.length - 1]
+    setPaymentUpdateFocus(focus === 'fix' && history.length === 0 ? 'add' : focus)
+    setPaymentUpdateOrder(row)
+    setPaymentUpdateSelectedId(latest?.id ?? '')
+    setPaymentUpdateStatus(latest?.status === 'failed' ? 'received' : (latest?.status ?? 'received'))
+    setPaymentUpdateStaffId(staff[0]?.id ?? '')
+    const balance = data?.summary.balance ?? row.final_price_mmk
+    setPaymentUpdateAmount(balance > 0 ? Math.round(balance * 100) / 100 : '')
+    setPaymentUpdateMethod('cash')
+    setPaymentUpdateReference('')
+    setPaymentUpdateError(null)
+    setPaymentSubmitAction(null)
+    setOpenMenuId(null)
+    setPaymentUpdateOpen(true)
+  }
+
+  function onPaymentUpdateSelectPayment(paymentId: string, history: ApiPayment[]) {
+    setPaymentUpdateSelectedId(paymentId)
+    const p = history.find((h) => h.id === paymentId)
+    if (p) setPaymentUpdateStatus(p.status)
+  }
+
+  async function submitPaymentUpdate(e?: FormEvent) {
+    e?.preventDefault()
+    if (!paymentUpdateOrder) return
+    setPaymentUpdateError(null)
+    const amount =
+      typeof paymentUpdateAmount === 'number'
+        ? paymentUpdateAmount
+        : Number.parseFloat(String(paymentUpdateAmount))
+    if (!Number.isFinite(amount) || amount <= 0) {
+      return setPaymentUpdateError('Enter a valid payment amount.')
+    }
+    setPaymentSubmitAction('record')
+    setPaymentUpdateSubmitting(true)
+    try {
+      await createPayment({
+        order_id: paymentUpdateOrder.id,
+        amount_mmk: amount,
+        method: paymentUpdateMethod,
+        status: 'received',
+        reference_no: paymentUpdateReference.trim() || null,
+      })
+      showSuccess('Payment recorded.')
+      setPaymentUpdateOpen(false)
+      await refreshPaymentForOrder(paymentUpdateOrder.id)
+      if (detailOrder?.id === paymentUpdateOrder.id) void refreshDetailOrder(paymentUpdateOrder.id)
+    } catch (err) {
+      setPaymentUpdateError(err instanceof Error ? err.message : 'Payment update failed')
+    } finally {
+      setPaymentUpdateSubmitting(false)
+      setPaymentSubmitAction(null)
+    }
+  }
+
+  async function submitPaymentFix() {
+    if (!paymentUpdateOrder) return
+    setPaymentUpdateError(null)
+    if (paymentUpdateStatus === 'verified' && !paymentUpdateStaffId) {
+      return setPaymentUpdateError('Select staff when marking payment as verified.')
+    }
+    if (!paymentUpdateSelectedId) {
+      return setPaymentUpdateError('Select a payment to update.')
+    }
+    setPaymentSubmitAction('fix')
+    setPaymentUpdateSubmitting(true)
+    try {
+      await updatePaymentStatus(paymentUpdateSelectedId, {
+        status: paymentUpdateStatus,
+        staff_id: paymentUpdateStatus === 'verified' ? paymentUpdateStaffId : undefined,
+      })
+      showSuccess('Payment status updated.')
+      setPaymentUpdateOpen(false)
+      await refreshPaymentForOrder(paymentUpdateOrder.id)
+      if (detailOrder?.id === paymentUpdateOrder.id) void refreshDetailOrder(paymentUpdateOrder.id)
+    } catch (err) {
+      setPaymentUpdateError(err instanceof Error ? err.message : 'Payment update failed')
+    } finally {
+      setPaymentUpdateSubmitting(false)
+      setPaymentSubmitAction(null)
+    }
+  }
+
   function openCreateOrder() {
     const firstUser = users[0]
     const firstTest = tests[0]
@@ -660,7 +951,6 @@ export function OrderManagementPage() {
     setCreateTestPickerOpen(false)
     setCreateLatitude(firstUser ? firstUser.latitude : 0)
     setCreateLongitude(firstUser ? firstUser.longitude : 0)
-    setCreateGeocodeHint(null)
     if (!firstUser && !firstTest) {
       setCreateError('No users and no lab tests found. Create users/tests first.')
     } else if (!firstUser) {
@@ -748,6 +1038,7 @@ export function OrderManagementPage() {
         setDetailError('Order not found.')
       } else {
         setDetailOrder(order)
+        void refreshPaymentForOrder(id)
       }
     } catch (e) {
       setDetailError(e instanceof Error ? e.message : 'Failed to load detail')
@@ -975,7 +1266,7 @@ export function OrderManagementPage() {
       />
 
       {!hasApi ? (
-        <div className="card" style={{ borderColor: '#dfe5f0', background: '#f8fafc' }}>
+        <div className="card card--muted">
           <p style={{ margin: 0, fontSize: '0.9rem' }}>
             Set <code>VITE_API_BASE_URL</code> in <code>apps/lab_admin_web</code> (e.g. <code>http://localhost:3000</code>) and restart the dev server.
           </p>
@@ -1072,23 +1363,36 @@ export function OrderManagementPage() {
       </div>
 
       <div className="card">
-        <div className="table-wrap">
-          <table className="data-table data-table--catalog data-table--align-center">
+        <div className="table-wrap table-wrap--sticky-actions">
+          <table className="data-table data-table--catalog data-table--orders">
             <thead>
               <tr>
                 <th scope="col">Patient</th>
                 <th scope="col">Phone</th>
                 <th scope="col">Priority</th>
                 <th scope="col">Status</th>
+                <th scope="col" className="order-col-pay-status">
+                  Payment
+                </th>
+                <th
+                  scope="col"
+                  className="col-num order-col-paid"
+                  title="Sum of payments recorded on this order"
+                >
+                  Paid
+                </th>
+                <th scope="col" className="col-num order-col-due" title="Amount still owed on this order">
+                  Due
+                </th>
                 <th scope="col" title="Prescription file uploaded">
                   Rx
                 </th>
                 <th scope="col">Tests</th>
                 <th scope="col" className="col-num">
-                  Original (MMK)
+                  Original
                 </th>
                 <th scope="col" className="col-num">
-                  Final (MMK)
+                  Final
                 </th>
                 <th scope="col" className="action-col">
                   Actions
@@ -1098,13 +1402,13 @@ export function OrderManagementPage() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={9} className="data-table__state data-table__state--loading">
+                  <td colSpan={12} className="data-table__state data-table__state--loading">
                     <LoadingSpinner label="Loading orders" />
                   </td>
                 </tr>
               ) : sorted.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="data-table__state">
+                  <td colSpan={12} className="data-table__state">
                     <div className="data-table__empty-panel">
                       <div className="data-table__empty-icon" aria-hidden>
                         <span className="material-symbols-outlined">receipt_long</span>
@@ -1140,6 +1444,60 @@ export function OrderManagementPage() {
                     <td>
                       <span className={statusBadgeClass(o.status)}>{o.status}</span>
                     </td>
+                    <td className="order-col-pay-status">
+                      {(() => {
+                        const payData = paymentByOrderId.get(o.id)
+                        const display = orderPaymentListDisplay(payData, o.final_price_mmk)
+                        const amounts = orderPaymentAmounts(payData, o.final_price_mmk)
+                        if (paymentsLoading && !payData) {
+                          return <span className="order-pay-muted">…</span>
+                        }
+                        return (
+                          <div className="order-pay-status">
+                            <span className={paymentBadgeClass(display.status, display.fullyPaid)}>
+                              {display.label}
+                            </span>
+                            {amounts.total > 0 ? (
+                              <div
+                                className="order-pay-progress"
+                                role="progressbar"
+                                aria-valuenow={amounts.percentPaid}
+                                aria-valuemin={0}
+                                aria-valuemax={100}
+                                aria-label={`${amounts.percentPaid}% paid`}
+                              >
+                                <div className="order-pay-progress__track">
+                                  <div
+                                    className={`order-pay-progress__fill${amounts.balance <= 0 ? ' order-pay-progress__fill--complete' : ''}`}
+                                    style={{ width: `${amounts.percentPaid}%` }}
+                                  />
+                                </div>
+                              </div>
+                            ) : null}
+                          </div>
+                        )
+                      })()}
+                    </td>
+                    <td className="col-num order-col-paid">
+                      {(() => {
+                        const payData = paymentByOrderId.get(o.id)
+                        if (paymentsLoading && !payData) return <span className="order-pay-muted">…</span>
+                        const { paid } = orderPaymentAmounts(payData, o.final_price_mmk)
+                        return paid.toLocaleString()
+                      })()}
+                    </td>
+                    <td className="col-num order-col-due">
+                      {(() => {
+                        const payData = paymentByOrderId.get(o.id)
+                        if (paymentsLoading && !payData) return <span className="order-pay-muted">…</span>
+                        const { balance, total } = orderPaymentAmounts(payData, o.final_price_mmk)
+                        if (total <= 0) return '—'
+                        if (balance <= 0) {
+                          return <span className="order-due-zero">0</span>
+                        }
+                        return <span className="order-due-amount">{balance.toLocaleString()}</span>
+                      })()}
+                    </td>
                     <td>
                       {o.prescription_url ? (
                         <span className="badge badge--success" title={o.prescription_url}>
@@ -1150,11 +1508,32 @@ export function OrderManagementPage() {
                       )}
                     </td>
                     <td>
-                      {testsAssignedFlag(o.is_tests_assigned) ? (
-                        <span className="badge badge--success">Assigned</span>
-                      ) : (
-                        <span className="badge badge--warn">Missing</span>
-                      )}
+                      {(() => {
+                        const n = o.items?.length ?? 0
+                        if (n > 0) {
+                          const names = (o.items ?? [])
+                            .map((it) => it.test_name?.trim() || it.test_id)
+                            .slice(0, 2)
+                          const more = n > 2 ? ` +${n - 2}` : ''
+                          return (
+                            <span title={(o.items ?? []).map((it) => it.test_name ?? it.test_id).join(', ')}>
+                              {n} test{n === 1 ? '' : 's'}
+                              {names.length > 0 ? (
+                                <span className="order-list-tests-hint">
+                                  {' '}
+                                  ({names.join(', ')}
+                                  {more})
+                                </span>
+                              ) : null}
+                            </span>
+                          )
+                        }
+                        return testsAssignedFlag(o.is_tests_assigned) ? (
+                          <span className="badge badge--success">Assigned</span>
+                        ) : (
+                          <span className="badge badge--warn">Missing</span>
+                        )
+                      })()}
                     </td>
                     <td className="col-num">{o.original_price_mmk.toLocaleString()}</td>
                     <td className="col-num">{o.final_price_mmk.toLocaleString()}</td>
@@ -1169,6 +1548,27 @@ export function OrderManagementPage() {
                               void openDetail(o.id)
                             },
                           },
+                          {
+                            label: 'Payment',
+                            children: [
+                              {
+                                label: 'Add payment',
+                                onSelect: () => {
+                                  openPaymentUpdate(o, 'add')
+                                },
+                              },
+                              ...((paymentByOrderId.get(o.id)?.history.length ?? 0) > 0
+                                ? [
+                                    {
+                                      label: 'Update entry',
+                                      onSelect: () => {
+                                        openPaymentUpdate(o, 'fix')
+                                      },
+                                    },
+                                  ]
+                                : []),
+                            ],
+                          },
                           ...(canAddTestFromListRow(o)
                             ? [
                                 {
@@ -1178,17 +1578,17 @@ export function OrderManagementPage() {
                                   },
                                 },
                               ]
-                            : [
-                                {
-                                  label: 'Update status',
-                                  onSelect: () => {
-                                    void openStatusUpdate(o)
-                                  },
-                                },
-                              ]),
+                            : []),
+                          {
+                            label: 'Update status',
+                            onSelect: () => {
+                              void openStatusUpdate(o)
+                            },
+                          },
                           {
                             label: 'Delete',
                             onSelect: () => setDeleteTarget(o),
+                            danger: true,
                           },
                         ]}
                       />
@@ -1418,6 +1818,239 @@ export function OrderManagementPage() {
               </div>
               </div>
             </form>
+          </div>
+        </div>
+      ) : null}
+
+      {paymentUpdateOpen && paymentUpdateOrder ? (
+        <div
+          className="modal-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="payment-modal-title"
+          onMouseDown={(e) =>
+            e.target === e.currentTarget && !paymentUpdateSubmitting && setPaymentUpdateOpen(false)
+          }
+        >
+          <div className="modal-card modal-card--payment" onMouseDown={(e) => e.stopPropagation()}>
+            {(() => {
+              const payData = paymentSummaryForOrder(
+                paymentUpdateOrder.id,
+                paymentByOrderId,
+                detailOrder,
+                paymentUpdateOrder,
+              )
+              const amounts = orderPaymentAmounts(payData, paymentUpdateOrder.final_price_mmk)
+              const history = payData?.history ?? []
+              const hasHistory = history.length > 0
+              const enterAmount =
+                typeof paymentUpdateAmount === 'number'
+                  ? paymentUpdateAmount
+                  : Number.parseFloat(String(paymentUpdateAmount))
+              const adding = Number.isFinite(enterAmount) && enterAmount > 0 ? enterAmount : 0
+              const previewPaid = Math.min(amounts.total, amounts.paid + adding)
+              const previewLeft = Math.max(0, amounts.total - previewPaid)
+              const showAddSection = paymentUpdateFocus === 'add'
+              const showFixSection = paymentUpdateFocus === 'fix' && hasHistory
+              const fullyPaid = amounts.total > 0 && amounts.balance <= 0
+
+              return (
+                <>
+                  <div className="modal-head payment-modal__head">
+                    <div>
+                      <h2 id="payment-modal-title" className="modal-title">
+                        {showFixSection ? 'Update payment entry' : 'Add payment'}
+                      </h2>
+                      <p className="payment-modal__subtitle">{paymentUpdateOrder.patient_name}</p>
+                    </div>
+                    <button
+                      type="button"
+                      className="btn btn-ghost modal-close"
+                      onClick={() => !paymentUpdateSubmitting && setPaymentUpdateOpen(false)}
+                      aria-label="Close"
+                      disabled={paymentUpdateSubmitting}
+                    >
+                      ×
+                    </button>
+                  </div>
+                  <div className="payment-modal">
+                    <PaymentModalSummary amounts={amounts} />
+
+                    {paymentUpdateError ? (
+                      <div className="form-alert form-alert--error" role="alert">
+                        {paymentUpdateError}
+                      </div>
+                    ) : null}
+
+                    {showAddSection ? (
+                      <div className="payment-modal__form">
+                        {fullyPaid ? (
+                          <p className="payment-modal__notice" role="status">
+                            This order is already fully paid. Enter an amount only if the patient
+                            pays extra (e.g. additional tests).
+                          </p>
+                        ) : null}
+                        <div className="payment-modal__row">
+                          <div className="field payment-modal__amount-field">
+                            <label htmlFor="pu-amount">Amount (MMK)</label>
+                            <input
+                              id="pu-amount"
+                              type="number"
+                              className="payment-modal__amount-input"
+                              min={0}
+                              step="0.01"
+                              placeholder={fullyPaid ? '0' : amounts.balance > 0 ? String(Math.round(amounts.balance)) : '0'}
+                              value={paymentUpdateAmount === '' ? '' : paymentUpdateAmount}
+                              onChange={(e) =>
+                                setPaymentUpdateAmount(
+                                  e.target.value === '' ? '' : Number(e.target.value),
+                                )
+                              }
+                              disabled={paymentUpdateSubmitting}
+                            />
+                            {amounts.balance > 0 ? (
+                              <button
+                                type="button"
+                                className="payment-modal__fill-due"
+                                onClick={() =>
+                                  setPaymentUpdateAmount(Math.round(amounts.balance * 100) / 100)
+                                }
+                                disabled={paymentUpdateSubmitting}
+                              >
+                                Fill due ({amounts.balance.toLocaleString()} MMK)
+                              </button>
+                            ) : null}
+                          </div>
+                          <div className="field payment-modal__method-field">
+                            <label htmlFor="pu-method">Method</label>
+                            <select
+                              id="pu-method"
+                              className="select-chevron-left"
+                              value={paymentUpdateMethod}
+                              onChange={(e) =>
+                                setPaymentUpdateMethod(e.target.value as ApiPaymentMethod)
+                              }
+                              disabled={paymentUpdateSubmitting}
+                            >
+                              {PAYMENT_METHOD_OPTIONS.map((m) => (
+                                <option key={m.value} value={m.value}>
+                                  {m.label}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+                        {adding > 0 ? (
+                          <p className="payment-modal__preview" role="status">
+                            After this payment:{' '}
+                            <strong>{previewPaid.toLocaleString()}</strong> paid ·{' '}
+                            <strong>{previewLeft.toLocaleString()}</strong> MMK due
+                          </p>
+                        ) : null}
+                      </div>
+                    ) : null}
+
+                    {showFixSection ? (
+                      <div className="payment-modal__form">
+                        <p className="payment-modal__notice payment-modal__notice--muted">
+                          Update status on a payment already recorded — no new amount.
+                        </p>
+                        <div className="field">
+                          <label htmlFor="pu-payment">Payment entry</label>
+                          <select
+                            id="pu-payment"
+                            className="select-chevron-left"
+                            value={paymentUpdateSelectedId}
+                            onChange={(e) => onPaymentUpdateSelectPayment(e.target.value, history)}
+                            disabled={paymentUpdateSubmitting}
+                          >
+                            {history.map((p) => (
+                              <option key={p.id} value={p.id}>
+                                {p.amount_mmk.toLocaleString()} MMK — {p.status}
+                                {p.method ? ` (${p.method})` : ''}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="payment-modal__row">
+                          <div className="field">
+                            <label htmlFor="pu-status">New status</label>
+                            <select
+                              id="pu-status"
+                              className="select-chevron-left"
+                              value={paymentUpdateStatus}
+                              onChange={(e) =>
+                                setPaymentUpdateStatus(e.target.value as ApiPaymentStatus)
+                              }
+                              disabled={paymentUpdateSubmitting}
+                            >
+                              {ADMIN_PAYMENT_UPDATE_STATUSES.map((s) => (
+                                <option key={s} value={s}>
+                                  {s}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          {paymentUpdateStatus === 'verified' ? (
+                            <div className="field">
+                              <label htmlFor="pu-staff">Verified by</label>
+                              <select
+                                id="pu-staff"
+                                className="select-chevron-left"
+                                value={paymentUpdateStaffId}
+                                onChange={(e) => setPaymentUpdateStaffId(e.target.value)}
+                                disabled={paymentUpdateSubmitting}
+                              >
+                                <option value="">Select staff</option>
+                                {staff.map((s) => (
+                                  <option key={s.id} value={s.id}>
+                                    {s.name}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          ) : null}
+                        </div>
+                      </div>
+                    ) : null}
+
+                    <div className="payment-modal-footer">
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        onClick={() => setPaymentUpdateOpen(false)}
+                        disabled={paymentUpdateSubmitting}
+                      >
+                        Cancel
+                      </button>
+                      {showAddSection ? (
+                        <button
+                          type="button"
+                          className="btn btn-primary"
+                          onClick={() => void submitPaymentUpdate()}
+                          disabled={paymentUpdateSubmitting}
+                        >
+                          {paymentUpdateSubmitting && paymentSubmitAction === 'record'
+                            ? 'Recording…'
+                            : 'Record payment'}
+                        </button>
+                      ) : showFixSection ? (
+                        <button
+                          type="button"
+                          className="btn btn-primary"
+                          onClick={() => void submitPaymentFix()}
+                          disabled={paymentUpdateSubmitting}
+                        >
+                          {paymentUpdateSubmitting && paymentSubmitAction === 'fix'
+                            ? 'Saving…'
+                            : 'Save changes'}
+                        </button>
+                      ) : null}
+                    </div>
+                  </div>
+                </>
+              )
+            })()}
           </div>
         </div>
       ) : null}
@@ -1716,10 +2349,42 @@ export function OrderManagementPage() {
                       <span className="order-detail-value">{(detailOrder.total_paid_mmk ?? 0).toLocaleString()} MMK</span>
                     </div>
                     <div className="order-detail-item">
-                      <span className="order-detail-label">Balance</span>
+                      <span className="order-detail-label">Left to pay</span>
                       <span className="order-detail-value order-detail-value--emphasis">
-                        {(detailOrder.balance_mmk ?? detailOrder.final_price_mmk).toLocaleString()} MMK
+                        {Math.max(
+                          0,
+                          detailOrder.balance_mmk ??
+                            detailOrder.final_price_mmk - (detailOrder.total_paid_mmk ?? 0),
+                        ).toLocaleString()}{' '}
+                        MMK
                       </span>
+                    </div>
+                    <div className="order-detail-item">
+                      <span className="order-detail-label">Payment</span>
+                      {(() => {
+                        const payData = paymentByOrderId.get(detailOrder.id)
+                        const display = orderPaymentListDisplay(
+                          payData ??
+                            (detailOrder.payments?.length
+                              ? {
+                                  summary: {
+                                    total_price: detailOrder.final_price_mmk,
+                                    total_paid: detailOrder.total_paid_mmk ?? 0,
+                                    balance:
+                                      detailOrder.balance_mmk ??
+                                      detailOrder.final_price_mmk - (detailOrder.total_paid_mmk ?? 0),
+                                  },
+                                  history: detailOrder.payments,
+                                }
+                              : undefined),
+                          detailOrder.final_price_mmk,
+                        )
+                        return (
+                          <span className={paymentBadgeClass(display.status, display.fullyPaid)}>
+                            {display.label}
+                          </span>
+                        )
+                      })()}
                     </div>
                     <div className="order-detail-item">
                       <span className="order-detail-label">Created</span>
@@ -1735,6 +2400,38 @@ export function OrderManagementPage() {
 
               {orderPrescriptionAttachmentUrl(detailOrder) ? (
                 <PrescriptionPreviewBlock url={orderPrescriptionAttachmentUrl(detailOrder)!} />
+              ) : null}
+
+              {(detailOrder.payments?.length ?? 0) > 0 ? (
+                <div className="order-detail-section">
+                  <h3 className="order-detail-section__title">Payments</h3>
+                  <div className="table-wrap">
+                    <table className="data-table">
+                      <thead>
+                        <tr>
+                          <th>Amount (MMK)</th>
+                          <th>Status</th>
+                          <th>Method</th>
+                          <th>Reference</th>
+                          <th>Paid at</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {detailOrder.payments!.map((p) => (
+                          <tr key={p.id}>
+                            <td>{p.amount_mmk.toLocaleString()}</td>
+                            <td>
+                              <span className={paymentBadgeClass(p.status)}>{p.status}</span>
+                            </td>
+                            <td>{p.method ?? '—'}</td>
+                            <td>{p.reference_no?.trim() || '—'}</td>
+                            <td>{fmtDateTime(p.paid_at ?? undefined)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
               ) : null}
 
               {detailOrder.schedule ? (
@@ -1788,9 +2485,15 @@ export function OrderManagementPage() {
                       <tbody>
                         {detailOrder.items.map((it, idx) => {
                           const t = testMap.get(it.test_id)
+                          const label =
+                            t != null
+                              ? `${t.test_name} (${t.test_code})`
+                              : it.test_name
+                                ? `${it.test_name}${it.test_code ? ` (${it.test_code})` : ''}`
+                                : it.test_id
                           return (
                             <tr key={`${it.test_id}-${idx}`}>
-                              <td>{t ? `${t.test_name} (${t.test_code})` : it.test_id}</td>
+                              <td>{label}</td>
                               <td>{it.quantity}</td>
                               <td>{it.unit_price_mmk.toLocaleString()}</td>
                               <td>{it.subtotal_mmk.toLocaleString()}</td>
@@ -1804,6 +2507,27 @@ export function OrderManagementPage() {
               </div>
             </div>
             <div className="modal-card--order-detail__footer row-actions">
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => {
+                  const row = rows.find((r) => r.id === detailOrder.id)
+                  if (row) openPaymentUpdate(row)
+                  else {
+                    openPaymentUpdate({
+                      id: detailOrder.id,
+                      patient_name: detailOrder.patient_name,
+                      priority: detailOrder.priority,
+                      status: detailOrder.status,
+                      original_price_mmk: detailOrder.original_price_mmk,
+                      final_price_mmk: detailOrder.final_price_mmk,
+                      created_at: detailOrder.created_at,
+                    })
+                  }
+                }}
+              >
+                Update payment
+              </button>
               <button type="button" className="btn btn-primary" onClick={() => setDetailOrder(null)}>
                 Close
               </button>

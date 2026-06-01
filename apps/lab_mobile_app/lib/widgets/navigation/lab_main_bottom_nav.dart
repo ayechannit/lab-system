@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/session_scope.dart';
-import '../../theme/app_colors.dart';
+import '../../theme/theme_extensions.dart';
 
 /// Which tab is highlighted in the pill nav (use [none] when no tab matches the current screen).
 enum LabMainTab {
@@ -48,15 +48,16 @@ class LabMainBottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = context.cs;
     return SafeArea(
       top: false,
       minimum: const EdgeInsets.fromLTRB(14, 0, 14, 14),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: context.cardFill,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: const Color(0x66E1E2EC)),
+          border: Border.all(color: cs.outline.withValues(alpha: 0.45)),
         ),
         child: Row(
           children: [
@@ -122,7 +123,9 @@ class _NavCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fg = active ? AppColors.primary : AppColors.outline;
+    final cs = context.cs;
+    final extras = context.appExtras;
+    final fg = active ? cs.primary : cs.onSurfaceVariant;
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -132,7 +135,7 @@ class _NavCell extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
           child: DecoratedBox(
             decoration: BoxDecoration(
-              color: active ? const Color(0xFFEAF1FF) : Colors.transparent,
+              color: active ? extras.navActiveBackground : Colors.transparent,
               borderRadius: BorderRadius.circular(14),
             ),
             child: Padding(

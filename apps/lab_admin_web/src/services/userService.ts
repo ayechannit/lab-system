@@ -37,6 +37,7 @@ function normalizeUserRow(raw: Record<string, unknown>): UserListRow {
     latitude: Number(raw.latitude ?? 0),
     longitude: Number(raw.longitude ?? 0),
     total_points: Number(raw.total_points ?? 0),
+    is_approved: raw.is_approved === true || raw.is_approved === 1 || raw.is_approved === '1',
     is_deleted: Boolean(raw.is_deleted),
     created_at: String(raw.created_at ?? ''),
     updated_at: String(raw.updated_at ?? ''),
@@ -57,6 +58,8 @@ export type FetchUserListParams = {
   role?: EndUserRole
   name?: string
   phone?: string
+  /** When `false`, only users awaiting staff approval (doctor/clinic signups). */
+  is_approved?: boolean
   page?: number
   limit?: number
 }
@@ -66,6 +69,8 @@ export async function fetchUserList(params?: FetchUserListParams): Promise<UserL
   if (params?.role) sp.set('role', params.role)
   if (params?.name?.trim()) sp.set('name', params.name.trim())
   if (params?.phone?.trim()) sp.set('phone', params.phone.trim())
+  if (params?.is_approved === false) sp.set('is_approved', 'false')
+  if (params?.is_approved === true) sp.set('is_approved', 'true')
   if (params?.page != null && params.page > 0) sp.set('page', String(params.page))
   if (params?.limit != null && params.limit > 0) sp.set('limit', String(params.limit))
   const qs = sp.toString()
@@ -89,4 +94,12 @@ export async function updateUser(id: string, body: UserUpdateBody): Promise<unkn
 export async function deleteUser(id: string): Promise<void> {
   const res = await apiFetch(`/api/users/${encodeURIComponent(id)}`, { method: 'DELETE' })
   if (!res.ok) throw new Error(await readApiErrorBody(res))
+}
+
+export async function approveUser(id: string): Promise<UserListRow> {
+  const res = await apiFetch(`/api/users/${encodeURIComponent(id)}/approve`, { method: 'PUT' })
+  if (!res.ok) throw new Error(await readApiErrorBody(res))
+  const data = (await res.json()) as { user?: Record<string, unknown> }
+  const row = data.user ?? data
+  return normalizeUserRow({ ...(row as Record<string, unknown>), is_deleted: false })
 }

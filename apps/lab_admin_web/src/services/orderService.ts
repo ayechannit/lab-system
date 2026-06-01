@@ -1,5 +1,6 @@
 import { apiFetch } from './apiClient'
 import { readApiErrorBody } from './readApiError'
+import type { ApiPayment } from './paymentService'
 import type { ApiOrderSchedule } from './scheduleService'
 
 export type ApiOrderStatus =
@@ -9,6 +10,18 @@ export type ApiOrderStatus =
   | 'running'
   | 'completed'
   | 'delivered'
+
+export type ApiOrderDetailItem = {
+  id?: string
+  test_id: string
+  quantity: number
+  unit_price_mmk: number
+  subtotal_mmk: number
+  test_name?: string | null
+  test_code?: string | null
+  result_file_url?: string | null
+  download_url?: string | null
+}
 
 export type ApiOrderListRow = {
   id: string
@@ -24,16 +37,58 @@ export type ApiOrderListRow = {
   prescription_url?: string | null
   is_tests_assigned?: boolean | number | null
   report_delivery_method?: string
+  items?: ApiOrderDetailItem[]
 }
 
-export type ApiOrderDetailItem = {
-  id?: string
-  test_id: string
-  quantity: number
-  unit_price_mmk: number
-  subtotal_mmk: number
-  result_file_url?: string | null
-  download_url?: string | null
+function normalizeOrderItems(raw: unknown): ApiOrderDetailItem[] {
+  if (raw == null) return []
+  let parsed: unknown = raw
+  if (typeof raw === 'string') {
+    try {
+      parsed = JSON.parse(raw) as unknown
+    } catch {
+      return []
+    }
+  }
+  if (!Array.isArray(parsed)) return []
+  return parsed.map((row) => {
+    const it = row as ApiOrderDetailItem
+    return {
+      test_id: it.test_id,
+      quantity: Number(it.quantity) || 1,
+      unit_price_mmk: Number(it.unit_price_mmk) || 0,
+      subtotal_mmk: Number(it.subtotal_mmk) || 0,
+      id: it.id,
+      test_name: it.test_name ?? null,
+      test_code: it.test_code ?? null,
+      result_file_url: it.result_file_url ?? null,
+      download_url: it.download_url ?? null,
+    }
+  })
+}
+
+function normalizePayments(raw: unknown): ApiPayment[] {
+  if (raw == null) return []
+  let parsed: unknown = raw
+  if (typeof raw === 'string') {
+    try {
+      parsed = JSON.parse(raw) as unknown
+    } catch {
+      return []
+    }
+  }
+  if (!Array.isArray(parsed)) return []
+  return parsed as ApiPayment[]
+}
+
+function normalizeOrderDetail(raw: Record<string, unknown>): ApiOrderDetail {
+  return {
+    ...(raw as ApiOrderDetail),
+    items: normalizeOrderItems(raw.items),
+    payments: normalizePayments(raw.payments),
+    total_paid_mmk: raw.total_paid_mmk != null ? Number(raw.total_paid_mmk) : undefined,
+    balance_mmk: raw.balance_mmk != null ? Number(raw.balance_mmk) : undefined,
+  }
 }
 
 export type ApiOrderDetail = {
@@ -62,6 +117,7 @@ export type ApiOrderDetail = {
   is_tests_assigned?: boolean | number | null
   items: ApiOrderDetailItem[]
   schedule?: ApiOrderSchedule | null
+  payments?: ApiPayment[]
 }
 
 export type ApiOrderCreateItem = {
@@ -110,14 +166,19 @@ export async function fetchOrders(params?: FetchOrdersParams): Promise<ApiOrderL
   const res = await apiFetch(`/api/orders${qs ? `?${qs}` : ''}`)
   if (!res.ok) throw new Error(await readApiErrorBody(res))
   const data = await res.json()
-  return Array.isArray(data) ? (data as ApiOrderListRow[]) : []
+  if (!Array.isArray(data)) return []
+  return data.map((row) => {
+    const o = row as ApiOrderListRow
+    return { ...o, items: normalizeOrderItems(o.items) }
+  })
 }
 
 export async function fetchOrderById(id: string): Promise<ApiOrderDetail | null> {
   const res = await apiFetch(`/api/orders/${encodeURIComponent(id)}`)
   if (res.status === 404) return null
   if (!res.ok) throw new Error(await readApiErrorBody(res))
-  return (await res.json()) as ApiOrderDetail
+  const raw = (await res.json()) as Record<string, unknown>
+  return normalizeOrderDetail(raw)
 }
 
 export async function createOrder(body: ApiOrderCreateBody): Promise<unknown> {

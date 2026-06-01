@@ -5,7 +5,8 @@ import { LOGO_URL_MAX_LENGTH } from '../utils/logoImage'
 
 export { LOGO_URL_MAX_LENGTH }
 
-export type ThemeMode = 'light' | 'dark' | 'custom'
+/** Stored in `theme_settings.mode`; only preset themes are supported in the admin UI. */
+export type ThemeMode = 'light' | 'dark'
 
 export type SystemSettingsRow = {
   id?: string
@@ -42,8 +43,8 @@ export const DEFAULT_SYSTEM_SETTINGS: SystemSettingsUpdateBody = {
   lab_name: 'MedLab Smart',
   mode: 'light',
   logo_url: null,
-  primary_color: '#0055ff',
-  secondary_color: '#00cc66',
+  primary_color: '#003d9b',
+  secondary_color: '#0d8a5b',
   custom_colors: null,
   latitude: null,
   longitude: null,
@@ -73,9 +74,7 @@ function asNum(v: unknown): number | null {
 }
 
 function normalizeMode(v: unknown): ThemeMode {
-  const s = String(v ?? 'light')
-  if (s === 'dark' || s === 'custom') return s
-  return 'light'
+  return String(v) === 'dark' ? 'dark' : 'light'
 }
 
 /** HTML color inputs require `#rrggbb`. */
@@ -95,8 +94,8 @@ export function normalizeSystemSettings(raw: Record<string, unknown> | null | un
     lab_name: asStr(raw.lab_name, 'MedLab Smart'),
     mode: normalizeMode(raw.mode),
     logo_url: asNullableStr(raw.logo_url),
-    primary_color: normalizeHexColor(asNullableStr(raw.primary_color), '#0055ff'),
-    secondary_color: normalizeHexColor(asNullableStr(raw.secondary_color), '#00cc66'),
+    primary_color: normalizeHexColor(asNullableStr(raw.primary_color), '#003d9b'),
+    secondary_color: normalizeHexColor(asNullableStr(raw.secondary_color), '#0d8a5b'),
     custom_colors: asNullableStr(raw.custom_colors),
     latitude: asNum(raw.latitude),
     longitude: asNum(raw.longitude),

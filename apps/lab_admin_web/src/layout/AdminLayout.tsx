@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { BrandMark } from '../components/common/BrandMark'
 import { MyProfileModal } from '../components/profile/MyProfileModal'
 import { useAuth } from '../hooks/AuthContext'
+import { useSystemBranding } from '../hooks/SystemBrandingContext'
 import { useToast } from '../hooks/ToastContext'
 import type { SessionRole } from '../model/types'
 import './admin-layout.css'
@@ -70,6 +72,7 @@ function readSidebarCollapsed(): boolean {
 export function AdminLayout() {
   const { showSuccess } = useToast()
   const { signOut, account, role, refreshAccount } = useAuth()
+  const { labName, logoDisplayUrl } = useSystemBranding()
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const headerTitle = headerTitleForPath(pathname)
@@ -165,11 +168,9 @@ export function AdminLayout() {
             isMobile ? 'Close navigation menu' : sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar to icons'
           }
         >
-          <span className="brand-mark" aria-hidden>
-            <span className="material-symbols-outlined">biotech</span>
-          </span>
+          <BrandMark logoUrl={logoDisplayUrl} />
           <div className="brand-copy">
-            <div className="brand-title">MedLab Smart </div>
+            <div className="brand-title">{labName}</div>
             <div className="brand-sub">Lab management</div>
           </div>
         </button>
@@ -224,9 +225,7 @@ export function AdminLayout() {
                 aria-expanded={false}
                 onClick={() => setMobileDrawerOpen(true)}
               >
-                <span className="brand-mark" aria-hidden>
-                  <span className="material-symbols-outlined">biotech</span>
-                </span>
+                <BrandMark logoUrl={logoDisplayUrl} />
               </button>
             ) : null}
             <h1 className="page-title">{headerTitle}</h1>

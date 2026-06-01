@@ -27,6 +27,8 @@ export interface UserListRow {
   latitude: number
   longitude: number
   total_points: number
+  /** Doctors/clinics register as pending until staff approves. Patients are auto-approved. */
+  is_approved: boolean
   is_deleted: boolean
   created_at: string
   updated_at: string

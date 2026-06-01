@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../models/user_role.dart';
-import '../../theme/app_colors.dart';
+import '../../theme/theme_extensions.dart';
 
 class RoleSelectionScreen extends StatelessWidget {
   const RoleSelectionScreen({super.key});
@@ -26,7 +26,7 @@ class RoleSelectionScreen extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               'Choose your account type, then complete signup with your details.',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.onSurfaceVariant),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: context.cs.onSurfaceVariant),
             ),
             const SizedBox(height: 24),
             ...UserRole.values.map(

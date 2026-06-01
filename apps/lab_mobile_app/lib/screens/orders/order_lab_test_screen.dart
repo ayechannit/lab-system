@@ -1,7 +1,9 @@
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
@@ -11,11 +13,16 @@ import '../../models/lab_test_pick.dart';
 import '../../models/user_role.dart';
 import '../../config/map_defaults.dart';
 import '../../theme/app_colors.dart';
-import '../../widgets/common/app_brand_mark.dart';
+import '../../theme/theme_extensions.dart';
+import '../../widgets/common/app_branding_row.dart';
+import '../../widgets/common/app_dropdown_form_field.dart';
+import '../../widgets/common/app_field_decoration.dart';
 import '../../widgets/location/address_location_fields.dart';
 import '../../widgets/navigation/lab_main_bottom_nav.dart';
 
 enum _OrderMode { catalogTests, prescriptionOnly }
+
+enum _PrescriptionPickSource { camera, gallery, file }
 
 class OrderLabTestScreen extends StatefulWidget {
   const OrderLabTestScreen({super.key});
@@ -26,6 +33,7 @@ class OrderLabTestScreen extends StatefulWidget {
 
 class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _processOrderKey = GlobalKey<FormFieldState<void>>();
   final _description = TextEditingController();
   final _patientName = TextEditingController();
   final _age = TextEditingController();
@@ -109,45 +117,56 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
         .toList();
   }
 
-  Widget _stackedFieldLabel(BuildContext context, String text) {
+  Widget _stackedFieldLabel(BuildContext context, String text, {bool required = false}) {
     final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
-      child: Text(
-        text,
-        style: theme.textTheme.titleSmall?.copyWith(
-          fontWeight: FontWeight.w500,
-          color: theme.colorScheme.onSurface,
+      child: Text.rich(
+        TextSpan(
+          text: text,
+          style: theme.textTheme.titleSmall?.copyWith(
+            fontWeight: FontWeight.w500,
+            color: theme.colorScheme.onSurface,
+          ),
+          children: required
+              ? [
+                  TextSpan(
+                    text: ' *',
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.error,
+                    ),
+                  ),
+                ]
+              : null,
         ),
       ),
     );
   }
 
-  InputDecoration _inputOutlineNoFloating(BuildContext context, {String? hint, Widget? prefixIcon}) {
-    final cs = Theme.of(context).colorScheme;
-    final r = BorderRadius.circular(12);
-    return InputDecoration(
-      hintText: hint,
-      hintStyle: TextStyle(color: cs.onSurfaceVariant.withValues(alpha: 0.72)),
-      prefixIcon: prefixIcon,
-      isDense: true,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-      border: OutlineInputBorder(borderRadius: r),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: r,
-        borderSide: BorderSide(color: cs.outline),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: r,
-        borderSide: BorderSide(color: cs.primary, width: 2),
-      ),
-      errorBorder: OutlineInputBorder(
-        borderRadius: r,
-        borderSide: BorderSide(color: cs.error),
-      ),
-      focusedErrorBorder: OutlineInputBorder(
-        borderRadius: r,
-        borderSide: BorderSide(color: cs.error, width: 2),
+  String? _validateProcessOrder() {
+    if (_mode == _OrderMode.catalogTests) {
+      if (_selectedTestIds.isEmpty) {
+        return 'Select at least one test from the catalog.';
+      }
+      return null;
+    }
+    if (_prescriptionBytes == null || _prescriptionBytes!.isEmpty) {
+      return 'Choose a prescription PDF or image.';
+    }
+    return null;
+  }
+
+  void _revalidateProcessOrder() {
+    _processOrderKey.currentState?.validate();
+  }
+
+  Widget _fieldErrorText(BuildContext context, String message) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 6, left: 2),
+      child: Text(
+        message,
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.error),
       ),
     );
   }
@@ -183,6 +202,93 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
   double _sumFinal(List<CatalogOrderLine> lines) => lines.fold(0.0, (a, b) => a + b.subtotalMmk);
 
   Future<void> _pickPrescription() async {
+    final choice = await showModalBottomSheet<_PrescriptionPickSource>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) {
+        final cs = Theme.of(ctx).colorScheme;
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Add prescription',
+                  style: Theme.of(ctx).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Take a photo, pick from gallery, or upload a PDF/image file.',
+                  style: Theme.of(ctx).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                ),
+                const SizedBox(height: 12),
+                if (!kIsWeb)
+                  ListTile(
+                    leading: Icon(Icons.photo_camera_outlined, color: cs.primary),
+                    title: const Text('Take photo'),
+                    subtitle: const Text('Use camera'),
+                    onTap: () => Navigator.pop(ctx, _PrescriptionPickSource.camera),
+                  ),
+                ListTile(
+                  leading: Icon(Icons.photo_library_outlined, color: cs.primary),
+                  title: const Text('Choose from gallery'),
+                  subtitle: const Text('JPG, PNG, or other image'),
+                  onTap: () => Navigator.pop(ctx, _PrescriptionPickSource.gallery),
+                ),
+                ListTile(
+                  leading: Icon(Icons.upload_file_outlined, color: cs.primary),
+                  title: const Text('Choose file'),
+                  subtitle: const Text('PDF or image from device'),
+                  onTap: () => Navigator.pop(ctx, _PrescriptionPickSource.file),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+    if (choice == null || !mounted) return;
+
+    switch (choice) {
+      case _PrescriptionPickSource.camera:
+        await _pickPrescriptionFromImage(ImageSource.camera);
+      case _PrescriptionPickSource.gallery:
+        await _pickPrescriptionFromImage(ImageSource.gallery);
+      case _PrescriptionPickSource.file:
+        await _pickPrescriptionFromFile();
+    }
+  }
+
+  Future<void> _pickPrescriptionFromImage(ImageSource source) async {
+    try {
+      final picker = ImagePicker();
+      final file = await picker.pickImage(
+        source: source,
+        imageQuality: 85,
+        maxWidth: 4096,
+        maxHeight: 4096,
+      );
+      if (file == null) return;
+      final bytes = await file.readAsBytes();
+      if (bytes.isEmpty) {
+        _showPrescriptionReadError();
+        return;
+      }
+      final name = file.name.trim().isNotEmpty
+          ? file.name
+          : 'prescription_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      _applyPrescriptionFile(bytes, name);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not ${source == ImageSource.camera ? 'capture' : 'load'} image: $e')),
+      );
+    }
+  }
+
+  Future<void> _pickPrescriptionFromFile() async {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: const ['pdf', 'jpg', 'jpeg', 'png', 'gif', 'webp'],
@@ -200,17 +306,25 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
       }
     }
     if (bytes == null || bytes.isEmpty) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not read the selected file.')),
-        );
-      }
+      _showPrescriptionReadError();
       return;
     }
+    _applyPrescriptionFile(bytes, f.name);
+  }
+
+  void _applyPrescriptionFile(Uint8List bytes, String name) {
     setState(() {
       _prescriptionBytes = bytes;
-      _prescriptionName = f.name;
+      _prescriptionName = name;
     });
+    _revalidateProcessOrder();
+  }
+
+  void _showPrescriptionReadError() {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Could not read the selected file.')),
+    );
   }
 
   Future<void> _openTestCatalogSheet(UserRole role) async {
@@ -257,11 +371,10 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
                           setState(() {});
                           setModal(() {});
                         },
-                        decoration: const InputDecoration(
-                          hintText: 'Search by test name or code',
-                          prefixIcon: Icon(Icons.search),
-                          border: OutlineInputBorder(),
-                          isDense: true,
+                        decoration: AppFieldDecoration.build(
+                          context,
+                          hint: 'Search by test name or code',
+                          prefixIcon: const Icon(Icons.search),
                         ),
                       ),
                     ),
@@ -269,7 +382,7 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: Text(
                         '${filtered.length} match${filtered.length == 1 ? '' : 'es'} · ${_selectedTestIds.length} selected',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.onSurfaceVariant),
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(color: context.cs.onSurfaceVariant),
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -278,7 +391,7 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
                           ? Center(
                               child: Text(
                                 'No tests match your search.',
-                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.onSurfaceVariant),
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: context.cs.onSurfaceVariant),
                               ),
                             )
                           : ListView.builder(
@@ -305,6 +418,7 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
                                         }
                                       });
                                       setModal(() {});
+                                      _revalidateProcessOrder();
                                     },
                                     title: Text(t.name, maxLines: 2, overflow: TextOverflow.ellipsis, style: body),
                                     subtitle: Text(
@@ -325,6 +439,7 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
         );
       },
     );
+    _revalidateProcessOrder();
   }
 
   String _summaryTestTitle(UserRole role) {
@@ -346,19 +461,7 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
       appBar: AppBar(
         automaticallyImplyLeading: false,
         titleSpacing: 12,
-        title: Row(
-          children: [
-            const AppBrandMark(size: 32, iconSize: 16, borderRadius: 8),
-            const SizedBox(width: 10),
-            Text(
-              'MedLab Smart',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.w800,
-                  ),
-            ),
-          ],
-        ),
+        title: const AppBrandingRow(markSize: 32, iconSize: 16, borderRadius: 8),
       ),
       body: Form(
         key: _formKey,
@@ -376,14 +479,14 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
                   _stackedFieldLabel(context, 'Patient full name'),
                   TextFormField(
                     controller: _patientName,
-                    decoration: _inputOutlineNoFloating(context),
+                    decoration: AppFieldDecoration.build(context),
                     validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
                   ),
                   const SizedBox(height: 12),
                   _stackedFieldLabel(context, 'Phone'),
                   TextFormField(
                     controller: _phone,
-                    decoration: _inputOutlineNoFloating(
+                    decoration: AppFieldDecoration.build(
                       context,
                       prefixIcon: Icon(Icons.phone_outlined, color: Theme.of(context).colorScheme.onSurfaceVariant),
                     ),
@@ -398,7 +501,7 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
                         _stackedFieldLabel(context, 'Age'),
                         TextFormField(
                           controller: _age,
-                          decoration: _inputOutlineNoFloating(context),
+                          decoration: AppFieldDecoration.build(context),
                           keyboardType: TextInputType.number,
                           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                           validator: (v) {
@@ -412,11 +515,9 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _stackedFieldLabel(context, 'Gender'),
-                        DropdownButtonFormField<String>(
+                        AppDropdownFormField<String>(
                           value: _gender,
-                          isExpanded: true,
                           style: _dropdownBodyStyle(context),
-                          decoration: _inputOutlineNoFloating(context),
                           items: ['Male', 'Female', 'Other']
                               .map(
                                 (e) => DropdownMenuItem<String>(
@@ -434,13 +535,13 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
                   _stackedFieldLabel(context, 'Blood type (optional)'),
                   TextFormField(
                     controller: _bloodType,
-                    decoration: _inputOutlineNoFloating(context),
+                    decoration: AppFieldDecoration.build(context),
                   ),
                   const SizedBox(height: 12),
                   _stackedFieldLabel(context, 'Clinical notes (optional)'),
                   TextFormField(
                     controller: _description,
-                    decoration: _inputOutlineNoFloating(context),
+                    decoration: AppFieldDecoration.build(context),
                     maxLines: 2,
                   ),
                 ],
@@ -459,11 +560,9 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _stackedFieldLabel(context, 'Report delivery'),
-                  DropdownButtonFormField<String>(
+                  AppDropdownFormField<String>(
                     value: _reportDelivery,
-                    isExpanded: true,
                     style: _dropdownBodyStyle(context),
-                    decoration: _inputOutlineNoFloating(context),
                     items: [
                       DropdownMenuItem(
                         value: 'soft_copy',
@@ -484,7 +583,7 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
                   _stackedFieldLabel(context, 'Collection / facility notes (optional)'),
                   TextFormField(
                     controller: _facilityNotes,
-                    decoration: _inputOutlineNoFloating(
+                    decoration: AppFieldDecoration.build(
                       context,
                       hint: 'Notes for collector or lab…',
                     ),
@@ -508,7 +607,7 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
                           },
                           borderRadius: BorderRadius.circular(12),
                           child: InputDecorator(
-                            decoration: _inputOutlineNoFloating(
+                            decoration: AppFieldDecoration.build(
                               context,
                               prefixIcon: Icon(
                                 Icons.calendar_today_outlined,
@@ -528,7 +627,7 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
                         _stackedFieldLabel(context, 'Time note (optional)'),
                         TextFormField(
                           controller: _timeSlot,
-                          decoration: _inputOutlineNoFloating(
+                          decoration: AppFieldDecoration.build(
                             context,
                             hint: 'e.g. Morning, after 2pm',
                           ),
@@ -585,6 +684,15 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   SegmentedButton<_OrderMode>(
+                    style: SegmentedButton.styleFrom(
+                      backgroundColor: context.appExtras.surfaceContainer,
+                      selectedBackgroundColor: context.cardFill,
+                      foregroundColor: context.cs.onSurfaceVariant,
+                      selectedForegroundColor: context.cs.primary,
+                      side: BorderSide(color: AppColors.outline.withValues(alpha: 0.35)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                    ),
                     segments: [
                       ButtonSegment(
                         value: _OrderMode.catalogTests,
@@ -614,81 +722,81 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
                           _prescriptionName = null;
                         }
                       });
+                      _revalidateProcessOrder();
                     },
                   ),
                   const SizedBox(height: 14),
-                  if (_mode == _OrderMode.catalogTests) ...[
-                    FutureBuilder<List<LabTestPick>>(
-                      future: _testsFuture,
-                      builder: (context, snap) {
-                        if (snap.connectionState == ConnectionState.waiting) {
-                          return const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 12),
-                            child: Center(child: CircularProgressIndicator()),
-                          );
-                        }
-                        if (_tests.isEmpty) {
-                          return Text(
-                            'No lab tests in the catalog. Use “Prescription file” or ask the lab to publish tests.',
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.error),
-                          );
-                        }
-                        final n = _selectedTestIds.length;
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            OutlinedButton(
-                              onPressed: () => _openTestCatalogSheet(role),
-                              style: OutlinedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-                                alignment: Alignment.centerLeft,
-                              ),
-                              child: Row(
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      n == 0
-                                          ? 'Select tests from catalog…'
-                                          : '$n test${n == 1 ? '' : 's'} selected — tap to add or remove',
-                                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                            fontWeight: FontWeight.w400,
-                                          ),
-                                      textAlign: TextAlign.left,
-                                    ),
+                  FormField<void>(
+                    key: _processOrderKey,
+                    validator: (_) => _validateProcessOrder(),
+                    builder: (field) {
+                      final err = field.errorText;
+                      if (_mode == _OrderMode.catalogTests) {
+                        return FutureBuilder<List<LabTestPick>>(
+                          future: _testsFuture,
+                          builder: (context, snap) {
+                            if (snap.connectionState == ConnectionState.waiting) {
+                              return const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 12),
+                                child: Center(child: CircularProgressIndicator()),
+                              );
+                            }
+                            if (_tests.isEmpty) {
+                              return Text(
+                                'No lab tests in the catalog. Use “Prescription file” or ask the lab to publish tests.',
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.error),
+                              );
+                            }
+                            final n = _selectedTestIds.length;
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                _stackedFieldLabel(context, 'Tests from catalog', required: true),
+                                AppDropdownTapField(
+                                  label: n == 0
+                                      ? 'Select tests from catalog…'
+                                      : '$n test${n == 1 ? '' : 's'} selected — tap to add or remove',
+                                  onTap: () => _openTestCatalogSheet(role),
+                                  hasError: err != null,
+                                ),
+                                if (err != null) _fieldErrorText(context, err),
+                              ],
+                            );
+                          },
+                        );
+                      }
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _stackedFieldLabel(context, 'Prescription file', required: true),
+                          AppDropdownTapField(
+                            label: _prescriptionName == null
+                                ? 'Add PDF, image, or take photo'
+                                : 'Change file',
+                            onTap: _pickPrescription,
+                            hasError: err != null,
+                          ),
+                          if (err != null) _fieldErrorText(context, err),
+                          if (_prescriptionName != null) ...[
+                            const SizedBox(height: 8),
+                            Text(
+                              _prescriptionName!,
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: context.cs.onSurfaceVariant,
                                   ),
-                                  Icon(
-                                    Icons.arrow_drop_down,
-                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                  ),
-                                ],
-                              ),
                             ),
                           ],
-                        );
-                      },
-                    ),
-                  ] else ...[
-                    OutlinedButton.icon(
-                      onPressed: _pickPrescription,
-                      icon: const Icon(Icons.attach_file),
-                      label: Text(
-                        _prescriptionName == null ? 'Choose PDF or image' : 'Change file',
-                        style: Theme.of(context).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w400),
-                      ),
-                    ),
-                    if (_prescriptionName != null) ...[
-                      const SizedBox(height: 8),
-                      Text(
-                        _prescriptionName!,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.onSurfaceVariant),
-                      ),
-                    ],
-                    const SizedBox(height: 8),
-                    Text(
-                      'The lab will review your file and assign tests. Order status stays pending until they add catalog lines.',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.onSurfaceVariant),
-                    ),
-                  ],
+                          const SizedBox(height: 8),
+                          Text(
+                            'The lab will review your file and assign tests. Order status stays pending until they add catalog lines.',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: context.cs.onSurfaceVariant,
+                                ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
                 ],
               ),
             ),
@@ -778,19 +886,6 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
                     ? null
                     : () async {
                         if (!_formKey.currentState!.validate()) return;
-                        if (_mode == _OrderMode.catalogTests && _selectedTestIds.isEmpty) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Select at least one test, or switch to prescription upload.')),
-                          );
-                          return;
-                        }
-                        if (_mode == _OrderMode.prescriptionOnly &&
-                            (_prescriptionBytes == null || _prescriptionBytes!.isEmpty)) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Choose a prescription PDF or image.')),
-                          );
-                          return;
-                        }
                         if (!hasMeaningfulCoordinates(_collectionLat, _collectionLng)) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
@@ -811,6 +906,16 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
                         }
 
                         final builtLines = _linesForRole(user.role);
+                        if (_mode == _OrderMode.catalogTests && builtLines.isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Selected tests could not be loaded. Wait for the catalog or pick tests again.',
+                              ),
+                            ),
+                          );
+                          return;
+                        }
                         final order = LabOrderRequest(
                           testName: _summaryTestTitle(user.role),
                           description: _description.text.trim(),
@@ -928,7 +1033,7 @@ class _SectionCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.cardFill,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: const Color(0x66E1E2EC)),
       ),
@@ -944,7 +1049,7 @@ class _SectionCard extends StatelessWidget {
                   color: const Color(0xFFEAF1FF),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(icon, color: AppColors.primary),
+                child: Icon(icon, color: context.cs.primary),
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -955,7 +1060,7 @@ class _SectionCard extends StatelessWidget {
                     if (subtitle != null)
                       Text(
                         subtitle!,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.onSurfaceVariant),
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(color: context.cs.onSurfaceVariant),
                       ),
                   ],
                 ),

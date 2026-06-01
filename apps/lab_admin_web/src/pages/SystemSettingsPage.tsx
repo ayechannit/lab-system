@@ -1,13 +1,18 @@
-import { type FormEvent, useCallback, useEffect, useState } from 'react'
+import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ConfirmDialog } from '../components/common/ConfirmDialog'
-import { ColorField } from '../components/common/ColorField'
 import { LoadingSpinner } from '../components/common/LoadingSpinner'
 import { PageBanner } from '../components/common/PageBanner'
 import { PageHeader } from '../components/common/PageHeader'
+import { ThemePicker } from '../components/settings/ThemePicker'
+import { useSystemBranding } from '../hooks/SystemBrandingContext'
 import { useToast } from '../hooks/ToastContext'
 import { messageFromError, useErrorToast } from '../hooks/usePageNotify'
 import { LogoUrlField } from '../components/settings/LogoUrlField'
-import { LOGO_URL_MAX_LENGTH } from '../services/systemSettingService'
+import {
+  LOGO_URL_MAX_LENGTH,
+  resolveLogoDisplayUrl,
+  uploadSystemSettingsLogo,
+} from '../services/systemSettingService'
 import { formatCoordPair, LocationMapPicker } from '../components/users/LocationMapPicker'
 import { useAddressGeocode } from '../hooks/useAddressGeocode'
 import { isApiMode } from '../services/apiBase'
@@ -19,13 +24,13 @@ import {
   resetSystemSettingsToDefaults,
   updateSystemSettings,
 } from '../services/systemSettingService'
+import {
+  applyAppTheme,
+  type AppThemeId,
+  normalizeAppThemeId,
+  themeFieldsForApi,
+} from '../theme/appThemes'
 import '../components/common/ui.css'
-
-const MODE_OPTIONS: { value: ThemeMode; label: string }[] = [
-  { value: 'light', label: 'Light' },
-  { value: 'dark', label: 'Dark' },
-  { value: 'custom', label: 'Custom' },
-]
 
 function applyRowToState(
   row: SystemSettingsRow,
@@ -35,9 +40,6 @@ function applyRowToState(
     setLabName: (v: string) => void
     setMode: (v: ThemeMode) => void
     setLogoUrl: (v: string) => void
-    setPrimaryColor: (v: string) => void
-    setSecondaryColor: (v: string) => void
-    setCustomColors: (v: string) => void
     setAddress: (v: string) => void
     setLatitude: (v: number | '') => void
     setLongitude: (v: number | '') => void
@@ -45,14 +47,12 @@ function applyRowToState(
     setContactEmail: (v: string) => void
   },
 ) {
+  const themeId = normalizeAppThemeId(row.mode)
   setters.setSettingsId(row.id)
   setters.setUpdatedAt(row.updated_at)
   setters.setLabName(row.lab_name)
-  setters.setMode(row.mode)
+  setters.setMode(themeId)
   setters.setLogoUrl(row.logo_url ?? '')
-  setters.setPrimaryColor(row.primary_color)
-  setters.setSecondaryColor(row.secondary_color)
-  setters.setCustomColors(row.custom_colors ?? '')
   setters.setAddress(row.address ?? '')
   setters.setLatitude(row.latitude ?? '')
   setters.setLongitude(row.longitude ?? '')
@@ -60,9 +60,53 @@ function applyRowToState(
   setters.setContactEmail(row.contact_email ?? '')
 }
 
+type FormSnapshotFields = {
+  labName: string
+  mode: ThemeMode
+  logoUrl: string
+  address: string
+  latitude: number | ''
+  longitude: number | ''
+  contactPhone: string
+  contactEmail: string
+}
+
+type SavedBranding = { labName: string; logoUrl: string | null }
+
+function formSnapshot(fields: FormSnapshotFields, hasPendingLogo: boolean): string {
+  return JSON.stringify({
+    labName: fields.labName.trim(),
+    mode: fields.mode,
+    logoUrl: fields.logoUrl.trim(),
+    address: fields.address.trim(),
+    latitude: fields.latitude,
+    longitude: fields.longitude,
+    contactPhone: fields.contactPhone.trim(),
+    contactEmail: fields.contactEmail.trim(),
+    hasPendingLogo,
+  })
+}
+
+function snapshotFromRow(row: SystemSettingsRow): string {
+  return formSnapshot(
+    {
+      labName: row.lab_name,
+      mode: normalizeAppThemeId(row.mode),
+      logoUrl: row.logo_url ?? '',
+      address: row.address ?? '',
+      latitude: row.latitude ?? '',
+      longitude: row.longitude ?? '',
+      contactPhone: row.contact_phone ?? '',
+      contactEmail: row.contact_email ?? '',
+    },
+    false,
+  )
+}
+
 export function SystemSettingsPage() {
   const hasApi = isApiMode()
   const { showSuccess, showError } = useToast()
+  const { applyBranding } = useSystemBranding()
   const [loading, setLoading] = useState(hasApi)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -74,15 +118,49 @@ export function SystemSettingsPage() {
   const [labName, setLabName] = useState('MedLab Smart')
   const [mode, setMode] = useState<ThemeMode>('light')
   const [logoUrl, setLogoUrl] = useState('')
-  const [primaryColor, setPrimaryColor] = useState('#0055ff')
-  const [secondaryColor, setSecondaryColor] = useState('#00cc66')
-  const [customColors, setCustomColors] = useState('')
+  const [pendingLogoFile, setPendingLogoFile] = useState<File | null>(null)
+  const [pendingLogoPreview, setPendingLogoPreview] = useState<string | null>(null)
   const [address, setAddress] = useState('')
   const [latitude, setLatitude] = useState<number | ''>('')
   const [longitude, setLongitude] = useState<number | ''>('')
   const [contactPhone, setContactPhone] = useState('')
   const [contactEmail, setContactEmail] = useState('')
   const [loadedAddressBaseline, setLoadedAddressBaseline] = useState<string | null>(null)
+
+  const savedThemeRef = useRef<AppThemeId>('light')
+  const savedBrandingRef = useRef<SavedBranding>({ labName: 'MedLab Smart', logoUrl: null })
+  const savedFormSnapshotRef = useRef('')
+
+  const clearPendingLogo = useCallback(() => {
+    setPendingLogoPreview((prev) => {
+      if (prev) URL.revokeObjectURL(prev)
+      return null
+    })
+    setPendingLogoFile(null)
+  }, [])
+
+  const syncSavedFromRow = useCallback((row: SystemSettingsRow) => {
+    savedThemeRef.current = normalizeAppThemeId(row.mode)
+    savedBrandingRef.current = { labName: row.lab_name, logoUrl: row.logo_url }
+    savedFormSnapshotRef.current = snapshotFromRow(row)
+  }, [])
+
+  const commitSavedToApp = useCallback(
+    (row: SystemSettingsRow) => {
+      const themeId = normalizeAppThemeId(row.mode)
+      savedThemeRef.current = themeId
+      savedBrandingRef.current = { labName: row.lab_name, logoUrl: row.logo_url }
+      savedFormSnapshotRef.current = snapshotFromRow(row)
+      applyAppTheme(themeId)
+      applyBranding({ labName: row.lab_name, logoUrl: row.logo_url })
+    },
+    [applyBranding],
+  )
+
+  const revertUnsavedToApp = useCallback(() => {
+    applyAppTheme(savedThemeRef.current)
+    applyBranding(savedBrandingRef.current)
+  }, [applyBranding])
 
   const handleGeocodeCoords = useCallback((lat: number, lng: number) => {
     setLatitude(lat)
@@ -102,15 +180,64 @@ export function SystemSettingsPage() {
     setLabName,
     setMode,
     setLogoUrl,
-    setPrimaryColor,
-    setSecondaryColor,
-    setCustomColors,
     setAddress,
     setLatitude,
     setLongitude,
     setContactPhone,
     setContactEmail,
   }
+
+  const logoPreviewSrc = useMemo(() => {
+    if (pendingLogoPreview) return pendingLogoPreview
+    return resolveLogoDisplayUrl(logoUrl.trim() || null)
+  }, [pendingLogoPreview, logoUrl])
+
+  const currentSnapshot = useMemo(
+    () =>
+      formSnapshot(
+        {
+          labName,
+          mode,
+          logoUrl,
+          address,
+          latitude,
+          longitude,
+          contactPhone,
+          contactEmail,
+        },
+        pendingLogoFile !== null,
+      ),
+    [labName, mode, logoUrl, address, latitude, longitude, contactPhone, contactEmail, pendingLogoFile],
+  )
+
+  const isDirty =
+    hasApi && !loading && savedFormSnapshotRef.current.length > 0 && currentSnapshot !== savedFormSnapshotRef.current
+
+  const handleThemeChange = useCallback((next: ThemeMode) => {
+    setMode(next)
+  }, [])
+
+  const handleLogoFileSelected = useCallback(
+    (file: File) => {
+      clearPendingLogo()
+      setPendingLogoFile(file)
+      setPendingLogoPreview(URL.createObjectURL(file))
+      setLogoUrl('')
+    },
+    [clearPendingLogo],
+  )
+
+  const handleLogoClear = useCallback(() => {
+    clearPendingLogo()
+    setLogoUrl('')
+  }, [clearPendingLogo])
+
+  useEffect(() => {
+    return () => {
+      clearPendingLogo()
+      revertUnsavedToApp()
+    }
+  }, [clearPendingLogo, revertUnsavedToApp])
 
   useErrorToast(loadError)
 
@@ -126,7 +253,9 @@ export function SystemSettingsPage() {
       try {
         const row = await fetchSystemSettings()
         if (!cancelled) {
+          clearPendingLogo()
           applyRowToState(row, setters)
+          syncSavedFromRow(row)
           const addr = row.address?.trim() ?? ''
           const hasCoords =
             row.latitude != null &&
@@ -144,7 +273,7 @@ export function SystemSettingsPage() {
       cancelled = true
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- load once when API mode is on
-  }, [hasApi])
+  }, [hasApi, clearPendingLogo, syncSavedFromRow])
 
   async function confirmResetToDefaults() {
     if (!hasApi) return
@@ -152,7 +281,9 @@ export function SystemSettingsPage() {
     setResetting(true)
     try {
       const next = await resetSystemSettingsToDefaults()
+      clearPendingLogo()
       applyRowToState(next, setters)
+      commitSavedToApp(next)
       setLoadedAddressBaseline('')
       showSuccess('Settings reset to defaults.')
     } catch (err) {
@@ -170,16 +301,18 @@ export function SystemSettingsPage() {
       showError('Lab name is required.')
       return
     }
-    if (customColors.trim()) {
+    let logoToSave = logoUrl.trim() || null
+    if (pendingLogoFile) {
       try {
-        JSON.parse(customColors)
-      } catch {
-        showError('Custom colors must be valid JSON (or leave empty).')
+        const uploaded = await uploadSystemSettingsLogo(pendingLogoFile)
+        logoToSave = uploaded.logo_url
+        clearPendingLogo()
+      } catch (err) {
+        showError(messageFromError(err, 'Logo upload failed'))
         return
       }
     }
-    const logoTrim = logoUrl.trim()
-    if (logoTrim.length > LOGO_URL_MAX_LENGTH) {
+    if (logoToSave && logoToSave.length > LOGO_URL_MAX_LENGTH) {
       showError(
         `Logo must be at most ${LOGO_URL_MAX_LENGTH} characters. Upload a smaller image or use a shorter URL.`,
       )
@@ -189,11 +322,8 @@ export function SystemSettingsPage() {
     const lng = longitude === '' ? null : Number(longitude)
     const body: SystemSettingsUpdateBody = {
       lab_name: nameTrim,
-      mode,
-      logo_url: logoUrl.trim() || null,
-      primary_color: primaryColor.trim() || null,
-      secondary_color: secondaryColor.trim() || null,
-      custom_colors: customColors.trim() || null,
+      ...themeFieldsForApi(mode),
+      logo_url: logoToSave,
       latitude: lat != null && Number.isFinite(lat) ? lat : null,
       longitude: lng != null && Number.isFinite(lng) ? lng : null,
       address: address.trim() || null,
@@ -204,6 +334,7 @@ export function SystemSettingsPage() {
     try {
       const next = await updateSystemSettings(body)
       applyRowToState(next, setters)
+      commitSavedToApp(next)
       showSuccess('System settings saved.')
     } catch (err) {
       showError(messageFromError(err, 'Save failed'))
@@ -216,7 +347,7 @@ export function SystemSettingsPage() {
     <div className="system-settings-page">
       <PageHeader
         title="System settings"
-        description="Branding, theme colors, lab logo, and contact details."
+        description="Branding, appearance theme, lab logo, and contact details."
       />
 
       {!hasApi ? (
@@ -230,17 +361,33 @@ export function SystemSettingsPage() {
           <LoadingSpinner layout="block" label="Loading system settings" />
         ) : (
           <form className="system-settings-form" onSubmit={(e) => void handleSubmit(e)}>
-            {settingsId ? (
-              <p className="catalog-mode-hint" style={{ margin: 0 }}>
-                Record id: <code>{settingsId}</code>
-                {updatedAt ? ` · Last updated ${new Date(updatedAt).toLocaleString()}` : null}
+            <div className="system-settings-callout" role="note">
+              <span className="material-symbols-outlined system-settings-callout__icon" aria-hidden>
+                info
+              </span>
+              <p className="system-settings-callout__text">
+                Changes are drafts until you click <strong>Save settings</strong>. Leaving this page without
+                saving restores your last saved lab name, logo, and theme.
               </p>
+            </div>
+
+            {settingsId ? (
+              <div className="system-settings-meta">
+                <span>
+                  Record <code>{settingsId}</code>
+                </span>
+                {updatedAt ? (
+                  <span className="system-settings-meta__updated">
+                    Updated {new Date(updatedAt).toLocaleString()}
+                  </span>
+                ) : null}
+              </div>
             ) : null}
 
             <div className="system-settings-panel__grid">
             <section className="system-settings-section">
               <h2 className="system-settings-section__title">Branding</h2>
-              <div className="settings-form__stack">
+              <div className="settings-form__stack settings-form__stack--relaxed">
                 <div className="field">
                   <label htmlFor="sys-lab-name">Lab name</label>
                   <input
@@ -250,67 +397,30 @@ export function SystemSettingsPage() {
                     disabled={submitting || resetting || !hasApi}
                   />
                 </div>
-                <div className="field">
-                  <label htmlFor="sys-mode">Theme mode</label>
-                  <select
-                    id="sys-mode"
-                    className="select-chevron-left"
-                    value={mode}
-                    onChange={(e) => setMode(e.target.value as ThemeMode)}
-                    disabled={submitting || resetting || !hasApi}
-                  >
-                    {MODE_OPTIONS.map((o) => (
-                      <option key={o.value} value={o.value}>
-                        {o.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <ThemePicker
+                  value={mode}
+                  onChange={handleThemeChange}
+                  disabled={submitting || resetting || !hasApi}
+                />
                 <LogoUrlField
                   id="sys-logo"
                   value={logoUrl}
-                  onChange={setLogoUrl}
-                  onUploaded={(row) => {
-                    applyRowToState(row, setters)
-                    showSuccess('Logo uploaded.')
+                  previewSrc={logoPreviewSrc}
+                  pickedFileName={pendingLogoFile?.name ?? null}
+                  onChange={(url) => {
+                    clearPendingLogo()
+                    setLogoUrl(url)
                   }}
+                  onFileSelected={handleLogoFileSelected}
+                  onClear={handleLogoClear}
                   disabled={submitting || resetting || !hasApi}
                 />
-                <div className="settings-form__pair">
-                  <ColorField
-                    id="sys-primary"
-                    label="Primary color"
-                    value={primaryColor}
-                    onChange={setPrimaryColor}
-                    fallback="#0055ff"
-                    disabled={submitting || resetting || !hasApi}
-                  />
-                  <ColorField
-                    id="sys-secondary"
-                    label="Secondary color"
-                    value={secondaryColor}
-                    onChange={setSecondaryColor}
-                    fallback="#00cc66"
-                    disabled={submitting || resetting || !hasApi}
-                  />
-                </div>
-                <div className="field">
-                  <label htmlFor="sys-custom-colors">Custom colors (JSON, optional)</label>
-                  <textarea
-                    id="sys-custom-colors"
-                    value={customColors}
-                    onChange={(e) => setCustomColors(e.target.value)}
-                    rows={3}
-                    placeholder='{"accent":"#ff5500"}'
-                    disabled={submitting || resetting || !hasApi}
-                  />
-                </div>
               </div>
             </section>
 
             <section className="system-settings-section">
               <h2 className="system-settings-section__title">Location & contact</h2>
-              <div className="settings-form__stack">
+              <div className="settings-form__stack settings-form__stack--relaxed">
                 <div className="field">
                   <label htmlFor="sys-address">Address</label>
                   <textarea
@@ -372,18 +482,44 @@ export function SystemSettingsPage() {
             </section>
             </div>
 
-            <div className="system-settings-form__footer">
-              <button
-                type="button"
-                className="btn btn-secondary"
-                disabled={submitting || resetting || !hasApi}
-                onClick={() => setResetConfirmOpen(true)}
-              >
-                Reset to defaults
-              </button>
-              <button type="submit" className="btn btn-primary" disabled={submitting || resetting || !hasApi}>
-                {submitting ? 'Saving…' : 'Save settings'}
-              </button>
+            <div
+              className={`system-settings-actions${isDirty ? ' system-settings-actions--dirty' : ''}`}
+            >
+              <div className="system-settings-actions__status">
+                {isDirty ? (
+                  <>
+                    <span className="system-settings-actions__dot" aria-hidden />
+                    <span className="system-settings-actions__label">Unsaved changes</span>
+                    <span className="system-settings-actions__sub">
+                      Save to apply branding and theme across the app
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span className="material-symbols-outlined system-settings-actions__saved-icon" aria-hidden>
+                      check_circle
+                    </span>
+                    <span className="system-settings-actions__label">All changes saved</span>
+                  </>
+                )}
+              </div>
+              <div className="system-settings-actions__buttons">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  disabled={submitting || resetting || !hasApi}
+                  onClick={() => setResetConfirmOpen(true)}
+                >
+                  Reset to defaults
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={submitting || resetting || !hasApi || !isDirty}
+                >
+                  {submitting ? 'Saving…' : 'Save settings'}
+                </button>
+              </div>
             </div>
           </form>
         )}
@@ -392,7 +528,7 @@ export function SystemSettingsPage() {
       <ConfirmDialog
         open={resetConfirmOpen}
         title="Reset to defaults?"
-        message="All branding, theme colors, logo, and contact fields will be restored to the application defaults. This cannot be undone except by saving again."
+        message="Lab name, theme, logo, and contact fields will be restored to the application defaults. This cannot be undone except by saving again."
         confirmLabel="Reset to defaults"
         cancelLabel="Cancel"
         danger

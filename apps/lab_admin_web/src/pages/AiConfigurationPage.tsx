@@ -152,7 +152,7 @@ export function AiConfigurationPage() {
       />
 
       {!hasApi ? (
-        <div className="card" style={{ borderColor: '#dfe5f0', background: '#f8fafc' }}>
+        <div className="card card--muted">
           <p style={{ margin: 0, fontSize: '0.9rem' }}>
             Set <code>VITE_API_BASE_URL</code> in <code>apps/lab_admin_web</code> (e.g.{' '}
             <code>http://localhost:3000</code>) and restart the dev server. AI settings load from the backend only.

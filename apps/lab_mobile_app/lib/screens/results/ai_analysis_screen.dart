@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../app/session_scope.dart';
 import '../../theme/app_colors.dart';
-import '../../widgets/common/app_brand_mark.dart';
+import '../../theme/theme_extensions.dart';
+import '../../widgets/common/app_branding_row.dart';
 import '../../widgets/navigation/lab_main_bottom_nav.dart';
 
 class AiAnalysisScreen extends StatelessWidget {
@@ -24,19 +25,12 @@ class AiAnalysisScreen extends StatelessWidget {
       appBar: AppBar(
         automaticallyImplyLeading: false,
         titleSpacing: 4,
-        title: Text(
-          'MedLab Smart',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: AppColors.primary,
-                fontWeight: FontWeight.w800,
-              ),
+        title: const AppBrandingRow(
+          markSize: 24,
+          iconSize: 12,
+          borderRadius: 6,
+          spacing: 8,
         ),
-        actions: const [
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: 8),
-            child: AppBrandMark(size: 24, iconSize: 12, borderRadius: 6),
-          ),
-        ],
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
@@ -76,7 +70,7 @@ class AiAnalysisScreen extends StatelessWidget {
                 ? 'No lab report is loaded for your account yet.'
                 : 'Order ${report.orderId.length >= 8 ? report.orderId.substring(0, 8) : report.orderId} · ${ai != null ? 'Analysis on file' : 'Run analysis to fetch text from the lab API'}',
             textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.onSurfaceVariant),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: context.cs.onSurfaceVariant),
           ),
           const SizedBox(height: 14),
           _plainCard(context, summaryCardText),
@@ -126,7 +120,7 @@ class AiAnalysisScreen extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.cardFill,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: const Color(0x66E1E2EC)),
       ),

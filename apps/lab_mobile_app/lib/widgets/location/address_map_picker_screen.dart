@@ -9,6 +9,7 @@ import '../../config/map_defaults.dart';
 import '../../models/address_map_pick_result.dart';
 import '../../services/nominatim_geocode.dart';
 import '../../theme/app_colors.dart';
+import '../../theme/theme_extensions.dart';
 
 /// Full-screen map + address editor (same idea as admin web user create).
 class AddressMapPickerScreen extends StatefulWidget {
@@ -203,8 +204,7 @@ class _AddressMapPickerScreenState extends State<AddressMapPickerScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Choose location'),
-        backgroundColor: AppColors.surface,
-        foregroundColor: AppColors.primary,
+        foregroundColor: context.cs.primary,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         actions: [
@@ -266,7 +266,7 @@ class _AddressMapPickerScreenState extends State<AddressMapPickerScreen> {
             ),
           ),
           Material(
-            color: AppColors.surface,
+            color: context.cs.surface,
             child: SafeArea(
               top: false,
               child: Padding(
@@ -278,7 +278,7 @@ class _AddressMapPickerScreenState extends State<AddressMapPickerScreen> {
                       'Tap the map to move the pin, or type an address to move the map. '
                       'The address line updates from the pin when you tap the map.',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppColors.onSurfaceVariant,
+                            color: context.cs.onSurfaceVariant,
                             height: 1.35,
                           ),
                     ),
@@ -299,7 +299,7 @@ class _AddressMapPickerScreenState extends State<AddressMapPickerScreen> {
                         labelText: 'Address',
                         hintText: 'Street, city, etc.',
                         filled: true,
-                        fillColor: Colors.white,
+                        fillColor: context.appExtras.surfaceContainer,
                         suffixIcon: _lookupBusy
                             ? const Padding(
                                 padding: EdgeInsets.all(12),

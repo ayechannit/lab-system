@@ -1,0 +1,45 @@
+/*
+ * Semantic theme tokens. Light defaults here; dark values applied via applyAppTheme()
+ * in appThemes.ts (sets the same variables on document.documentElement).
+ */
+:root {
+  --elevated-bg: #ffffff;
+  --input-bg: #ffffff;
+  --table-bg: #ffffff;
+  --table-header-bg: #f5f7fb;
+  --table-row-hover: rgba(0, 61, 155, 0.04);
+  --segment-track: #f1f4f9;
+  --segment-active: #ffffff;
+  --segment-hover: rgba(255, 255, 255, 0.65);
+  --subtle-fill: #f8fafc;
+  --subtle-fill-2: #fafbfd;
+  --code-bg: #f1f3f7;
+  --btn-secondary-bg: #ffffff;
+  --btn-export-bg: #ffffff;
+  --btn-export-hover: #f3f7ff;
+  --btn-ghost-hover: rgba(0, 61, 155, 0.06);
+  --nav-active-bg: rgba(0, 61, 155, 0.08);
+  --action-trigger-color: #536176;
+  --action-trigger-hover-bg: #f5f8ff;
+  --action-trigger-open-bg: #eef4ff;
+  --menu-bg: #ffffff;
+  --menu-border: #d9e1ef;
+  --menu-shadow: 0 10px 24px rgba(13, 23, 45, 0.14);
+  --menu-item-hover: rgba(0, 61, 155, 0.07);
+  --input-text: #0f172a;
+  --sticky-col-shadow: -10px 0 14px -8px rgba(13, 23, 45, 0.14);
+  --stat-border: #e8edf4;
+  --warning-bg: #fffbeb;
+  --warning-border: #fde68a;
+  --warning-text: #92400e;
+  --popover-shadow: 0 4px 12px rgba(15, 23, 42, 0.08), 0 18px 44px rgba(15, 23, 42, 0.12);
+  --focus-ring: rgba(0, 61, 155, 0.12);
+  --banner-fade: #ffffff;
+  --info-panel-bg: #f8fbff;
+  --info-panel-border: #dbeafe;
+  --error-panel-bg: #fef2f2;
+  --error-panel-border: #fecaca;
+  --error-panel-text: #991b1b;
+  --error-panel-text-muted: #7f1d1d;
+  --success-panel-border: #bbf7d0;
+}

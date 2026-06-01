@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../app/session_scope.dart';
 import '../../theme/app_colors.dart';
-import '../../widgets/common/app_brand_mark.dart';
+import '../../theme/theme_extensions.dart';
+import '../../widgets/common/app_branding_row.dart';
 import '../../widgets/navigation/lab_main_bottom_nav.dart';
 
 class LoyaltyPointsScreen extends StatelessWidget {
@@ -17,19 +18,7 @@ class LoyaltyPointsScreen extends StatelessWidget {
       appBar: AppBar(
         automaticallyImplyLeading: false,
         titleSpacing: 12,
-        title: Row(
-          children: [
-            const AppBrandMark(size: 32, iconSize: 16, borderRadius: 8),
-            const SizedBox(width: 10),
-            Text(
-              'MedLab Smart',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.w800,
-                  ),
-            ),
-          ],
-        ),
+        title: const AppBrandingRow(markSize: 32, iconSize: 16, borderRadius: 8),
       ),
       body: ListView(
         padding: const EdgeInsets.all(20),
@@ -38,8 +27,8 @@ class LoyaltyPointsScreen extends StatelessWidget {
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(24),
-              gradient: const LinearGradient(
-                colors: [AppColors.primaryLight, AppColors.primary],
+              gradient: LinearGradient(
+                colors: [context.cs.primary.withValues(alpha: 0.85), context.cs.primary],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -56,7 +45,7 @@ class LoyaltyPointsScreen extends StatelessWidget {
                       TextSpan(
                         text: '$balance',
                         style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                              color: Colors.white,
+                              color: context.cardFill,
                               fontWeight: FontWeight.w800,
                             ),
                       ),
@@ -77,7 +66,7 @@ class LoyaltyPointsScreen extends StatelessWidget {
             children: [
               Text(
                 'Points history',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: AppColors.primary),
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: context.cs.primary),
               ),
             ],
           ),
@@ -87,7 +76,7 @@ class LoyaltyPointsScreen extends StatelessWidget {
               padding: const EdgeInsets.only(top: 12),
               child: Text(
                 'No point transactions returned yet.',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.onSurfaceVariant),
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: context.cs.onSurfaceVariant),
               ),
             )
           else
@@ -96,7 +85,7 @@ class LoyaltyPointsScreen extends StatelessWidget {
                 margin: const EdgeInsets.only(bottom: 10),
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: context.cardFill,
                   borderRadius: BorderRadius.circular(12),
                   border: Border(
                     left: BorderSide(
@@ -112,7 +101,7 @@ class LoyaltyPointsScreen extends StatelessWidget {
                       backgroundColor: const Color(0xFFEAF1FF),
                       child: Icon(
                         e.delta >= 0 ? Icons.biotech_outlined : Icons.shopping_bag_outlined,
-                        color: e.delta >= 0 ? AppColors.primary : AppColors.outline,
+                        color: e.delta >= 0 ? context.cs.primary : AppColors.outline,
                       ),
                     ),
                     const SizedBox(width: 10),
@@ -121,7 +110,7 @@ class LoyaltyPointsScreen extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(e.label, style: Theme.of(context).textTheme.titleMedium),
-                          Text(e.atLabel, style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.onSurfaceVariant)),
+                          Text(e.atLabel, style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: context.cs.onSurfaceVariant)),
                         ],
                       ),
                     ),
@@ -129,7 +118,7 @@ class LoyaltyPointsScreen extends StatelessWidget {
                       '${e.delta > 0 ? '+' : ''}${e.delta}\npoints',
                       textAlign: TextAlign.right,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: e.delta >= 0 ? AppColors.accentGreen : AppColors.primary,
+                            color: e.delta >= 0 ? AppColors.accentGreen : context.cs.primary,
                             fontWeight: FontWeight.w700,
                           ),
                     ),

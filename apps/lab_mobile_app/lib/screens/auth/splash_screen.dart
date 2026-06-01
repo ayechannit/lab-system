@@ -3,8 +3,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../app/app_settings_scope.dart';
 import '../../app/session_scope.dart';
 import '../../theme/app_colors.dart';
+import '../../theme/theme_extensions.dart';
+import '../../widgets/common/app_brand_mark.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -56,46 +59,22 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                 children: [
                   const Spacer(flex: 3),
                   Center(
-                    child: Container(
-                      width: 112,
-                      height: 112,
-                      decoration: BoxDecoration(
-                        color: AppColors.primaryLight,
-                        borderRadius: BorderRadius.circular(28),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Color(0x1A003D9B),
-                            blurRadius: 24,
-                            offset: Offset(0, 10),
-                          ),
-                        ],
-                        border: Border.all(color: const Color(0x330052CC)),
-                      ),
-                      alignment: Alignment.center,
-                      child: const Icon(Icons.biotech, size: 52, color: Colors.white),
+                    child: AppBrandMark(
+                      size: 112,
+                      iconSize: 52,
+                      borderRadius: 28,
+                      showShadow: true,
+                      logoUrl: AppSettingsScope.of(context).logoUrl,
                     ),
                   ),
                   const SizedBox(height: 24),
-                  Text.rich(
-                    TextSpan(
-                      children: [
-                        TextSpan(
-                          text: 'MedLab',
-                          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                                color: const Color(0xFF121523),
-                                fontWeight: FontWeight.w800,
-                              ),
-                        ),
-                        TextSpan(
-                          text: ' Smart',
-                          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                                color: AppColors.primaryLight,
-                                fontWeight: FontWeight.w800,
-                              ),
-                        ),
-                      ],
-                    ),
+                  Text(
+                    AppSettingsScope.of(context).labName,
                     textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                          color: const Color(0xFF121523),
+                          fontWeight: FontWeight.w800,
+                        ),
                   ),
                   const Spacer(flex: 4),
                   Align(
@@ -133,7 +112,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                     'Loading…',
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: AppColors.onSurfaceVariant.withValues(alpha: 0.85),
+                          color: context.cs.onSurfaceVariant.withValues(alpha: 0.85),
                         ),
                   ),
                   const SizedBox(height: 12),

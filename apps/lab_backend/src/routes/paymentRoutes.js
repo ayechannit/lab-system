@@ -161,8 +161,9 @@ router.use(authMiddleware);
  *               $ref: '#/components/schemas/Payment'
  */
 
-router.get('/:order_id', paymentController.getPaymentByOrderId);
 router.post('/', paymentController.createPayment);
 router.put('/:id/verify', paymentController.verifyPayment);
+router.put('/:id/status', paymentController.updatePaymentStatus);
+router.get('/:order_id', paymentController.getPaymentByOrderId);
 
 module.exports = router;

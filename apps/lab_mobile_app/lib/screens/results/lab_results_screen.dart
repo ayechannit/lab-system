@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../app/session_scope.dart';
 import '../../models/lab_result.dart';
-import '../../theme/app_colors.dart';
-import '../../widgets/common/app_brand_mark.dart';
+import '../../theme/theme_extensions.dart';
+import '../../widgets/common/app_branding_row.dart';
 import '../../widgets/navigation/lab_main_bottom_nav.dart';
 import '../../widgets/results/lab_result_insight_cards.dart';
 
@@ -27,18 +27,15 @@ class LabResultsScreen extends StatelessWidget {
       appBar: AppBar(
         automaticallyImplyLeading: false,
         titleSpacing: 12,
-        title: Row(
-          children: [
-            const AppBrandMark(size: 24, iconSize: 12, borderRadius: 6),
-            const SizedBox(width: 8),
-            Text(
-              'MedLab Smart',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.w800,
-                  ),
-            ),
-          ],
+        title: AppBrandingRow(
+          markSize: 24,
+          iconSize: 12,
+          borderRadius: 6,
+          spacing: 8,
+          titleStyle: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: context.cs.primary,
+                fontWeight: FontWeight.w800,
+              ),
         ),
       ),
       body: ListView(
@@ -47,7 +44,7 @@ class LabResultsScreen extends StatelessWidget {
           Text(
             kicker,
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: AppColors.onSurfaceVariant,
+                  color: context.cs.onSurfaceVariant,
                   letterSpacing: 0.6,
                 ),
           ),
@@ -59,18 +56,18 @@ class LabResultsScreen extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             'Sample ID: ${report?.sampleId ?? 'Pending'}',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.onSurfaceVariant),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: context.cs.onSurfaceVariant),
           ),
           const SizedBox(height: 12),
           if (!hasStructured && !hasPdf)
             Text(
               'Results are not available yet.',
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: AppColors.onSurfaceVariant),
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: context.cs.onSurfaceVariant),
             )
           else if (!hasStructured && hasPdf)
             Text(
               'Your official report is ready as a PDF from the lab. Open it below or use AI Check for a plain-language summary.',
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: AppColors.onSurfaceVariant),
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: context.cs.onSurfaceVariant),
             )
           else ...[
             _ResultCard(
@@ -127,7 +124,7 @@ class _ResultCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.cardFill,
         borderRadius: BorderRadius.circular(12),
         border: Border(left: BorderSide(color: borderColor, width: 3)),
       ),

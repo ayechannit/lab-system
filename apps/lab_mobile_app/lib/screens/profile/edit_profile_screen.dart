@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../app/app_settings_scope.dart';
 import '../../app/session_scope.dart';
-import '../../config/map_defaults.dart';
 import '../../theme/app_colors.dart';
+import '../../theme/theme_extensions.dart';
 import '../../widgets/common/app_brand_mark.dart';
 import '../../widgets/location/address_location_fields.dart';
 import '../../widgets/navigation/lab_main_bottom_nav.dart';
@@ -59,13 +60,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   InputDecoration _fieldDecoration(String label, {String? hint, IconData? prefix}) {
-    final iconColor = Theme.of(context).iconTheme.color ?? AppColors.onSurfaceVariant;
+    final iconColor = Theme.of(context).iconTheme.color ?? context.cs.onSurfaceVariant;
     return InputDecoration(
       labelText: label,
       hintText: hint,
       prefixIcon: prefix != null ? Icon(prefix, size: 22, color: iconColor) : null,
       filled: true,
-      fillColor: Colors.white,
+      fillColor: context.appExtras.surfaceContainer,
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
@@ -137,26 +138,29 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final initial = user.name.trim().isNotEmpty ? user.name.trim()[0].toUpperCase() : '?';
 
     return Scaffold(
-      backgroundColor: AppColors.surface,
       appBar: AppBar(
-        backgroundColor: AppColors.surface,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
           tooltip: 'Back',
           onPressed: () => context.pop(),
-          icon: const Icon(Icons.arrow_back_rounded, color: AppColors.primary),
+          icon: Icon(Icons.arrow_back_rounded, color: context.cs.primary),
         ),
         titleSpacing: 8,
         title: Row(
           children: [
-            const AppBrandMark(size: 28, iconSize: 14, borderRadius: 7),
+            AppBrandMark(
+              size: 28,
+              iconSize: 14,
+              borderRadius: 7,
+              logoUrl: AppSettingsScope.of(context).logoUrl,
+            ),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
                 'Edit profile',
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      color: AppColors.primary,
+                      color: context.cs.primary,
                       fontWeight: FontWeight.w800,
                     ),
                 overflow: TextOverflow.ellipsis,
@@ -195,7 +199,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               Text(
                 'Update how the lab reaches you. Changes apply to your signed-in account.',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppColors.onSurfaceVariant,
+                      color: context.cs.onSurfaceVariant,
                       height: 1.45,
                     ),
               ),
@@ -206,15 +210,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   children: [
                     CircleAvatar(
                       radius: 48,
-                      backgroundColor: AppColors.primary.withValues(alpha: 0.12),
+                      backgroundColor: context.cs.primary.withValues(alpha: 0.12),
                       child: CircleAvatar(
                         radius: 43,
-                        backgroundColor: const Color(0xFF121826),
+                        backgroundColor: context.cs.primary.withValues(alpha: 0.85),
                         child: Text(
                           initial,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 36,
-                            color: Colors.white,
+                            color: context.cs.onPrimary,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
@@ -243,7 +247,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               Container(
                 padding: const EdgeInsets.all(18),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: context.cardFill,
                   borderRadius: BorderRadius.circular(18),
                   border: Border.all(color: const Color(0x66E1E2EC)),
                   boxShadow: const [
@@ -264,7 +268,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       const SizedBox(height: 4),
                       Text(
                         'Used for orders, results, and account recovery.',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.onSurfaceVariant),
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(color: context.cs.onSurfaceVariant),
                       ),
                       const SizedBox(height: 18),
                       TextFormField(
@@ -319,7 +323,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       FilledButton(
                         onPressed: _saving ? null : _save,
                         style: FilledButton.styleFrom(
-                          backgroundColor: AppColors.primary,
+                          backgroundColor: context.cs.primary,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -336,7 +340,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       OutlinedButton(
                         onPressed: _saving ? null : () => context.pop(),
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: AppColors.primary,
+                          foregroundColor: context.cs.primary,
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           side: const BorderSide(color: Color(0x66E1E2EC)),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -380,7 +384,7 @@ class _ProfileTopToast extends StatelessWidget {
       child: Container(
         width: double.infinity,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: context.cardFill,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: const Color(0x44C3C6D6)),
           boxShadow: const [
@@ -410,7 +414,7 @@ class _ProfileTopToast extends StatelessWidget {
                             width: 40,
                             height: 40,
                             decoration: BoxDecoration(
-                              color: Colors.white,
+                              color: context.cardFill,
                               shape: BoxShape.circle,
                               boxShadow: [
                                 BoxShadow(
@@ -436,7 +440,7 @@ class _ProfileTopToast extends StatelessWidget {
                                   saved ? 'Profile saved' : 'Could not save changes',
                                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
                                         fontWeight: FontWeight.w800,
-                                        color: AppColors.onSurface,
+                                        color: context.cs.onSurface,
                                       ),
                                 ),
                                 const SizedBox(height: 4),
@@ -445,7 +449,7 @@ class _ProfileTopToast extends StatelessWidget {
                                       ? 'Your details are updated on the lab account. Returning to your profile…'
                                       : (errorText ?? 'Please check your connection and try again.'),
                                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                        color: AppColors.onSurfaceVariant,
+                                        color: context.cs.onSurfaceVariant,
                                         height: 1.35,
                                       ),
                                 ),

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../theme/app_colors.dart';
+import '../../theme/theme_extensions.dart';
 
 class QuickActionButton extends StatelessWidget {
   const QuickActionButton({
@@ -8,20 +8,23 @@ class QuickActionButton extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.onTap,
-    this.iconBackgroundColor = const Color(0xFFEAF1FF),
-    this.iconColor = AppColors.primary,
+    this.iconBackgroundColor,
+    this.iconColor,
   });
 
   final IconData icon;
   final String label;
   final VoidCallback onTap;
-  final Color iconBackgroundColor;
-  final Color iconColor;
+  final Color? iconBackgroundColor;
+  final Color? iconColor;
 
   @override
   Widget build(BuildContext context) {
+    final cs = context.cs;
+    final bg = iconBackgroundColor ?? context.appExtras.iconTileBackground;
+    final fg = iconColor ?? cs.primary;
     return Material(
-      color: Colors.white,
+      color: context.cardFill,
       borderRadius: BorderRadius.circular(14),
       child: InkWell(
         onTap: onTap,
@@ -30,7 +33,7 @@ class QuickActionButton extends StatelessWidget {
           padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: const Color(0x66E1E2EC)),
+            border: Border.all(color: cs.outline.withValues(alpha: 0.4)),
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -40,9 +43,9 @@ class QuickActionButton extends StatelessWidget {
                   height: 44,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: iconBackgroundColor,
+                    color: bg,
                   ),
-                  child: Icon(icon, color: iconColor, size: 24),
+                  child: Icon(icon, color: fg, size: 24),
                 ),
                 const SizedBox(height: 10),
               Text(

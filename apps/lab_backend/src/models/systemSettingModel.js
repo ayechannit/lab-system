@@ -1,6 +1,37 @@
 const { sql, poolPromise } = require('../config/db');
 
+const THEME_PRESETS = {
+  light: {
+    mode: 'light',
+    primary_color: '#003d9b',
+    secondary_color: '#0d8a5b',
+    custom_colors: null,
+  },
+  dark: {
+    mode: 'dark',
+    primary_color: '#6b9fff',
+    secondary_color: '#34d399',
+    custom_colors: null,
+  },
+};
+
 class SystemSetting {
+  static normalizeThemeMode(mode) {
+    return mode === 'dark' ? 'dark' : 'light';
+  }
+
+  static applyThemePreset(data) {
+    const themeId = this.normalizeThemeMode(data?.mode);
+    const preset = THEME_PRESETS[themeId];
+    return {
+      ...data,
+      mode: preset.mode,
+      primary_color: preset.primary_color,
+      secondary_color: preset.secondary_color,
+      custom_colors: null,
+    };
+  }
+
   static toUpdatePayload(row) {
     return {
       lab_name: row.lab_name,
@@ -22,8 +53,8 @@ class SystemSetting {
       lab_name: 'MedLab Smart',
       mode: 'light',
       logo_url: null,
-      primary_color: '#0055ff',
-      secondary_color: '#00cc66',
+      primary_color: '#003d9b',
+      secondary_color: '#0d8a5b',
       custom_colors: null,
       latitude: null,
       longitude: null,
@@ -42,23 +73,24 @@ class SystemSetting {
   }
 
   static async updateSettings(data, updatedBy = null) {
+    const themed = this.applyThemePreset(data);
     const pool = await poolPromise;
     const request = pool.request();
     
     // Get existing settings first to see if we need to insert or update
     const existing = await this.getSettings();
 
-    request.input('lab_name', sql.NVarChar(255), data.lab_name);
-    request.input('mode', sql.NVarChar(20), data.mode || 'light');
-    request.input('logo_url', sql.NVarChar(2048), data.logo_url);
-    request.input('primary_color', sql.NVarChar(50), data.primary_color);
-    request.input('secondary_color', sql.NVarChar(50), data.secondary_color);
-    request.input('custom_colors', sql.NVarChar(sql.MAX), data.custom_colors);
-    request.input('latitude', sql.Float, data.latitude);
-    request.input('longitude', sql.Float, data.longitude);
-    request.input('address', sql.NVarChar(sql.MAX), data.address);
-    request.input('contact_phone', sql.NVarChar(50), data.contact_phone);
-    request.input('contact_email', sql.NVarChar(255), data.contact_email);
+    request.input('lab_name', sql.NVarChar(255), themed.lab_name);
+    request.input('mode', sql.NVarChar(20), themed.mode);
+    request.input('logo_url', sql.NVarChar(2048), themed.logo_url);
+    request.input('primary_color', sql.NVarChar(50), themed.primary_color);
+    request.input('secondary_color', sql.NVarChar(50), themed.secondary_color);
+    request.input('custom_colors', sql.NVarChar(sql.MAX), themed.custom_colors);
+    request.input('latitude', sql.Float, themed.latitude);
+    request.input('longitude', sql.Float, themed.longitude);
+    request.input('address', sql.NVarChar(sql.MAX), themed.address);
+    request.input('contact_phone', sql.NVarChar(50), themed.contact_phone);
+    request.input('contact_email', sql.NVarChar(255), themed.contact_email);
     request.input('updated_user', sql.UniqueIdentifier, updatedBy);
 
     if (existing) {

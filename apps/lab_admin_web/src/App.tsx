@@ -1,6 +1,7 @@
 import { BrowserRouter, HashRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom'
 import { LoadingSpinner } from './components/common/LoadingSpinner'
 import { useAuth } from './hooks/AuthContext'
+import { useAppThemeSync } from './hooks/useAppTheme'
 import { AdminLayout } from './layout/AdminLayout'
 import { LoginPage } from './pages/auth/LoginPage'
 import { DiscountManagementPage } from './pages/DiscountManagementPage'
@@ -30,11 +31,18 @@ function RequireAuth() {
   return <Outlet />
 }
 
+function AppThemeSync() {
+  const { signedIn, initializing } = useAuth()
+  useAppThemeSync(signedIn && !initializing)
+  return null
+}
+
 export default function App() {
   const Router = window.location.protocol === 'file:' ? HashRouter : BrowserRouter
 
   return (
     <Router>
+      <AppThemeSync />
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route element={<RequireAuth />}>

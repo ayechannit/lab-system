@@ -131,6 +131,23 @@ class UpcomingTest {
   final String whenLabel;
 }
 
+/// Saved catalog line returned from `GET /api/orders/:id` (`items` array).
+class OrderLineSummary {
+  const OrderLineSummary({
+    required this.testId,
+    required this.testName,
+    required this.testCode,
+    required this.quantity,
+    required this.subtotalMmk,
+  });
+
+  final String testId;
+  final String testName;
+  final String testCode;
+  final int quantity;
+  final double subtotalMmk;
+}
+
 class LabOrderSummary {
   const LabOrderSummary({
     required this.id,
@@ -149,6 +166,7 @@ class LabOrderSummary {
     this.reportOutAt,
     this.scheduleAcceptedByUser = true,
     this.backendStatus,
+    this.lineItems = const [],
   });
 
   final String id;
@@ -171,6 +189,9 @@ class LabOrderSummary {
 
   /// Raw API status when using REST (`pending`, `scheduled`, …).
   final String? backendStatus;
+
+  /// Line items from the server (`lab_order_items`), with catalog names when available.
+  final List<OrderLineSummary> lineItems;
 
   bool get isReportReady => reportOutAt != null;
 
@@ -198,6 +219,7 @@ class LabOrderSummary {
       reportOutAt: reportOutAt,
       scheduleAcceptedByUser: scheduleAcceptedByUser ?? this.scheduleAcceptedByUser,
       backendStatus: backendStatus,
+      lineItems: lineItems,
     );
   }
 }

@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/session_scope.dart';
-import '../../theme/app_colors.dart';
-import '../../widgets/common/app_brand_mark.dart';
+import '../../theme/theme_extensions.dart';
+import '../../widgets/common/app_branding_row.dart';
+import '../../widgets/common/app_surface_card.dart';
 import '../../widgets/navigation/lab_main_bottom_nav.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -13,6 +14,7 @@ class ProfileScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final session = SessionScope.of(context);
     final user = session.user;
+    final cs = context.cs;
     if (user == null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (context.mounted) context.go('/login');
@@ -24,19 +26,7 @@ class ProfileScreen extends StatelessWidget {
       appBar: AppBar(
         automaticallyImplyLeading: false,
         titleSpacing: 12,
-        title: Row(
-          children: [
-            const AppBrandMark(size: 32, iconSize: 16, borderRadius: 8),
-            const SizedBox(width: 10),
-            Text(
-              'MedLab Smart',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.w800,
-                  ),
-            ),
-          ],
-        ),
+        title: const AppBrandingRow(markSize: 32, iconSize: 16, borderRadius: 8),
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
@@ -47,13 +37,17 @@ class ProfileScreen extends StatelessWidget {
               children: [
                 CircleAvatar(
                   radius: 58,
-                  backgroundColor: AppColors.primary.withValues(alpha: 0.12),
+                  backgroundColor: cs.primary.withValues(alpha: 0.12),
                   child: CircleAvatar(
                     radius: 53,
-                    backgroundColor: const Color(0xFF121826),
+                    backgroundColor: cs.primary.withValues(alpha: 0.85),
                     child: Text(
                       user.name.isNotEmpty ? user.name[0].toUpperCase() : '?',
-                      style: const TextStyle(fontSize: 42, color: Colors.white, fontWeight: FontWeight.w700),
+                      style: TextStyle(
+                        fontSize: 42,
+                        color: cs.onPrimary,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
                 ),
@@ -64,11 +58,11 @@ class ProfileScreen extends StatelessWidget {
                     width: 36,
                     height: 36,
                     decoration: BoxDecoration(
-                      color: AppColors.primaryLight,
+                      color: cs.primary,
                       shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 2),
+                      border: Border.all(color: cs.surface, width: 2),
                     ),
-                    child: const Icon(Icons.edit, size: 18, color: Colors.white),
+                    child: Icon(Icons.edit, size: 18, color: cs.onPrimary),
                   ),
                 ),
               ],
@@ -83,29 +77,29 @@ class ProfileScreen extends StatelessWidget {
           Text(
             user.role.label,
             textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(color: AppColors.onSurfaceVariant),
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(color: cs.onSurfaceVariant),
           ),
           const SizedBox(height: 18),
           _ContactCard(
             icon: Icons.call_outlined,
-            iconColor: AppColors.primary,
+            iconColor: cs.primary,
             label: 'Phone',
             value: user.phone,
-            leftBorderColor: AppColors.primaryLight,
+            leftBorderColor: cs.primary,
           ),
           const SizedBox(height: 12),
           _ContactCard(
             icon: Icons.mail_outline,
-            iconColor: const Color(0xFFA33500),
+            iconColor: const Color(0xFFE07A3A),
             label: 'Email',
             value: user.email,
-            leftBorderColor: const Color(0xFFA33500),
+            leftBorderColor: const Color(0xFFE07A3A),
           ),
           const SizedBox(height: 18),
           Text(
             'ACCOUNT SETTINGS',
             style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  color: AppColors.primary,
+                  color: cs.primary,
                   letterSpacing: 1.4,
                   fontWeight: FontWeight.w700,
                 ),
@@ -118,10 +112,17 @@ class ProfileScreen extends StatelessWidget {
             onTap: () => context.push('/edit-profile'),
           ),
           const SizedBox(height: 12),
+          _SettingTile(
+            icon: Icons.palette_outlined,
+            title: 'Lab & appearance',
+            subtitle: 'Theme, logo, and contact info from your lab',
+            onTap: () => context.push('/lab-info'),
+          ),
+          const SizedBox(height: 12),
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: AppColors.primaryLight,
+              color: cs.primary,
               borderRadius: BorderRadius.circular(12),
             ),
             child: Column(
@@ -130,7 +131,7 @@ class ProfileScreen extends StatelessWidget {
                 Text(
                   'LOYALTY STATUS',
                   style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        color: Colors.white70,
+                        color: cs.onPrimary.withValues(alpha: 0.75),
                         letterSpacing: 1.2,
                       ),
                 ),
@@ -138,7 +139,7 @@ class ProfileScreen extends StatelessWidget {
                 Text(
                   'Elite Wellness',
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        color: Colors.white,
+                        color: cs.onPrimary,
                         fontWeight: FontWeight.w800,
                       ),
                 ),
@@ -146,7 +147,7 @@ class ProfileScreen extends StatelessWidget {
                 Text(
                   '${user.pointsBalance} Points',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: Colors.white,
+                        color: cs.onPrimary,
                         fontWeight: FontWeight.w700,
                       ),
                 ),
@@ -159,10 +160,10 @@ class ProfileScreen extends StatelessWidget {
               session.logout();
               context.go('/login');
             },
-            icon: const Icon(Icons.logout, color: AppColors.error),
-            label: const Text('Logout', style: TextStyle(color: AppColors.error)),
+            icon: Icon(Icons.logout, color: cs.error),
+            label: Text('Logout', style: TextStyle(color: cs.error)),
             style: OutlinedButton.styleFrom(
-              side: BorderSide(color: AppColors.error.withValues(alpha: 0.35)),
+              side: BorderSide(color: cs.error.withValues(alpha: 0.35)),
               padding: const EdgeInsets.symmetric(vertical: 14),
             ),
           ),
@@ -190,13 +191,9 @@ class _ContactCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border(left: BorderSide(color: leftBorderColor, width: 3)),
-      ),
+    final cs = context.cs;
+    return AppSurfaceCard(
+      border: Border(left: BorderSide(color: leftBorderColor, width: 3)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -204,7 +201,10 @@ class _ContactCard extends StatelessWidget {
             children: [
               Icon(icon, color: iconColor),
               const SizedBox(width: 8),
-              Text(label, style: Theme.of(context).textTheme.titleMedium?.copyWith(color: AppColors.onSurfaceVariant)),
+              Text(
+                label,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(color: cs.onSurfaceVariant),
+              ),
             ],
           ),
           const SizedBox(height: 10),
@@ -233,8 +233,10 @@ class _SettingTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = context.cs;
+    final extras = context.appExtras;
     return Material(
-      color: Colors.white,
+      color: context.cardFill,
       borderRadius: BorderRadius.circular(14),
       child: InkWell(
         onTap: onTap,
@@ -247,26 +249,29 @@ class _SettingTile extends StatelessWidget {
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFEAF1FF),
+                  color: extras.iconTileBackground,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(icon, color: AppColors.primary),
+                child: Icon(icon, color: cs.primary),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(title, style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
+                    Text(
+                      title,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                    ),
                     const SizedBox(height: 2),
                     Text(
                       subtitle,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.onSurfaceVariant),
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
                     ),
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right, color: AppColors.outline),
+              Icon(Icons.chevron_right, color: cs.outline),
             ],
           ),
         ),

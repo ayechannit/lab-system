@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../theme/app_colors.dart';
+import '../../theme/theme_extensions.dart';
 
 class SectionCard extends StatelessWidget {
   const SectionCard({
@@ -35,7 +35,6 @@ class SectionCard extends StatelessWidget {
                         title,
                         style: Theme.of(context).textTheme.titleMedium?.copyWith(
                               fontWeight: FontWeight.w700,
-                              color: AppColors.onSurface,
                             ),
                       ),
                       if (subtitle != null) ...[
@@ -43,7 +42,7 @@ class SectionCard extends StatelessWidget {
                         Text(
                           subtitle!,
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: AppColors.onSurfaceVariant,
+                                color: context.cs.onSurfaceVariant,
                               ),
                         ),
                       ],

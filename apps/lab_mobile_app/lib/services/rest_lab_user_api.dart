@@ -240,6 +240,59 @@ class RestLabUserApi implements LabUserApi {
     }).toList();
   }
 
+  double _roundMoney(double v) => (v * 100).round() / 100.0;
+
+  /// Body for `POST /api/orders` — matches `orderController.createOrder` / admin web `createOrder`.
+  Map<String, dynamic> _orderCreateBody({
+    required String userId,
+    required LabOrderRequest request,
+    required List<CatalogOrderLine> lines,
+  }) {
+    final original = lines.isEmpty
+        ? 0.0
+        : _roundMoney(lines.fold<double>(0, (a, b) => a + b.unitPriceMmk));
+    final finalSum = lines.isEmpty
+        ? 0.0
+        : _roundMoney(lines.fold<double>(0, (a, b) => a + b.subtotalMmk));
+    final blended =
+        original > 0 ? _roundMoney((1 - finalSum / original) * 100) : 0.0;
+
+    return {
+      'user_id': userId,
+      'priority': request.priority.name,
+      'patient_name': request.patientName,
+      'patient_age': request.age,
+      'patient_phone': request.phone,
+      'address': request.address.line,
+      'latitude': request.address.latitude,
+      'longitude': request.address.longitude,
+      'report_delivery_method': request.reportDeliveryMethod,
+      'description': _composeDescription(request),
+      'status': 'pending',
+      'original_price_mmk': original,
+      'final_price_mmk': finalSum,
+      'discount_percent': blended,
+      'items': lines.map((e) => e.toItemJson()).toList(),
+    };
+  }
+
+  void _applyOrderFieldsToMultipart(
+    http.MultipartRequest mp,
+    Map<String, dynamic> body,
+  ) {
+    for (final entry in body.entries) {
+      final key = entry.key;
+      final value = entry.value;
+      if (key == 'items') {
+        mp.fields[key] = jsonEncode(value);
+      } else if (value is num) {
+        mp.fields[key] = value is int ? '$value' : '$value';
+      } else {
+        mp.fields[key] = '$value';
+      }
+    }
+  }
+
   @override
   Future<LabOrderSummary> createOrder({
     required String userId,
@@ -257,46 +310,17 @@ class RestLabUserApi implements LabUserApi {
       throw LabApiException('Choose either tests from the catalog or a prescription upload — not both.');
     }
 
-    /*
-     * POST /api/orders (multipart) — field names match `orderController.createOrder` + `Order.create`:
-     * Required: user_id, priority, patient_name, patient_age, patient_phone, address, report_delivery_method.
-     * Optional: description, latitude, longitude, status, original_price_mmk, discount_percent, final_price_mmk, items (JSON string).
-     * File: prescription (multer upload.single('prescription')).
-     */
-    final mp = http.MultipartRequest('POST', Uri.parse('$_base/api/orders'));
-    mp.headers['Authorization'] = 'Bearer $_token';
+    final body = _orderCreateBody(userId: userId, request: request, lines: lines);
 
-    double roundMoney(double v) => (v * 100).round() / 100.0;
-
-    mp.fields['user_id'] = userId;
-    mp.fields['priority'] = request.priority.name;
-    mp.fields['patient_name'] = request.patientName;
-    mp.fields['patient_age'] = '${request.age}';
-    mp.fields['patient_phone'] = request.phone;
-    mp.fields['address'] = request.address.line;
-    mp.fields['latitude'] = '${request.address.latitude}';
-    mp.fields['longitude'] = '${request.address.longitude}';
-    mp.fields['report_delivery_method'] = request.reportDeliveryMethod;
-    mp.fields['description'] = _composeDescription(request);
-    mp.fields['status'] = 'pending';
-
-    if (lines.isNotEmpty) {
-      final original = roundMoney(lines.fold<double>(0, (a, b) => a + b.unitPriceMmk));
-      final finalSum = roundMoney(lines.fold<double>(0, (a, b) => a + b.subtotalMmk));
-      final blended =
-          original > 0 ? ((1 - finalSum / original) * 10000).round() / 100 : 0.0;
-      mp.fields['original_price_mmk'] = roundMoney(original).toString();
-      mp.fields['final_price_mmk'] = roundMoney(finalSum).toString();
-      mp.fields['discount_percent'] = roundMoney(blended).toString();
-      mp.fields['items'] = jsonEncode(lines.map((e) => e.toItemJson()).toList());
-    } else {
-      mp.fields['original_price_mmk'] = '0';
-      mp.fields['final_price_mmk'] = '0';
-      mp.fields['discount_percent'] = '0';
-      mp.fields['items'] = jsonEncode([]);
-    }
-
+    final http.Response r;
     if (hasFile) {
+      final mp = http.MultipartRequest('POST', Uri.parse('$_base/api/orders'));
+      if (_token != null) {
+        mp.headers['Authorization'] = 'Bearer $_token';
+      }
+      mp.headers['Accept'] = 'application/json';
+      _applyOrderFieldsToMultipart(mp, body);
+
       final rawName = request.prescriptionFilename!.trim();
       final shortName = rawName.contains('/') ? rawName.split('/').last : rawName.split(r'\').last;
       final nameForPart = shortName.isEmpty ? 'prescription' : shortName;
@@ -309,10 +333,17 @@ class RestLabUserApi implements LabUserApi {
           contentType: contentType,
         ),
       );
+
+      final streamed = await mp.send();
+      r = await http.Response.fromStream(streamed);
+    } else {
+      r = await http.post(
+        Uri.parse('$_base/api/orders'),
+        headers: _jsonHeaders(),
+        body: jsonEncode(body),
+      );
     }
 
-    final streamed = await mp.send();
-    final r = await http.Response.fromStream(streamed);
     if (r.statusCode >= 400) _throwFromResponse(r);
     final created = _asObj(jsonDecode(r.body));
     final id = '${_gv(created, 'id')}';
@@ -373,14 +404,13 @@ class RestLabUserApi implements LabUserApi {
     final createdLabel =
         '${createdAt.year}-${createdAt.month.toString().padLeft(2, '0')}-${createdAt.day.toString().padLeft(2, '0')}';
 
-    final items = o['items'];
+    final lineItems = _parseOrderLineItems(o['items']);
     String testLabel = 'Lab test';
-    if (items is List && items.isNotEmpty) {
-      final first = _asObj(items.first);
-      final nested = first['test'];
-      if (nested is Map) {
-        final tm = _asObj(nested);
-        testLabel = '${_gv(tm, 'test_name') ?? _gv(tm, 'testName') ?? testLabel}';
+    if (lineItems.isNotEmpty) {
+      if (lineItems.length == 1) {
+        testLabel = lineItems.first.testName;
+      } else {
+        testLabel = '${lineItems.length} tests';
       }
     }
 
@@ -414,7 +444,46 @@ class RestLabUserApi implements LabUserApi {
       reportOutAt: reportOutTime,
       scheduleAcceptedByUser: accepted,
       backendStatus: status,
+      lineItems: lineItems,
     );
+  }
+
+  List<OrderLineSummary> _parseOrderLineItems(dynamic raw) {
+    if (raw == null) return const [];
+    var list = raw;
+    if (raw is String) {
+      try {
+        list = jsonDecode(raw);
+      } catch (_) {
+        return const [];
+      }
+    }
+    if (list is! List) return const [];
+    final out = <OrderLineSummary>[];
+    for (final entry in list) {
+      final m = _asObj(entry);
+      final testId = '${_gv(m, 'test_id') ?? _gv(m, 'testId')}';
+      if (testId.isEmpty) continue;
+      final nested = m['test'];
+      String name = '${_gv(m, 'test_name') ?? _gv(m, 'testName') ?? ''}'.trim();
+      String code = '${_gv(m, 'test_code') ?? _gv(m, 'testCode') ?? ''}'.trim();
+      if (name.isEmpty && nested is Map) {
+        final tm = _asObj(nested);
+        name = '${_gv(tm, 'test_name') ?? _gv(tm, 'testName') ?? 'Test'}'.trim();
+        code = '${_gv(tm, 'test_code') ?? _gv(tm, 'testCode') ?? ''}'.trim();
+      }
+      if (name.isEmpty) name = 'Test';
+      out.add(
+        OrderLineSummary(
+          testId: testId,
+          testName: name,
+          testCode: code,
+          quantity: _asInt(_gv(m, 'quantity'), 1),
+          subtotalMmk: _asDouble(_gv(m, 'subtotal_mmk') ?? _gv(m, 'subtotalMmk')),
+        ),
+      );
+    }
+    return out;
   }
 
   List<OrderTimelineStep> _buildTimeline(

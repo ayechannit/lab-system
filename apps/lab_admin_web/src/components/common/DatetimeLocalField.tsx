@@ -198,16 +198,16 @@ export function DatetimeLocalField({
 
   useEffect(() => {
     if (!open) return
-    const onPointerDown = (e: MouseEvent | PointerEvent) => {
+    const onOutsidePointer = (e: Event) => {
       const t = e.target as Node
       if (popRef.current?.contains(t) || triggerRef.current?.contains(t)) return
       closePopover()
     }
-    document.addEventListener('mousedown', onPointerDown)
-    document.addEventListener('touchstart', onPointerDown, { passive: true })
+    document.addEventListener('mousedown', onOutsidePointer)
+    document.addEventListener('touchstart', onOutsidePointer, { passive: true })
     return () => {
-      document.removeEventListener('mousedown', onPointerDown)
-      document.removeEventListener('touchstart', onPointerDown)
+      document.removeEventListener('mousedown', onOutsidePointer)
+      document.removeEventListener('touchstart', onOutsidePointer)
     }
   }, [open, closePopover])
 

@@ -4,6 +4,9 @@ import 'package:go_router/go_router.dart';
 import '../../app/session_scope.dart';
 import '../../models/post_register_login_hint.dart';
 import '../../theme/app_colors.dart';
+import '../../theme/theme_extensions.dart';
+import '../../app/app_settings_scope.dart';
+import '../../services/rest_lab_user_api.dart';
 import '../../widgets/common/app_brand_mark.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -57,26 +60,27 @@ class _LoginScreenState extends State<LoginScreen> {
               constraints: BoxConstraints(minHeight: constraints.maxHeight - 32),
               child: Column(
                 children: [
-                  const AppBrandMark(
+                  AppBrandMark(
                     size: 64,
                     iconSize: 30,
                     borderRadius: 16,
                     showShadow: true,
+                    logoUrl: AppSettingsScope.of(context).logoUrl,
                   ),
                   const SizedBox(height: 14),
                   Text(
-                    'MedLab Smart',
+                    AppSettingsScope.of(context).labName,
                     textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(color: AppColors.primary),
+                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(color: context.cs.primary),
                   ),
                   const SizedBox(height: 22),
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: context.cardFill,
                       borderRadius: BorderRadius.circular(24),
-                      border: Border.all(color: const Color(0x80E1E2EC)),
+                      border: Border.all(color: context.cs.outline.withValues(alpha: 0.5)),
                       boxShadow: const [
                         BoxShadow(
                           color: Color(0x14000000),
@@ -161,7 +165,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               style: Theme.of(context)
                                   .textTheme
                                   .bodyLarge
-                                  ?.copyWith(color: AppColors.onSurfaceVariant),
+                                  ?.copyWith(color: context.cs.onSurfaceVariant),
                             ),
                             checkboxShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
                             side: const BorderSide(color: AppColors.outline),
@@ -181,8 +185,18 @@ class _LoginScreenState extends State<LoginScreen> {
                                   context.go(session.homeRoute);
                                 } catch (e) {
                                   if (!context.mounted) return;
+                                  final msg = e is LabApiException ? e.message : '$e';
+                                  final pending = e is LabApiException && e.statusCode == 403;
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('$e')),
+                                    SnackBar(
+                                      duration: const Duration(seconds: 6),
+                                      backgroundColor: pending ? const Color(0xFFB45309) : null,
+                                      content: Text(
+                                        pending
+                                            ? '$msg\n\nAsk lab staff to approve your account in the admin portal.'
+                                            : msg,
+                                      ),
+                                    ),
                                   );
                                 }
                               },
@@ -200,7 +214,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             style: Theme.of(context)
                                 .textTheme
                                 .headlineSmall
-                                ?.copyWith(color: AppColors.onSurfaceVariant, fontSize: 34 / 2),
+                                ?.copyWith(color: context.cs.onSurfaceVariant, fontSize: 34 / 2),
                           ),
                           const SizedBox(height: 12),
                           SizedBox(
@@ -237,7 +251,7 @@ class _FieldLabel extends StatelessWidget {
       child: Text(
         label,
         style: Theme.of(context).textTheme.labelLarge?.copyWith(
-              color: AppColors.onSurfaceVariant,
+              color: context.cs.onSurfaceVariant,
               fontWeight: FontWeight.w700,
             ),
       ),
@@ -254,7 +268,7 @@ class _InputShell extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFFF1F1FB),
+        color: context.appExtras.surfaceContainer,
         borderRadius: BorderRadius.circular(16),
       ),
       child: child,

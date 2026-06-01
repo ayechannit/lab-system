@@ -4,7 +4,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../app/session_scope.dart';
 import '../../theme/app_colors.dart';
-import '../../widgets/common/app_brand_mark.dart';
+import '../../theme/theme_extensions.dart';
+import '../../widgets/common/app_branding_row.dart';
 
 class OrderSuccessConfirmationScreen extends StatelessWidget {
   const OrderSuccessConfirmationScreen({super.key});
@@ -15,26 +16,12 @@ class OrderSuccessConfirmationScreen extends StatelessWidget {
     final order = session.trackingOrder;
 
     return Scaffold(
-      backgroundColor: AppColors.surface,
       appBar: AppBar(
         automaticallyImplyLeading: false,
         titleSpacing: 12,
-        backgroundColor: AppColors.surface,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
-        title: Row(
-          children: [
-            const AppBrandMark(size: 32, iconSize: 16, borderRadius: 8),
-            const SizedBox(width: 10),
-            Text(
-              'MedLab Smart',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.w800,
-                  ),
-            ),
-          ],
-        ),
+        title: const AppBrandingRow(markSize: 32, iconSize: 16, borderRadius: 8),
       ),
       body: SafeArea(
         child: LayoutBuilder(
@@ -64,7 +51,7 @@ class OrderSuccessConfirmationScreen extends StatelessWidget {
                   'Order submitted',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        color: AppColors.onSurface,
+                        color: context.cs.onSurface,
                         fontWeight: FontWeight.w600,
                         letterSpacing: -0.25,
                       ),
@@ -74,7 +61,7 @@ class OrderSuccessConfirmationScreen extends StatelessWidget {
                   'Thanks — the lab has your request. You can follow progress from Orders or below.',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: AppColors.onSurfaceVariant,
+                        color: context.cs.onSurfaceVariant,
                         height: 1.45,
                         fontWeight: FontWeight.w400,
                       ),
@@ -85,7 +72,7 @@ class OrderSuccessConfirmationScreen extends StatelessWidget {
                     width: double.infinity,
                     padding: const EdgeInsets.fromLTRB(18, 18, 18, 14),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: context.cardFill,
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(color: const Color(0x66E1E2EC)),
                       boxShadow: [
@@ -102,15 +89,54 @@ class OrderSuccessConfirmationScreen extends StatelessWidget {
                         Text(
                           'Summary',
                           style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                color: AppColors.primary,
+                                color: context.cs.primary,
                                 fontWeight: FontWeight.w600,
                               ),
                         ),
                         const SizedBox(height: 16),
                         _SuccessField(label: 'Patient', value: order.patientName),
                         _SuccessDivider(),
-                        _SuccessField(label: 'Test', value: order.testType),
-                        _SuccessDivider(),
+                        if (order.lineItems.isEmpty)
+                          ...[
+                            _SuccessField(label: 'Test', value: order.testType),
+                            _SuccessDivider(),
+                          ]
+                        else ...[
+                          Text(
+                            'Tests',
+                            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                  color: context.cs.onSurfaceVariant,
+                                ),
+                          ),
+                          const SizedBox(height: 8),
+                          for (var i = 0; i < order.lineItems.length; i++) ...[
+                            if (i > 0) const SizedBox(height: 8),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    order.lineItems[i].testCode.isEmpty
+                                        ? order.lineItems[i].testName
+                                        : '${order.lineItems[i].testName} (${order.lineItems[i].testCode})',
+                                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                          color: context.cs.onSurface,
+                                          fontWeight: FontWeight.w400,
+                                          height: 1.35,
+                                        ),
+                                  ),
+                                ),
+                                Text(
+                                  '${order.lineItems[i].subtotalMmk.toStringAsFixed(0)} MMK',
+                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                        color: context.cs.onSurfaceVariant,
+                                      ),
+                                ),
+                              ],
+                            ),
+                          ],
+                          _SuccessDivider(),
+                        ],
                         _SuccessField(label: 'Address', value: order.address.line),
                         if (order.backendStatus != null) ...[
                           _SuccessDivider(),
@@ -119,13 +145,13 @@ class OrderSuccessConfirmationScreen extends StatelessWidget {
                         _SuccessDivider(),
                         Text(
                           'Reference (for support)',
-                          style: Theme.of(context).textTheme.labelMedium?.copyWith(color: AppColors.onSurfaceVariant),
+                          style: Theme.of(context).textTheme.labelMedium?.copyWith(color: context.cs.onSurfaceVariant),
                         ),
                         const SizedBox(height: 6),
                         SelectableText(
                           order.id,
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: AppColors.onSurfaceVariant,
+                                color: context.cs.onSurfaceVariant,
                                 height: 1.4,
                               ),
                         ),
@@ -176,12 +202,12 @@ class OrderSuccessConfirmationScreen extends StatelessWidget {
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                     ),
                     onPressed: () => context.go(session.homeRoute),
-                    icon: Icon(Icons.grid_view_rounded, size: 20, color: AppColors.primary),
+                    icon: Icon(Icons.grid_view_rounded, size: 20, color: context.cs.primary),
                     label: Text(
                       'Back to home',
                       style: Theme.of(context).textTheme.labelLarge?.copyWith(
                             fontWeight: FontWeight.w500,
-                            color: AppColors.primary,
+                            color: context.cs.primary,
                           ),
                     ),
                   ),
@@ -208,13 +234,13 @@ class _SuccessField extends StatelessWidget {
       children: [
         Text(
           label,
-          style: Theme.of(context).textTheme.labelMedium?.copyWith(color: AppColors.onSurfaceVariant),
+          style: Theme.of(context).textTheme.labelMedium?.copyWith(color: context.cs.onSurfaceVariant),
         ),
         const SizedBox(height: 4),
         Text(
           value,
           style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: AppColors.onSurface,
+                color: context.cs.onSurface,
                 fontWeight: FontWeight.w400,
                 height: 1.35,
               ),

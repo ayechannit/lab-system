@@ -6,6 +6,8 @@ import '../../config/map_defaults.dart';
 import '../../models/post_register_login_hint.dart';
 import '../../models/user_role.dart';
 import '../../theme/app_colors.dart';
+import '../../theme/theme_extensions.dart';
+import '../../app/app_settings_scope.dart';
 import '../../widgets/common/app_brand_mark.dart';
 import '../../widgets/location/address_location_fields.dart';
 
@@ -62,19 +64,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
             padding: const EdgeInsets.fromLTRB(20, 26, 20, 16),
             child: Column(
               children: [
-                const AppBrandMark(size: 64, iconSize: 30, borderRadius: 16),
+                AppBrandMark(
+                  size: 64,
+                  iconSize: 30,
+                  borderRadius: 16,
+                  logoUrl: AppSettingsScope.of(context).logoUrl,
+                ),
                 const SizedBox(height: 14),
                 Text(
-                  'MedLab Smart',
+                  AppSettingsScope.of(context).labName,
                   textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(color: AppColors.primary),
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(color: context.cs.primary),
                 ),
                 const SizedBox(height: 18),
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: context.cardFill,
                     borderRadius: BorderRadius.circular(24),
                     border: Border.all(color: const Color(0x80E1E2EC)),
                   ),
@@ -99,7 +106,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                       duration: const Duration(milliseconds: 160),
                                       padding: const EdgeInsets.symmetric(vertical: 10),
                                       decoration: BoxDecoration(
-                                        color: _selectedRole == role ? AppColors.primary : Colors.transparent,
+                                        color: _selectedRole == role ? context.cs.primary : Colors.transparent,
                                         borderRadius: BorderRadius.circular(10),
                                       ),
                                       child: Text(
@@ -107,8 +114,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                         textAlign: TextAlign.center,
                                         style: Theme.of(context).textTheme.labelLarge?.copyWith(
                                               color: _selectedRole == role
-                                                  ? Colors.white
-                                                  : AppColors.onSurfaceVariant,
+                                                  ? context.cs.onPrimary
+                                                  : context.cs.onSurfaceVariant,
                                             ),
                                       ),
                                     ),
@@ -251,23 +258,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         title: Text.rich(
                           TextSpan(
                             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  color: AppColors.onSurfaceVariant,
+                                  color: context.cs.onSurfaceVariant,
                                   height: 1.2,
                                 ),
-                            children: const [
-                              TextSpan(text: 'I agree to the '),
+                            children: [
+                              const TextSpan(text: 'I agree to the '),
                               TextSpan(
                                 text: 'Terms of Service',
                                 style: TextStyle(
-                                  color: AppColors.primary,
+                                  color: context.cs.primary,
                                   fontWeight: FontWeight.w700,
                                 ),
                               ),
-                              TextSpan(text: ' and '),
+                              const TextSpan(text: ' and '),
                               TextSpan(
                                 text: 'Privacy Policy.',
                                 style: TextStyle(
-                                  color: AppColors.primary,
+                                  color: context.cs.primary,
                                   fontWeight: FontWeight.w700,
                                 ),
                               ),
@@ -315,10 +322,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 longitude: _addressLng,
                               );
                               if (!context.mounted) return;
+                              final needsApproval =
+                                  _selectedRole.toUserRole() != UserRole.patient;
                               context.go(
                                 '/login',
                                 extra: PostRegisterLoginHint(
-                                  message: 'Account created. Sign in with your email and password.',
+                                  message: needsApproval
+                                      ? 'Account created. A lab staff member must approve your account before you can sign in.'
+                                      : 'Account created. Sign in with your email and password.',
                                   email: emailTrim,
                                 ),
                               );
@@ -343,16 +354,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   style: TextButton.styleFrom(
                     splashFactory: NoSplash.splashFactory,
                     overlayColor: Colors.transparent,
-                    foregroundColor: AppColors.onSurfaceVariant,
+                    foregroundColor: context.cs.onSurfaceVariant,
                   ),
                   child: Text.rich(
                     TextSpan(
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: AppColors.onSurfaceVariant),
-                      children: const [
-                        TextSpan(text: 'Already have an account? '),
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: context.cs.onSurfaceVariant),
+                      children: [
+                        const TextSpan(text: 'Already have an account? '),
                         TextSpan(
                           text: 'Log In',
-                          style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w700),
+                          style: TextStyle(color: context.cs.primary, fontWeight: FontWeight.w700),
                         ),
                       ],
                     ),
@@ -386,7 +397,7 @@ class _RegisterLabel extends StatelessWidget {
       child: Text(
         text,
         style: Theme.of(context).textTheme.labelLarge?.copyWith(
-              color: AppColors.onSurfaceVariant,
+              color: context.cs.onSurfaceVariant,
               fontWeight: FontWeight.w700,
             ),
       ),

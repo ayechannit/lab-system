@@ -1,28 +1,36 @@
 import { useId, useState, type ChangeEvent } from 'react'
-import {
-  resolveLogoDisplayUrl,
-  uploadSystemSettingsLogo,
-  type SystemSettingsRow,
-} from '../../services/systemSettingService'
+import { resolveLogoDisplayUrl } from '../../services/systemSettingService'
 import { isDisplayableLogoUrl, LOGO_URL_MAX_LENGTH } from '../../utils/logoImage'
 
 type LogoUrlFieldProps = {
   id: string
   value: string
+  /** Local preview (unsaved file) or resolved saved URL — controlled by parent. */
+  previewSrc: string | null
+  pickedFileName?: string | null
   onChange: (value: string) => void
-  onUploaded?: (row: SystemSettingsRow) => void
+  onFileSelected?: (file: File) => void
+  onClear?: () => void
   disabled?: boolean
 }
 
-export function LogoUrlField({ id, value, onChange, onUploaded, disabled = false }: LogoUrlFieldProps) {
+export function LogoUrlField({
+  id,
+  value,
+  previewSrc,
+  pickedFileName = null,
+  onChange,
+  onFileSelected,
+  onClear,
+  disabled = false,
+}: LogoUrlFieldProps) {
   const fileInputId = useId()
   const [localError, setLocalError] = useState<string | null>(null)
-  const [uploading, setUploading] = useState(false)
-  const [pickedName, setPickedName] = useState<string | null>(null)
 
-  const previewSrc = isDisplayableLogoUrl(value) ? resolveLogoDisplayUrl(value) : null
+  const displayPreview =
+    previewSrc ?? (isDisplayableLogoUrl(value) ? resolveLogoDisplayUrl(value) : null)
 
-  async function onFileChange(e: ChangeEvent<HTMLInputElement>) {
+  function onFileChange(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     e.target.value = ''
     if (!file) return
@@ -31,35 +39,23 @@ export function LogoUrlField({ id, value, onChange, onUploaded, disabled = false
       return
     }
     setLocalError(null)
-    setUploading(true)
-    try {
-      const row = await uploadSystemSettingsLogo(file)
-      const url = row.logo_url ?? ''
-      onChange(url)
-      onUploaded?.(row)
-      setPickedName(file.name)
-    } catch (err) {
-      setLocalError(err instanceof Error ? err.message : 'Logo upload failed.')
-    } finally {
-      setUploading(false)
-    }
+    onFileSelected?.(file)
   }
 
   function clearLogo() {
     setLocalError(null)
-    setPickedName(null)
-    onChange('')
+    onClear?.()
   }
 
-  const statusLabel = uploading
-    ? 'Uploading…'
-    : pickedName
-      ? pickedName
-      : value.trim()
-        ? value.trim().startsWith('/uploads/')
-          ? 'Logo on server'
-          : 'URL set'
-        : 'No file selected'
+  const statusLabel = pickedFileName
+    ? `${pickedFileName} (not saved yet)`
+    : value.trim()
+      ? value.trim().startsWith('/uploads/')
+        ? 'Saved logo URL'
+        : 'URL set (not saved yet)'
+      : 'No file selected'
+
+  const showClear = Boolean(pickedFileName || value.trim() || displayPreview)
 
   return (
     <div className="field logo-url-field">
@@ -67,9 +63,9 @@ export function LogoUrlField({ id, value, onChange, onUploaded, disabled = false
         Logo
       </label>
 
-      {previewSrc ? (
+      {displayPreview ? (
         <div className="logo-url-field__preview-wrap">
-          <img src={previewSrc} alt="" className="logo-url-field__preview" />
+          <img src={displayPreview} alt="" className="logo-url-field__preview" />
         </div>
       ) : null}
 
@@ -79,15 +75,15 @@ export function LogoUrlField({ id, value, onChange, onUploaded, disabled = false
           className="file-upload-input"
           type="file"
           accept="image/png,image/jpeg,image/gif,image/webp"
-          onChange={(e) => void onFileChange(e)}
-          disabled={disabled || uploading}
+          onChange={onFileChange}
+          disabled={disabled}
         />
         <label htmlFor={fileInputId} className="file-upload-btn">
           Choose image
         </label>
         <span className="file-upload-name">{statusLabel}</span>
-        {value.trim() ? (
-          <button type="button" className="btn btn-ghost btn-sm" onClick={clearLogo} disabled={disabled || uploading}>
+        {showClear ? (
+          <button type="button" className="btn btn-ghost btn-sm" onClick={clearLogo} disabled={disabled}>
             Clear
           </button>
         ) : null}
@@ -102,11 +98,10 @@ export function LogoUrlField({ id, value, onChange, onUploaded, disabled = false
         value={value}
         onChange={(e) => {
           setLocalError(null)
-          setPickedName(null)
           onChange(e.target.value)
         }}
         placeholder="https://… or /uploads/…"
-        disabled={disabled || uploading}
+        disabled={disabled}
       />
 
       {localError ? (

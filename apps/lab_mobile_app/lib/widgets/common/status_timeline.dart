@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../models/lab_order.dart';
-import '../../theme/app_colors.dart';
+import '../../theme/theme_extensions.dart';
 
 class StatusTimeline extends StatelessWidget {
   const StatusTimeline({super.key, required this.steps});
@@ -37,8 +37,8 @@ class _Row extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = step.done ? AppColors.accentGreen : AppColors.outline;
-    final fill = step.done ? AppColors.accentGreen : Colors.white;
+    final color = step.done ? context.cs.secondary : context.cs.outline;
+    final fill = step.done ? context.cs.secondary : context.cardFill;
     return IntrinsicHeight(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -60,7 +60,7 @@ class _Row extends StatelessWidget {
                   Expanded(
                     child: Container(
                       width: 2,
-                      color: AppColors.outline.withValues(alpha: 0.6),
+                      color: context.cs.outline.withValues(alpha: 0.6),
                     ),
                   ),
               ],
@@ -83,7 +83,7 @@ class _Row extends StatelessWidget {
                   Text(
                     step.subtitle,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppColors.onSurfaceVariant,
+                          color: context.cs.onSurfaceVariant,
                         ),
                   ),
                 ],

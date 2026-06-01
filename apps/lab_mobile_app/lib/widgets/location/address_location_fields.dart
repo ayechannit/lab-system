@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import '../../config/map_defaults.dart';
 import '../../models/address_map_pick_result.dart';
 import '../../services/nominatim_geocode.dart';
-import '../../theme/app_colors.dart';
+import '../../theme/theme_extensions.dart';
 import 'address_map_picker_screen.dart';
 
 /// Inline address + coordinates with debounced geocode and optional map picker.
@@ -173,7 +173,7 @@ class _AddressLocationFieldsState extends State<AddressLocationFields> {
           const SizedBox(height: 6),
           Text(
             _geoHint!,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.onSurfaceVariant),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: context.cs.onSurfaceVariant),
           ),
         ],
         const SizedBox(height: 8),
@@ -189,7 +189,7 @@ class _AddressLocationFieldsState extends State<AddressLocationFields> {
         Text(
           'Latitude–Longitude',
           style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                color: AppColors.onSurface,
+                color: context.cs.onSurface,
                 fontWeight: FontWeight.w600,
               ),
         ),
@@ -197,7 +197,7 @@ class _AddressLocationFieldsState extends State<AddressLocationFields> {
         Text(
           coords,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: AppColors.onSurfaceVariant,
+                color: context.cs.onSurfaceVariant,
                 fontFeatures: const [FontFeature.tabularFigures()],
               ),
         ),

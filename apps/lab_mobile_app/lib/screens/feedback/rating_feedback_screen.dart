@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../app/session_scope.dart';
-import '../../theme/app_colors.dart';
-import '../../widgets/common/app_brand_mark.dart';
+import '../../theme/theme_extensions.dart';
+import '../../widgets/common/app_branding_row.dart';
 import '../../widgets/navigation/lab_main_bottom_nav.dart';
 
 class RatingFeedbackScreen extends StatefulWidget {
@@ -29,17 +29,12 @@ class _RatingFeedbackScreenState extends State<RatingFeedbackScreen> {
       appBar: AppBar(
         automaticallyImplyLeading: false,
         titleSpacing: 4,
-        title: Text(
-          'MedLab Smart',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: AppColors.primary,
-                fontWeight: FontWeight.w800,
-              ),
+        title: const AppBrandingRow(
+          markSize: 24,
+          iconSize: 12,
+          borderRadius: 6,
+          spacing: 8,
         ),
-        actions: const [
-          AppBrandMark(size: 24, iconSize: 12, borderRadius: 6),
-          SizedBox(width: 10),
-        ],
       ),
       body: ListView(
         padding: const EdgeInsets.all(20),
@@ -49,10 +44,10 @@ class _RatingFeedbackScreenState extends State<RatingFeedbackScreen> {
               width: 72,
               height: 72,
               decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.08),
+                color: context.cs.primary.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(999),
               ),
-              child: const Icon(Icons.biotech, size: 36, color: AppColors.primary),
+              child: Icon(Icons.biotech, size: 36, color: context.cs.primary),
             ),
           ),
           const SizedBox(height: 12),
@@ -64,13 +59,13 @@ class _RatingFeedbackScreenState extends State<RatingFeedbackScreen> {
           Text(
             'Share feedback for the lab. Ratings are sent to the server with your account.',
             textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(color: AppColors.onSurfaceVariant),
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(color: context.cs.onSurfaceVariant),
           ),
           const SizedBox(height: 16),
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: context.cardFill,
               borderRadius: BorderRadius.circular(14),
               border: Border.all(color: const Color(0x66E1E2EC)),
             ),
@@ -91,7 +86,7 @@ class _RatingFeedbackScreenState extends State<RatingFeedbackScreen> {
                       onPressed: () => setState(() => _stars = i + 1),
                       icon: Icon(
                         Icons.star_rounded,
-                        color: filled ? AppColors.primary : const Color(0xFFC8CCE0),
+                        color: filled ? context.cs.primary : const Color(0xFFC8CCE0),
                         size: 38,
                       ),
                     );
@@ -102,7 +97,7 @@ class _RatingFeedbackScreenState extends State<RatingFeedbackScreen> {
                   _stars == 0 ? 'Select a star rating' : '$_stars of 5 stars',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        color: AppColors.onSurfaceVariant,
+                        color: context.cs.onSurfaceVariant,
                         fontWeight: FontWeight.w600,
                       ),
                 ),
@@ -160,11 +155,11 @@ class _RatingFeedbackScreenState extends State<RatingFeedbackScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.verified_user_outlined, color: AppColors.onSurfaceVariant.withValues(alpha: 0.8), size: 18),
+              Icon(Icons.verified_user_outlined, color: context.cs.onSurfaceVariant.withValues(alpha: 0.8), size: 18),
               const SizedBox(width: 6),
               Text(
                 'Secure and confidential feedback',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(color: AppColors.onSurfaceVariant),
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(color: context.cs.onSurfaceVariant),
               ),
             ],
           ),

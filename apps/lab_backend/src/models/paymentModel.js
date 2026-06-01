@@ -22,7 +22,7 @@ class Payment {
           ISNULL(SUM(p.amount_mmk), 0) as total_paid,
           (o.final_price_mmk - ISNULL(SUM(p.amount_mmk), 0)) as balance
         FROM lab_orders o
-        LEFT JOIN payments p ON o.id = p.order_id AND p.status IN ('received', 'verified')
+        LEFT JOIN payments p ON o.id = p.order_id AND p.status IN ('pending', 'received', 'verified')
         WHERE o.id = @order_id
         GROUP BY o.final_price_mmk
       `);
@@ -47,18 +47,30 @@ class Payment {
   }
 
   static async verify(id, staffId, updatedBy = null) {
+    return Payment.updateStatus(id, 'verified', staffId, updatedBy);
+  }
+
+  static async updateStatus(id, status, staffId = null, updatedBy = null) {
     const pool = await poolPromise;
-    const result = await pool.request()
+    const request = pool.request()
       .input('id', sql.UniqueIdentifier, id)
-      .input('verified_by', sql.UniqueIdentifier, staffId)
-      .input('updated_user', sql.UniqueIdentifier, updatedBy || staffId)
-      .query(`
-        UPDATE payments 
-        SET status = 'verified', verified_by = @verified_by, verified_at = GETDATE(), 
-            updated_user = @updated_user, updated_at = GETDATE()
-        OUTPUT INSERTED.*
-        WHERE id = @id
-      `);
+      .input('status', sql.VarChar, status)
+      .input('updated_user', sql.UniqueIdentifier, updatedBy || staffId);
+
+    let setClause = 'status = @status, updated_user = @updated_user, updated_at = GETDATE()';
+    if (status === 'verified') {
+      request.input('verified_by', sql.UniqueIdentifier, staffId);
+      setClause += ', verified_by = @verified_by, verified_at = GETDATE()';
+    } else {
+      setClause += ', verified_by = NULL, verified_at = NULL';
+    }
+
+    const result = await request.query(`
+      UPDATE payments
+      SET ${setClause}
+      OUTPUT INSERTED.*
+      WHERE id = @id
+    `);
     return result.recordset[0];
   }
 }
