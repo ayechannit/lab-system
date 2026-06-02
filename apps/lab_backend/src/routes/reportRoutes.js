@@ -214,7 +214,7 @@ router.get('/revenue-by-channel', authMiddleware, roleMiddleware(['admin', 'mana
  *                   priority: "urgent"
  *                   hours_elapsed: 5
  */
-router.get('/pending-queue', authMiddleware, roleMiddleware(['admin', 'manager']), reportController.getPendingResultsQueue);
+router.get('/pending-queue', authMiddleware, roleMiddleware(['admin', 'manager', 'collector']), reportController.getPendingResultsQueue);
 
 /**
  * @swagger
@@ -254,6 +254,40 @@ router.get('/pending-queue', authMiddleware, roleMiddleware(['admin', 'manager']
  *                   last_action_at: "2024-05-22T09:00:00Z"
  */
 router.get('/staff-activity', authMiddleware, roleMiddleware(['admin', 'manager']), reportController.getStaffActivityAudit);
+
+/**
+ * @swagger
+ * /api/reports/collection-report:
+ *   get:
+ *     summary: Get sample collection performance report (for collectors)
+ *     tags: [Reports]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: startDate
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *       - in: query
+ *         name: endDate
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *     responses:
+ *       200:
+ *         description: Collection report data
+ *         content:
+ *           application/json:
+ *             example:
+ *               success: true
+ *               data:
+ *                 - staff_id: "uuid"
+ *                   staff_name: "John Collector"
+ *                   collections_count: 50
+ *                   avg_assignment_to_collection_minutes: 45.5
+ */
+router.get('/collection-report', authMiddleware, roleMiddleware(['admin', 'manager', 'collector']), reportController.getCollectionReport);
 
 /**
  * @swagger

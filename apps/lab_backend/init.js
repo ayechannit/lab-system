@@ -749,7 +749,8 @@ window.onload = function() {
                   "admin",
                   "lab_technician",
                   "reception",
-                  "manager"
+                  "manager",
+                  "collector"
                 ]
               },
               "description": "Filter staff by role"
@@ -1693,7 +1694,8 @@ window.onload = function() {
                 "admin",
                 "lab_technician",
                 "reception",
-                "manager"
+                "manager",
+                "collector"
               ]
             },
             "is_active": {

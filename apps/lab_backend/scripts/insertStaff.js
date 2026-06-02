@@ -22,7 +22,7 @@ const isActive =
     : process.env.STAFF_SEED_ACTIVE === '1' || process.env.STAFF_SEED_ACTIVE === 'true';
 
 async function main() {
-  const allowed = new Set(['admin', 'lab_technician', 'reception', 'manager']);
+  const allowed = new Set(['admin', 'lab_technician', 'reception', 'manager', 'collector']);
   if (!allowed.has(role)) {
     throw new Error(`Invalid role "${role}". Use one of: ${[...allowed].join(', ')}`);
   }

@@ -1268,11 +1268,12 @@
             "schema": {
               "type": "string",
               "enum": [
-                "admin",
-                "lab_technician",
-                "reception",
-                "manager"
-              ]
+                                "admin",
+                                "lab_technician",
+                                "reception",
+                                "manager",
+                                "collector"
+                              ]
             },
             "description": "Filter staff by role"
           },
@@ -2425,11 +2426,12 @@
           "role": {
             "type": "string",
             "enum": [
-              "admin",
-              "lab_technician",
-              "reception",
-              "manager"
-            ]
+                              "admin",
+                              "lab_technician",
+                              "reception",
+                              "manager",
+                              "collector"
+                            ]
           },
           "is_active": {
             "type": "boolean"

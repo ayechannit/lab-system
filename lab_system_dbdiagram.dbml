@@ -47,6 +47,7 @@ Enum staff_role {
   lab_technician
   reception
   manager
+  collector
 }
 
 // =====================

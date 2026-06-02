@@ -95,3 +95,15 @@ exports.getRatingsSummary = async (req, res, next) => {
     next(error);
   }
 };
+
+exports.getCollectionReport = async (req, res, next) => {
+  try {
+    const data = await Report.getCollectionReport(req.query);
+    res.json({
+      success: true,
+      data
+    });
+  } catch (error) {
+    next(error);
+  }
+};

@@ -28,7 +28,7 @@ router.use(authMiddleware);
  *           type: string
  *         role:
  *           type: string
- *           enum: [admin, lab_technician, reception, manager]
+ *           enum: [admin, lab_technician, reception, manager, collector]
  *         is_active:
  *           type: boolean
  *         is_deleted:
@@ -59,7 +59,7 @@ router.use(authMiddleware);
  *         name: role
  *         schema:
  *           type: string
- *           enum: [admin, lab_technician, reception, manager]
+ *           enum: [admin, lab_technician, reception, manager, collector]
  *         description: Filter staff by role
  *       - in: query
  *         name: name
@@ -144,7 +144,7 @@ router.use(authMiddleware);
  *                 type: string
  *               role:
  *                 type: string
- *                 enum: [admin, lab_technician, reception, manager]
+ *                 enum: [admin, lab_technician, reception, manager, collector]
  *               is_active:
  *                 type: boolean
  *     responses:

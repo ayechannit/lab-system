@@ -315,6 +315,37 @@ class Report {
       latestReviews: reviewsResult.recordset
     };
   }
+
+  static async getCollectionReport(filters = {}) {
+    const pool = await poolPromise;
+    const request = pool.request();
+    
+    let query = `
+      SELECT 
+        s.id as staff_id,
+        s.name as staff_name,
+        COUNT(l.id) as collections_count,
+        AVG(CAST(DATEDIFF(MINUTE, o.created_at, l.created_at) AS FLOAT)) as avg_assignment_to_collection_minutes
+      FROM order_status_logs l
+      JOIN lab_staff s ON l.changed_by = s.id
+      JOIN lab_orders o ON l.order_id = o.id
+      WHERE l.new_status = 'collecting' AND s.role = 'collector'
+    `;
+
+    if (filters.startDate) {
+      query += ' AND l.created_at >= @startDate';
+      request.input('startDate', sql.DateTime2, filters.startDate);
+    }
+    if (filters.endDate) {
+      query += ' AND l.created_at <= @endDate';
+      request.input('endDate', sql.DateTime2, filters.endDate);
+    }
+
+    query += ' GROUP BY s.id, s.name ORDER BY collections_count DESC';
+    
+    const result = await request.query(query);
+    return result.recordset;
+  }
 }
 
 module.exports = Report;

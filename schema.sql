@@ -39,7 +39,7 @@ CREATE TABLE lab_staff (
     name NVARCHAR(255) NOT NULL,
     email NVARCHAR(255) NOT NULL UNIQUE,
     password_hash NVARCHAR(MAX) NOT NULL,
-    role NVARCHAR(20) NOT NULL CHECK (role IN ('admin', 'lab_technician', 'reception', 'manager')),
+    role NVARCHAR(20) NOT NULL CHECK (role IN ('admin', 'lab_technician', 'reception', 'manager', 'collector')),
     is_active BIT DEFAULT 1,
     created_user UNIQUEIDENTIFIER,
     updated_user UNIQUEIDENTIFIER,
