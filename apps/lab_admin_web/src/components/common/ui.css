@@ -425,6 +425,15 @@
   background: var(--table-row-hover);
 }
 
+/* Sticky action column must stay opaque — transparent row hover lets scrolled MMK columns show through */
+.table-wrap--sticky-actions .data-table tbody tr:hover .action-cell {
+  background: color-mix(in srgb, var(--primary) 4%, var(--table-bg));
+}
+
+.table-wrap--sticky-actions .data-table tbody tr:hover .action-col {
+  background: var(--table-header-bg);
+}
+
 .data-table tr:last-child td {
   border-bottom: none;
 }
@@ -660,7 +669,8 @@
 }
 
 .data-table--orders .order-col-pay-status {
-  min-width: 6.5rem;
+  min-width: 8.75rem;
+  text-align: center;
 }
 
 .data-table--orders .action-col,
@@ -681,14 +691,20 @@
 .order-pay-status {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: stretch;
   gap: 0.4rem;
-  min-width: 5.5rem;
+  min-width: 8.75rem;
+}
+
+.order-pay-status .badge {
+  justify-content: center;
+  width: 100%;
+  text-align: center;
+  box-sizing: border-box;
 }
 
 .order-pay-progress {
   width: 100%;
-  max-width: 5.5rem;
 }
 
 .order-pay-progress__track {
@@ -1080,6 +1096,18 @@ a.btn {
 
 .btn-primary:hover {
   background: var(--primary-light);
+}
+
+.btn:disabled,
+.btn[disabled] {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.btn-primary:disabled,
+.btn-primary[disabled] {
+  background: var(--primary);
+  color: #fff;
 }
 
 .btn-secondary {
@@ -3925,6 +3953,21 @@ a.btn {
   border-bottom: 1px solid var(--border);
 }
 
+.route-panel__head-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: 0.65rem 0.85rem;
+}
+
+.route-panel__hint {
+  margin: -0.35rem 0 0.85rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
 .route-panel__title {
   margin: 0;
   font-size: 1rem;
@@ -4037,6 +4080,25 @@ a.btn {
   font-size: 0.82rem;
   color: var(--muted);
   line-height: 1.4;
+}
+
+.route-stop-card__assigned {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0.5rem 0 0;
+  padding: 0.4rem 0.55rem;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--primary);
+  background: var(--nav-active-bg);
+  border: 1px solid color-mix(in srgb, var(--primary) 22%, transparent);
+}
+
+.route-stop-card__assigned-icon {
+  font-size: 1rem;
+  line-height: 1;
 }
 
 .route-stop-card__empty {
@@ -4243,6 +4305,24 @@ a.btn {
   font-weight: 600;
   color: var(--heading);
   font-variant-numeric: tabular-nums;
+}
+
+.lab-result-entry__workflow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem 1rem;
+  padding-top: 0.85rem;
+  margin-top: 0.85rem;
+  border-top: 1px solid var(--border);
+}
+
+.lab-result-entry__workflow-text {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--muted);
+  flex: 1 1 14rem;
+  line-height: 1.45;
 }
 
 .lab-result-entry__code {
@@ -4681,8 +4761,34 @@ a.btn {
   min-height: 0;
   border: 1px solid var(--border);
   border-radius: 12px;
-  padding: 0.65rem;
+  padding: 1rem 1.1rem;
   background: var(--subtle-fill-2);
+}
+
+.lab-result-release-preview .lab-result-ai-panel__head {
+  align-items: flex-start;
+  gap: 0.75rem 1.25rem;
+  margin-bottom: 0.85rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.lab-result-release-preview .lab-result-ai-panel__head > span {
+  flex: 1 1 8rem;
+  min-width: 0;
+  padding-top: 0.15rem;
+  line-height: 1.35;
+}
+
+.lab-result-release-preview__title {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--heading);
+}
+
+.lab-result-release-preview .lab-result-ai-panel__head .btn {
+  flex-shrink: 0;
+  margin-left: auto;
 }
 
 .lab-result-release-preview__panel .assign-tests-prescription-panel__body {

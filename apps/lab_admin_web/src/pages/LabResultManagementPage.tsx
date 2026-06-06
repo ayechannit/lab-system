@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEventHandler } from 'react'
 import { ListFilterSearchField } from '../components/common/ListFilterSearchField'
 import { PageHeader } from '../components/common/PageHeader'
+import { useAuth } from '../hooks/AuthContext'
 import { useToast } from '../hooks/ToastContext'
 import {
   aiReviewErrorNeedsConfigFix,
@@ -17,6 +18,7 @@ import { fetchPrompts, type PromptRow } from '../services/promptService'
 import {
   fetchOrderById,
   fetchOrders,
+  updateOrderStatus,
   uploadOrderTestResult,
   type ApiOrderDetailItem,
   type ApiOrderDetail,
@@ -87,19 +89,24 @@ function LabResultOrderSwitcher({
   )
 }
 
-const ORDER_STATUS_OPTIONS: { value: '' | ApiOrderStatus; label: string }[] = [
+const LAB_RESULT_STATUS_OPTIONS: { value: '' | ApiOrderStatus; label: string }[] = [
   { value: '', label: 'All statuses' },
-  { value: 'pending', label: 'Pending' },
-  { value: 'scheduled', label: 'Scheduled' },
   { value: 'collecting', label: 'Collecting' },
   { value: 'running', label: 'Running' },
   { value: 'completed', label: 'Completed' },
   { value: 'delivered', label: 'Delivered' },
 ]
 
+const LAB_RESULT_RELEVANT_STATUSES: ApiOrderStatus[] = ['collecting', 'running', 'completed', 'delivered']
+
+function canUploadResultPdfs(status: ApiOrderStatus): boolean {
+  return status === 'completed' || status === 'delivered'
+}
+
 export function LabResultManagementPage() {
   const hasApi = isApiMode()
-  const { showSuccess, showError, showInfo } = useToast()
+  const { account } = useAuth()
+  const { showSuccess, showError } = useToast()
   const [orders, setOrders] = useState<ApiOrderListRow[]>([])
   const [listLoading, setListLoading] = useState(hasApi)
   const [listError, setListError] = useState<string | null>(null)
@@ -128,11 +135,12 @@ export function LabResultManagementPage() {
   const [aiConfigId, setAiConfigId] = useState('')
   const [promptId, setPromptId] = useState('')
   const [aiReviewByTestId, setAiReviewByTestId] = useState<Record<string, AiReviewEntry>>({})
-  const [aiReviewTestId, setAiReviewTestId] = useState<string | null>(null)
   const [aiReviewLoadingTestId, setAiReviewLoadingTestId] = useState<string | null>(null)
   const [aiReviewErrorByTestId, setAiReviewErrorByTestId] = useState<Record<string, string>>({})
   const [releaseReviewOpen, setReleaseReviewOpen] = useState(false)
   const [releaseReviewTestId, setReleaseReviewTestId] = useState<string | null>(null)
+  const [statusSubmitting, setStatusSubmitting] = useState(false)
+  const [releaseSubmitting, setReleaseSubmitting] = useState(false)
 
   useEffect(() => {
     const id = window.setTimeout(() => setPatientName(patientInput.trim()), 350)
@@ -176,12 +184,16 @@ export function LabResultManagementPage() {
     void (async () => {
       try {
         const list = await fetchOrders(ordersListQuery)
+        const visible =
+          statusFilter === ''
+            ? list.filter((o) => LAB_RESULT_RELEVANT_STATUSES.includes(o.status))
+            : list
         if (!cancelled) {
-          setOrders(list)
-          if (list.length === 0 && ordersPage > 1) {
+          setOrders(visible)
+          if (visible.length === 0 && ordersPage > 1) {
             setOrdersPage((p) => Math.max(1, p - 1))
           }
-          setOrderId((prev) => (prev && list.some((o) => o.id === prev) ? prev : ''))
+          setOrderId((prev) => (prev && visible.some((o) => o.id === prev) ? prev : ''))
         }
       } catch (e) {
         if (!cancelled) setListError(e instanceof Error ? e.message : 'Failed to load orders')
@@ -225,7 +237,8 @@ export function LabResultManagementPage() {
       setDetail(null)
       setAiReviewByTestId({})
       setAiReviewErrorByTestId({})
-      setAiReviewTestId(null)
+      setReleaseReviewOpen(false)
+      setReleaseReviewTestId(null)
       return
     }
     let cancelled = false
@@ -243,8 +256,8 @@ export function LabResultManagementPage() {
             setDetailError(null)
             setAiReviewByTestId({})
             setAiReviewErrorByTestId({})
-            const firstWithFile = d.items.find((it) => testResultFileUrl(it))
-            setAiReviewTestId(firstWithFile?.test_id ?? null)
+            setReleaseReviewOpen(false)
+            setReleaseReviewTestId(null)
           }
         }
       } catch (e) {
@@ -258,16 +271,6 @@ export function LabResultManagementPage() {
     }
   }, [hasApi, orderId])
 
-  const activeAiReview = useMemo(() => {
-    if (!aiReviewTestId) return null
-    return aiReviewByTestId[aiReviewTestId] ?? null
-  }, [aiReviewByTestId, aiReviewTestId])
-
-  const selectedAiConfig = useMemo(
-    () => aiConfigs.find((c) => c.id === aiConfigId),
-    [aiConfigs, aiConfigId],
-  )
-
   const releaseReviewItem = useMemo(() => {
     if (!detail || !releaseReviewTestId) return null
     const it = detail.items.find((i) => i.test_id === releaseReviewTestId)
@@ -280,62 +283,40 @@ export function LabResultManagementPage() {
     [detail],
   )
 
-  const allOrdersOnPageSelected =
-    orders.length > 0 && orders.every((o) => selectedOrderIds.has(o.id))
-  const someOrdersOnPageSelected = orders.some((o) => selectedOrderIds.has(o.id))
-
-  const selectedOrders = useMemo(
-    () => orders.filter((o) => selectedOrderIds.has(o.id)),
-    [orders, selectedOrderIds],
+  const allTestsHavePdf = Boolean(
+    detail && detail.items.length > 0 && uploadedItems.length === detail.items.length,
   )
 
-  useEffect(() => {
-    const el = selectAllPageRef.current
-    if (el) el.indeterminate = someOrdersOnPageSelected && !allOrdersOnPageSelected
-  }, [someOrdersOnPageSelected, allOrdersOnPageSelected])
+  const canUploadPdfs = detail ? canUploadResultPdfs(detail.status) : false
 
-  function focusOrderForResults(id: string) {
-    setOrderId(id)
-    setSelectedOrderIds((prev) => {
-      if (prev.has(id)) return prev
-      const next = new Set(prev)
-      next.add(id)
-      return next
-    })
+  async function refreshOrderDetail(id: string) {
+    const next = await fetchOrderById(id)
+    if (next) setDetail(next)
+    setRefreshTick((t) => t + 1)
+    return next
   }
 
-  function toggleOrderSelection(id: string) {
-    setSelectedOrderIds((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) {
-        next.delete(id)
-        setOrderId((active) => {
-          if (active !== id) return active
-          const remaining = [...next]
-          return remaining[0] ?? ''
-        })
-      } else {
-        next.add(id)
-        setOrderId(id)
-      }
-      return next
-    })
-  }
-
-  function toggleSelectAllOrdersOnPage() {
-    if (allOrdersOnPageSelected) {
-      setSelectedOrderIds(new Set())
-      setOrderId('')
+  async function advanceOrderStatus(next: ApiOrderStatus, note: string) {
+    if (!detail) return
+    const staffId = account?.id
+    if (!staffId) {
+      showError('Sign in with a staff account to update order status.')
       return
     }
-    const ids = orders.map((o) => o.id)
-    setSelectedOrderIds(new Set(ids))
-    setOrderId(ids[0] ?? '')
+    setStatusSubmitting(true)
+    try {
+      await updateOrderStatus(detail.id, { status: next, staff_id: staffId, note })
+      await refreshOrderDetail(detail.id)
+      showSuccess(`Order status updated to ${next}.`)
+    } catch (err) {
+      showError(messageFromError(err, 'Status update failed'))
+    } finally {
+      setStatusSubmitting(false)
+    }
   }
 
-  function clearOrderSelection() {
-    setSelectedOrderIds(new Set())
-    setOrderId('')
+  function selectOrderForResults(id: string) {
+    setOrderId(id)
   }
 
   function orderTestsSummary(o: ApiOrderListRow): string {
@@ -359,18 +340,24 @@ export function LabResultManagementPage() {
     e.target.value = ''
     setUploadTestId(null)
     if (!file || !detail || !testId) return
+    if (!canUploadResultPdfs(detail.status)) {
+      showError('Mark the order completed before uploading result PDFs.')
+      return
+    }
     setUploadBusy(true)
     try {
       await uploadOrderTestResult(detail.id, testId, file)
-      const next = await fetchOrderById(detail.id)
-      setDetail(next)
-      setAiReviewTestId(testId)
+      const next = await refreshOrderDetail(detail.id)
       setAiReviewByTestId((prev) => {
         const nextMap = { ...prev }
         delete nextMap[testId]
         return nextMap
       })
-      showSuccess('Result file uploaded. Run AI review when ready.')
+      if (next?.status === 'delivered') {
+        showSuccess('Result uploaded. All tests have PDFs — order marked delivered.')
+      } else {
+        showSuccess('Result file uploaded.')
+      }
     } catch (err) {
       showError(messageFromError(err, 'Upload failed'))
     } finally {
@@ -390,8 +377,6 @@ export function LabResultManagementPage() {
       showError('Upload a result PDF for this test first.')
       return
     }
-    setAiReviewTestId(testId)
-    setReleaseReviewTestId(testId)
     setAiReviewLoadingTestId(testId)
     setAiReviewErrorByTestId((prev) => {
       const next = { ...prev }
@@ -424,8 +409,12 @@ export function LabResultManagementPage() {
 
   function openReleaseReview() {
     if (!detail) return
+    if (detail.status === 'delivered') {
+      showError('This order is already marked delivered.')
+      return
+    }
     if (detail.status !== 'completed') {
-      showError('Set the order status to completed in Order management when the lab run is finished.')
+      showError('Mark the order completed before releasing results to the patient.')
       return
     }
     if (uploadedItems.length === 0) {
@@ -434,23 +423,40 @@ export function LabResultManagementPage() {
     }
     const first = uploadedItems[0]?.test_id ?? null
     setReleaseReviewTestId(first)
-    setAiReviewTestId(first)
     setReleaseReviewOpen(true)
   }
 
-  function confirmRelease() {
+  async function confirmRelease() {
     if (!detail) return
-    const notReviewed = uploadedItems.filter((it) => !aiReviewByTestId[it.test_id])
-    if (notReviewed.length > 0) {
-      const ok = window.confirm(
-        `${notReviewed.length} uploaded test(s) have not been reviewed with AI yet. Release anyway?`,
-      )
-      if (!ok) return
+    const staffId = account?.id
+    if (!staffId) {
+      showError('Sign in with a staff account to release results.')
+      return
     }
-    setReleaseReviewOpen(false)
-    showInfo(
-      'Results are on the server and ready for your patient release process. Confirm handoff with operations if needed.',
-    )
+    if (detail.status === 'delivered') {
+      setReleaseReviewOpen(false)
+      showSuccess('Results already released.')
+      return
+    }
+    if (detail.status !== 'completed') {
+      showError('Mark the order completed before release.')
+      return
+    }
+    setReleaseSubmitting(true)
+    try {
+      await updateOrderStatus(detail.id, {
+        status: 'delivered',
+        staff_id: staffId,
+        note: 'Results released to patient after lab review',
+      })
+      await refreshOrderDetail(detail.id)
+      setReleaseReviewOpen(false)
+      showSuccess('Results released to patient.')
+    } catch (err) {
+      showError(messageFromError(err, 'Release failed'))
+    } finally {
+      setReleaseSubmitting(false)
+    }
   }
 
   function renderAiReviewBody(
@@ -499,7 +505,7 @@ export function LabResultManagementPage() {
     <div className="stack">
       <PageHeader
         title="Lab result management"
-        description="Open an order, upload result PDFs, run AI review on each file, then confirm release when the order is completed."
+        description="Advance each order through lab processing, upload result PDFs when complete, run AI review, then release to the patient."
       />
 
       {!hasApi ? (
@@ -530,7 +536,7 @@ export function LabResultManagementPage() {
               onChange={(e) => setStatusFilter((e.target.value || '') as '' | ApiOrderStatus)}
               disabled={!hasApi || listLoading}
             >
-              {ORDER_STATUS_OPTIONS.map((o) => (
+              {LAB_RESULT_STATUS_OPTIONS.map((o) => (
                 <option key={o.value || 'all'} value={o.value}>
                   {o.label}
                 </option>
@@ -566,36 +572,14 @@ export function LabResultManagementPage() {
       <div className="card">
         <h3 className="card-title">Select order</h3>
         <p className="lab-result-page-hint">
-          Check orders in the table, then upload PDFs and run AI review in the result panel below.
+          Select one order in the table, then upload PDFs and run AI review in the result panel below.
         </p>
-        {selectedOrderIds.size > 0 ? (
-          <div className="lab-result-selection-bar" role="status">
-            <span className="lab-result-selection-bar__count">
-              {selectedOrderIds.size} selected
-            </span>
-            <button
-              type="button"
-              className="btn btn-ghost btn-sm"
-              onClick={clearOrderSelection}
-            >
-              Clear
-            </button>
-          </div>
-        ) : null}
         <div className="table-wrap">
           <table className="data-table data-table--catalog">
             <thead>
               <tr>
                 <th scope="col" className="col-check">
-                  <input
-                    ref={selectAllPageRef}
-                    type="checkbox"
-                    className="data-table__check"
-                    checked={allOrdersOnPageSelected && orders.length > 0}
-                    disabled={listLoading || orders.length === 0}
-                    onChange={toggleSelectAllOrdersOnPage}
-                    aria-label="Select all orders on this page"
-                  />
+                  <span className="visually-hidden">Select</span>
                 </th>
                 <th scope="col">Patient</th>
                 <th scope="col">Status</th>
@@ -623,18 +607,12 @@ export function LabResultManagementPage() {
                 orders.map((o) => (
                   <tr
                     key={o.id}
-                    className={
-                      orderId === o.id
-                        ? 'data-table__row--selected'
-                        : selectedOrderIds.has(o.id)
-                          ? 'data-table__row--checked'
-                          : undefined
-                    }
-                    onClick={() => focusOrderForResults(o.id)}
+                    className={orderId === o.id ? 'data-table__row--selected' : undefined}
+                    onClick={() => selectOrderForResults(o.id)}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') {
                         e.preventDefault()
-                        focusOrderForResults(o.id)
+                        selectOrderForResults(o.id)
                       }
                     }}
                     tabIndex={0}
@@ -644,10 +622,11 @@ export function LabResultManagementPage() {
                   >
                     <td className="col-check" onClick={(e) => e.stopPropagation()}>
                       <input
-                        type="checkbox"
+                        type="radio"
+                        name="lab-result-order"
                         className="data-table__check"
-                        checked={selectedOrderIds.has(o.id)}
-                        onChange={() => toggleOrderSelection(o.id)}
+                        checked={orderId === o.id}
+                        onChange={() => selectOrderForResults(o.id)}
                         onClick={(e) => e.stopPropagation()}
                         aria-label={`Select order for ${o.patient_name}`}
                       />
@@ -714,22 +693,6 @@ export function LabResultManagementPage() {
       {detail && !detailLoading ? (
         <div className="card lab-result-entry">
           <header className="lab-result-entry__header">
-            {selectedOrders.length > 1 ? (
-              <div className="lab-result-entry__switcher-wrap">
-                <p className="lab-result-entry__switcher-label">
-                  {(() => {
-                    const i = selectedOrders.findIndex((o) => o.id === orderId)
-                    const n = i >= 0 ? i + 1 : 1
-                    return `Viewing order ${n} of ${selectedOrders.length}`
-                  })()}
-                </p>
-                <LabResultOrderSwitcher
-                  orders={selectedOrders}
-                  activeId={orderId}
-                  onSelect={setOrderId}
-                />
-              </div>
-            ) : null}
             <div className="lab-result-entry__identity">
               <p className="lab-result-entry__eyebrow">Result entry</p>
               <div className="lab-result-entry__title-row">
@@ -753,7 +716,55 @@ export function LabResultManagementPage() {
                 <dd>{detail.items.length}</dd>
               </div>
             </dl>
+            <div className="lab-result-entry__workflow" aria-label="Lab processing steps">
+              {detail.status === 'collecting' ? (
+                <>
+                  <p className="lab-result-entry__workflow-text">
+                    Sample collection is in progress. Start lab processing when the sample arrives at the lab.
+                  </p>
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-sm"
+                    disabled={statusSubmitting || !hasApi}
+                    onClick={() => void advanceOrderStatus('running', 'Sample received — lab processing started')}
+                  >
+                    {statusSubmitting ? 'Updating…' : 'Start lab processing'}
+                  </button>
+                </>
+              ) : detail.status === 'running' ? (
+                <>
+                  <p className="lab-result-entry__workflow-text">
+                    Lab processing is underway. Mark complete when tests are finished, then upload result PDFs.
+                  </p>
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-sm"
+                    disabled={statusSubmitting || !hasApi}
+                    onClick={() => void advanceOrderStatus('completed', 'Lab run finished — ready for result upload')}
+                  >
+                    {statusSubmitting ? 'Updating…' : 'Mark lab complete'}
+                  </button>
+                </>
+              ) : detail.status === 'completed' ? (
+                <p className="lab-result-entry__workflow-text">
+                  Lab run complete. Upload result PDFs, run AI review, then release to the patient.
+                  {allTestsHavePdf
+                    ? ' All tests have PDFs — releasing the last file also marks the order delivered automatically.'
+                    : null}
+                </p>
+              ) : detail.status === 'delivered' ? (
+                <p className="lab-result-entry__workflow-text">
+                  Results released to the patient. You can replace PDFs or re-run AI review if needed.
+                </p>
+              ) : null}
+            </div>
           </header>
+
+          {!canUploadPdfs && detail.status !== 'delivered' ? (
+            <p className="lab-result-entry__warn" role="status">
+              Result PDF upload unlocks after you mark the order <strong>completed</strong>.
+            </p>
+          ) : null}
 
           <section className="lab-result-entry__section" aria-labelledby="lab-result-tests-heading">
             <div className="lab-result-entry__section-head">
@@ -773,20 +784,11 @@ export function LabResultManagementPage() {
                   const fileUrl = testResultFileUrl(it)
                   const hasFile = Boolean(fileUrl)
                   const reviewed = Boolean(aiReviewByTestId[it.test_id])
-                  const isActive = aiReviewTestId === it.test_id
-                  const reviewing = aiReviewLoadingTestId === it.test_id
                   const testName = it.test_name?.trim() || it.test_id
                   const testCode = it.test_code?.trim() || '—'
 
                   return (
-                    <li
-                      key={`${it.test_id}-${idx}`}
-                      className={
-                        isActive
-                          ? 'lab-result-test-card lab-result-test-card--active'
-                          : 'lab-result-test-card'
-                      }
-                    >
+                    <li key={`${it.test_id}-${idx}`} className="lab-result-test-card">
                       <div className="lab-result-test-card__body">
                         <div className="lab-result-test-card__info">
                           <span className="lab-result-test-card__name">{testName}</span>
@@ -809,7 +811,7 @@ export function LabResultManagementPage() {
                           <button
                             type="button"
                             className="btn btn-secondary btn-sm"
-                            disabled={uploadBusy}
+                            disabled={uploadBusy || !canUploadPdfs}
                             onClick={() => openPdfPicker(it.test_id)}
                           >
                             {uploadBusy && uploadTestId === it.test_id
@@ -818,19 +820,6 @@ export function LabResultManagementPage() {
                                 ? 'Replace PDF'
                                 : 'Upload PDF'}
                           </button>
-                          {hasFile ? (
-                            <button
-                              type="button"
-                              className={`btn btn-sm${isActive ? ' btn-primary' : ' btn-secondary'}`}
-                              disabled={!aiConfigId || reviewing}
-                              onClick={() => {
-                                setAiReviewTestId(it.test_id)
-                                if (!aiReviewByTestId[it.test_id]) void runAiReviewForTest(it.test_id)
-                              }}
-                            >
-                              {reviewing ? 'Reviewing…' : reviewed ? 'Re-run AI' : 'AI review'}
-                            </button>
-                          ) : null}
                         </div>
                       </div>
                     </li>
@@ -850,65 +839,30 @@ export function LabResultManagementPage() {
             </p>
           ) : null}
 
-          {aiReviewTestId && uploadedItems.some((it) => it.test_id === aiReviewTestId) ? (
-            <section className="lab-result-entry__ai" aria-labelledby="lab-result-ai-heading">
-              <div className="lab-result-entry__ai-head">
-                <div>
-                  <h4 id="lab-result-ai-heading" className="lab-result-entry__section-title">
-                    AI review
-                  </h4>
-                  <p className="lab-result-entry__ai-sub">
-                    {(() => {
-                      const it = detail.items.find((i) => i.test_id === aiReviewTestId)
-                      const name = it?.test_name?.trim() || aiReviewTestId
-                      const code = it?.test_code?.trim()
-                      return code ? `${name} (${code})` : name
-                    })()}
-                    {selectedAiConfig ? (
-                      <>
-                        {' '}
-                        · <span className="lab-result-entry__ai-model">{selectedAiConfig.type}</span>
-                      </>
-                    ) : null}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  className="btn btn-secondary btn-sm"
-                  disabled={!aiConfigId || aiReviewLoadingTestId === aiReviewTestId}
-                  onClick={() => void runAiReviewForTest(aiReviewTestId)}
-                >
-                  {aiReviewLoadingTestId === aiReviewTestId ? 'Reviewing…' : 'Run again'}
-                </button>
-              </div>
-              <div className="lab-result-entry__ai-body">
-                {renderAiReviewBody(
-                  activeAiReview,
-                  aiReviewLoadingTestId === aiReviewTestId,
-                  aiReviewTestId ? aiReviewErrorByTestId[aiReviewTestId] ?? null : null,
-                )}
-              </div>
-            </section>
-          ) : uploadedItems.length > 0 ? (
-            <p className="lab-result-entry__hint">
-              Select <strong>AI review</strong> on a test with an uploaded PDF to preview analysis here.
-            </p>
-          ) : null}
-
           <footer className="lab-result-entry__footer">
             <p className="lab-result-entry__footer-text">
-              {uploadedItems.length === 0
-                ? 'Upload at least one result PDF to continue.'
-                : `${uploadedItems.length} PDF${uploadedItems.length === 1 ? '' : 's'} ready for release review.`}
+              {detail.status === 'delivered'
+                ? 'This order has been released to the patient.'
+                : detail.status !== 'completed'
+                  ? 'Complete the lab run before uploading results or releasing.'
+                  : uploadedItems.length === 0
+                    ? 'Upload at least one result PDF to continue.'
+                    : allTestsHavePdf
+                      ? 'All tests have PDFs. Use Release to patient to run AI review and deliver.'
+                      : `${uploadedItems.length} PDF${uploadedItems.length === 1 ? '' : 's'} uploaded — use Release to patient when ready.`}
             </p>
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={openReleaseReview}
-              disabled={uploadedItems.length === 0}
-            >
-              Confirm release
-            </button>
+            {detail.status === 'completed' ? (
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={openReleaseReview}
+                disabled={uploadedItems.length === 0 || releaseSubmitting}
+              >
+                Release to patient
+              </button>
+            ) : detail.status === 'delivered' ? (
+              <span className="badge badge--success">Released</span>
+            ) : null}
           </footer>
         </div>
       ) : null}
@@ -958,7 +912,6 @@ export function LabResultManagementPage() {
                           onClick={() => {
                             if (!url) return
                             setReleaseReviewTestId(it.test_id)
-                            setAiReviewTestId(it.test_id)
                           }}
                         >
                           <span className="lab-result-release-list__name">
@@ -984,7 +937,7 @@ export function LabResultManagementPage() {
                   {releaseReviewItem && releaseReviewTestId ? (
                     <>
                       <div className="lab-result-ai-panel__head">
-                        <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>
+                        <span className="lab-result-release-preview__title">
                           {releaseReviewItem.test_name?.trim() || releaseReviewItem.test_id}
                         </span>
                         <button
@@ -1015,11 +968,16 @@ export function LabResultManagementPage() {
                 </p>
               ) : null}
               <div className="row-actions" style={{ marginTop: '1rem', justifyContent: 'flex-end' }}>
-                <button type="button" className="btn btn-secondary" onClick={() => setReleaseReviewOpen(false)}>
+                <button type="button" className="btn btn-secondary" onClick={() => setReleaseReviewOpen(false)} disabled={releaseSubmitting}>
                   Cancel
                 </button>
-                <button type="button" className="btn btn-primary" onClick={confirmRelease}>
-                  Confirm release
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  disabled={releaseSubmitting}
+                  onClick={() => void confirmRelease()}
+                >
+                  {releaseSubmitting ? 'Releasing…' : 'Release to patient'}
                 </button>
               </div>
             </div>

@@ -168,6 +168,13 @@ export function applyAppTheme(themeId: AppThemeId): void {
   }
 }
 
+/** Last theme applied to the document (survives route changes). */
+export function getAppliedAppTheme(): AppThemeId {
+  const fromDom = document.documentElement.dataset.theme
+  if (fromDom === 'dark' || fromDom === 'light') return fromDom
+  return 'light'
+}
+
 export function themeFieldsForApi(
   themeId: AppThemeId,
 ): Pick<SystemSettingsUpdateBody, 'mode' | 'primary_color' | 'secondary_color' | 'custom_colors'> {

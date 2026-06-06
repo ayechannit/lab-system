@@ -27,6 +27,7 @@ import {
 import {
   applyAppTheme,
   type AppThemeId,
+  getAppliedAppTheme,
   normalizeAppThemeId,
   themeFieldsForApi,
 } from '../theme/appThemes'
@@ -116,7 +117,7 @@ export function SystemSettingsPage() {
   const [updatedAt, setUpdatedAt] = useState<string | undefined>()
 
   const [labName, setLabName] = useState('MedLab Smart')
-  const [mode, setMode] = useState<ThemeMode>('light')
+  const [mode, setMode] = useState<ThemeMode>(() => getAppliedAppTheme())
   const [logoUrl, setLogoUrl] = useState('')
   const [pendingLogoFile, setPendingLogoFile] = useState<File | null>(null)
   const [pendingLogoPreview, setPendingLogoPreview] = useState<string | null>(null)
@@ -127,9 +128,10 @@ export function SystemSettingsPage() {
   const [contactEmail, setContactEmail] = useState('')
   const [loadedAddressBaseline, setLoadedAddressBaseline] = useState<string | null>(null)
 
-  const savedThemeRef = useRef<AppThemeId>('light')
+  const savedThemeRef = useRef<AppThemeId>(getAppliedAppTheme())
   const savedBrandingRef = useRef<SavedBranding>({ labName: 'MedLab Smart', logoUrl: null })
   const savedFormSnapshotRef = useRef('')
+  const isDirtyRef = useRef(false)
 
   const clearPendingLogo = useCallback(() => {
     setPendingLogoPreview((prev) => {
@@ -213,6 +215,8 @@ export function SystemSettingsPage() {
   const isDirty =
     hasApi && !loading && savedFormSnapshotRef.current.length > 0 && currentSnapshot !== savedFormSnapshotRef.current
 
+  isDirtyRef.current = isDirty
+
   const handleThemeChange = useCallback((next: ThemeMode) => {
     setMode(next)
   }, [])
@@ -235,7 +239,10 @@ export function SystemSettingsPage() {
   useEffect(() => {
     return () => {
       clearPendingLogo()
-      revertUnsavedToApp()
+      // Only roll back draft edits; saved theme/branding must stay applied app-wide.
+      if (isDirtyRef.current) {
+        revertUnsavedToApp()
+      }
     }
   }, [clearPendingLogo, revertUnsavedToApp])
 

@@ -70,7 +70,7 @@ function priorityBadgeClass(priority: 'urgent' | 'elective'): string {
 function paymentBadgeClass(status: ApiPaymentStatus | 'unpaid', fullyPaid = false): string {
   if (fullyPaid && status === 'received') return 'badge badge--success'
   const map: Record<ApiPaymentStatus | 'unpaid', string> = {
-    unpaid: 'badge badge--neutral',
+    unpaid: 'badge badge--danger',
     pending: 'badge badge--warn',
     received: 'badge badge--neutral',
     verified: 'badge badge--success',
@@ -169,8 +169,10 @@ function orderPaymentListDisplay(
   if (balance > 0) {
     const pending = history.find((p) => p.status === 'pending')
     if (pending) return { label: 'pending', status: 'pending' }
-    const latest = history[history.length - 1]
-    return { label: latest.status, status: latest.status }
+    if (total_paid > 0) {
+      return { label: 'partial received', status: 'received', fullyPaid: false }
+    }
+    return { label: 'unpaid', status: 'unpaid' }
   }
 
   const latest = history[history.length - 1]
@@ -211,6 +213,7 @@ function staffRoleShort(role: StaffRole): string {
     lab_technician: 'Lab tech',
     reception: 'Reception',
     manager: 'Manager',
+    collector: 'Collector',
   }
   return map[role] ?? role
 }
@@ -1468,7 +1471,13 @@ export function OrderManagementPage() {
                               >
                                 <div className="order-pay-progress__track">
                                   <div
-                                    className={`order-pay-progress__fill${amounts.balance <= 0 ? ' order-pay-progress__fill--complete' : ''}`}
+                                    className={`order-pay-progress__fill${
+                                      amounts.balance <= 0
+                                        ? ' order-pay-progress__fill--complete'
+                                        : display.label === 'partial received'
+                                          ? ' order-pay-progress__fill--partial'
+                                          : ''
+                                    }`}
                                     style={{ width: `${amounts.percentPaid}%` }}
                                   />
                                 </div>
