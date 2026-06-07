@@ -29,6 +29,8 @@ export type ApiOrderListRow = {
   patient_name: string
   patient_phone?: string
   address?: string
+  latitude?: number | null
+  longitude?: number | null
   priority: 'urgent' | 'elective'
   status: ApiOrderStatus
   original_price_mmk: number
@@ -103,6 +105,8 @@ export type ApiOrderDetail = {
   priority: 'urgent' | 'elective'
   status: ApiOrderStatus
   address: string
+  latitude?: number | null
+  longitude?: number | null
   description?: string | null
   report_delivery_method?: string
   original_price_mmk: number
@@ -197,6 +201,26 @@ export async function createOrder(body: ApiOrderCreateBody): Promise<unknown> {
 export async function deleteOrder(id: string): Promise<void> {
   const res = await apiFetch(`/api/orders/${encodeURIComponent(id)}`, { method: 'DELETE' })
   if (!res.ok) throw new Error(await readApiErrorBody(res))
+}
+
+export type ApiOrderUpdateBody = {
+  description?: string | null
+  priority: 'urgent' | 'elective'
+  patient_name: string
+  patient_age: number
+  patient_phone: string
+  address: string
+  latitude?: number | null
+  longitude?: number | null
+}
+
+export async function updateOrder(id: string, body: ApiOrderUpdateBody): Promise<unknown> {
+  const res = await apiFetch(`/api/orders/${encodeURIComponent(id)}`, {
+    method: 'PUT',
+    body: JSON.stringify(body),
+  })
+  if (!res.ok) throw new Error(await readApiErrorBody(res))
+  return res.json()
 }
 
 export async function updateOrderStatus(

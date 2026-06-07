@@ -1,4 +1,4 @@
-export type StaffRole = 'admin' | 'lab_technician' | 'reception' | 'manager'
+export type StaffRole = 'admin' | 'lab_technician' | 'reception' | 'manager' | 'collector'
 
 /** End-user roles for `POST /api/users` (`users.role`). */
 export type EndUserRole = 'clinic' | 'doctor' | 'patient'

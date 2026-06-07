@@ -37,6 +37,7 @@ function isSessionRole(r: string): r is SessionRole {
     r === 'lab_technician' ||
     r === 'reception' ||
     r === 'manager' ||
+    r === 'collector' ||
     r === 'clinic' ||
     r === 'doctor' ||
     r === 'patient'

@@ -425,6 +425,15 @@
   background: var(--table-row-hover);
 }
 
+/* Sticky action column must stay opaque — transparent row hover lets scrolled MMK columns show through */
+.table-wrap--sticky-actions .data-table tbody tr:hover .action-cell {
+  background: color-mix(in srgb, var(--primary) 4%, var(--table-bg));
+}
+
+.table-wrap--sticky-actions .data-table tbody tr:hover .action-col {
+  background: var(--table-header-bg);
+}
+
 .data-table tr:last-child td {
   border-bottom: none;
 }
@@ -531,6 +540,18 @@
   to {
     transform: rotate(360deg);
   }
+}
+
+.btn-busy-content {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+}
+
+.btn-primary .btn-busy-content__spinner {
+  border-color: rgba(255, 255, 255, 0.35);
+  border-top-color: #fff;
 }
 
 .card-body-loading {
@@ -660,7 +681,8 @@
 }
 
 .data-table--orders .order-col-pay-status {
-  min-width: 6.5rem;
+  min-width: 8.75rem;
+  text-align: center;
 }
 
 .data-table--orders .action-col,
@@ -681,14 +703,20 @@
 .order-pay-status {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: stretch;
   gap: 0.4rem;
-  min-width: 5.5rem;
+  min-width: 8.75rem;
+}
+
+.order-pay-status .badge {
+  justify-content: center;
+  width: 100%;
+  text-align: center;
+  box-sizing: border-box;
 }
 
 .order-pay-progress {
   width: 100%;
-  max-width: 5.5rem;
 }
 
 .order-pay-progress__track {
@@ -1080,6 +1108,18 @@ a.btn {
 
 .btn-primary:hover {
   background: var(--primary-light);
+}
+
+.btn:disabled,
+.btn[disabled] {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.btn-primary:disabled,
+.btn-primary[disabled] {
+  background: var(--primary);
+  color: #fff;
 }
 
 .btn-secondary {
@@ -1551,6 +1591,24 @@ a.btn {
   border-color: var(--primary);
 }
 
+.time-field__trigger {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%234768ad' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 7v5l3 2'/%3E%3C/svg%3E");
+}
+
+.time-popover {
+  width: min(100vw - 20px, 240px);
+}
+
+.time-popover__time {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
+
+.time-popover__footer {
+  justify-content: flex-end;
+}
+
 .datetime-popover {
   position: fixed;
   z-index: 10100;
@@ -1688,15 +1746,21 @@ a.btn {
 .datetime-popover__select {
   flex: 1;
   min-width: 0;
-  padding: 0.42rem 0.5rem;
+  padding: 0.42rem 1.85rem 0.42rem 0.55rem;
   border-radius: 9px;
   border: 1px solid var(--border);
   font: inherit;
   font-size: 0.8125rem;
   font-variant-numeric: tabular-nums;
-  background: var(--elevated-bg);
+  background-color: var(--elevated-bg);
   color: var(--heading);
   cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 4.5 6 7.5 9 4.5' fill='none' stroke='%23697A93' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.65rem center;
 }
 
 .datetime-popover__select:focus {
@@ -3914,15 +3978,72 @@ a.btn {
   font-size: 0.875rem;
 }
 
+.route-setup {
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+  padding: 0.85rem 1rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--subtle-fill-2);
+}
+
+.route-setup__title {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--heading);
+}
+
+.route-setup__hint {
+  margin: 0.35rem 0 0.85rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.route-setup__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem 1rem;
+  margin-bottom: 0.85rem;
+}
+
+.route-setup__map {
+  margin-bottom: 0;
+}
+
+@media (max-width: 640px) {
+  .route-setup__grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .route-panel__head {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 0.75rem 1.25rem;
   margin-bottom: 1rem;
   padding-bottom: 0.85rem;
   border-bottom: 1px solid var(--border);
+}
+
+.route-panel__head-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.65rem 0.85rem;
+  margin-left: auto;
+  margin-right: clamp(1.5rem, 8vw, 4.5rem);
+}
+
+.route-panel__hint {
+  margin: -0.35rem 0 0.85rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+  line-height: 1.45;
 }
 
 .route-panel__title {
@@ -4037,6 +4158,32 @@ a.btn {
   font-size: 0.82rem;
   color: var(--muted);
   line-height: 1.4;
+}
+
+.route-stop-card__schedule {
+  margin: 0 0 0.45rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #3d5270;
+}
+
+.route-stop-card__assigned {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0.5rem 0 0;
+  padding: 0.4rem 0.55rem;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--primary);
+  background: var(--nav-active-bg);
+  border: 1px solid color-mix(in srgb, var(--primary) 22%, transparent);
+}
+
+.route-stop-card__assigned-icon {
+  font-size: 1rem;
+  line-height: 1;
 }
 
 .route-stop-card__empty {
@@ -4243,6 +4390,24 @@ a.btn {
   font-weight: 600;
   color: var(--heading);
   font-variant-numeric: tabular-nums;
+}
+
+.lab-result-entry__workflow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem 1rem;
+  padding-top: 0.85rem;
+  margin-top: 0.85rem;
+  border-top: 1px solid var(--border);
+}
+
+.lab-result-entry__workflow-text {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--muted);
+  flex: 1 1 14rem;
+  line-height: 1.45;
 }
 
 .lab-result-entry__code {
@@ -4681,8 +4846,34 @@ a.btn {
   min-height: 0;
   border: 1px solid var(--border);
   border-radius: 12px;
-  padding: 0.65rem;
+  padding: 1rem 1.1rem;
   background: var(--subtle-fill-2);
+}
+
+.lab-result-release-preview .lab-result-ai-panel__head {
+  align-items: flex-start;
+  gap: 0.75rem 1.25rem;
+  margin-bottom: 0.85rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.lab-result-release-preview .lab-result-ai-panel__head > span {
+  flex: 1 1 8rem;
+  min-width: 0;
+  padding-top: 0.15rem;
+  line-height: 1.35;
+}
+
+.lab-result-release-preview__title {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--heading);
+}
+
+.lab-result-release-preview .lab-result-ai-panel__head .btn {
+  flex-shrink: 0;
+  margin-left: auto;
 }
 
 .lab-result-release-preview__panel .assign-tests-prescription-panel__body {

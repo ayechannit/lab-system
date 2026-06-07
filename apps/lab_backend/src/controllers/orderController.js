@@ -92,6 +92,47 @@ const addOrderItems = async (req, res) => {
   }
 };
 
+const updateOrder = async (req, res) => {
+  try {
+    const {
+      description,
+      priority,
+      patient_name,
+      patient_age,
+      patient_phone,
+      address,
+      latitude,
+      longitude,
+    } = req.body;
+
+    if (!priority || !patient_name || patient_age == null || !patient_phone || !address) {
+      return res.status(400).json({
+        message: 'priority, patient_name, patient_age, patient_phone, and address are required',
+      });
+    }
+
+    const order = await Order.update(
+      req.params.id,
+      {
+        description,
+        priority,
+        patient_name,
+        patient_age,
+        patient_phone,
+        address,
+        latitude,
+        longitude,
+      },
+      req.user?.id,
+    );
+
+    if (!order) return res.status(404).json({ message: 'Order not found' });
+    res.json(order);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 const updateOrderStatus = async (req, res) => {
   const { status, staff_id, note } = req.body;
   const order = await Order.updateStatus(req.params.id, status, staff_id || req.user?.id, note, req.user?.id);
@@ -181,6 +222,7 @@ module.exports = {
   getOrderById,
   createOrder,
   addOrderItems,
+  updateOrder,
   updateOrderStatus,
   deleteOrder,
   generateQrCode,

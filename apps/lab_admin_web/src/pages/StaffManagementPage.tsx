@@ -20,11 +20,12 @@ function roleLabel(r: StaffRole): string {
     lab_technician: 'Lab technician',
     reception: 'Reception',
     manager: 'Manager',
+    collector: 'Collector',
   }
   return map[r]
 }
 
-const STAFF_ROLES: StaffRole[] = ['admin', 'lab_technician', 'reception', 'manager']
+const STAFF_ROLES: StaffRole[] = ['admin', 'lab_technician', 'reception', 'manager', 'collector']
 
 export function StaffManagementPage() {
   const hasApi = isApiMode()

@@ -16,6 +16,7 @@ const ROLE_OPTIONS: { value: StaffRole; label: string }[] = [
   { value: 'lab_technician', label: 'Lab technician' },
   { value: 'reception', label: 'Reception' },
   { value: 'manager', label: 'Manager' },
+  { value: 'collector', label: 'Collector' },
 ]
 
 type StaffFormModalProps = {

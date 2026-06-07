@@ -25,6 +25,7 @@ function roleDisplay(role: SessionRole | null): string {
     lab_technician: 'Lab technician',
     reception: 'Reception',
     manager: 'Manager',
+    collector: 'Collector',
     clinic: 'Clinic',
     doctor: 'Doctor',
     patient: 'Patient',
