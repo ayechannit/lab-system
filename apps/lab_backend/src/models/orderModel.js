@@ -264,6 +264,38 @@ class Order {
     }
   }
 
+  static async update(id, data, updatedBy = null) {
+    const pool = await poolPromise;
+    const result = await pool.request()
+      .input('id', sql.UniqueIdentifier, id)
+      .input('description', sql.Text, data.description ?? null)
+      .input('priority', sql.VarChar, data.priority)
+      .input('patient_name', sql.VarChar, data.patient_name)
+      .input('patient_age', sql.Int, data.patient_age)
+      .input('patient_phone', sql.VarChar, data.patient_phone)
+      .input('address', sql.Text, data.address)
+      .input('latitude', sql.Float, data.latitude)
+      .input('longitude', sql.Float, data.longitude)
+      .input('updated_user', sql.UniqueIdentifier, updatedBy)
+      .query(`
+        UPDATE lab_orders SET
+          description = @description,
+          priority = @priority,
+          patient_name = @patient_name,
+          patient_age = @patient_age,
+          patient_phone = @patient_phone,
+          address = @address,
+          latitude = @latitude,
+          longitude = @longitude,
+          updated_user = @updated_user,
+          updated_at = GETDATE()
+        OUTPUT INSERTED.*
+        WHERE id = @id AND is_deleted = 0
+      `);
+
+    return result.recordset[0] ?? null;
+  }
+
   static async updateStatus(id, newStatus, staffId, note, updatedBy = null) {
     const pool = await poolPromise;
     const transaction = new sql.Transaction(pool);

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { DatetimeLocalField } from '../components/common/DatetimeLocalField'
+import { TimeField } from '../components/common/TimeField'
 import { ListFilterSearchField } from '../components/common/ListFilterSearchField'
 import { PageHeader } from '../components/common/PageHeader'
 import { useAuth } from '../hooks/AuthContext'
@@ -8,6 +9,7 @@ import { useToast } from '../hooks/ToastContext'
 import { useErrorToast } from '../hooks/usePageNotify'
 import { LoadingSpinner } from '../components/common/LoadingSpinner'
 import { DEFAULT_TABLE_PAGE_SIZE, TablePagination } from '../components/common/TablePagination'
+import { formatCoordPair, LocationMapPicker } from '../components/users/LocationMapPicker'
 import type { StaffListRow, StaffRole } from '../model/types'
 import { isApiMode } from '../services/apiBase'
 import {
@@ -21,7 +23,14 @@ import {
 } from '../services/orderService'
 import { fetchStaffList } from '../services/staffService'
 import { upsertSchedule, type ApiOrderSchedule } from '../services/scheduleService'
+import {
+  planCollectionRouteWithAi,
+  type CollectionRouteResult,
+  type CollectionRouteStopDetail,
+} from '../services/aiConversationService'
+import { fetchSystemSettings } from '../services/systemSettingService'
 import { suggestCollectionRoute } from '../services/aiDemo'
+import { friendlyAiReviewErrorMessage } from '../hooks/usePageNotify'
 import {
   COLLECTOR_OTHER_VALUE,
   collectorRoleStaffList,
@@ -91,21 +100,91 @@ function fmtWhen(iso: string | undefined): string {
   return d.toLocaleString()
 }
 
+function formatRouteStartTime(date = new Date()): string {
+  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
+}
+
+function labStartLocation(settings: Awaited<ReturnType<typeof fetchSystemSettings>>): { lat: number; lng: number } | null {
+  const lat = settings.latitude
+  const lng = settings.longitude
+  if (lat == null || lng == null || !Number.isFinite(lat) || !Number.isFinite(lng)) return null
+  if (lat === 0 && lng === 0) return null
+  return { lat, lng }
+}
+
+
+function routeStartLocationFromState(
+  latitude: number | '',
+  longitude: number | '',
+): { lat: number; lng: number } | null {
+  const lat = typeof latitude === 'number' ? latitude : Number.parseFloat(String(latitude))
+  const lng = typeof longitude === 'number' ? longitude : Number.parseFloat(String(longitude))
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null
+  if (lat === 0 && lng === 0) return null
+  return { lat, lng }
+}
+
+function parseRouteCollectionDuration(value: number | ''): number | null {
+  const minutes = typeof value === 'number' ? value : Number.parseInt(String(value), 10)
+  if (!Number.isFinite(minutes) || minutes <= 0) return null
+  return minutes
+}
+
+function parseRouteStartTimeInput(value: string): string | null {
+  const trimmed = value.trim()
+  if (!/^\d{1,2}:\d{2}$/.test(trimmed)) return null
+  const [h, m] = trimmed.split(':').map(Number)
+  if (!Number.isFinite(h) || !Number.isFinite(m) || h > 23 || m > 59) return null
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+}
+
+function orderCoords(order: ApiOrderListRow): { lat: number; lng: number } | null {
+  const lat = Number(order.latitude)
+  const lng = Number(order.longitude)
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null
+  if (lat === 0 && lng === 0) return null
+  return { lat, lng }
+}
+
 function orderStopsInRouteOrder(
   picked: ApiOrderListRow[],
   orderedStops: string[],
 ): ApiOrderListRow[] {
-  const byId = new Map(picked.map((o) => [o.id, o]))
+  const byId = new Map(picked.map((o) => [o.id.toLowerCase(), o]))
   const ordered: ApiOrderListRow[] = []
   for (const line of orderedStops) {
     const id = line.split(':')[0]?.trim()
-    const o = id ? byId.get(id) : undefined
+    const o = id ? byId.get(id.toLowerCase()) : undefined
     if (o && !ordered.some((x) => x.id === o.id)) ordered.push(o)
   }
   for (const o of picked) {
     if (!ordered.some((x) => x.id === o.id)) ordered.push(o)
   }
   return ordered
+}
+
+function orderStopsFromRouteDetails(
+  picked: ApiOrderListRow[],
+  routeStops: CollectionRouteStopDetail[],
+): ApiOrderListRow[] {
+  if (routeStops.length === 0) return picked
+  const byId = new Map(picked.map((o) => [o.id.toLowerCase(), o]))
+  const ordered: ApiOrderListRow[] = []
+  for (const stop of [...routeStops].sort((a, b) => a.sequence - b.sequence)) {
+    const order = byId.get(stop.orderId.toLowerCase())
+    if (order && !ordered.some((x) => x.id === order.id)) ordered.push(order)
+  }
+  for (const o of picked) {
+    if (!ordered.some((x) => x.id === o.id)) ordered.push(o)
+  }
+  return ordered
+}
+
+function routeStopDetailForOrder(
+  routeStops: CollectionRouteStopDetail[],
+  orderId: string,
+): CollectionRouteStopDetail | undefined {
+  return routeStops.find((stop) => stop.orderId.toLowerCase() === orderId.toLowerCase())
 }
 
 export function SampleCollectionPage() {
@@ -118,8 +197,13 @@ export function SampleCollectionPage() {
 
   useErrorToast(loadError)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set())
-  const [routeResult, setRouteResult] = useState<ReturnType<typeof suggestCollectionRoute> | null>(null)
+  const [routeResult, setRouteResult] = useState<CollectionRouteResult | null>(null)
   const [routePlanOrders, setRoutePlanOrders] = useState<ApiOrderListRow[]>([])
+  const [routePlanning, setRoutePlanning] = useState(false)
+  const [routeStartLatitude, setRouteStartLatitude] = useState<number | ''>('')
+  const [routeStartLongitude, setRouteStartLongitude] = useState<number | ''>('')
+  const [routeStartTime, setRouteStartTime] = useState(() => formatRouteStartTime())
+  const [routeCollectionDurationMinutes, setRouteCollectionDurationMinutes] = useState<number | ''>(10)
   const [patientInput, setPatientInput] = useState('')
   const [patientName, setPatientName] = useState('')
   const [statusFilter, setStatusFilter] = useState<ApiOrderStatus>('pending')
@@ -207,6 +291,27 @@ export function SampleCollectionPage() {
   }, [hasApi, ordersListQuery, refreshTick])
 
   useEffect(() => {
+    if (!hasApi || isScheduleMode) return
+    let cancelled = false
+    void (async () => {
+      try {
+        const settings = await fetchSystemSettings()
+        if (cancelled) return
+        const loc = labStartLocation(settings)
+        if (loc) {
+          setRouteStartLatitude(loc.lat)
+          setRouteStartLongitude(loc.lng)
+        }
+      } catch {
+        /* optional prefill only */
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [hasApi, isScheduleMode])
+
+  useEffect(() => {
     setSelectedIds(new Set())
     setRouteResult(null)
     setRoutePlanOrders([])
@@ -224,6 +329,16 @@ export function SampleCollectionPage() {
     [routable, selectedIds],
   )
 
+  const routeSetupReady = useMemo(() => {
+    if (routeStartLocationFromState(routeStartLatitude, routeStartLongitude) == null) return false
+    if (parseRouteStartTimeInput(routeStartTime) == null) return false
+    if (parseRouteCollectionDuration(routeCollectionDurationMinutes) == null) return false
+    return true
+  }, [routeStartLatitude, routeStartLongitude, routeStartTime, routeCollectionDurationMinutes])
+
+  const canPlanRoute =
+    hasApi && !loading && !routePlanning && selectedRoutableCount >= 2 && routeSetupReady
+
   const canUpdateSchedule = hasApi && !loading && selectedRoutableCount >= 1
 
   const toggle = (id: string) => {
@@ -235,20 +350,83 @@ export function SampleCollectionPage() {
     })
   }
 
-  const runAiRoute = () => {
+  const runAiRoute = async () => {
     const picked = routable.filter((o) => selectedIds.has(o.id))
     if (picked.length < 2) {
       showError('Select at least two orders to build a multi-stop collection route.')
       return
     }
-    const addresses = picked.map(
-      (o) => `${o.id}: ${o.patient_name} — ${o.address?.trim() || '—'}`,
-    )
-    const result = suggestCollectionRoute(addresses)
-    setRouteResult(result)
-    setRoutePlanOrders(orderStopsInRouteOrder(picked, result.orderedStops))
-    setRouteAssignments({})
-    showSuccess('Collection route generated.')
+
+    if (!hasApi) {
+      const addresses = picked.map(
+        (o) => `${o.id}: ${o.patient_name} — ${o.address?.trim() || '—'}`,
+      )
+      const result = suggestCollectionRoute(addresses)
+      setRouteResult({
+        orderedStops: result.orderedStops,
+        summary: result.summary,
+        estimatedFinishTime: null,
+        estimatedMinutes: result.estimatedMinutes,
+        routeStops: [],
+      })
+      setRoutePlanOrders(orderStopsInRouteOrder(picked, result.orderedStops))
+      setRouteAssignments({})
+      showSuccess('Collection route generated.')
+      return
+    }
+
+    const missingCoords = picked.filter((o) => !orderCoords(o))
+    if (missingCoords.length > 0) {
+      showError(
+        `${missingCoords.length} selected order(s) are missing map coordinates. Add latitude/longitude on the order before planning a route.`,
+      )
+      return
+    }
+
+    const startLocation = routeStartLocationFromState(routeStartLatitude, routeStartLongitude)
+    if (!startLocation) {
+      showError('Set the route start location on the map before planning.')
+      return
+    }
+
+    const startTime = parseRouteStartTimeInput(routeStartTime)
+    if (!startTime) {
+      showError('Enter a valid route start time.')
+      return
+    }
+
+    const collectionDurationMinutes = parseRouteCollectionDuration(routeCollectionDurationMinutes)
+    if (collectionDurationMinutes == null) {
+      showError('Enter collection duration per stop (minutes).')
+      return
+    }
+
+    setRoutePlanning(true)
+    try {
+      const result = await planCollectionRouteWithAi({
+        startLocation,
+        startTime,
+        collectionDurationMinutes,
+        stops: picked.map((o) => {
+          const coords = orderCoords(o)!
+          return {
+            orderId: o.id,
+            patientName: o.patient_name,
+            address: o.address?.trim() || '—',
+            lat: coords.lat,
+            lng: coords.lng,
+          }
+        }),
+      })
+      setRouteResult(result)
+      setRoutePlanOrders(orderStopsFromRouteDetails(picked, result.routeStops))
+      setRouteAssignments({})
+      showSuccess('Collection route generated.')
+    } catch (err) {
+      showError(friendlyAiReviewErrorMessage(err, 'Route planning failed.'))
+    } finally {
+      setRoutePlanning(false)
+    }
   }
 
   function openRouteAssign() {
@@ -281,9 +459,9 @@ export function SampleCollectionPage() {
 
     const actingStaffId = account?.id ?? collector.id
     const minutesPerStop =
-      routeResult && routePlanOrders.length > 1
+      routeResult?.estimatedMinutes != null && routePlanOrders.length > 1
         ? Math.max(8, Math.round(routeResult.estimatedMinutes / routePlanOrders.length))
-        : 0
+        : parseRouteCollectionDuration(routeCollectionDurationMinutes) ?? 10
     const baseMs = new Date(baseIso).getTime()
 
     setRouteAssignSubmitting(true)
@@ -484,7 +662,7 @@ export function SampleCollectionPage() {
         <p style={{ margin: '0 0 0.75rem', color: 'var(--muted)', fontSize: '0.875rem' }}>
           {isScheduleMode
             ? 'Select one or more orders, then update collector, collection time, and optional lab / report times.'
-            : 'Addresses come from the order record. Select at least two rows, then plan route order (demo helper).'}
+            : 'Select at least two orders below, then set route start details and plan an optimized multi-stop route with AI.'}
         </p>
         <div className="table-wrap">
           <table className="data-table">
@@ -554,6 +732,68 @@ export function SampleCollectionPage() {
             }}
           />
         ) : null}
+        {!isScheduleMode && hasApi && !loading ? (
+          selectedRoutableCount >= 2 ? (
+            <div className="route-setup">
+              <h4 className="route-setup__title">Route setup</h4>
+              <p className="route-setup__hint">
+                {selectedRoutableCount} orders selected — set start location, departure time, and on-site
+                minutes per stop, then click Plan route.
+              </p>
+              <div className="route-setup__grid">
+                <div className="field">
+                  <label htmlFor="route-start-time">Start time</label>
+                  <TimeField
+                    id="route-start-time"
+                    value={routeStartTime}
+                    onChange={setRouteStartTime}
+                    disabled={routePlanning}
+                    placeholder="Select start time"
+                  />
+                </div>
+                <div className="field">
+                  <label htmlFor="route-duration">Collection duration (min per stop)</label>
+                  <input
+                    id="route-duration"
+                    type="number"
+                    min={1}
+                    step={1}
+                    value={routeCollectionDurationMinutes === '' ? '' : routeCollectionDurationMinutes}
+                    onChange={(e) =>
+                      setRouteCollectionDurationMinutes(
+                        e.target.value === '' ? '' : Number(e.target.value),
+                      )
+                    }
+                    disabled={routePlanning}
+                  />
+                </div>
+              </div>
+              <div className="route-setup__map user-form-modal__location-card">
+                <div className="field" style={{ marginBottom: '0.5rem' }}>
+                  <span style={{ fontWeight: 600, fontSize: '0.875rem', color: 'var(--heading)' }}>
+                    Start location
+                  </span>
+                </div>
+                <LocationMapPicker
+                  latitude={routeStartLatitude}
+                  longitude={routeStartLongitude}
+                  mapHeight={200}
+                  onPick={(lat, lng) => {
+                    setRouteStartLatitude(lat)
+                    setRouteStartLongitude(lng)
+                  }}
+                />
+                <p className="user-form-modal__coords" aria-live="polite">
+                  {formatCoordPair(routeStartLatitude, routeStartLongitude)}
+                </p>
+              </div>
+            </div>
+          ) : (
+            <p style={{ margin: '1rem 0 0', fontSize: '0.875rem', color: 'var(--muted)' }}>
+              Select at least two orders in the table above to set up a collection route.
+            </p>
+          )
+        ) : null}
         <div className="row-actions" style={{ marginTop: '1rem', alignItems: 'center' }}>
           {isScheduleMode ? (
             canUpdateSchedule ? (
@@ -571,11 +811,22 @@ export function SampleCollectionPage() {
                 Select one or more orders in the table above to update their schedules.
               </p>
             )
-          ) : (
-            <button type="button" className="btn btn-primary" onClick={runAiRoute} disabled={!hasApi || loading}>
-              Plan route (demo ordering)
+          ) : selectedRoutableCount >= 2 ? (
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => void runAiRoute()}
+              disabled={!canPlanRoute}
+              aria-busy={routePlanning}
+            >
+              <span className="btn-busy-content">
+                {routePlanning ? (
+                  <span className="loading-spinner loading-spinner--sm btn-busy-content__spinner" aria-hidden />
+                ) : null}
+                {routePlanning ? 'Planning route…' : 'Plan route'}
+              </span>
             </button>
-          )}
+          ) : null}
         </div>
       </div>
 
@@ -775,8 +1026,8 @@ export function SampleCollectionPage() {
                 Assign collector
               </button>
               <div className="route-panel__eta">
-                <span className="route-panel__eta-label">Est. time</span>
-                <span className="route-panel__eta-value">{routeResult.estimatedMinutes} min</span>
+                <span className="route-panel__eta-label">Est. finish</span>
+                <span className="route-panel__eta-value">{routeResult.estimatedFinishTime ?? '—'}</span>
               </div>
             </div>
           </div>
@@ -792,6 +1043,7 @@ export function SampleCollectionPage() {
               const items: ApiOrderDetailItem[] = order.items ?? []
               const stop = stopIndex + 1
               const assigned = routeAssignments[order.id]
+              const stopDetail = routeStopDetailForOrder(routeResult.routeStops, order.id)
               return (
                 <li key={order.id} className="route-stop-card">
                   <div className="route-stop-card__marker" aria-hidden>
@@ -805,6 +1057,16 @@ export function SampleCollectionPage() {
                         {order.address?.trim() || 'No address on file'}
                       </span>
                     </div>
+                    {stopDetail?.arrivalTime ? (
+                      <p className="route-stop-card__schedule">
+                        Arrive {stopDetail.arrivalTime}
+                        {stopDetail.collectionStart && stopDetail.collectionEnd
+                          ? ` · collect ${stopDetail.collectionStart}–${stopDetail.collectionEnd}`
+                          : stopDetail.collectionEnd
+                            ? ` · finish ${stopDetail.collectionEnd}`
+                            : null}
+                      </p>
+                    ) : null}
                     {assigned ? (
                       <p className="route-stop-card__assigned">
                         <span className="material-symbols-outlined route-stop-card__assigned-icon" aria-hidden>

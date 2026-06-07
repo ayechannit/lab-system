@@ -442,6 +442,7 @@ router.get('/', orderController.getAllOrders);
 router.get('/:id', orderController.getOrderById);
 router.post('/', upload.single('prescription'), orderController.createOrder);
 router.post('/:id/items', orderController.addOrderItems);
+router.put('/:id', orderController.updateOrder);
 router.put('/:id/status', orderController.updateOrderStatus);
 router.delete('/:id', orderController.deleteOrder);
 router.get('/:id/qrcode', orderController.generateQrCode);

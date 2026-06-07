@@ -17,8 +17,6 @@ import {
   createPayment,
   fetchPaymentsByOrderId,
   PAYMENT_METHOD_OPTIONS,
-  updatePaymentStatus,
-  type ApiPayment,
   type ApiPaymentMethod,
   type ApiPaymentOrderSummary,
   type ApiPaymentStatus,
@@ -33,6 +31,7 @@ import {
   type ApiOrderListRow,
   type ApiOrderStatus,
   type FetchOrdersParams,
+  updateOrder,
   updateOrderStatus,
 } from '../services/orderService'
 import { upsertSchedule, type ApiOrderSchedule } from '../services/scheduleService'
@@ -67,16 +66,23 @@ function priorityBadgeClass(priority: 'urgent' | 'elective'): string {
   return priority === 'urgent' ? 'badge badge--danger' : 'badge badge--neutral'
 }
 
+function normalizePaymentStatusForDisplay(
+  status: ApiPaymentStatus | 'unpaid',
+): ApiPaymentStatus | 'unpaid' {
+  return status === 'verified' ? 'received' : status
+}
+
 function paymentBadgeClass(status: ApiPaymentStatus | 'unpaid', fullyPaid = false): string {
-  if (fullyPaid && status === 'received') return 'badge badge--success'
+  const displayStatus = normalizePaymentStatusForDisplay(status)
+  if (fullyPaid && displayStatus === 'received') return 'badge badge--success'
   const map: Record<ApiPaymentStatus | 'unpaid', string> = {
     unpaid: 'badge badge--danger',
     pending: 'badge badge--warn',
     received: 'badge badge--neutral',
-    verified: 'badge badge--success',
+    verified: 'badge badge--neutral',
     failed: 'badge badge--danger',
   }
-  return map[status]
+  return map[displayStatus]
 }
 
 function orderPaymentAmounts(
@@ -95,9 +101,6 @@ function orderPaymentAmounts(
   return { total, paid: 0, balance, percentPaid: 0 }
 }
 
-const ADMIN_PAYMENT_UPDATE_STATUSES: ApiPaymentStatus[] = ['received', 'verified', 'failed']
-
-type PaymentModalFocus = 'add' | 'fix'
 
 function PaymentModalSummary({ amounts }: { amounts: ReturnType<typeof orderPaymentAmounts> }) {
   const due = amounts.balance > 0 ? amounts.balance : 0
@@ -159,10 +162,6 @@ function orderPaymentListDisplay(
   if (failedOnly) return { label: 'failed', status: 'failed' }
 
   if (fullyPaid) {
-    // Verified = staff confirmed (optional). Received = money recorded at the lab.
-    if (history.some((p) => p.status === 'verified')) {
-      return { label: 'verified', status: 'verified', fullyPaid: true }
-    }
     return { label: 'received', status: 'received', fullyPaid: true }
   }
 
@@ -176,7 +175,8 @@ function orderPaymentListDisplay(
   }
 
   const latest = history[history.length - 1]
-  return { label: latest.status, status: latest.status }
+  const status = normalizePaymentStatusForDisplay(latest.status)
+  return { label: status, status }
 }
 
 function paymentSummaryForOrder(
@@ -625,6 +625,19 @@ export function OrderManagementPage() {
   const [createLatitude, setCreateLatitude] = useState<number | ''>(0)
   const [createLongitude, setCreateLongitude] = useState<number | ''>(0)
 
+  const [editOpen, setEditOpen] = useState(false)
+  const [editOrderId, setEditOrderId] = useState<string | null>(null)
+  const [editSubmitting, setEditSubmitting] = useState(false)
+  const [editError, setEditError] = useState<string | null>(null)
+  const [editPriority, setEditPriority] = useState<'urgent' | 'elective'>('elective')
+  const [editPatientName, setEditPatientName] = useState('')
+  const [editPatientAge, setEditPatientAge] = useState<number | ''>('')
+  const [editPatientPhone, setEditPatientPhone] = useState('')
+  const [editAddress, setEditAddress] = useState('')
+  const [editDescription, setEditDescription] = useState('')
+  const [editLatitude, setEditLatitude] = useState<number | ''>(0)
+  const [editLongitude, setEditLongitude] = useState<number | ''>(0)
+
   const onCreateGeocodeCoords = useCallback((lat: number, lng: number) => {
     setCreateLatitude(lat)
     setCreateLongitude(lng)
@@ -634,6 +647,17 @@ export function OrderManagementPage() {
     enabled: createOpen,
     address: createAddress,
     onCoords: onCreateGeocodeCoords,
+  })
+
+  const onEditGeocodeCoords = useCallback((lat: number, lng: number) => {
+    setEditLatitude(lat)
+    setEditLongitude(lng)
+  }, [])
+
+  const editGeocodeHint = useAddressGeocode({
+    enabled: editOpen,
+    address: editAddress,
+    onCoords: onEditGeocodeCoords,
   })
 
   const [statusOpen, setStatusOpen] = useState(false)
@@ -665,15 +689,10 @@ export function OrderManagementPage() {
 
   const [paymentUpdateOpen, setPaymentUpdateOpen] = useState(false)
   const [paymentUpdateOrder, setPaymentUpdateOrder] = useState<ApiOrderListRow | null>(null)
-  const [paymentUpdateSelectedId, setPaymentUpdateSelectedId] = useState('')
-  const [paymentUpdateStatus, setPaymentUpdateStatus] = useState<ApiPaymentStatus>('pending')
-  const [paymentUpdateStaffId, setPaymentUpdateStaffId] = useState('')
   const [paymentUpdateAmount, setPaymentUpdateAmount] = useState<number | ''>('')
   const [paymentUpdateMethod, setPaymentUpdateMethod] = useState<ApiPaymentMethod>('cash')
   const [paymentUpdateReference, setPaymentUpdateReference] = useState('')
   const [paymentUpdateSubmitting, setPaymentUpdateSubmitting] = useState(false)
-  const [paymentSubmitAction, setPaymentSubmitAction] = useState<'record' | 'fix' | null>(null)
-  const [paymentUpdateFocus, setPaymentUpdateFocus] = useState<PaymentModalFocus>('add')
   const [paymentUpdateError, setPaymentUpdateError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -853,29 +872,16 @@ export function OrderManagementPage() {
     }
   }
 
-  function openPaymentUpdate(row: ApiOrderListRow, focus: PaymentModalFocus = 'add') {
+  function openPaymentUpdate(row: ApiOrderListRow) {
     const data = paymentSummaryForOrder(row.id, paymentByOrderId, detailOrder, row)
-    const history = data?.history ?? []
-    const latest = history[history.length - 1]
-    setPaymentUpdateFocus(focus === 'fix' && history.length === 0 ? 'add' : focus)
     setPaymentUpdateOrder(row)
-    setPaymentUpdateSelectedId(latest?.id ?? '')
-    setPaymentUpdateStatus(latest?.status === 'failed' ? 'received' : (latest?.status ?? 'received'))
-    setPaymentUpdateStaffId(staff[0]?.id ?? '')
     const balance = data?.summary.balance ?? row.final_price_mmk
     setPaymentUpdateAmount(balance > 0 ? Math.round(balance * 100) / 100 : '')
     setPaymentUpdateMethod('cash')
     setPaymentUpdateReference('')
     setPaymentUpdateError(null)
-    setPaymentSubmitAction(null)
     setOpenMenuId(null)
     setPaymentUpdateOpen(true)
-  }
-
-  function onPaymentUpdateSelectPayment(paymentId: string, history: ApiPayment[]) {
-    setPaymentUpdateSelectedId(paymentId)
-    const p = history.find((h) => h.id === paymentId)
-    if (p) setPaymentUpdateStatus(p.status)
   }
 
   async function submitPaymentUpdate(e?: FormEvent) {
@@ -889,7 +895,6 @@ export function OrderManagementPage() {
     if (!Number.isFinite(amount) || amount <= 0) {
       return setPaymentUpdateError('Enter a valid payment amount.')
     }
-    setPaymentSubmitAction('record')
     setPaymentUpdateSubmitting(true)
     try {
       await createPayment({
@@ -907,35 +912,6 @@ export function OrderManagementPage() {
       setPaymentUpdateError(err instanceof Error ? err.message : 'Payment update failed')
     } finally {
       setPaymentUpdateSubmitting(false)
-      setPaymentSubmitAction(null)
-    }
-  }
-
-  async function submitPaymentFix() {
-    if (!paymentUpdateOrder) return
-    setPaymentUpdateError(null)
-    if (paymentUpdateStatus === 'verified' && !paymentUpdateStaffId) {
-      return setPaymentUpdateError('Select staff when marking payment as verified.')
-    }
-    if (!paymentUpdateSelectedId) {
-      return setPaymentUpdateError('Select a payment to update.')
-    }
-    setPaymentSubmitAction('fix')
-    setPaymentUpdateSubmitting(true)
-    try {
-      await updatePaymentStatus(paymentUpdateSelectedId, {
-        status: paymentUpdateStatus,
-        staff_id: paymentUpdateStatus === 'verified' ? paymentUpdateStaffId : undefined,
-      })
-      showSuccess('Payment status updated.')
-      setPaymentUpdateOpen(false)
-      await refreshPaymentForOrder(paymentUpdateOrder.id)
-      if (detailOrder?.id === paymentUpdateOrder.id) void refreshDetailOrder(paymentUpdateOrder.id)
-    } catch (err) {
-      setPaymentUpdateError(err instanceof Error ? err.message : 'Payment update failed')
-    } finally {
-      setPaymentUpdateSubmitting(false)
-      setPaymentSubmitAction(null)
     }
   }
 
@@ -1028,6 +1004,69 @@ export function OrderManagementPage() {
       setCreateError(e instanceof Error ? e.message : 'Create failed')
     } finally {
       setCreateSubmitting(false)
+    }
+  }
+
+  async function openEditOrder(row: ApiOrderListRow) {
+    setOpenMenuId(null)
+    setEditError(null)
+    setEditOrderId(row.id)
+    try {
+      const order = await fetchOrderById(row.id)
+      if (!order) {
+        showError('Order not found.')
+        setEditOrderId(null)
+        return
+      }
+      setEditPriority(order.priority)
+      setEditPatientName(order.patient_name)
+      setEditPatientAge(order.patient_age ?? '')
+      setEditPatientPhone(order.patient_phone ?? '')
+      setEditAddress(order.address ?? '')
+      setEditDescription(order.description?.trim() ?? '')
+      const lat = order.latitude != null ? Number(order.latitude) : null
+      const lng = order.longitude != null ? Number(order.longitude) : null
+      setEditLatitude(lat != null && Number.isFinite(lat) ? lat : 0)
+      setEditLongitude(lng != null && Number.isFinite(lng) ? lng : 0)
+      setEditOpen(true)
+    } catch (e) {
+      showError(messageFromError(e, 'Failed to load order'))
+      setEditOrderId(null)
+    }
+  }
+
+  async function submitEditOrder(e: FormEvent) {
+    e.preventDefault()
+    if (!editOrderId) return
+    setEditError(null)
+    if (!editPatientName.trim()) return setEditError('Enter patient name.')
+    if (!editPatientPhone.trim()) return setEditError('Enter patient phone.')
+    if (!editAddress.trim()) return setEditError('Enter address.')
+    const age =
+      typeof editPatientAge === 'number' ? editPatientAge : Number.parseInt(String(editPatientAge), 10)
+    if (!Number.isFinite(age) || age < 0) return setEditError('Enter valid patient age.')
+    const { latitude: latApi, longitude: lngApi } = coordsForOrderApi(editLatitude, editLongitude)
+    setEditSubmitting(true)
+    try {
+      await updateOrder(editOrderId, {
+        description: editDescription.trim() || null,
+        priority: editPriority,
+        patient_name: editPatientName.trim(),
+        patient_age: age,
+        patient_phone: editPatientPhone.trim(),
+        address: editAddress.trim(),
+        latitude: latApi,
+        longitude: lngApi,
+      })
+      setEditOpen(false)
+      setEditOrderId(null)
+      showSuccess('Order updated.')
+      bumpOrderViews()
+      if (detailOrder?.id === editOrderId) void refreshDetailOrder(editOrderId)
+    } catch (e) {
+      setEditError(e instanceof Error ? e.message : 'Update failed')
+    } finally {
+      setEditSubmitting(false)
     }
   }
 
@@ -1558,25 +1597,16 @@ export function OrderManagementPage() {
                             },
                           },
                           {
-                            label: 'Payment',
-                            children: [
-                              {
-                                label: 'Add payment',
-                                onSelect: () => {
-                                  openPaymentUpdate(o, 'add')
-                                },
-                              },
-                              ...((paymentByOrderId.get(o.id)?.history.length ?? 0) > 0
-                                ? [
-                                    {
-                                      label: 'Update entry',
-                                      onSelect: () => {
-                                        openPaymentUpdate(o, 'fix')
-                                      },
-                                    },
-                                  ]
-                                : []),
-                            ],
+                            label: 'Update order',
+                            onSelect: () => {
+                              void openEditOrder(o)
+                            },
+                          },
+                          {
+                            label: 'Add payment',
+                            onSelect: () => {
+                              openPaymentUpdate(o)
+                            },
                           },
                           ...(canAddTestFromListRow(o)
                             ? [
@@ -1831,6 +1861,148 @@ export function OrderManagementPage() {
         </div>
       ) : null}
 
+      {editOpen && editOrderId ? (
+        <div
+          className="modal-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="edit-order-title"
+          onMouseDown={(e) => e.target === e.currentTarget && !editSubmitting && setEditOpen(false)}
+        >
+          <div className="modal-card modal-card--order-create" onMouseDown={(e) => e.stopPropagation()}>
+            <div className="order-create-modal__head">
+              <div className="modal-head">
+                <h2 className="modal-title" id="edit-order-title">
+                  Update order
+                </h2>
+                <button
+                  type="button"
+                  className="btn btn-ghost modal-close"
+                  onClick={() => !editSubmitting && setEditOpen(false)}
+                  aria-label="Close"
+                  disabled={editSubmitting}
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+            <form className="order-create-modal__form" onSubmit={(e) => void submitEditOrder(e)}>
+              <div className="order-create-modal__body">
+                <div className="order-create-modal__stack">
+                  <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--muted)' }}>
+                    Update patient details, address, and map pin. Tests, pricing, and status are changed elsewhere.
+                  </p>
+                  <div className="grid-2">
+                    <div className="field">
+                      <label htmlFor="om-edit-name">Patient name</label>
+                      <input
+                        id="om-edit-name"
+                        value={editPatientName}
+                        onChange={(e) => setEditPatientName(e.target.value)}
+                        disabled={editSubmitting}
+                      />
+                    </div>
+                    <div className="field">
+                      <label htmlFor="om-edit-age">Age</label>
+                      <input
+                        id="om-edit-age"
+                        type="number"
+                        min={0}
+                        value={editPatientAge === '' ? '' : editPatientAge}
+                        onChange={(e) =>
+                          setEditPatientAge(e.target.value === '' ? '' : Number(e.target.value))
+                        }
+                        disabled={editSubmitting}
+                      />
+                    </div>
+                  </div>
+                  <div className="grid-2">
+                    <div className="field">
+                      <label htmlFor="om-edit-phone">Phone</label>
+                      <input
+                        id="om-edit-phone"
+                        value={editPatientPhone}
+                        onChange={(e) => setEditPatientPhone(e.target.value)}
+                        disabled={editSubmitting}
+                      />
+                    </div>
+                    <div className="field">
+                      <label htmlFor="om-edit-pri">Priority</label>
+                      <select
+                        id="om-edit-pri"
+                        className="select-chevron-left"
+                        value={editPriority}
+                        onChange={(e) => setEditPriority(e.target.value as 'urgent' | 'elective')}
+                        disabled={editSubmitting}
+                      >
+                        <option value="elective">Elective</option>
+                        <option value="urgent">Urgent</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="field">
+                    <label htmlFor="om-edit-address">Address</label>
+                    <textarea
+                      id="om-edit-address"
+                      value={editAddress}
+                      onChange={(e) => setEditAddress(e.target.value)}
+                      disabled={editSubmitting}
+                    />
+                  </div>
+                  <div className="user-form-modal__location-card">
+                    <LocationMapPicker
+                      latitude={editLatitude}
+                      longitude={editLongitude}
+                      mapHeight={220}
+                      onPick={(lat, lng) => {
+                        setEditLatitude(lat)
+                        setEditLongitude(lng)
+                      }}
+                      onAddressFromMap={setEditAddress}
+                    />
+                    <p className="user-form-modal__coords" aria-live="polite">
+                      {formatCoordPair(editLatitude, editLongitude)}
+                    </p>
+                    {editGeocodeHint ? <p className="user-form-modal__geocode-hint">{editGeocodeHint}</p> : null}
+                  </div>
+                  <div className="field">
+                    <label htmlFor="om-edit-desc">Description</label>
+                    <textarea
+                      id="om-edit-desc"
+                      value={editDescription}
+                      onChange={(e) => setEditDescription(e.target.value)}
+                      disabled={editSubmitting}
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className="order-create-modal__footer">
+                {editError ? (
+                  <div className="form-alert form-alert--error" role="alert">
+                    {editError}
+                  </div>
+                ) : null}
+                <div className="order-create-modal__footer-actions">
+                  <div className="row-actions">
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={() => setEditOpen(false)}
+                      disabled={editSubmitting}
+                    >
+                      Cancel
+                    </button>
+                    <button type="submit" className="btn btn-primary" disabled={editSubmitting}>
+                      {editSubmitting ? 'Saving…' : 'Save changes'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
+
       {paymentUpdateOpen && paymentUpdateOrder ? (
         <div
           className="modal-backdrop"
@@ -1850,8 +2022,6 @@ export function OrderManagementPage() {
                 paymentUpdateOrder,
               )
               const amounts = orderPaymentAmounts(payData, paymentUpdateOrder.final_price_mmk)
-              const history = payData?.history ?? []
-              const hasHistory = history.length > 0
               const enterAmount =
                 typeof paymentUpdateAmount === 'number'
                   ? paymentUpdateAmount
@@ -1859,8 +2029,6 @@ export function OrderManagementPage() {
               const adding = Number.isFinite(enterAmount) && enterAmount > 0 ? enterAmount : 0
               const previewPaid = Math.min(amounts.total, amounts.paid + adding)
               const previewLeft = Math.max(0, amounts.total - previewPaid)
-              const showAddSection = paymentUpdateFocus === 'add'
-              const showFixSection = paymentUpdateFocus === 'fix' && hasHistory
               const fullyPaid = amounts.total > 0 && amounts.balance <= 0
 
               return (
@@ -1868,7 +2036,7 @@ export function OrderManagementPage() {
                   <div className="modal-head payment-modal__head">
                     <div>
                       <h2 id="payment-modal-title" className="modal-title">
-                        {showFixSection ? 'Update payment entry' : 'Add payment'}
+                        Add payment
                       </h2>
                       <p className="payment-modal__subtitle">{paymentUpdateOrder.patient_name}</p>
                     </div>
@@ -1891,137 +2059,70 @@ export function OrderManagementPage() {
                       </div>
                     ) : null}
 
-                    {showAddSection ? (
-                      <div className="payment-modal__form">
-                        {fullyPaid ? (
-                          <p className="payment-modal__notice" role="status">
-                            This order is already fully paid. Enter an amount only if the patient
-                            pays extra (e.g. additional tests).
-                          </p>
-                        ) : null}
-                        <div className="payment-modal__row">
-                          <div className="field payment-modal__amount-field">
-                            <label htmlFor="pu-amount">Amount (MMK)</label>
-                            <input
-                              id="pu-amount"
-                              type="number"
-                              className="payment-modal__amount-input"
-                              min={0}
-                              step="0.01"
-                              placeholder={fullyPaid ? '0' : amounts.balance > 0 ? String(Math.round(amounts.balance)) : '0'}
-                              value={paymentUpdateAmount === '' ? '' : paymentUpdateAmount}
-                              onChange={(e) =>
-                                setPaymentUpdateAmount(
-                                  e.target.value === '' ? '' : Number(e.target.value),
-                                )
-                              }
-                              disabled={paymentUpdateSubmitting}
-                            />
-                            {amounts.balance > 0 ? (
-                              <button
-                                type="button"
-                                className="payment-modal__fill-due"
-                                onClick={() =>
-                                  setPaymentUpdateAmount(Math.round(amounts.balance * 100) / 100)
-                                }
-                                disabled={paymentUpdateSubmitting}
-                              >
-                                Fill due ({amounts.balance.toLocaleString()} MMK)
-                              </button>
-                            ) : null}
-                          </div>
-                          <div className="field payment-modal__method-field">
-                            <label htmlFor="pu-method">Method</label>
-                            <select
-                              id="pu-method"
-                              className="select-chevron-left"
-                              value={paymentUpdateMethod}
-                              onChange={(e) =>
-                                setPaymentUpdateMethod(e.target.value as ApiPaymentMethod)
+                    <div className="payment-modal__form">
+                      {fullyPaid ? (
+                        <p className="payment-modal__notice" role="status">
+                          This order is already fully paid. Enter an amount only if the patient pays extra (e.g.
+                          additional tests).
+                        </p>
+                      ) : null}
+                      <div className="payment-modal__row">
+                        <div className="field payment-modal__amount-field">
+                          <label htmlFor="pu-amount">Amount (MMK)</label>
+                          <input
+                            id="pu-amount"
+                            type="number"
+                            className="payment-modal__amount-input"
+                            min={0}
+                            step="0.01"
+                            placeholder={fullyPaid ? '0' : amounts.balance > 0 ? String(Math.round(amounts.balance)) : '0'}
+                            value={paymentUpdateAmount === '' ? '' : paymentUpdateAmount}
+                            onChange={(e) =>
+                              setPaymentUpdateAmount(
+                                e.target.value === '' ? '' : Number(e.target.value),
+                              )
+                            }
+                            disabled={paymentUpdateSubmitting}
+                          />
+                          {amounts.balance > 0 ? (
+                            <button
+                              type="button"
+                              className="payment-modal__fill-due"
+                              onClick={() =>
+                                setPaymentUpdateAmount(Math.round(amounts.balance * 100) / 100)
                               }
                               disabled={paymentUpdateSubmitting}
                             >
-                              {PAYMENT_METHOD_OPTIONS.map((m) => (
-                                <option key={m.value} value={m.value}>
-                                  {m.label}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
+                              Fill due ({amounts.balance.toLocaleString()} MMK)
+                            </button>
+                          ) : null}
                         </div>
-                        {adding > 0 ? (
-                          <p className="payment-modal__preview" role="status">
-                            After this payment:{' '}
-                            <strong>{previewPaid.toLocaleString()}</strong> paid ·{' '}
-                            <strong>{previewLeft.toLocaleString()}</strong> MMK due
-                          </p>
-                        ) : null}
-                      </div>
-                    ) : null}
-
-                    {showFixSection ? (
-                      <div className="payment-modal__form">
-                        <p className="payment-modal__notice payment-modal__notice--muted">
-                          Update status on a payment already recorded — no new amount.
-                        </p>
-                        <div className="field">
-                          <label htmlFor="pu-payment">Payment entry</label>
+                        <div className="field payment-modal__method-field">
+                          <label htmlFor="pu-method">Method</label>
                           <select
-                            id="pu-payment"
+                            id="pu-method"
                             className="select-chevron-left"
-                            value={paymentUpdateSelectedId}
-                            onChange={(e) => onPaymentUpdateSelectPayment(e.target.value, history)}
+                            value={paymentUpdateMethod}
+                            onChange={(e) =>
+                              setPaymentUpdateMethod(e.target.value as ApiPaymentMethod)
+                            }
                             disabled={paymentUpdateSubmitting}
                           >
-                            {history.map((p) => (
-                              <option key={p.id} value={p.id}>
-                                {p.amount_mmk.toLocaleString()} MMK — {p.status}
-                                {p.method ? ` (${p.method})` : ''}
+                            {PAYMENT_METHOD_OPTIONS.map((m) => (
+                              <option key={m.value} value={m.value}>
+                                {m.label}
                               </option>
                             ))}
                           </select>
                         </div>
-                        <div className="payment-modal__row">
-                          <div className="field">
-                            <label htmlFor="pu-status">New status</label>
-                            <select
-                              id="pu-status"
-                              className="select-chevron-left"
-                              value={paymentUpdateStatus}
-                              onChange={(e) =>
-                                setPaymentUpdateStatus(e.target.value as ApiPaymentStatus)
-                              }
-                              disabled={paymentUpdateSubmitting}
-                            >
-                              {ADMIN_PAYMENT_UPDATE_STATUSES.map((s) => (
-                                <option key={s} value={s}>
-                                  {s}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                          {paymentUpdateStatus === 'verified' ? (
-                            <div className="field">
-                              <label htmlFor="pu-staff">Verified by</label>
-                              <select
-                                id="pu-staff"
-                                className="select-chevron-left"
-                                value={paymentUpdateStaffId}
-                                onChange={(e) => setPaymentUpdateStaffId(e.target.value)}
-                                disabled={paymentUpdateSubmitting}
-                              >
-                                <option value="">Select staff</option>
-                                {staff.map((s) => (
-                                  <option key={s.id} value={s.id}>
-                                    {s.name}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                          ) : null}
-                        </div>
                       </div>
-                    ) : null}
+                      {adding > 0 ? (
+                        <p className="payment-modal__preview" role="status">
+                          After this payment: <strong>{previewPaid.toLocaleString()}</strong> paid ·{' '}
+                          <strong>{previewLeft.toLocaleString()}</strong> MMK due
+                        </p>
+                      ) : null}
+                    </div>
 
                     <div className="payment-modal-footer">
                       <button
@@ -2032,29 +2133,14 @@ export function OrderManagementPage() {
                       >
                         Cancel
                       </button>
-                      {showAddSection ? (
-                        <button
-                          type="button"
-                          className="btn btn-primary"
-                          onClick={() => void submitPaymentUpdate()}
-                          disabled={paymentUpdateSubmitting}
-                        >
-                          {paymentUpdateSubmitting && paymentSubmitAction === 'record'
-                            ? 'Recording…'
-                            : 'Record payment'}
-                        </button>
-                      ) : showFixSection ? (
-                        <button
-                          type="button"
-                          className="btn btn-primary"
-                          onClick={() => void submitPaymentFix()}
-                          disabled={paymentUpdateSubmitting}
-                        >
-                          {paymentUpdateSubmitting && paymentSubmitAction === 'fix'
-                            ? 'Saving…'
-                            : 'Save changes'}
-                        </button>
-                      ) : null}
+                      <button
+                        type="button"
+                        className="btn btn-primary"
+                        onClick={() => void submitPaymentUpdate()}
+                        disabled={paymentUpdateSubmitting}
+                      >
+                        {paymentUpdateSubmitting ? 'Recording…' : 'Record payment'}
+                      </button>
                     </div>
                   </div>
                 </>
@@ -2426,17 +2512,20 @@ export function OrderManagementPage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {detailOrder.payments!.map((p) => (
+                        {detailOrder.payments!.map((p) => {
+                          const displayStatus = normalizePaymentStatusForDisplay(p.status)
+                          return (
                           <tr key={p.id}>
                             <td>{p.amount_mmk.toLocaleString()}</td>
                             <td>
-                              <span className={paymentBadgeClass(p.status)}>{p.status}</span>
+                              <span className={paymentBadgeClass(displayStatus)}>{displayStatus}</span>
                             </td>
                             <td>{p.method ?? '—'}</td>
                             <td>{p.reference_no?.trim() || '—'}</td>
                             <td>{fmtDateTime(p.paid_at ?? undefined)}</td>
                           </tr>
-                        ))}
+                          )
+                        })}
                       </tbody>
                     </table>
                   </div>
