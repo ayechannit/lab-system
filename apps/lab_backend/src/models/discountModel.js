@@ -7,7 +7,7 @@ class Discount {
    */
   static async upsert(data, updatedBy = null) {
     const pool = await poolPromise;
-    const roles = data.role === 'all' ? ['clinic', 'doctor', 'patient'] : [data.role];
+    const roles = data.role === 'all' ? ['clinic', 'doctor', 'patient', 'phlebotomist'] : [data.role];
     const results = [];
 
     for (const role of roles) {

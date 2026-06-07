@@ -24,7 +24,7 @@ router.use(authMiddleware);
  *           format: uuid
  *         role:
  *           type: string
- *           enum: [clinic, doctor, patient, all]
+ *           enum: [clinic, doctor, patient, phlebotomist, all]
  *         discount_percent:
  *           type: number
  *         is_active:
@@ -65,7 +65,7 @@ router.use(authMiddleware);
  *         name: role
  *         schema:
  *           type: string
- *           enum: [clinic, doctor, patient]
+ *           enum: [clinic, doctor, patient, phlebotomist]
  *         description: Filter discounts by role
  *       - in: query
  *         name: is_active
@@ -147,7 +147,7 @@ router.use(authMiddleware);
  *         required: true
  *         schema:
  *           type: string
- *           enum: [clinic, doctor, patient]
+ *           enum: [clinic, doctor, patient, phlebotomist]
  *     responses:
  *       200:
  *         description: Discount detail including pricing
@@ -189,7 +189,7 @@ router.use(authMiddleware);
  *                       format: uuid
  *                     role:
  *                       type: string
- *                       enum: [clinic, doctor, patient, all]
+ *                       enum: [clinic, doctor, patient, phlebotomist, all]
  *                     discount_percent:
  *                       type: number
  *                     is_active:
@@ -228,7 +228,7 @@ router.use(authMiddleware);
  *                 format: uuid
  *               role:
  *                 type: string
- *                 enum: [clinic, doctor, patient, all]
+ *                 enum: [clinic, doctor, patient, phlebotomist, all]
  *               discount_percent:
  *                 type: number
  *               is_active:

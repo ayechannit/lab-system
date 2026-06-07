@@ -11,7 +11,7 @@ const loginUser = async (req, res) => {
       return res.status(401).json({ message: 'Invalid email or password' });
     }
 
-    if (['doctor', 'clinic'].includes(user.role) && !user.is_approved) {
+    if (['doctor', 'clinic', 'phlebotomist'].includes(user.role) && !user.is_approved) {
       return res.status(403).json({ message: 'Account is pending approval from lab staff.' });
     }
 

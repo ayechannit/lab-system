@@ -44,8 +44,8 @@ const createUser = async (req, res) => {
       return res.status(400).json({ message: 'name, email, phone, role, and password are required' });
     }
 
-    if ((role === 'doctor' || role === 'clinic') && !license_number) {
-      return res.status(400).json({ message: 'license_number is required for doctor and clinic roles' });
+    if ((role === 'doctor' || role === 'clinic' || role === 'phlebotomist') && !license_number) {
+      return res.status(400).json({ message: 'license_number is required for doctor, clinic, and phlebotomist roles' });
     }
 
     const userData = { name, email, phone, role, password, password_hash, address, latitude, longitude, license_number };

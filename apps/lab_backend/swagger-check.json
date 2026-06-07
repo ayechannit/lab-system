@@ -116,7 +116,8 @@
               "enum": [
                 "clinic",
                 "doctor",
-                "patient"
+                "patient",
+                "phlebotomist"
               ]
             },
             "description": "Filter discounts by role"
@@ -272,7 +273,8 @@
               "enum": [
                 "clinic",
                 "doctor",
-                "patient"
+                "patient",
+                "phlebotomist"
               ]
             }
           }
@@ -1268,12 +1270,12 @@
             "schema": {
               "type": "string",
               "enum": [
-                                "admin",
-                                "lab_technician",
-                                "reception",
-                                "manager",
-                                "collector"
-                              ]
+                "admin",
+                "lab_technician",
+                "reception",
+                "manager",
+                "collector"
+              ]
             },
             "description": "Filter staff by role"
           },
@@ -1476,7 +1478,8 @@
               "enum": [
                 "clinic",
                 "doctor",
-                "patient"
+                "patient",
+                "phlebotomist"
               ]
             },
             "description": "User role to calculate specific discounts"
@@ -1696,7 +1699,8 @@
               "enum": [
                 "clinic",
                 "doctor",
-                "patient"
+                "patient",
+                "phlebotomist"
               ]
             },
             "description": "Filter users by role"
@@ -1985,6 +1989,7 @@
               "clinic",
               "doctor",
               "patient",
+              "phlebotomist",
               "all"
             ]
           },
@@ -2426,12 +2431,12 @@
           "role": {
             "type": "string",
             "enum": [
-                              "admin",
-                              "lab_technician",
-                              "reception",
-                              "manager",
-                              "collector"
-                            ]
+              "admin",
+              "lab_technician",
+              "reception",
+              "manager",
+              "collector"
+            ]
           },
           "is_active": {
             "type": "boolean"
@@ -2519,7 +2524,8 @@
             "enum": [
               "clinic",
               "doctor",
-              "patient"
+              "patient",
+              "phlebotomist"
             ]
           },
           "address": {

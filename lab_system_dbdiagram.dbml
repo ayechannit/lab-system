@@ -10,7 +10,7 @@ Table users {
   email varchar [unique, not null]
   phone varchar [not null]
   password_hash varchar [not null]
-  role user_role [not null, note: 'clinic | doctor | patient']
+  role user_role [not null, note: 'clinic | doctor | patient | phlebotomist']
   address text
   latitude float
   longitude float
@@ -24,6 +24,7 @@ Enum user_role {
   clinic
   doctor
   patient
+  phlebotomist
 }
 
 // =====================

@@ -19,7 +19,7 @@ CREATE TABLE users (
     email NVARCHAR(255) NOT NULL UNIQUE,
     phone NVARCHAR(50) NOT NULL,
     password_hash NVARCHAR(MAX) NOT NULL,
-    role NVARCHAR(20) NOT NULL CHECK (role IN ('clinic', 'doctor', 'patient')),
+    role NVARCHAR(20) NOT NULL CHECK (role IN ('clinic', 'doctor', 'patient', 'phlebotomist')),
     address NVARCHAR(MAX),
     latitude FLOAT,
     longitude FLOAT,
@@ -156,7 +156,7 @@ CREATE TABLE payments (
 CREATE TABLE test_specific_discounts (
     id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
     test_id UNIQUEIDENTIFIER NOT NULL FOREIGN KEY REFERENCES lab_test_catalog(id),
-    role NVARCHAR(20) NOT NULL CHECK (role IN ('clinic', 'doctor', 'patient')),
+    role NVARCHAR(20) NOT NULL CHECK (role IN ('clinic', 'doctor', 'patient', 'phlebotomist')),
     discount_percent DECIMAL(5, 2) NOT NULL,
     is_active BIT DEFAULT 1,
     created_user UNIQUEIDENTIFIER,

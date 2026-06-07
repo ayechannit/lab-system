@@ -30,7 +30,7 @@ const userController = require('../controllers/userController');
  *           type: string
  *         role:
  *           type: string
- *           enum: [clinic, doctor, patient]
+ *           enum: [clinic, doctor, patient, phlebotomist]
  *         address:
  *           type: string
  *         latitude:
@@ -71,7 +71,7 @@ const userController = require('../controllers/userController');
  *         name: role
  *         schema:
  *           type: string
- *           enum: [clinic, doctor, patient]
+ *           enum: [clinic, doctor, patient, phlebotomist]
  *         description: Filter users by role
  *       - in: query
  *         name: name
@@ -165,7 +165,7 @@ const userController = require('../controllers/userController');
  *                 type: string
  *               role:
  *                 type: string
- *                 enum: [clinic, doctor, patient]
+ *                 enum: [clinic, doctor, patient, phlebotomist]
  *               address:
  *                 type: string
  *               latitude:
