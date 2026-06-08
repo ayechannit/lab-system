@@ -111,6 +111,20 @@ class Staff {
       .query('UPDATE lab_staff SET is_deleted = 1, updated_user = @updated_user, updated_at = GETDATE() WHERE id = @id');
     return result.rowsAffected[0] > 0;
   }
+
+  static async updateFcmToken(id, fcmToken, updatedBy = null) {
+    const pool = await poolPromise;
+    const result = await pool.request()
+      .input('id', sql.UniqueIdentifier, id)
+      .input('fcm_token', sql.NVarChar(500), fcmToken)
+      .input('updated_user', sql.UniqueIdentifier, updatedBy)
+      .query(`
+        UPDATE lab_staff 
+        SET fcm_token = @fcm_token, updated_user = @updated_user, updated_at = GETDATE()
+        WHERE id = @id AND is_deleted = 0
+      `);
+    return result.rowsAffected[0] > 0;
+  }
 }
 
 module.exports = Staff;

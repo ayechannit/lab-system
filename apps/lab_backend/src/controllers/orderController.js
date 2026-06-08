@@ -1,6 +1,7 @@
 const Order = require('../models/orderModel');
 const QRCode = require('qrcode');
 const StorageService = require('../utils/storageService');
+const NotificationService = require('../services/notificationService');
 
 const getAllOrders = async (req, res) => {
   const orders = await Order.getAll(req.query);
@@ -60,6 +61,25 @@ const createOrder = async (req, res) => {
     }
 
     const order = await Order.create(orderData, req.user?.id);
+    
+    // Send background notifications
+    if (order && order.id) {
+      NotificationService.sendToUser(
+        order.user_id,
+        'user',
+        'Order Placed Successfully',
+        `Your lab order for patient "${order.patient_name}" has been created with ${order.priority} priority.`,
+        { order_id: order.id, event: 'order_created' }
+      ).catch(err => console.error('Error sending user order notification:', err.message));
+
+      NotificationService.sendToTopic(
+        'staff_notifications',
+        'New Order Received',
+        `New ${order.priority} priority order placed for ${order.patient_name}.`,
+        { order_id: order.id, event: 'new_order_alert' }
+      ).catch(err => console.error('Error sending staff order notification:', err.message));
+    }
+
     res.status(201).json(order);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -137,6 +157,16 @@ const updateOrderStatus = async (req, res) => {
   const { status, staff_id, note } = req.body;
   const order = await Order.updateStatus(req.params.id, status, staff_id || req.user?.id, note, req.user?.id);
   if (!order) return res.status(404).json({ message: 'Order not found' });
+
+  // Send background notification to user
+  NotificationService.sendToUser(
+    order.user_id,
+    'user',
+    'Order Status Updated',
+    `Your order for patient "${order.patient_name}" status has been updated to "${status}".`,
+    { order_id: order.id, status: status, event: 'order_status_updated' }
+  ).catch(err => console.error('Error sending status update notification:', err.message));
+
   res.json(order);
 };
 
@@ -198,11 +228,27 @@ const uploadTestResult = async (req, res) => {
           'All test results uploaded - automatically marked as delivered',
           req.user?.id
         );
+
+        // Notify user that all results are ready
+        NotificationService.sendToUser(
+          order.user_id,
+          'user',
+          'Lab Results Ready',
+          `All lab test results for patient "${order.patient_name}" are ready and available for download.`,
+          { order_id: id, event: 'results_ready' }
+        ).catch(err => console.error('Error sending lab results notification:', err.message));
       } catch (statusError) {
         console.error('Failed to auto-update order status:', statusError);
-        // We don't want to fail the whole request if only status update fails, 
-        // but maybe we should? The result IS uploaded.
       }
+    } else {
+      // Notify user that a specific result was uploaded
+      NotificationService.sendToUser(
+        order.user_id,
+        'user',
+        'Test Result Uploaded',
+        `A new test result has been uploaded for patient "${order.patient_name}".`,
+        { order_id: id, event: 'result_uploaded' }
+      ).catch(err => console.error('Error sending single result upload notification:', err.message));
     }
 
     const downloadUrl = await StorageService.getFileUrl(fileUrl);

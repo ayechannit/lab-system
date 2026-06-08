@@ -324,6 +324,37 @@ router.get('/:id/orders',authMiddleware, userController.getOrdersByUser);
 router.get('/:id',authMiddleware, userController.getUserById);
 
 router.post('/', userController.createUser);
+
+/**
+ * @swagger
+ * /api/users/fcm-token:
+ *   put:
+ *     summary: Register/update FCM token for notifications
+ *     description: Registers or updates the Firebase Cloud Messaging (FCM) token for the currently authenticated user or staff.
+ *     tags: [Users]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - fcm_token
+ *             properties:
+ *               fcm_token:
+ *                 type: string
+ *                 description: The Firebase device token
+ *     responses:
+ *       200:
+ *         description: FCM token registered successfully
+ *       400:
+ *         description: Validation error (missing fcm_token)
+ *       401:
+ *         description: Authentication required
+ *       404:
+ *         description: Account not found
+ */
+router.put('/fcm-token', authMiddleware, userController.registerFcmToken);
 router.put('/:id', userController.updateUser);
 router.put('/:id/approve', authMiddleware, userController.approveUser);
 router.delete('/:id', userController.deleteUser);

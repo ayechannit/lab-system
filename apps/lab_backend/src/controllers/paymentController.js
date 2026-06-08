@@ -2,6 +2,7 @@ const Payment = require('../models/paymentModel');
 const Order = require('../models/orderModel');
 const PointSetting = require('../models/pointSettingModel');
 const User = require('../models/userModel');
+const NotificationService = require('../services/notificationService');
 
 const getPaymentByOrderId = async (req, res) => {
   const payments = await Payment.getByOrderId(req.params.order_id);
@@ -21,6 +22,19 @@ const createPayment = async (req, res) => {
   const paymentData = { order_id, amount_mmk, method, status, reference_no };
   try {
     const payment = await Payment.create(paymentData, req.user?.id);
+
+    // Notify user of payment submission
+    const order = await Order.getById(order_id);
+    if (order && order.user_id) {
+      NotificationService.sendToUser(
+        order.user_id,
+        'user',
+        'Payment Submitted',
+        `Your payment submission of ${amount_mmk} MMK was received and is pending review.`,
+        { order_id, payment_id: payment.id, event: 'payment_submitted' }
+      ).catch(err => console.error('Error sending payment creation notification:', err.message));
+    }
+
     res.status(201).json(payment);
   } catch(error) {
      res.status(500).json({ error: error.message });
@@ -69,6 +83,30 @@ const updatePaymentStatus = async (req, res) => {
     if (!payment) return res.status(404).json({ message: 'Payment not found' });
 
     await awardPointsForVerifiedPayment(payment, req.user?.id);
+
+    // Notify user of payment status update
+    const order = await Order.getById(payment.order_id);
+    if (order && order.user_id) {
+      let title = 'Payment Status Updated';
+      let body = `Your payment status for order has been updated to "${status}".`;
+      
+      if (status === 'verified') {
+        title = 'Payment Verified Successfully';
+        body = `Your payment of ${payment.amount_mmk} MMK was verified successfully. Thank you!`;
+      } else if (status === 'failed') {
+        title = 'Payment Verification Failed';
+        body = `Your payment of ${payment.amount_mmk} MMK was marked as failed/rejected. Please verify details or contact support.`;
+      }
+
+      NotificationService.sendToUser(
+        order.user_id,
+        'user',
+        title,
+        body,
+        { order_id: payment.order_id, payment_id: payment.id, status, event: 'payment_status_updated' }
+      ).catch(err => console.error('Error sending payment status update notification:', err.message));
+    }
+
     res.json(payment);
   } catch (error) {
     res.status(500).json({ message: error.message });

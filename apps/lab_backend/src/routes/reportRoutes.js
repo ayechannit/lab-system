@@ -374,4 +374,83 @@ router.get('/discount-impact', authMiddleware, roleMiddleware(['admin', 'manager
  */
 router.get('/ratings-summary', authMiddleware, roleMiddleware(['admin', 'manager']), reportController.getRatingsSummary);
 
+/**
+ * @swagger
+ * /api/reports/user-summary:
+ *   get:
+ *     summary: Get summary metrics and analytics for the logged-in user
+ *     description: Returns personalized KPIs (total orders, spent, points, order statuses), daily spend trends, and top ordered lab tests for the authenticated user/client.
+ *     tags: [Reports]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: startDate
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *       - in: query
+ *         name: endDate
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *     responses:
+ *       200:
+ *         description: Personalized user report data
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     kpis:
+ *                       type: object
+ *                       properties:
+ *                         total_spent:
+ *                           type: number
+ *                         total_orders:
+ *                           type: integer
+ *                         completed_orders:
+ *                           type: integer
+ *                         pending_orders:
+ *                           type: integer
+ *                         loyalty_points:
+ *                           type: integer
+ *                     spendTrend:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           date:
+ *                             type: string
+ *                           spent:
+ *                             type: number
+ *                           order_count:
+ *                             type: integer
+ *                     topTests:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           test_name:
+ *                             type: string
+ *                           test_code:
+ *                             type: string
+ *                           category:
+ *                             type: string
+ *                           order_count:
+ *                             type: integer
+ *                           total_spent:
+ *                             type: number
+ *       401:
+ *         description: Authentication required
+ *       500:
+ *         description: Server error
+ */
+router.get('/user-summary', authMiddleware, reportController.getUserReport);
+
 module.exports = router;

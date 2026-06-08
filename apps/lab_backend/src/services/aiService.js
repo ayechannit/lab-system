@@ -3,17 +3,17 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 const fs = require('fs');
 
 class AiService {
-  static async generate({ config, systemPrompt, message, history = [], stream = false, res, file }) {
+  static async generate({ config, systemPrompt, message, history = [], stream = false, res, file, onComplete }) {
     if (config.type === 'openai') {
-      return this._generateOpenAI({ config, systemPrompt, message, history, stream, res, file });
+      return this._generateOpenAI({ config, systemPrompt, message, history, stream, res, file, onComplete });
     } else if (config.type === 'gemini') {
-      return this._generateGemini({ config, systemPrompt, message, history, stream, res, file });
+      return this._generateGemini({ config, systemPrompt, message, history, stream, res, file, onComplete });
     } else {
       throw new Error('Unsupported AI type');
     }
   }
 
-  static async _generateOpenAI({ config, systemPrompt, message, history, stream, res, file }) {
+  static async _generateOpenAI({ config, systemPrompt, message, history, stream, res, file, onComplete }) {
     const openai = new OpenAI({ apiKey: config.api_key });
     
     const messages = [];
@@ -57,14 +57,23 @@ class AiService {
       res.setHeader('Cache-Control', 'no-cache');
       res.setHeader('Connection', 'keep-alive');
 
+      let fullReply = '';
       for await (const chunk of response) {
         const content = chunk.choices[0]?.delta?.content || '';
         if (content) {
+          fullReply += content;
           res.write(`data: ${JSON.stringify({ text: content })}\n\n`);
         }
       }
       res.write('data: [DONE]\n\n');
       res.end();
+      if (onComplete) {
+        try {
+          await onComplete(fullReply);
+        } catch (err) {
+          console.error('Error in onComplete callback:', err);
+        }
+      }
     } else {
       const response = await openai.chat.completions.create({
         model: config.model_name,
@@ -74,7 +83,7 @@ class AiService {
     }
   }
 
-  static async _generateGemini({ config, systemPrompt, message, history, stream, res, file }) {
+  static async _generateGemini({ config, systemPrompt, message, history, stream, res, file, onComplete }) {
     const genAI = new GoogleGenerativeAI(config.api_key);
     
     const modelOptions = { model: config.model_name };
@@ -111,12 +120,21 @@ class AiService {
       res.setHeader('Cache-Control', 'no-cache');
       res.setHeader('Connection', 'keep-alive');
 
+      let fullReply = '';
       for await (const chunk of result.stream) {
         const chunkText = chunk.text();
+        fullReply += chunkText;
         res.write(`data: ${JSON.stringify({ text: chunkText })}\n\n`);
       }
       res.write('data: [DONE]\n\n');
       res.end();
+      if (onComplete) {
+        try {
+          await onComplete(fullReply);
+        } catch (err) {
+          console.error('Error in onComplete callback:', err);
+        }
+      }
     } else {
       const result = await chat.sendMessage(messageParts);
       return result.response.text();

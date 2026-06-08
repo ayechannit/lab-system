@@ -50,6 +50,18 @@ const createUser = async (req, res) => {
 
     const userData = { name, email, phone, role, password, password_hash, address, latitude, longitude, license_number };
     const user = await User.create(userData, req.user?.id);
+
+    // Notify staff of new registration if role requires approval
+    if (user && ['doctor', 'clinic', 'phlebotomist'].includes(user.role)) {
+      const NotificationService = require('../services/notificationService');
+      NotificationService.sendToTopic(
+        'staff_notifications',
+        'New Registration Pending Approval',
+        `A new ${user.role} account ("${user.name}") has registered and is pending approval.`,
+        { user_id: user.id, event: 'new_registration' }
+      ).catch(err => console.error('Error sending registration alert to staff:', err.message));
+    }
+
     res.status(201).json(user);
   } catch (error) {
     if (error.message.includes('UNIQUE KEY')) {
@@ -104,6 +116,19 @@ const approveUser = async (req, res) => {
     if (!user) return res.status(404).json({ message: 'User not found' });
 
     const updatedUser = await User.approve(req.params.id, req.user?.id);
+
+    // Notify the user of their account approval
+    if (updatedUser) {
+      const NotificationService = require('../services/notificationService');
+      NotificationService.sendToUser(
+        updatedUser.id,
+        'user',
+        'Account Approved',
+        `Your lab account has been approved by the administrators. You can now log in.`,
+        { user_id: updatedUser.id, event: 'account_approved' }
+      ).catch(err => console.error('Error sending account approval notification:', err.message));
+    }
+
     res.json({ message: 'User approved successfully', user: updatedUser });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -120,6 +145,34 @@ const deleteUser = async (req, res) => {
   }
 };
 
+const registerFcmToken = async (req, res) => {
+  try {
+    const { fcm_token } = req.body;
+    if (!fcm_token) {
+      return res.status(400).json({ message: 'fcm_token is required' });
+    }
+
+    const userId = req.user.id;
+    const userType = req.user.type; // 'user' or 'staff'
+    
+    let success;
+    if (userType === 'staff') {
+      const Staff = require('../models/staffModel');
+      success = await Staff.updateFcmToken(userId, fcm_token, userId);
+    } else {
+      success = await User.updateFcmToken(userId, fcm_token, userId);
+    }
+
+    if (!success) {
+      return res.status(404).json({ message: 'Account not found' });
+    }
+
+    res.json({ message: 'FCM token registered successfully' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 module.exports = {
   getAllUsers,
   getUserById,
@@ -128,4 +181,5 @@ module.exports = {
   updateUser,
   approveUser,
   deleteUser,
+  registerFcmToken,
 };

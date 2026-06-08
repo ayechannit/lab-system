@@ -72,4 +72,65 @@ router.use(authMiddleware);
  */
 router.post('/', upload.single('file'), conversationController.chat);
 
+/**
+ * @swagger
+ * /api/conversations/history:
+ *   get:
+ *     summary: Get conversation history for the logged-in user
+ *     tags: [Conversations]
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 50
+ *         description: Maximum number of conversation message pairs to retrieve
+ *     responses:
+ *       200:
+ *         description: A list of conversation message pairs
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: string
+ *                     format: uuid
+ *                   user_id:
+ *                     type: string
+ *                     format: uuid
+ *                   user_message:
+ *                     type: string
+ *                   ai_response:
+ *                     type: string
+ *                   created_at:
+ *                     type: string
+ *                     format: date-time
+ *       401:
+ *         description: Authentication required
+ *       500:
+ *         description: Server error
+ *   delete:
+ *     summary: Clear conversation history for the logged-in user
+ *     tags: [Conversations]
+ *     responses:
+ *       200:
+ *         description: Conversation history cleared successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *       401:
+ *         description: Authentication required
+ *       500:
+ *         description: Server error
+ */
+router.get('/history', conversationController.getHistory);
+router.delete('/history', conversationController.clearHistory);
+
 module.exports = router;

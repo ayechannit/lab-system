@@ -107,3 +107,16 @@ exports.getCollectionReport = async (req, res, next) => {
     next(error);
   }
 };
+
+exports.getUserReport = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const data = await Report.getUserReport(userId, req.query);
+    res.json({
+      success: true,
+      data
+    });
+  } catch (error) {
+    next(error);
+  }
+};

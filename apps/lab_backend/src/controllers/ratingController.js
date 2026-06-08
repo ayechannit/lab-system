@@ -1,5 +1,6 @@
 const Rating = require('../models/ratingModel');
 const Order = require('../models/orderModel');
+const NotificationService = require('../services/notificationService');
 
 const createRating = async (req, res) => {
   try {
@@ -21,6 +22,15 @@ const createRating = async (req, res) => {
 
     const ratingData = { order_id, user_id, rating: ratingScore, remark };
     const rating = await Rating.create(ratingData, req.user?.id);
+
+    // Notify staff of new rating in background
+    NotificationService.sendToTopic(
+      'staff_notifications',
+      'New Order Rating',
+      `User left a ${ratingScore}-star rating for order with remark: "${remark || 'No remark'}".`,
+      { order_id, rating: String(ratingScore), event: 'new_rating_alert' }
+    ).catch(err => console.error('Error sending rating notification to staff:', err.message));
+
     res.status(201).json(rating);
   } catch (error) {
     res.status(400).json({ message: error.message });

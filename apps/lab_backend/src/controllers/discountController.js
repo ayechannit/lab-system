@@ -37,6 +37,35 @@ const upsertDiscount = async (req, res) => {
     }
     const discountData = { test_id, role, discount_percent, is_active };
     const result = await Discount.upsert(discountData, req.user?.id);
+
+    // Send notifications for newly active discounts in background
+    if (result && result.length > 0 && (is_active === undefined || is_active === true || is_active === 1 || is_active === 'true')) {
+      const LabTest = require('../models/testModel');
+      const test = await LabTest.getById(test_id);
+      const testName = test ? test.test_name : 'Selected Lab Test';
+      
+      const NotificationService = require('../services/notificationService');
+      const formattedPercent = parseFloat(discount_percent).toFixed(0);
+
+      // If role is 'all', notify topic 'all_users' or send role-specific dispatches
+      if (role === 'all') {
+        NotificationService.sendToTopic(
+          'all_users',
+          'New Special Discount!',
+          `Get ${formattedPercent}% off on our "${testName}" lab test! Book your test today.`,
+          { test_id, discount_percent: String(discount_percent), event: 'new_discount' }
+        ).catch(err => console.error('Error sending discount broadcast:', err.message));
+      } else {
+        // Broadcast to a specific role-based topic (e.g., 'clinic_notifications', 'doctor_notifications', 'patient_notifications')
+        NotificationService.sendToTopic(
+          `${role}_notifications`,
+          'Exclusive Discount for You!',
+          `Exclusive ${formattedPercent}% off on "${testName}" for ${role} accounts! Limited time offer.`,
+          { test_id, discount_percent: String(discount_percent), event: 'new_discount_targeted' }
+        ).catch(err => console.error(`Error sending role discount broadcast for ${role}:`, err.message));
+      }
+    }
+
     res.json(result);
   } catch (error) {
     res.status(500).json({ error: error.message });

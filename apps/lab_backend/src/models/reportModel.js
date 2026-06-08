@@ -346,6 +346,76 @@ class Report {
     const result = await request.query(query);
     return result.recordset;
   }
+
+  static async getUserReport(userId, filters = {}) {
+    const pool = await poolPromise;
+    const request = pool.request();
+    request.input('user_id', sql.UniqueIdentifier, userId);
+    
+    let dateFilter = '';
+    if (filters.startDate) {
+      dateFilter += ' AND created_at >= @startDate';
+      request.input('startDate', sql.DateTime2, filters.startDate);
+    }
+    if (filters.endDate) {
+      dateFilter += ' AND created_at <= @endDate';
+      request.input('endDate', sql.DateTime2, filters.endDate);
+    }
+
+    // 1. Query user-specific KPIs
+    const kpiQuery = `
+      SELECT 
+        (SELECT ISNULL(SUM(final_price_mmk), 0) FROM lab_orders WHERE user_id = @user_id AND is_deleted = 0 AND status = 'delivered' ${dateFilter}) as total_spent,
+        (SELECT COUNT(*) FROM lab_orders WHERE user_id = @user_id AND is_deleted = 0 ${dateFilter}) as total_orders,
+        (SELECT COUNT(*) FROM lab_orders WHERE user_id = @user_id AND is_deleted = 0 AND status IN ('completed', 'delivered') ${dateFilter}) as completed_orders,
+        (SELECT COUNT(*) FROM lab_orders WHERE user_id = @user_id AND is_deleted = 0 AND status NOT IN ('completed', 'delivered') ${dateFilter}) as pending_orders,
+        (SELECT ISNULL(total_points, 0) FROM users WHERE id = @user_id) as loyalty_points
+    `;
+    const kpiResult = await request.query(kpiQuery);
+
+    // 2. Query spend & order trends
+    const trendQuery = `
+      SELECT 
+        CAST(created_at AS DATE) as date,
+        SUM(final_price_mmk) as spent,
+        COUNT(*) as order_count
+      FROM lab_orders
+      WHERE user_id = @user_id AND is_deleted = 0 ${dateFilter}
+      GROUP BY CAST(created_at AS DATE)
+      ORDER BY date ASC
+    `;
+    const trendResult = await request.query(trendQuery);
+
+    // 3. Query top ordered tests
+    let testFilter = '';
+    if (filters.startDate) {
+      testFilter += ' AND o.created_at >= @startDate';
+    }
+    if (filters.endDate) {
+      testFilter += ' AND o.created_at <= @endDate';
+    }
+    const topTestsQuery = `
+      SELECT TOP 5
+        tc.test_name,
+        tc.test_code,
+        tc.category,
+        COUNT(oi.id) as order_count,
+        SUM(oi.subtotal_mmk) as total_spent
+      FROM lab_order_items oi
+      JOIN lab_test_catalog tc ON oi.test_id = tc.id
+      JOIN lab_orders o ON oi.order_id = o.id
+      WHERE o.user_id = @user_id AND o.is_deleted = 0 ${testFilter}
+      GROUP BY tc.test_name, tc.test_code, tc.category
+      ORDER BY order_count DESC
+    `;
+    const topTestsResult = await request.query(topTestsQuery);
+
+    return {
+      kpis: kpiResult.recordset[0],
+      spendTrend: trendResult.recordset,
+      topTests: topTestsResult.recordset
+    };
+  }
 }
 
 module.exports = Report;

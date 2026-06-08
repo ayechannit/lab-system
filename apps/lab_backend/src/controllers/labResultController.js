@@ -1,5 +1,6 @@
 const LabResult = require('../models/labResultModel');
 const AiQualityCheck = require('../models/aiQualityCheckModel');
+const NotificationService = require('../services/notificationService');
 
 exports.createResult = async (req, res, next) => {
   try {
@@ -46,6 +47,17 @@ exports.addAiQualityCheck = async (req, res, next) => {
       ...req.body,
       result_id: req.params.resultId
     }, req.user.id);
+
+    // Send notification if verdict is not pass
+    if (aiCheck && aiCheck.verdict !== 'pass') {
+      NotificationService.sendToTopic(
+        'staff_notifications',
+        'AI Quality Check Issue',
+        `A lab result has failed AI Quality Check with verdict "${aiCheck.verdict}". Immediate review required.`,
+        { result_id: aiCheck.result_id, verdict: aiCheck.verdict, event: 'ai_check_failed' }
+      ).catch(err => console.error('Error sending AI quality check notification:', err.message));
+    }
+
     res.status(201).json({
       success: true,
       data: aiCheck
