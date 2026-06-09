@@ -55,6 +55,14 @@ class RestLabUserApi implements LabUserApi {
     return s;
   }
 
+  String _absoluteUrl(String url) {
+    final trimmed = url.trim();
+    if (trimmed.isEmpty) return trimmed;
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) return trimmed;
+    if (trimmed.startsWith('/')) return '$_base$trimmed';
+    return '$_base/$trimmed';
+  }
+
   Map<String, String> _jsonHeaders({bool withAuth = true}) {
     final h = <String, String>{'Content-Type': 'application/json', 'Accept': 'application/json'};
     if (withAuth && _token != null) {
@@ -552,43 +560,91 @@ class RestLabUserApi implements LabUserApi {
   }
 
   @override
-  Future<LabOrderSummary?> getTrackingOrder(String userId) async {
+  Future<List<LabOrderSummary>> listActiveOrders(
+    String userId, {
+    String excludeStatus = 'delivered',
+    int limit = 50,
+    int page = 1,
+  }) async {
+    final exclude = Uri.encodeQueryComponent(excludeStatus.trim().toLowerCase());
     final r = await http.get(
-      Uri.parse('$_base/api/users/$userId/orders?limit=1&page=1'),
+      Uri.parse('$_base/api/users/$userId/orders?exclude_status=$exclude&limit=$limit&page=$page'),
       headers: _jsonHeaders(),
     );
     if (r.statusCode >= 400) _throwFromResponse(r);
     final list = jsonDecode(r.body);
-    if (list is! List || list.isEmpty) return null;
-    final first = _asObj(list.first);
-    final id = '${_gv(first, 'id')}';
+    if (list is! List) return const [];
+    final out = <LabOrderSummary>[];
+    for (final raw in list) {
+      final row = _asObj(raw);
+      final summary = _mapListRowToSummary(row);
+      if (summary != null) out.add(summary);
+    }
+    return out;
+  }
+
+  LabOrderSummary? _mapListRowToSummary(Map<String, dynamic> row) {
+    final id = '${_gv(row, 'id')}';
     if (id.isEmpty) return null;
-    return _hydrateOrderSummary(id);
+    final userId = '${_gv(row, 'user_id') ?? _gv(row, 'userId')}';
+    final patientName = '${_gv(row, 'patient_name') ?? _gv(row, 'patientName') ?? ''}';
+    final desc = '${_gv(row, 'description') ?? ''}';
+    final priorityRaw = '${_gv(row, 'priority') ?? 'elective'}'.toLowerCase();
+    final priority = priorityRaw == 'urgent' ? OrderPriority.urgent : OrderPriority.elective;
+    final addressLine = '${_gv(row, 'address') ?? ''}';
+    final lat = _asDouble(_gv(row, 'latitude'));
+    final lng = _asDouble(_gv(row, 'longitude'));
+    final createdAt = _asDt(_gv(row, 'created_at') ?? _gv(row, 'createdAt')) ?? DateTime.now();
+    final createdLabel =
+        '${createdAt.year}-${createdAt.month.toString().padLeft(2, '0')}-${createdAt.day.toString().padLeft(2, '0')}';
+    final status = '${_gv(row, 'status') ?? 'pending'}'.toLowerCase();
+    final timeline = _buildTimeline(status, createdAt, null, null, null, null);
+    return LabOrderSummary(
+      id: id,
+      userId: userId,
+      patientName: patientName,
+      testType: desc.trim().isEmpty ? 'Lab test' : desc.split('\n').first.trim(),
+      description: desc,
+      priority: priority,
+      address: LabAddress(line: addressLine, latitude: lat, longitude: lng),
+      createdAt: createdAt,
+      timeline: timeline,
+      createdAtLabel: createdLabel,
+      backendStatus: status,
+    );
   }
 
   @override
-  Future<LabResultReport?> getLatestResult(String userId) async {
+  Future<LabOrderSummary> getOrderSummary(String orderId) => _hydrateOrderSummary(orderId);
+
+  @override
+  Future<List<LabOrderSummary>> listReleasedOrders(
+    String userId, {
+    int limit = 50,
+    int page = 1,
+  }) async {
     final r = await http.get(
-      Uri.parse('$_base/api/users/$userId/orders?limit=30&page=1'),
+      Uri.parse('$_base/api/users/$userId/orders?status=delivered&limit=$limit&page=$page'),
       headers: _jsonHeaders(),
     );
     if (r.statusCode >= 400) _throwFromResponse(r);
     final list = jsonDecode(r.body);
-    if (list is! List) return null;
-
+    if (list is! List) return const [];
+    final out = <LabOrderSummary>[];
     for (final raw in list) {
-      final summary = _asObj(raw);
-      final status = '${_gv(summary, 'status')}'.toLowerCase();
-      if (status != 'completed' && status != 'delivered') continue;
-      final id = '${_gv(summary, 'id')}';
-      final detail = await http.get(Uri.parse('$_base/api/orders/$id'), headers: _jsonHeaders());
-      if (detail.statusCode >= 400) continue;
-      final o = _asObj(jsonDecode(detail.body));
-      final items = o['items'];
-      if (items is! List) continue;
-      String? pdf;
-      DateTime? released;
-      var sampleRef = '';
+      final row = _asObj(raw);
+      final summary = _mapListRowToSummary(row);
+      if (summary != null) out.add(summary);
+    }
+    return out;
+  }
+
+  LabResultReport _mapOrderDetailToResult(Map<String, dynamic> o, String orderId) {
+    final items = o['items'];
+    String? pdf;
+    DateTime? released;
+    var sampleRef = '';
+    if (items is List) {
       for (final it in items) {
         final m = _asObj(it);
         final u = _gv(m, 'download_url') ?? _gv(m, 'downloadUrl');
@@ -599,22 +655,86 @@ class RestLabUserApi implements LabUserApi {
           break;
         }
       }
-      if (pdf == null) continue;
-      if (sampleRef.isEmpty) {
-        sampleRef = '${_gv(o, 'description')}'.trim();
+    }
+    if (sampleRef.isEmpty) {
+      sampleRef = '${_gv(o, 'description')}'.trim();
+    }
+    if (sampleRef.isEmpty) {
+      sampleRef = '${_gv(o, 'patient_name') ?? _gv(o, 'patientName') ?? ''}'.trim();
+    }
+    if (sampleRef.isEmpty && orderId.length >= 8) {
+      sampleRef = orderId.substring(0, 8);
+    }
+    return LabResultReport(
+      orderId: orderId,
+      sampleId: sampleRef.isEmpty ? orderId : sampleRef,
+      releasedAt: released ?? DateTime.now(),
+      lines: const [],
+      resultPdfUrl: pdf,
+    );
+  }
+
+  @override
+  Future<LabResultReport?> getResultForOrder({
+    required String userId,
+    required String orderId,
+  }) async {
+    final detail = await http.get(Uri.parse('$_base/api/orders/$orderId'), headers: _jsonHeaders());
+    if (detail.statusCode >= 400) _throwFromResponse(detail);
+    final o = _asObj(jsonDecode(detail.body));
+    final owner = '${_gv(o, 'user_id') ?? _gv(o, 'userId')}';
+    if (owner.toLowerCase() != userId.toLowerCase()) {
+      throw LabApiException('Order does not belong to the current user.');
+    }
+    final status = '${_gv(o, 'status')}'.toLowerCase();
+    if (status != 'delivered') return null;
+    return _mapOrderDetailToResult(o, orderId);
+  }
+
+  @override
+  Future<LabOrderSummary?> getTrackingOrder(String userId) async {
+    final active = await listActiveOrders(userId, limit: 1, page: 1);
+    if (active.isEmpty) return null;
+    return getOrderSummary(active.first.id);
+  }
+
+  @override
+  Future<LabResultReport?> getLatestResult(String userId) async {
+    final released = await listReleasedOrders(userId, limit: 30);
+    for (final order in released) {
+      final report = await getResultForOrder(userId: userId, orderId: order.id);
+      if (report?.resultPdfUrl != null && report!.resultPdfUrl!.isNotEmpty) {
+        return report;
       }
-      if (sampleRef.isEmpty && id.length >= 8) {
-        sampleRef = id.substring(0, 8);
-      }
-      return LabResultReport(
-        orderId: id,
-        sampleId: sampleRef.isEmpty ? id : sampleRef,
-        releasedAt: released ?? DateTime.now(),
-        lines: const [],
-        resultPdfUrl: pdf,
-      );
     }
     return null;
+  }
+
+  bool _historyMessageMatchesOrder(String userMessage, String orderId) {
+    try {
+      final parsed = jsonDecode(userMessage);
+      if (parsed is! Map) return false;
+      final m = _asObj(parsed);
+      final oid = '${_gv(m, 'order_id') ?? _gv(m, 'orderId')}';
+      return oid.toLowerCase() == orderId.toLowerCase();
+    } catch (_) {
+      return userMessage.toLowerCase().contains(orderId.toLowerCase());
+    }
+  }
+
+  AiAnalysisResult _mapConversationToAnalysis({
+    required String orderId,
+    required String reply,
+    DateTime? generatedAt,
+  }) {
+    final trimmed = reply.trim();
+    return AiAnalysisResult(
+      orderId: orderId,
+      generatedAt: generatedAt ?? DateTime.now(),
+      summary: trimmed.length > 160 ? '${trimmed.substring(0, 157)}...' : trimmed,
+      observation: trimmed,
+      recommendation: 'Discuss these findings with your clinician if you have symptoms or concerns.',
+    );
   }
 
   @override
@@ -622,6 +742,29 @@ class RestLabUserApi implements LabUserApi {
     required String userId,
     required String orderId,
   }) async {
+    try {
+      final r = await http.get(
+        Uri.parse('$_base/api/conversations/history?limit=50'),
+        headers: _jsonHeaders(),
+      );
+      if (r.statusCode >= 400) return null;
+      final list = jsonDecode(r.body);
+      if (list is! List) return null;
+
+      for (var i = list.length - 1; i >= 0; i--) {
+        final m = _asObj(list[i]);
+        final userMsg = '${_gv(m, 'user_message') ?? _gv(m, 'userMessage') ?? ''}';
+        final reply = '${_gv(m, 'ai_response') ?? _gv(m, 'aiResponse') ?? ''}'.trim();
+        if (reply.isEmpty || !_historyMessageMatchesOrder(userMsg, orderId)) continue;
+        return _mapConversationToAnalysis(
+          orderId: orderId,
+          reply: reply,
+          generatedAt: _asDt(_gv(m, 'created_at') ?? _gv(m, 'createdAt')),
+        );
+      }
+    } catch (_) {
+      /* optional cache */
+    }
     return null;
   }
 
@@ -643,6 +786,13 @@ class RestLabUserApi implements LabUserApi {
     required String userId,
     required String orderId,
   }) async {
+    final promptId = LabApiConfig.labResultSummarizedPromptId.trim();
+    if (promptId.isEmpty) {
+      throw LabApiException(
+        'Lab result summary prompt is not configured. Set LAB_RESULT_SUMMARIZED_PROMPT_ID.',
+      );
+    }
+
     final detail = await http.get(Uri.parse('$_base/api/orders/$orderId'), headers: _jsonHeaders());
     if (detail.statusCode >= 400) _throwFromResponse(detail);
     final o = _asObj(jsonDecode(detail.body));
@@ -650,42 +800,136 @@ class RestLabUserApi implements LabUserApi {
     if (owner.toLowerCase() != userId.toLowerCase()) {
       throw LabApiException('Order does not belong to the current user.');
     }
+    final tests = <Map<String, dynamic>>[];
     final items = o['items'];
-    final buffer = StringBuffer('Lab order $orderId.\n');
     if (items is List) {
       for (final it in items) {
         final m = _asObj(it);
-        final u = _gv(m, 'download_url') ?? _gv(m, 'downloadUrl');
-        if (u != null && '$u'.isNotEmpty) {
-          buffer.writeln('Result PDF: $u');
-        }
+        final url = _gv(m, 'download_url') ?? _gv(m, 'downloadUrl');
+        if (url == null || '$url'.isEmpty) continue;
+        tests.add({
+          'test_id': _gv(m, 'test_id') ?? _gv(m, 'testId'),
+          'test_name': _gv(m, 'test_name') ?? _gv(m, 'testName'),
+          'test_code': _gv(m, 'test_code') ?? _gv(m, 'testCode'),
+          'result_pdf_url': '$url',
+        });
       }
     }
+    if (tests.isEmpty) {
+      throw LabApiException('No result PDF is available for this order yet.');
+    }
+
+    final message = jsonEncode({
+      'order_id': orderId,
+      'patient_name': _gv(o, 'patient_name') ?? _gv(o, 'patientName'),
+      'tests': tests,
+    });
     final aiId = await _resolveAiConfigId();
-    final r = await http.post(
-      Uri.parse('$_base/api/conversations'),
-      headers: _jsonHeaders(),
-      body: jsonEncode({
-        'ai_config_id': aiId,
-        'message':
-            'You are assisting a patient. Summarize these lab results in plain language, note any concerns, and suggest next steps (non-diagnostic). Data:\n${buffer.toString()}',
-        'stream': false,
-      }),
-    );
+
+    List<int>? pdfBytes;
+    final firstPdfUrl = '${tests.first['result_pdf_url']}';
+    if (firstPdfUrl.isNotEmpty) {
+      try {
+        final pdfRes = await http.get(Uri.parse(_absoluteUrl(firstPdfUrl)), headers: _jsonHeaders());
+        if (pdfRes.statusCode < 400 && pdfRes.bodyBytes.isNotEmpty) {
+          pdfBytes = pdfRes.bodyBytes;
+        }
+      } catch (_) {
+        /* fall back to URL-only message */
+      }
+    }
+
+    final http.Response r;
+    if (pdfBytes != null) {
+      final mp = http.MultipartRequest('POST', Uri.parse('$_base/api/conversations'));
+      if (_token != null) {
+        mp.headers['Authorization'] = 'Bearer $_token';
+      }
+      mp.headers['Accept'] = 'application/json';
+      mp.fields['ai_config_id'] = aiId;
+      mp.fields['prompt_id'] = promptId;
+      mp.fields['message'] = message;
+      mp.fields['stream'] = 'false';
+      mp.files.add(
+        http.MultipartFile.fromBytes(
+          'file',
+          pdfBytes,
+          filename: 'lab-result.pdf',
+          contentType: MediaType('application', 'pdf'),
+        ),
+      );
+      final streamed = await mp.send();
+      r = await http.Response.fromStream(streamed);
+    } else {
+      r = await http.post(
+        Uri.parse('$_base/api/conversations'),
+        headers: _jsonHeaders(),
+        body: jsonEncode({
+          'ai_config_id': aiId,
+          'prompt_id': promptId,
+          'message': message,
+          'stream': false,
+        }),
+      );
+    }
+
     if (r.statusCode >= 400) _throwFromResponse(r);
     final map = _asObj(jsonDecode(r.body));
-    final reply = '${map['reply'] ?? map['message'] ?? 'No reply from AI.'}';
-    return AiAnalysisResult(
+    final reply = '${map['reply'] ?? map['message'] ?? ''}'.trim();
+    if (reply.isEmpty) {
+      throw LabApiException('No text returned from AI.');
+    }
+    return _mapConversationToAnalysis(orderId: orderId, reply: reply);
+  }
+
+  OrderRatingSummary? _parseRatingSummary(dynamic raw) {
+    final m = _asObj(raw);
+    final id = '${_gv(m, 'id')}';
+    final orderId = '${_gv(m, 'order_id') ?? _gv(m, 'orderId')}';
+    if (id.isEmpty || orderId.isEmpty) return null;
+    return OrderRatingSummary(
+      id: id,
       orderId: orderId,
-      generatedAt: DateTime.now(),
-      summary: reply.length > 160 ? '${reply.substring(0, 157)}...' : reply,
-      observation: reply,
-      recommendation: 'Discuss these findings with your clinician if you have symptoms or concerns.',
+      stars: _asInt(_gv(m, 'rating'), 0),
+      remark: '${_gv(m, 'remark') ?? ''}',
+      createdAt: _asDt(_gv(m, 'created_at') ?? _gv(m, 'createdAt')) ?? DateTime.now(),
     );
   }
 
   @override
-  Future<void> submitRating({
+  Future<List<OrderRatingSummary>> listUserRatings(
+    String userId, {
+    int limit = 100,
+    int page = 1,
+  }) async {
+    final r = await http.get(
+      Uri.parse('$_base/api/ratings?user_id=$userId&limit=$limit&page=$page'),
+      headers: _jsonHeaders(),
+    );
+    if (r.statusCode >= 400) _throwFromResponse(r);
+    final list = jsonDecode(r.body);
+    if (list is! List) return const [];
+    final out = <OrderRatingSummary>[];
+    for (final raw in list) {
+      final parsed = _parseRatingSummary(raw);
+      if (parsed != null) out.add(parsed);
+    }
+    return out;
+  }
+
+  @override
+  Future<OrderRatingSummary?> getOrderRating(String orderId) async {
+    final r = await http.get(
+      Uri.parse('$_base/api/ratings/order/$orderId'),
+      headers: _jsonHeaders(),
+    );
+    if (r.statusCode == 404) return null;
+    if (r.statusCode >= 400) _throwFromResponse(r);
+    return _parseRatingSummary(jsonDecode(r.body));
+  }
+
+  @override
+  Future<OrderRatingSummary> submitRating({
     required String userId,
     required RatingDraft rating,
   }) async {
@@ -700,6 +944,11 @@ class RestLabUserApi implements LabUserApi {
       }),
     );
     if (r.statusCode >= 400) _throwFromResponse(r);
+    final saved = _parseRatingSummary(jsonDecode(r.body));
+    if (saved == null) {
+      throw LabApiException('Rating saved but response was invalid.');
+    }
+    return saved;
   }
 
   @override

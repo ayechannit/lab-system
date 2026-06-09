@@ -17,6 +17,14 @@ class HomeDashboardScreen extends StatelessWidget {
 
   static const double _maxContentWidth = 720;
 
+  static void _openResults(BuildContext context, LabResultReport? report) {
+    if (report != null) {
+      context.push('/lab-result-detail');
+      return;
+    }
+    context.go('/lab-results');
+  }
+
   @override
   Widget build(BuildContext context) {
     final session = SessionScope.of(context);
@@ -120,13 +128,13 @@ class HomeDashboardScreen extends StatelessWidget {
                     ),
                   ),
                   TextButton(
-                    onPressed: () => context.push('/lab-results'),
+                    onPressed: () => _openResults(context, latestReport),
                     child: const Text('Full report'),
                   ),
                 ],
               ),
               const SizedBox(height: 12),
-              LabResultInsightCards(report: latestReport),
+              LabResultInsightCards(report: latestReport, compact: true),
               const SizedBox(height: 22),
               Text(
                 'Quick actions',
@@ -153,7 +161,7 @@ class HomeDashboardScreen extends StatelessWidget {
                   QuickActionButton(
                     icon: Icons.assignment_outlined,
                     label: 'View results',
-                    onTap: () => context.push('/lab-results'),
+                    onTap: () => _openResults(context, latestReport),
                     iconBackgroundColor: const Color(0xFFEAF9F1),
                     iconColor: const Color(0xFF0D8A5B),
                   ),
@@ -231,7 +239,7 @@ class _AtAGlanceStrip extends StatelessWidget {
           iconBg: const Color(0xFFEAF9F1),
           title: reportTitle,
           subtitle: reportSubtitle,
-          onTap: () => context.push('/lab-results'),
+          onTap: () => HomeDashboardScreen._openResults(context, latestReport),
         ),
       ),
       SizedBox(width: useRow ? 10 : 0, height: useRow ? 0 : 10),
@@ -271,7 +279,7 @@ class _AtAGlanceStrip extends StatelessWidget {
           iconBg: const Color(0xFFEAF9F1),
           title: reportTitle,
           subtitle: reportSubtitle,
-          onTap: () => context.push('/lab-results'),
+          onTap: () => HomeDashboardScreen._openResults(context, latestReport),
         ),
         const SizedBox(height: 10),
         _GlanceCard(

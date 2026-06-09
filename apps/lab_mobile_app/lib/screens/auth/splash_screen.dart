@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../app/app_settings_scope.dart';
 import '../../app/session_scope.dart';
-import '../../theme/app_colors.dart';
 import '../../theme/theme_extensions.dart';
 import '../../widgets/common/app_brand_mark.dart';
 
@@ -41,14 +40,21 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
 
   @override
   Widget build(BuildContext context) {
+    final cs = context.cs;
+    final extras = context.appExtras;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
+      backgroundColor: cs.surface,
       body: SizedBox.expand(
         child: DecoratedBox(
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              colors: [Color(0xFFF3F2FB), Color(0xFFF7F6FD)],
+              colors: isDark
+                  ? [cs.surface, extras.surfaceContainer]
+                  : [cs.surface, extras.surfaceContainer.withValues(alpha: 0.65)],
             ),
           ),
           child: SafeArea(
@@ -72,7 +78,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                     AppSettingsScope.of(context).labName,
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          color: const Color(0xFF121523),
+                          color: cs.primary,
                           fontWeight: FontWeight.w800,
                         ),
                   ),
@@ -84,7 +90,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                       child: Container(
                         width: 240,
                         height: 4,
-                        color: const Color(0xFFE7E8F2),
+                        color: cs.outline.withValues(alpha: isDark ? 0.45 : 0.35),
                         child: AnimatedBuilder(
                           animation: _loadingController,
                           builder: (context, _) {
@@ -96,7 +102,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                                   width: 76,
                                   height: 4,
                                   decoration: BoxDecoration(
-                                    color: AppColors.primaryLight,
+                                    color: cs.primary,
                                     borderRadius: BorderRadius.circular(99),
                                   ),
                                 ),
@@ -112,7 +118,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                     'Loading…',
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: context.cs.onSurfaceVariant.withValues(alpha: 0.85),
+                          color: cs.onSurfaceVariant,
                         ),
                   ),
                   const SizedBox(height: 12),

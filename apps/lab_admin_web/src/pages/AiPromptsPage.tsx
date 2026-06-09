@@ -17,7 +17,7 @@ import {
 } from '../services/promptService'
 import '../components/common/ui.css'
 
-const colSpan = 4
+const colSpan = 5
 
 function formatWhen(iso?: string): string {
   if (!iso) return '—'
@@ -206,6 +206,7 @@ export function AiPromptsPage() {
           <table className="data-table data-table--align-left">
             <thead>
               <tr>
+                <th>ID</th>
                 <th>Name</th>
                 <th>Preview</th>
                 <th>Updated</th>
@@ -247,6 +248,9 @@ export function AiPromptsPage() {
               ) : (
                 paged.map((r) => (
                   <tr key={r.id}>
+                    <td>
+                      <code style={{ fontSize: '0.72rem', wordBreak: 'break-all' }}>{r.id}</code>
+                    </td>
                     <td>{r.name}</td>
                     <td title={r.prompt_text}>{previewPromptText(r.prompt_text)}</td>
                     <td>{formatWhen(r.updated_at ?? r.created_at)}</td>

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../app/session_scope.dart';
 import '../../theme/theme_extensions.dart';
 import '../../widgets/common/app_branding_row.dart';
+import '../../widgets/common/app_toast.dart';
 import '../../widgets/navigation/lab_main_bottom_nav.dart';
 
 class RatingFeedbackScreen extends StatefulWidget {
@@ -143,8 +144,10 @@ class _RatingFeedbackScreenState extends State<RatingFeedbackScreen> {
                           )
                           .then((_) {
                         if (!context.mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Rating submitted ($_stars stars).')),
+                        AppToast.successInShell(
+                          context,
+                          'You rated $_stars star${_stars == 1 ? '' : 's'}.',
+                          title: 'Thanks for your feedback',
                         );
                       });
                     },

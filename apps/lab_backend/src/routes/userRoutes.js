@@ -294,6 +294,12 @@ const userController = require('../controllers/userController');
  *           enum: [pending, scheduled, collecting, running, completed, delivered]
  *         description: Filter user's orders by status
  *       - in: query
+ *         name: exclude_status
+ *         schema:
+ *           type: string
+ *           enum: [pending, scheduled, collecting, running, completed, delivered]
+ *         description: Exclude orders with this status (e.g. delivered for active order lists)
+ *       - in: query
  *         name: page
  *         schema:
  *           type: integer

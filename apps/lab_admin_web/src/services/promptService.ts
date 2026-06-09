@@ -60,3 +60,22 @@ export function previewPromptText(text: string, max = 120): string {
   if (t.length <= max) return t || '—'
   return `${t.slice(0, max - 1)}…`
 }
+
+export function pickPromptId(
+  prompts: PromptRow[],
+  options: {
+    preferredId?: string
+    namePattern: RegExp
+    excludePattern?: RegExp
+  },
+): string {
+  const preferred = options.preferredId?.trim()
+  if (preferred && prompts.some((p) => p.id.toLowerCase() === preferred.toLowerCase())) {
+    return preferred
+  }
+  const match = prompts.find((p) => {
+    if (options.excludePattern?.test(p.name)) return false
+    return options.namePattern.test(p.name)
+  })
+  return match?.id ?? preferred ?? ''
+}

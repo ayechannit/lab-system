@@ -32,10 +32,10 @@ class LabMainBottomNav extends StatelessWidget {
         context.go(session.homeRoute);
         break;
       case LabMainTab.orders:
-        context.push('/order-lab-test');
+        context.go('/orders');
         break;
       case LabMainTab.results:
-        context.push('/lab-results');
+        context.go('/lab-results');
         break;
       case LabMainTab.points:
         context.push('/loyalty');

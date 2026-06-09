@@ -86,7 +86,7 @@ ThemeData buildAppThemeForSettings(LabSystemSettings settings, {required Brightn
       labelSmall: TextStyle(fontSize: 12, height: 16 / 12, fontWeight: FontWeight.w500, color: onSurfaceVariant),
     ),
     appBarTheme: AppBarTheme(
-      centerTitle: true,
+      centerTitle: false,
       elevation: 0,
       scrolledUnderElevation: 0.5,
       backgroundColor: surface,
@@ -169,6 +169,13 @@ ThemeData buildAppThemeForSettings(LabSystemSettings settings, {required Brightn
       backgroundColor: cardColor,
       selectedItemColor: primary,
       unselectedItemColor: onSurfaceVariant,
+    ),
+    snackBarTheme: SnackBarThemeData(
+      elevation: 0,
+      backgroundColor: Colors.transparent,
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      contentTextStyle: TextStyle(color: onSurface, fontWeight: FontWeight.w500),
     ),
     extensions: [
       AppThemeExtras(

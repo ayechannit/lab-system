@@ -12,9 +12,8 @@ import {
 import { LoadingSpinner } from '../components/common/LoadingSpinner'
 import { DEFAULT_TABLE_PAGE_SIZE, TablePagination } from '../components/common/TablePagination'
 import { isApiMode } from '../services/apiBase'
-import { fetchAiConfigs, type AiConfigRow } from '../services/aiConfigService'
+import { getAiConfigId, getLabResultValidationPromptId, isLabResultReviewConfigured } from '../config/aiEnv'
 import { reviewLabResultWithAi } from '../services/aiConversationService'
-import { fetchPrompts, type PromptRow } from '../services/promptService'
 import {
   fetchOrderById,
   fetchOrders,
@@ -33,16 +32,51 @@ type AiReviewEntry = {
   reviewedAt: string
 }
 
+type AiReviewVerdict = 'pass' | 'fail' | 'neutral'
+
+type ParsedAiReview = {
+  verdict: AiReviewVerdict | null
+  label: string | null
+  detail: string | null
+  isCompact: boolean
+}
+
+const AI_REVIEW_VERDICT_PATTERNS: { verdict: AiReviewVerdict; re: RegExp; label: string }[] = [
+  { verdict: 'fail', re: /^incorrect\b/i, label: 'Incorrect' },
+  { verdict: 'fail', re: /^(fail|failed|invalid|rejected?)\b/i, label: 'Failed' },
+  { verdict: 'pass', re: /^correct\b/i, label: 'Correct' },
+  { verdict: 'pass', re: /^(pass|passed|valid|approved?)\b/i, label: 'Passed' },
+]
+
+function parseAiReviewReply(reply: string): ParsedAiReview {
+  const trimmed = reply.trim()
+  if (!trimmed) {
+    return { verdict: null, label: null, detail: null, isCompact: true }
+  }
+
+  for (const pattern of AI_REVIEW_VERDICT_PATTERNS) {
+    if (!pattern.re.test(trimmed)) continue
+    const rest = trimmed.replace(pattern.re, '').trim().replace(/^[:\-—]\s*/, '')
+    return {
+      verdict: pattern.verdict,
+      label: pattern.label,
+      detail: rest || null,
+      isCompact: !rest,
+    }
+  }
+
+  return { verdict: null, label: null, detail: trimmed, isCompact: false }
+}
+
+function formatAiReviewedAt(iso: string): string {
+  return new Date(iso).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })
+}
+
 function testResultFileUrl(item: ApiOrderDetailItem): string | null {
   const d = item.download_url?.trim()
   if (d) return d
   const u = item.result_file_url?.trim()
   return u || null
-}
-
-function pickDefaultLabReviewPrompt(prompts: PromptRow[]): string {
-  const match = prompts.find((p) => /lab|result|review/i.test(p.name))
-  return match?.id ?? ''
 }
 
 function labResultStatusBadgeClass(status: ApiOrderStatus): string {
@@ -55,38 +89,6 @@ function labResultStatusBadgeClass(status: ApiOrderStatus): string {
     delivered: 'badge badge--success',
   }
   return map[status] ?? 'badge badge--neutral'
-}
-
-function LabResultOrderSwitcher({
-  orders,
-  activeId,
-  onSelect,
-}: {
-  orders: ApiOrderListRow[]
-  activeId: string
-  onSelect: (id: string) => void
-}) {
-  if (orders.length <= 1) return null
-  return (
-    <div className="lab-result-segmented" role="tablist" aria-label="Switch selected order">
-      {orders.map((o) => (
-        <button
-          key={o.id}
-          type="button"
-          role="tab"
-          aria-selected={activeId === o.id}
-          className={
-            activeId === o.id
-              ? 'lab-result-segmented__btn lab-result-segmented__btn--active'
-              : 'lab-result-segmented__btn'
-          }
-          onClick={() => onSelect(o.id)}
-        >
-          {o.patient_name}
-        </button>
-      ))}
-    </div>
-  )
 }
 
 const LAB_RESULT_STATUS_OPTIONS: { value: '' | ApiOrderStatus; label: string }[] = [
@@ -114,8 +116,6 @@ export function LabResultManagementPage() {
   useErrorToast(listError)
 
   const [orderId, setOrderId] = useState('')
-  const [selectedOrderIds, setSelectedOrderIds] = useState<Set<string>>(() => new Set())
-  const selectAllPageRef = useRef<HTMLInputElement>(null)
   const [detail, setDetail] = useState<ApiOrderDetail | null>(null)
   const [detailLoading, setDetailLoading] = useState(false)
   const [detailError, setDetailError] = useState<string | null>(null)
@@ -131,14 +131,12 @@ export function LabResultManagementPage() {
   const [ordersPage, setOrdersPage] = useState(1)
   const [ordersPageSize, setOrdersPageSize] = useState(DEFAULT_TABLE_PAGE_SIZE)
   const [refreshTick, setRefreshTick] = useState(0)
-  const [aiConfigs, setAiConfigs] = useState<AiConfigRow[]>([])
-  const [aiConfigId, setAiConfigId] = useState('')
-  const [promptId, setPromptId] = useState('')
+  const aiConfigId = getAiConfigId()
+  const promptId = getLabResultValidationPromptId()
+  const aiReviewConfigured = isLabResultReviewConfigured()
   const [aiReviewByTestId, setAiReviewByTestId] = useState<Record<string, AiReviewEntry>>({})
   const [aiReviewLoadingTestId, setAiReviewLoadingTestId] = useState<string | null>(null)
   const [aiReviewErrorByTestId, setAiReviewErrorByTestId] = useState<Record<string, string>>({})
-  const [releaseReviewOpen, setReleaseReviewOpen] = useState(false)
-  const [releaseReviewTestId, setReleaseReviewTestId] = useState<string | null>(null)
   const [statusSubmitting, setStatusSubmitting] = useState(false)
   const [releaseSubmitting, setReleaseSubmitting] = useState(false)
 
@@ -168,7 +166,6 @@ export function LabResultManagementPage() {
   }, [patientName, statusFilter])
 
   useEffect(() => {
-    setSelectedOrderIds(new Set())
     setOrderId('')
   }, [ordersListQuery])
 
@@ -207,38 +204,10 @@ export function LabResultManagementPage() {
   }, [hasApi, ordersListQuery, refreshTick])
 
   useEffect(() => {
-    if (!hasApi) {
-      setAiConfigs([])
-      return
-    }
-    let cancelled = false
-    void (async () => {
-      try {
-        const [configs, promptRows] = await Promise.all([fetchAiConfigs(), fetchPrompts()])
-        if (cancelled) return
-        setAiConfigs(configs)
-        const preferred = configs.find((c) => c.type === 'gemini') ?? configs[0]
-        setAiConfigId((prev) => (prev && configs.some((c) => c.id === prev) ? prev : preferred?.id ?? ''))
-        setPromptId((prev) => {
-          if (prev && promptRows.some((p) => p.id === prev)) return prev
-          return pickDefaultLabReviewPrompt(promptRows)
-        })
-      } catch {
-        /* AI settings optional until user runs review */
-      }
-    })()
-    return () => {
-      cancelled = true
-    }
-  }, [hasApi, refreshTick])
-
-  useEffect(() => {
     if (!hasApi || !orderId) {
       setDetail(null)
       setAiReviewByTestId({})
       setAiReviewErrorByTestId({})
-      setReleaseReviewOpen(false)
-      setReleaseReviewTestId(null)
       return
     }
     let cancelled = false
@@ -256,8 +225,6 @@ export function LabResultManagementPage() {
             setDetailError(null)
             setAiReviewByTestId({})
             setAiReviewErrorByTestId({})
-            setReleaseReviewOpen(false)
-            setReleaseReviewTestId(null)
           }
         }
       } catch (e) {
@@ -270,13 +237,6 @@ export function LabResultManagementPage() {
       cancelled = true
     }
   }, [hasApi, orderId])
-
-  const releaseReviewItem = useMemo(() => {
-    if (!detail || !releaseReviewTestId) return null
-    const it = detail.items.find((i) => i.test_id === releaseReviewTestId)
-    if (!it || !testResultFileUrl(it)) return null
-    return it
-  }, [detail, releaseReviewTestId])
 
   const uploadedItems = useMemo(
     () => (detail?.items ?? []).filter((it) => testResultFileUrl(it)),
@@ -353,11 +313,13 @@ export function LabResultManagementPage() {
         delete nextMap[testId]
         return nextMap
       })
-      if (next?.status === 'delivered') {
-        showSuccess('Result uploaded. All tests have PDFs — order marked delivered.')
-      } else {
-        showSuccess('Result file uploaded.')
-      }
+      const allPdfsNow =
+        next && next.items.length > 0 && next.items.every((item) => testResultFileUrl(item))
+      showSuccess(
+        allPdfsNow
+          ? 'Result uploaded. All tests have PDFs — review with AI, then use Release to patient.'
+          : 'Result file uploaded.',
+      )
     } catch (err) {
       showError(messageFromError(err, 'Upload failed'))
     } finally {
@@ -367,8 +329,8 @@ export function LabResultManagementPage() {
 
   async function runAiReviewForTest(testId: string) {
     if (!detail) return
-    if (!aiConfigId) {
-      showError('Add an AI configuration under AI configuration before running review.')
+    if (!aiReviewConfigured) {
+      showError('Set VITE_AI_CONFIG_ID and VITE_LAB_RESULT_VALIDATION_PROMPT_ID in .env before running review.')
       return
     }
     const it = detail.items.find((i) => i.test_id === testId)
@@ -407,26 +369,7 @@ export function LabResultManagementPage() {
     }
   }
 
-  function openReleaseReview() {
-    if (!detail) return
-    if (detail.status === 'delivered') {
-      showError('This order is already marked delivered.')
-      return
-    }
-    if (detail.status !== 'completed') {
-      showError('Mark the order completed before releasing results to the patient.')
-      return
-    }
-    if (uploadedItems.length === 0) {
-      showError('Upload a result PDF for at least one test before release.')
-      return
-    }
-    const first = uploadedItems[0]?.test_id ?? null
-    setReleaseReviewTestId(first)
-    setReleaseReviewOpen(true)
-  }
-
-  async function confirmRelease() {
+  async function releaseToPatient() {
     if (!detail) return
     const staffId = account?.id
     if (!staffId) {
@@ -434,12 +377,15 @@ export function LabResultManagementPage() {
       return
     }
     if (detail.status === 'delivered') {
-      setReleaseReviewOpen(false)
       showSuccess('Results already released.')
       return
     }
     if (detail.status !== 'completed') {
-      showError('Mark the order completed before release.')
+      showError('Mark the order completed before releasing results to the patient.')
+      return
+    }
+    if (!allTestsHavePdf) {
+      showError('Upload result PDFs for all tests before release.')
       return
     }
     setReleaseSubmitting(true)
@@ -450,7 +396,6 @@ export function LabResultManagementPage() {
         note: 'Results released to patient after lab review',
       })
       await refreshOrderDetail(detail.id)
-      setReleaseReviewOpen(false)
       showSuccess('Results released to patient.')
     } catch (err) {
       showError(messageFromError(err, 'Release failed'))
@@ -477,9 +422,9 @@ export function LabResultManagementPage() {
           <p className="lab-result-entry__ai-fail-title">Review failed</p>
           <p className="lab-result-entry__ai-fail-message">{errorMessage}</p>
           {aiReviewErrorNeedsConfigFix(errorMessage) ? (
-            <a href="/ai-config" className="lab-result-entry__ai-fail-link">
-              Open AI configuration
-            </a>
+            <p className="lab-result-entry__ai-fail-link">
+              Check VITE_AI_CONFIG_ID and your provider API key in .env.
+            </p>
           ) : null}
         </div>
       )
@@ -491,12 +436,32 @@ export function LabResultManagementPage() {
         </p>
       )
     }
+
+    const parsed = parseAiReviewReply(entry.reply)
+    const reviewedLabel = `Reviewed ${formatAiReviewedAt(entry.reviewedAt)}`
+
+    if (parsed.verdict && parsed.label) {
+      return (
+        <div
+          className={`lab-result-entry__ai-verdict lab-result-entry__ai-verdict--${parsed.verdict}${
+            parsed.isCompact ? ' lab-result-entry__ai-verdict--compact' : ''
+          }`}
+        >
+          <div className="lab-result-entry__ai-verdict-head">
+            <span className="lab-result-entry__ai-verdict-badge">{parsed.label}</span>
+            <span className="lab-result-entry__ai-verdict-meta">{reviewedLabel}</span>
+          </div>
+          {parsed.detail ? (
+            <p className="lab-result-entry__ai-verdict-detail">{parsed.detail}</p>
+          ) : null}
+        </div>
+      )
+    }
+
     return (
-      <div className="lab-result-entry__ai-success">
-        <p className="lab-result-entry__ai-success-text">{entry.reply}</p>
-        <p className="lab-result-entry__ai-success-meta">
-          Reviewed {new Date(entry.reviewedAt).toLocaleString()}
-        </p>
+      <div className="lab-result-entry__ai-result">
+        <p className="lab-result-entry__ai-result-text">{entry.reply}</p>
+        <p className="lab-result-entry__ai-result-meta">{reviewedLabel}</p>
       </div>
     )
   }
@@ -747,10 +712,9 @@ export function LabResultManagementPage() {
                 </>
               ) : detail.status === 'completed' ? (
                 <p className="lab-result-entry__workflow-text">
-                  Lab run complete. Upload result PDFs, run AI review, then release to the patient.
-                  {allTestsHavePdf
-                    ? ' All tests have PDFs — releasing the last file also marks the order delivered automatically.'
-                    : null}
+                  Lab run complete. Upload result PDFs, run AI review, then use{' '}
+                  <strong>Release to patient</strong> when you are ready to deliver.
+                  {allTestsHavePdf ? ' All tests have PDFs — you can release when review is done.' : null}
                 </p>
               ) : detail.status === 'delivered' ? (
                 <p className="lab-result-entry__workflow-text">
@@ -784,44 +748,92 @@ export function LabResultManagementPage() {
                   const fileUrl = testResultFileUrl(it)
                   const hasFile = Boolean(fileUrl)
                   const reviewed = Boolean(aiReviewByTestId[it.test_id])
+                  const aiEntry = aiReviewByTestId[it.test_id]
+                  const aiVerdict = aiEntry ? parseAiReviewReply(aiEntry.reply).verdict : null
                   const testName = it.test_name?.trim() || it.test_id
                   const testCode = it.test_code?.trim() || '—'
+                  const aiSectionClass = [
+                    'lab-result-test-card__ai',
+                    aiVerdict ? `lab-result-test-card__ai--${aiVerdict}` : '',
+                    aiReviewErrorByTestId[it.test_id] ? 'lab-result-test-card__ai--error' : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')
+                  const showPdfControls = canUploadPdfs || hasFile
 
                   return (
                     <li key={`${it.test_id}-${idx}`} className="lab-result-test-card">
-                      <div className="lab-result-test-card__body">
+                      <div
+                        className={`lab-result-test-card__body${
+                          showPdfControls ? '' : ' lab-result-test-card__body--info-only'
+                        }`}
+                      >
                         <div className="lab-result-test-card__info">
                           <span className="lab-result-test-card__name">{testName}</span>
                           <span className="lab-result-test-card__sub">
                             {testCode} · Qty {it.quantity}
                           </span>
                         </div>
-                        <div className="lab-result-test-card__status">
-                          {hasFile ? (
-                            reviewed ? (
-                              <span className="badge badge--success">AI reviewed</span>
+                        {showPdfControls ? (
+                          <div className="lab-result-test-card__status">
+                            {hasFile ? (
+                              reviewed ? (
+                                <span className="badge badge--success">AI reviewed</span>
+                              ) : (
+                                <span className="badge badge--success">PDF uploaded</span>
+                              )
                             ) : (
-                              <span className="badge badge--success">PDF uploaded</span>
-                            )
-                          ) : (
-                            <span className="badge badge--neutral">Awaiting PDF</span>
+                              <span className="badge badge--neutral">Awaiting PDF</span>
+                            )}
+                          </div>
+                        ) : null}
+                        {showPdfControls ? (
+                          <div className="lab-result-test-card__actions">
+                            <button
+                              type="button"
+                              className="btn btn-secondary btn-sm"
+                              disabled={uploadBusy || !canUploadPdfs}
+                              onClick={() => openPdfPicker(it.test_id)}
+                            >
+                              {uploadBusy && uploadTestId === it.test_id
+                                ? 'Uploading…'
+                                : hasFile
+                                  ? 'Replace PDF'
+                                  : 'Upload PDF'}
+                            </button>
+                            {hasFile ? (
+                              <button
+                                type="button"
+                                className="btn btn-secondary btn-sm"
+                              disabled={
+                                !aiReviewConfigured ||
+                                aiReviewLoadingTestId === it.test_id ||
+                                uploadBusy
+                              }
+                                onClick={() => void runAiReviewForTest(it.test_id)}
+                              >
+                                {aiReviewLoadingTestId === it.test_id
+                                  ? 'Reviewing…'
+                                  : reviewed
+                                    ? 'Re-run AI review'
+                                    : 'AI review'}
+                              </button>
+                            ) : null}
+                          </div>
+                        ) : null}
+                      </div>
+                      {hasFile &&
+                      (aiReviewLoadingTestId === it.test_id ||
+                        aiReviewByTestId[it.test_id] ||
+                        aiReviewErrorByTestId[it.test_id]) ? (
+                        <div className={aiSectionClass}>
+                          {renderAiReviewBody(
+                            aiReviewByTestId[it.test_id],
+                            aiReviewLoadingTestId === it.test_id,
+                            aiReviewErrorByTestId[it.test_id] ?? null,
                           )}
                         </div>
-                        <div className="lab-result-test-card__actions">
-                          <button
-                            type="button"
-                            className="btn btn-secondary btn-sm"
-                            disabled={uploadBusy || !canUploadPdfs}
-                            onClick={() => openPdfPicker(it.test_id)}
-                          >
-                            {uploadBusy && uploadTestId === it.test_id
-                              ? 'Uploading…'
-                              : hasFile
-                                ? 'Replace PDF'
-                                : 'Upload PDF'}
-                          </button>
-                        </div>
-                      </div>
+                      ) : null}
                     </li>
                   )
                 })}
@@ -829,13 +841,11 @@ export function LabResultManagementPage() {
             )}
           </section>
 
-          {!aiConfigId ? (
+          {!aiReviewConfigured ? (
             <p className="lab-result-entry__warn" role="status">
-              No AI model configured — add one under{' '}
-              <a href="/ai-config" className="link">
-                AI configuration
-              </a>{' '}
-              before running review.
+              AI review is not configured — set <code>VITE_AI_CONFIG_ID</code> and{' '}
+              <code>VITE_LAB_RESULT_VALIDATION_PROMPT_ID</code> in <code>.env</code>, then restart the dev
+              server.
             </p>
           ) : null}
 
@@ -846,142 +856,24 @@ export function LabResultManagementPage() {
                 : detail.status !== 'completed'
                   ? 'Complete the lab run before uploading results or releasing.'
                   : uploadedItems.length === 0
-                    ? 'Upload at least one result PDF to continue.'
+                    ? 'Upload result PDFs for all tests to continue.'
                     : allTestsHavePdf
-                      ? 'All tests have PDFs. Use Release to patient to run AI review and deliver.'
-                      : `${uploadedItems.length} PDF${uploadedItems.length === 1 ? '' : 's'} uploaded — use Release to patient when ready.`}
+                      ? 'All tests have PDFs. Release to patient when review is complete.'
+                      : `${uploadedItems.length} of ${detail.items.length} PDFs uploaded — upload all tests before releasing.`}
             </p>
             {detail.status === 'completed' ? (
               <button
                 type="button"
                 className="btn btn-primary"
-                onClick={openReleaseReview}
-                disabled={uploadedItems.length === 0 || releaseSubmitting}
+                onClick={() => void releaseToPatient()}
+                disabled={!allTestsHavePdf || releaseSubmitting}
               >
-                Release to patient
+                {releaseSubmitting ? 'Releasing…' : 'Release to patient'}
               </button>
             ) : detail.status === 'delivered' ? (
               <span className="badge badge--success">Released</span>
             ) : null}
           </footer>
-        </div>
-      ) : null}
-
-      {releaseReviewOpen && detail ? (
-        <div
-          className="modal-backdrop"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="lab-result-release-title"
-          onMouseDown={(e) => e.target === e.currentTarget && setReleaseReviewOpen(false)}
-        >
-          <div
-            className="modal-card modal-card--lab-result-release"
-            onMouseDown={(e) => e.stopPropagation()}
-          >
-            <div className="modal-head">
-              <h2 id="lab-result-release-title" className="modal-title">
-                Review results before release
-              </h2>
-              <button
-                type="button"
-                className="btn btn-ghost modal-close"
-                onClick={() => setReleaseReviewOpen(false)}
-                aria-label="Close"
-              >
-                ×
-              </button>
-            </div>
-            <div className="lab-result-release-modal__body">
-              <p style={{ margin: '0 0 0.85rem', fontSize: '0.9rem', color: 'var(--muted)' }}>
-                Review each uploaded result with AI for <strong>{detail.patient_name}</strong> before you confirm
-                release.
-              </p>
-              <div className="lab-result-release-split">
-                <ul className="lab-result-release-list">
-                  {detail.items.map((it, idx) => {
-                    const url = testResultFileUrl(it)
-                    const selected = releaseReviewTestId === it.test_id
-                    const reviewed = Boolean(aiReviewByTestId[it.test_id])
-                    return (
-                      <li key={`${it.test_id}-${idx}`}>
-                        <button
-                          type="button"
-                          className={`lab-result-release-list__btn${selected ? ' lab-result-release-list__btn--active' : ''}`}
-                          disabled={!url}
-                          onClick={() => {
-                            if (!url) return
-                            setReleaseReviewTestId(it.test_id)
-                          }}
-                        >
-                          <span className="lab-result-release-list__name">
-                            {it.test_name?.trim() || it.test_id}
-                          </span>
-                          <span className="lab-result-release-list__meta">
-                            {url ? (
-                              reviewed ? (
-                                <span className="badge badge--success">AI reviewed</span>
-                              ) : (
-                                <span className="badge badge--success">Uploaded</span>
-                              )
-                            ) : (
-                              <span className="badge badge--warn">Missing file</span>
-                            )}
-                          </span>
-                        </button>
-                      </li>
-                    )
-                  })}
-                </ul>
-                <div className="lab-result-release-preview lab-result-ai-panel">
-                  {releaseReviewItem && releaseReviewTestId ? (
-                    <>
-                      <div className="lab-result-ai-panel__head">
-                        <span className="lab-result-release-preview__title">
-                          {releaseReviewItem.test_name?.trim() || releaseReviewItem.test_id}
-                        </span>
-                        <button
-                          type="button"
-                          className="btn btn-secondary btn-sm"
-                          disabled={!aiConfigId || aiReviewLoadingTestId === releaseReviewTestId}
-                          onClick={() => void runAiReviewForTest(releaseReviewTestId)}
-                        >
-                          {aiReviewLoadingTestId === releaseReviewTestId ? 'Reviewing…' : 'Run AI review'}
-                        </button>
-                      </div>
-                      {renderAiReviewBody(
-                        aiReviewByTestId[releaseReviewTestId],
-                        aiReviewLoadingTestId === releaseReviewTestId,
-                        aiReviewErrorByTestId[releaseReviewTestId] ?? null,
-                      )}
-                    </>
-                  ) : (
-                    <div className="lab-result-release-preview__empty">
-                      Select a test with an uploaded file to see its AI review here.
-                    </div>
-                  )}
-                </div>
-              </div>
-              {detail.items.some((it) => !testResultFileUrl(it)) ? (
-                <p style={{ marginTop: '0.85rem', fontSize: '0.85rem', color: '#9a6700' }} role="status">
-                  Some tests have no result file yet. You can still release if that is intentional.
-                </p>
-              ) : null}
-              <div className="row-actions" style={{ marginTop: '1rem', justifyContent: 'flex-end' }}>
-                <button type="button" className="btn btn-secondary" onClick={() => setReleaseReviewOpen(false)} disabled={releaseSubmitting}>
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-primary"
-                  disabled={releaseSubmitting}
-                  onClick={() => void confirmRelease()}
-                >
-                  {releaseSubmitting ? 'Releasing…' : 'Release to patient'}
-                </button>
-              </div>
-            </div>
-          </div>
         </div>
       ) : null}
     </div>

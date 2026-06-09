@@ -1,3 +1,8 @@
+import {
+  getCollectionRouteAiConfigId,
+  getCollectionRoutePromptId,
+  getLabResultValidationPromptId,
+} from '../config/aiEnv'
 import { apiFetch } from './apiClient'
 import { readApiErrorBody } from './readApiError'
 
@@ -25,9 +30,6 @@ export type CollectionRouteResult = {
   routeStops: CollectionRouteStopDetail[]
 }
 
-export const COLLECTION_ROUTE_AI_CONFIG_ID = '6bdff7e4-fc4b-4751-865e-4a2004f41c9b'
-export const COLLECTION_ROUTE_PROMPT_ID = '6c5027bd-719b-4b4c-b977-cf3aed6ee487'
-
 export type PlanCollectionRouteParams = {
   stops: CollectionRouteStop[]
   startLocation: { lat: number; lng: number }
@@ -48,13 +50,6 @@ export type AiReviewParams = {
   downloadUrl?: string
 }
 
-const STAFF_REVIEW_PREAMBLE =
-  'You are a clinical lab quality reviewer for MedLab Smart. Review the lab result document for accuracy, completeness, and internal consistency. ' +
-  'Flag critical anomalies, missing sections, or identifiers that do not match the order. ' +
-  'Write for lab staff in clear sections: Summary, Findings, Release recommendation (approve / needs correction). ' +
-  'Do not replace physician diagnosis.'
-
-
 function buildRoutePlanMessage(params: PlanCollectionRouteParams): string {
   const payload = {
     start_location: params.startLocation,
@@ -66,6 +61,18 @@ function buildRoutePlanMessage(params: PlanCollectionRouteParams): string {
       lat: stop.lat,
       lng: stop.lng,
     })),
+  }
+  return JSON.stringify(payload)
+}
+
+function buildLabResultReviewMessage(params: AiReviewParams): string {
+  const payload = {
+    order_id: params.orderId,
+    patient_name: params.patientName,
+    test_id: params.testId,
+    test_name: params.testName,
+    test_code: params.testCode?.trim() || null,
+    result_pdf_url: params.downloadUrl?.trim() || null,
   }
   return JSON.stringify(payload)
 }
@@ -410,8 +417,8 @@ export async function planCollectionRouteWithAi(params: PlanCollectionRouteParam
   const res = await apiFetch('/api/conversations', {
     method: 'POST',
     body: JSON.stringify({
-      ai_config_id: params.ai_config_id ?? COLLECTION_ROUTE_AI_CONFIG_ID,
-      prompt_id: params.prompt_id ?? COLLECTION_ROUTE_PROMPT_ID,
+      ai_config_id: params.ai_config_id ?? getCollectionRouteAiConfigId(),
+      prompt_id: params.prompt_id ?? getCollectionRoutePromptId(),
       message,
       stream: false,
     }),
@@ -430,14 +437,12 @@ export async function planCollectionRouteWithAi(params: PlanCollectionRouteParam
 }
 
 export async function reviewLabResultWithAi(params: AiReviewParams): Promise<string> {
-  const testLabel = params.testCode ? `${params.testName} (${params.testCode})` : params.testName
-  const message =
-    `${STAFF_REVIEW_PREAMBLE}\n\n` +
-    `Order: ${params.orderId}\n` +
-    `Patient: ${params.patientName}\n` +
-    `Test line: ${testLabel}\n` +
-    `Test ID: ${params.testId}`
+  const promptId = params.prompt_id ?? getLabResultValidationPromptId()
+  if (!promptId) {
+    throw new Error('No Laboratory Report Validation prompt configured.')
+  }
 
+  const message = buildLabResultReviewMessage(params)
   const url = params.downloadUrl?.trim()
   let pdfBlob: Blob | null = null
   if (url) {
@@ -448,14 +453,14 @@ export async function reviewLabResultWithAi(params: AiReviewParams): Promise<str
         if (blob.size > 0) pdfBlob = blob
       }
     } catch {
-      /* fall back to URL in message */
+      /* fall back to URL in message JSON */
     }
   }
 
   if (pdfBlob) {
     const fd = new FormData()
     fd.append('ai_config_id', params.ai_config_id)
-    if (params.prompt_id) fd.append('prompt_id', params.prompt_id)
+    fd.append('prompt_id', promptId)
     fd.append('message', message)
     fd.append('stream', 'false')
     fd.append('file', pdfBlob, 'lab-result.pdf')
@@ -469,8 +474,8 @@ export async function reviewLabResultWithAi(params: AiReviewParams): Promise<str
     method: 'POST',
     body: JSON.stringify({
       ai_config_id: params.ai_config_id,
-      prompt_id: params.prompt_id || undefined,
-      message: url ? `${message}\n\nResult PDF URL: ${url}` : message,
+      prompt_id: promptId,
+      message,
       stream: false,
     }),
   })

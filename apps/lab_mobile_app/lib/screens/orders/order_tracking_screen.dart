@@ -1,12 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../app/session_scope.dart';
 import '../../theme/theme_extensions.dart';
+import '../../widgets/common/app_toast.dart';
+import '../../widgets/common/order_status_chip.dart';
 import '../../widgets/common/section_card.dart';
 import '../../widgets/common/status_timeline.dart';
 
 class OrderTrackingScreen extends StatelessWidget {
   const OrderTrackingScreen({super.key});
+
+  void _goBack(BuildContext context) {
+    if (context.canPop()) {
+      context.pop();
+      return;
+    }
+    context.go('/orders');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -18,7 +29,11 @@ class OrderTrackingScreen extends StatelessWidget {
         if (order == null) {
           return Scaffold(
             appBar: AppBar(
-              automaticallyImplyLeading: false,
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back),
+                tooltip: 'Back',
+                onPressed: () => _goBack(context),
+              ),
               title: const Text('Order tracking'),
             ),
             body: RefreshIndicator(
@@ -40,7 +55,11 @@ class OrderTrackingScreen extends StatelessWidget {
         }
         return Scaffold(
           appBar: AppBar(
-            automaticallyImplyLeading: false,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back),
+              tooltip: 'Back',
+              onPressed: () => _goBack(context),
+            ),
             title: const Text('Order tracking'),
           ),
           body: RefreshIndicator(
@@ -58,8 +77,8 @@ class OrderTrackingScreen extends StatelessWidget {
                       const SizedBox(height: 6),
                       Text('Address: ${order.address.line}'),
                       if (order.backendStatus != null) ...[
-                        const SizedBox(height: 6),
-                        Text('Status: ${order.backendStatus}', style: Theme.of(context).textTheme.bodySmall),
+                        const SizedBox(height: 8),
+                        OrderStatusChip(status: order.backendStatus, compact: false),
                       ],
                     ],
                   ),
@@ -107,14 +126,14 @@ class OrderTrackingScreen extends StatelessWidget {
                             try {
                               await session.acceptProposedSchedule();
                               if (!context.mounted) return;
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Schedule confirmed.')),
+                              AppToast.successInShell(
+                                context,
+                                'The collector can proceed with your sample.',
+                                title: 'Schedule confirmed',
                               );
                             } catch (e) {
                               if (!context.mounted) return;
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('$e')),
-                              );
+                              AppToast.errorInShell(context, '$e');
                             }
                           },
                     child: Text(session.busy ? 'Saving…' : 'Confirm collection schedule'),

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { createPortal } from 'react-dom'
+import { Link } from 'react-router-dom'
 import { DatetimeLocalField } from '../components/common/DatetimeLocalField'
 import { TimeField } from '../components/common/TimeField'
 import { ListFilterSearchField } from '../components/common/ListFilterSearchField'
@@ -9,7 +10,7 @@ import { useToast } from '../hooks/ToastContext'
 import { useErrorToast } from '../hooks/usePageNotify'
 import { LoadingSpinner } from '../components/common/LoadingSpinner'
 import { DEFAULT_TABLE_PAGE_SIZE, TablePagination } from '../components/common/TablePagination'
-import { formatCoordPair, LocationMapPicker } from '../components/users/LocationMapPicker'
+import { formatCoordPair } from '../components/users/LocationMapPicker'
 import type { StaffListRow, StaffRole } from '../model/types'
 import { isApiMode } from '../services/apiBase'
 import {
@@ -113,17 +114,6 @@ function labStartLocation(settings: Awaited<ReturnType<typeof fetchSystemSetting
 }
 
 
-function routeStartLocationFromState(
-  latitude: number | '',
-  longitude: number | '',
-): { lat: number; lng: number } | null {
-  const lat = typeof latitude === 'number' ? latitude : Number.parseFloat(String(latitude))
-  const lng = typeof longitude === 'number' ? longitude : Number.parseFloat(String(longitude))
-  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null
-  if (lat === 0 && lng === 0) return null
-  return { lat, lng }
-}
-
 function parseRouteCollectionDuration(value: number | ''): number | null {
   const minutes = typeof value === 'number' ? value : Number.parseInt(String(value), 10)
   if (!Number.isFinite(minutes) || minutes <= 0) return null
@@ -144,6 +134,12 @@ function orderCoords(order: ApiOrderListRow): { lat: number; lng: number } | nul
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null
   if (lat === 0 && lng === 0) return null
   return { lat, lng }
+}
+
+function formatOrderCoord(value: number | null | undefined): string {
+  const n = Number(value)
+  if (!Number.isFinite(n)) return '—'
+  return n.toFixed(5)
 }
 
 function orderStopsInRouteOrder(
@@ -200,8 +196,11 @@ export function SampleCollectionPage() {
   const [routeResult, setRouteResult] = useState<CollectionRouteResult | null>(null)
   const [routePlanOrders, setRoutePlanOrders] = useState<ApiOrderListRow[]>([])
   const [routePlanning, setRoutePlanning] = useState(false)
-  const [routeStartLatitude, setRouteStartLatitude] = useState<number | ''>('')
-  const [routeStartLongitude, setRouteStartLongitude] = useState<number | ''>('')
+  const [labRouteStart, setLabRouteStart] = useState<{
+    lat: number
+    lng: number
+    address: string | null
+  } | null>(null)
   const [routeStartTime, setRouteStartTime] = useState(() => formatRouteStartTime())
   const [routeCollectionDurationMinutes, setRouteCollectionDurationMinutes] = useState<number | ''>(10)
   const [patientInput, setPatientInput] = useState('')
@@ -298,10 +297,15 @@ export function SampleCollectionPage() {
         const settings = await fetchSystemSettings()
         if (cancelled) return
         const loc = labStartLocation(settings)
-        if (loc) {
-          setRouteStartLatitude(loc.lat)
-          setRouteStartLongitude(loc.lng)
-        }
+        setLabRouteStart(
+          loc
+            ? {
+                lat: loc.lat,
+                lng: loc.lng,
+                address: settings.address?.trim() || null,
+              }
+            : null,
+        )
       } catch {
         /* optional prefill only */
       }
@@ -330,11 +334,11 @@ export function SampleCollectionPage() {
   )
 
   const routeSetupReady = useMemo(() => {
-    if (routeStartLocationFromState(routeStartLatitude, routeStartLongitude) == null) return false
+    if (labRouteStart == null) return false
     if (parseRouteStartTimeInput(routeStartTime) == null) return false
     if (parseRouteCollectionDuration(routeCollectionDurationMinutes) == null) return false
     return true
-  }, [routeStartLatitude, routeStartLongitude, routeStartTime, routeCollectionDurationMinutes])
+  }, [labRouteStart, routeStartTime, routeCollectionDurationMinutes])
 
   const canPlanRoute =
     hasApi && !loading && !routePlanning && selectedRoutableCount >= 2 && routeSetupReady
@@ -383,9 +387,8 @@ export function SampleCollectionPage() {
       return
     }
 
-    const startLocation = routeStartLocationFromState(routeStartLatitude, routeStartLongitude)
-    if (!startLocation) {
-      showError('Set the route start location on the map before planning.')
+    if (!labRouteStart) {
+      showError('Configure the lab location in System settings before planning a route.')
       return
     }
 
@@ -404,7 +407,7 @@ export function SampleCollectionPage() {
     setRoutePlanning(true)
     try {
       const result = await planCollectionRouteWithAi({
-        startLocation,
+        startLocation: { lat: labRouteStart.lat, lng: labRouteStart.lng },
         startTime,
         collectionDurationMinutes,
         stops: picked.map((o) => {
@@ -672,6 +675,8 @@ export function SampleCollectionPage() {
                 <th>Order</th>
                 <th>Patient</th>
                 <th>Address</th>
+                <th>Lat</th>
+                <th>Long</th>
                 <th>Status</th>
                 <th>Created</th>
               </tr>
@@ -679,13 +684,13 @@ export function SampleCollectionPage() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="data-table__state data-table__state--loading">
+                  <td colSpan={8} className="data-table__state data-table__state--loading">
                     <LoadingSpinner label="Loading samples" />
                   </td>
                 </tr>
               ) : routable.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="data-table__state">
+                  <td colSpan={8} className="data-table__state">
                     {orders.length === 0
                       ? patientName || statusFilter
                         ? 'No orders match these filters.'
@@ -711,6 +716,16 @@ export function SampleCollectionPage() {
                     </td>
                     <td>{o.patient_name}</td>
                     <td>{o.address?.trim() || '—'}</td>
+                    <td>
+                      <code style={{ fontSize: '0.72rem', fontVariantNumeric: 'tabular-nums' }}>
+                        {formatOrderCoord(o.latitude)}
+                      </code>
+                    </td>
+                    <td>
+                      <code style={{ fontSize: '0.72rem', fontVariantNumeric: 'tabular-nums' }}>
+                        {formatOrderCoord(o.longitude)}
+                      </code>
+                    </td>
                     <td>{o.status}</td>
                     <td>{fmtWhen(o.created_at)}</td>
                   </tr>
@@ -737,9 +752,23 @@ export function SampleCollectionPage() {
             <div className="route-setup">
               <h4 className="route-setup__title">Route setup</h4>
               <p className="route-setup__hint">
-                {selectedRoutableCount} orders selected — set start location, departure time, and on-site
-                minutes per stop, then click Plan route.
+                {selectedRoutableCount} orders selected — routes start from your lab location in System
+                settings. Set departure time and on-site minutes per stop, then click Plan route.
               </p>
+              <div className="route-setup__location" aria-live="polite">
+                <p className="route-setup__location-label">Route start (lab location)</p>
+                {labRouteStart ? (
+                  <div className="route-setup__location-info">
+                    {labRouteStart.address ? <p>{labRouteStart.address}</p> : null}
+                    <p className="route-setup__coords">{formatCoordPair(labRouteStart.lat, labRouteStart.lng)}</p>
+                  </div>
+                ) : (
+                  <p className="route-setup__location-missing">
+                    No lab location configured. Set it under{' '}
+                    <Link to="/system-settings">System settings</Link> → Location &amp; contact.
+                  </p>
+                )}
+              </div>
               <div className="route-setup__grid">
                 <div className="field">
                   <label htmlFor="route-start-time">Start time</label>
@@ -767,25 +796,6 @@ export function SampleCollectionPage() {
                     disabled={routePlanning}
                   />
                 </div>
-              </div>
-              <div className="route-setup__map user-form-modal__location-card">
-                <div className="field" style={{ marginBottom: '0.5rem' }}>
-                  <span style={{ fontWeight: 600, fontSize: '0.875rem', color: 'var(--heading)' }}>
-                    Start location
-                  </span>
-                </div>
-                <LocationMapPicker
-                  latitude={routeStartLatitude}
-                  longitude={routeStartLongitude}
-                  mapHeight={200}
-                  onPick={(lat, lng) => {
-                    setRouteStartLatitude(lat)
-                    setRouteStartLongitude(lng)
-                  }}
-                />
-                <p className="user-form-modal__coords" aria-live="polite">
-                  {formatCoordPair(routeStartLatitude, routeStartLongitude)}
-                </p>
               </div>
             </div>
           ) : (

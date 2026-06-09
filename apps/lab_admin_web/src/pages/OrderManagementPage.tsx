@@ -105,31 +105,58 @@ function orderPaymentAmounts(
 function PaymentModalSummary({ amounts }: { amounts: ReturnType<typeof orderPaymentAmounts> }) {
   const due = amounts.balance > 0 ? amounts.balance : 0
   const fullyPaid = amounts.total > 0 && due <= 0
+  const pct = amounts.percentPaid
+
   return (
-    <div className="payment-modal-summary">
-      <div className="payment-modal-summary__head">
-        <span className="payment-modal-summary__title">Balance</span>
-        {fullyPaid ? <span className="payment-modal-summary__badge">Fully paid</span> : null}
-      </div>
-      <div className="payment-modal-stats" role="group" aria-label="Order payment summary">
-        <div className="payment-modal-stat">
-          <span className="payment-modal-stat__label">Total</span>
-          <span className="payment-modal-stat__value">{amounts.total.toLocaleString()}</span>
-          <span className="payment-modal-stat__unit">MMK</span>
-        </div>
-        <div className="payment-modal-stat">
-          <span className="payment-modal-stat__label">Paid</span>
-          <span className="payment-modal-stat__value">{amounts.paid.toLocaleString()}</span>
-          <span className="payment-modal-stat__unit">MMK</span>
-        </div>
+    <div className="payment-sheet" role="group" aria-label="Order payment summary">
+      <div
+        className="payment-sheet__progress"
+        role="progressbar"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={pct}
+        aria-label={`${pct}% paid`}
+      >
         <div
-          className={`payment-modal-stat${due > 0 ? ' payment-modal-stat--due' : ' payment-modal-stat--clear'}`}
-        >
-          <span className="payment-modal-stat__label">Due</span>
-          <span className="payment-modal-stat__value">{due.toLocaleString()}</span>
-          <span className="payment-modal-stat__unit">MMK</span>
-        </div>
+          className={[
+            'payment-sheet__progress-fill',
+            fullyPaid ? 'payment-sheet__progress-fill--complete' : '',
+          ]
+            .filter(Boolean)
+            .join(' ')}
+          style={{ width: `${pct}%` }}
+        />
       </div>
+      <div className="payment-sheet__meta">
+        <span>{pct}% of total collected</span>
+        {fullyPaid ? <span className="payment-sheet__status">Paid in full</span> : null}
+      </div>
+
+      <div
+        className={[
+          'payment-sheet__hero',
+          due > 0 ? 'payment-sheet__hero--due' : fullyPaid ? 'payment-sheet__hero--clear' : '',
+        ]
+          .filter(Boolean)
+          .join(' ')}
+      >
+        <span className="payment-sheet__hero-label">{due > 0 ? 'Amount due' : 'Balance remaining'}</span>
+        <span className="payment-sheet__hero-value">
+          {due.toLocaleString()}
+          <span>MMK</span>
+        </span>
+      </div>
+
+      <dl className="payment-sheet__breakdown">
+        <div>
+          <dt>Order total</dt>
+          <dd>{amounts.total.toLocaleString()} MMK</dd>
+        </div>
+        <div>
+          <dt>Already paid</dt>
+          <dd>{amounts.paid.toLocaleString()} MMK</dd>
+        </div>
+      </dl>
     </div>
   )
 }
@@ -2030,15 +2057,17 @@ export function OrderManagementPage() {
               const previewPaid = Math.min(amounts.total, amounts.paid + adding)
               const previewLeft = Math.max(0, amounts.total - previewPaid)
               const fullyPaid = amounts.total > 0 && amounts.balance <= 0
+              const canRecordPayment = adding > 0 && !paymentUpdateSubmitting
 
               return (
                 <>
-                  <div className="modal-head payment-modal__head">
+                  <div className="modal-head payment-sheet-head">
                     <div>
+                      <p className="payment-sheet-head__eyebrow">Record payment</p>
                       <h2 id="payment-modal-title" className="modal-title">
                         Add payment
                       </h2>
-                      <p className="payment-modal__subtitle">{paymentUpdateOrder.patient_name}</p>
+                      <p className="payment-sheet-head__patient">{paymentUpdateOrder.patient_name}</p>
                     </div>
                     <button
                       type="button"
@@ -2050,7 +2079,8 @@ export function OrderManagementPage() {
                       ×
                     </button>
                   </div>
-                  <div className="payment-modal">
+
+                  <div className="payment-sheet-body">
                     <PaymentModalSummary amounts={amounts} />
 
                     {paymentUpdateError ? (
@@ -2059,23 +2089,32 @@ export function OrderManagementPage() {
                       </div>
                     ) : null}
 
-                    <div className="payment-modal__form">
-                      {fullyPaid ? (
-                        <p className="payment-modal__notice" role="status">
-                          This order is already fully paid. Enter an amount only if the patient pays extra (e.g.
-                          additional tests).
-                        </p>
-                      ) : null}
-                      <div className="payment-modal__row">
-                        <div className="field payment-modal__amount-field">
-                          <label htmlFor="pu-amount">Amount (MMK)</label>
+                    <div className="payment-sheet-form">
+                      <div className="field">
+                        <div className="payment-sheet__amount-head">
+                          <label htmlFor="pu-amount">Payment amount</label>
+                          {amounts.balance > 0 ? (
+                            <button
+                              type="button"
+                              className="payment-sheet__quick-fill"
+                              onClick={() =>
+                                setPaymentUpdateAmount(Math.round(amounts.balance * 100) / 100)
+                              }
+                              disabled={paymentUpdateSubmitting}
+                            >
+                              Pay remaining balance
+                            </button>
+                          ) : null}
+                        </div>
+                        <div className="payment-sheet__amount-wrap">
                           <input
                             id="pu-amount"
                             type="number"
-                            className="payment-modal__amount-input"
+                            className="payment-sheet__amount-input"
                             min={0}
                             step="0.01"
-                            placeholder={fullyPaid ? '0' : amounts.balance > 0 ? String(Math.round(amounts.balance)) : '0'}
+                            inputMode="decimal"
+                            placeholder="0"
                             value={paymentUpdateAmount === '' ? '' : paymentUpdateAmount}
                             onChange={(e) =>
                               setPaymentUpdateAmount(
@@ -2084,64 +2123,71 @@ export function OrderManagementPage() {
                             }
                             disabled={paymentUpdateSubmitting}
                           />
-                          {amounts.balance > 0 ? (
-                            <button
-                              type="button"
-                              className="payment-modal__fill-due"
-                              onClick={() =>
-                                setPaymentUpdateAmount(Math.round(amounts.balance * 100) / 100)
-                              }
-                              disabled={paymentUpdateSubmitting}
-                            >
-                              Fill due ({amounts.balance.toLocaleString()} MMK)
-                            </button>
-                          ) : null}
-                        </div>
-                        <div className="field payment-modal__method-field">
-                          <label htmlFor="pu-method">Method</label>
-                          <select
-                            id="pu-method"
-                            className="select-chevron-left"
-                            value={paymentUpdateMethod}
-                            onChange={(e) =>
-                              setPaymentUpdateMethod(e.target.value as ApiPaymentMethod)
-                            }
-                            disabled={paymentUpdateSubmitting}
-                          >
-                            {PAYMENT_METHOD_OPTIONS.map((m) => (
-                              <option key={m.value} value={m.value}>
-                                {m.label}
-                              </option>
-                            ))}
-                          </select>
+                          <span className="payment-sheet__amount-unit" aria-hidden="true">
+                            MMK
+                          </span>
                         </div>
                       </div>
+
+                      <div className="field">
+                        <label htmlFor="pu-method">Payment method</label>
+                        <select
+                          id="pu-method"
+                          className="select-chevron-left"
+                          value={paymentUpdateMethod}
+                          onChange={(e) =>
+                            setPaymentUpdateMethod(e.target.value as ApiPaymentMethod)
+                          }
+                          disabled={paymentUpdateSubmitting}
+                        >
+                          {PAYMENT_METHOD_OPTIONS.map((m) => (
+                            <option key={m.value} value={m.value}>
+                              {m.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {fullyPaid ? (
+                        <p className="payment-sheet__hint">
+                          This order is fully paid. Enter an amount only for additional charges.
+                        </p>
+                      ) : null}
+
                       {adding > 0 ? (
-                        <p className="payment-modal__preview" role="status">
-                          After this payment: <strong>{previewPaid.toLocaleString()}</strong> paid ·{' '}
-                          <strong>{previewLeft.toLocaleString()}</strong> MMK due
+                        <p className="payment-sheet__preview" role="status">
+                          After recording:{' '}
+                          <strong>{previewPaid.toLocaleString()} MMK paid</strong>
+                          {previewLeft > 0 ? (
+                            <>
+                              {' '}
+                              · <strong>{previewLeft.toLocaleString()} MMK</strong> still due
+                            </>
+                          ) : (
+                            <> · order will be paid in full</>
+                          )}
                         </p>
                       ) : null}
                     </div>
+                  </div>
 
-                    <div className="payment-modal-footer">
-                      <button
-                        type="button"
-                        className="btn btn-secondary"
-                        onClick={() => setPaymentUpdateOpen(false)}
-                        disabled={paymentUpdateSubmitting}
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-primary"
-                        onClick={() => void submitPaymentUpdate()}
-                        disabled={paymentUpdateSubmitting}
-                      >
-                        {paymentUpdateSubmitting ? 'Recording…' : 'Record payment'}
-                      </button>
-                    </div>
+                  <div className="payment-sheet-footer">
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={() => setPaymentUpdateOpen(false)}
+                      disabled={paymentUpdateSubmitting}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-primary"
+                      onClick={() => void submitPaymentUpdate()}
+                      disabled={!canRecordPayment}
+                    >
+                      {paymentUpdateSubmitting ? 'Recording…' : 'Record payment'}
+                    </button>
                   </div>
                 </>
               )
