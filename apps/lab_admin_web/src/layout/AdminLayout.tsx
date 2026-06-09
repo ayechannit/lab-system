@@ -52,7 +52,6 @@ const nav: NavItem[] = [
   { to: '/discounts', label: 'Discounts', icon: 'sell' },
   { to: '/loyalty', label: 'Loyalty points', icon: 'card_giftcard' },
   { to: '/system-settings', label: 'System settings', icon: 'settings' },
-  { to: '/ai-prompts', label: 'AI prompts', icon: 'smart_toy' },
   { to: '/reports', label: 'Reports', icon: 'bar_chart' },
 ]
 

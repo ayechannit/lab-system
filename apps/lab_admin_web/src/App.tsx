@@ -14,7 +14,6 @@ import { ReportsAnalyticsPage } from './pages/ReportsAnalyticsPage'
 import { SampleCollectionPage } from './pages/SampleCollectionPage'
 import { StaffManagementPage } from './pages/StaffManagementPage'
 import { UserManagementPage } from './pages/UserManagementPage'
-import { AiPromptsPage } from './pages/AiPromptsPage'
 import { SystemSettingsPage } from './pages/SystemSettingsPage'
 
 function RequireAuth() {
@@ -57,7 +56,6 @@ export default function App() {
             <Route path="discounts" element={<DiscountManagementPage />} />
             <Route path="loyalty" element={<LoyaltyPointsManagementPage />} />
             <Route path="system-settings" element={<SystemSettingsPage />} />
-            <Route path="ai-prompts" element={<AiPromptsPage />} />
             <Route path="reports" element={<ReportsAnalyticsPage />} />
           </Route>
         </Route>
