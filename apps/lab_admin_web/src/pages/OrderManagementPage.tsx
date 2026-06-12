@@ -1646,12 +1646,6 @@ export function OrderManagementPage() {
                               ]
                             : []),
                           {
-                            label: 'Update status',
-                            onSelect: () => {
-                              void openStatusUpdate(o)
-                            },
-                          },
-                          {
                             label: 'Delete',
                             onSelect: () => setDeleteTarget(o),
                             danger: true,

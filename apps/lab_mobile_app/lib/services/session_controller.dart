@@ -8,6 +8,7 @@ import '../models/loyalty.dart';
 import '../models/rating.dart';
 import '../models/user_role.dart';
 import 'lab_user_api.dart';
+import 'lab_report_pdf_service.dart';
 
 class SessionController extends ChangeNotifier {
   SessionController({required LabUserApi api}) : _api = api;
@@ -234,6 +235,23 @@ class SessionController extends ChangeNotifier {
     } finally {
       _setBusy(false);
     }
+  }
+
+  Future<String> downloadReportPdf(LabResultReport report) async {
+    final filename = LabReportPdfService.buildFilename(
+      sampleId: report.sampleId,
+      orderId: report.orderId,
+    );
+    final testId = report.resultTestId;
+    if (testId != null && testId.isNotEmpty) {
+      final bytes = await _api.downloadResultPdf(orderId: report.orderId, testId: testId);
+      return LabReportPdfService.saveBytes(bytes: bytes, filename: filename);
+    }
+    final url = report.resultPdfUrl;
+    if (url == null || url.trim().isEmpty) {
+      throw LabReportPdfException('No PDF is available for this report.');
+    }
+    return LabReportPdfService.download(url: url, filename: filename);
   }
 
   Future<void> submitOrderRating({

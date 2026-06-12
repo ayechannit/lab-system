@@ -25,6 +25,7 @@ class LabResultReport {
     required this.releasedAt,
     required this.lines,
     this.resultPdfUrl,
+    this.resultTestId,
   });
 
   final String orderId;
@@ -34,6 +35,9 @@ class LabResultReport {
 
   /// Signed or public URL from API (`download_url` on an order item).
   final String? resultPdfUrl;
+
+  /// Test catalog id for the item that has the result PDF.
+  final String? resultTestId;
 }
 
 class AiAnalysisResult {

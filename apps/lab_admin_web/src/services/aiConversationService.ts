@@ -3,6 +3,7 @@ import {
   getCollectionRoutePromptId,
   getLabResultValidationPromptId,
 } from '../config/aiEnv'
+import { getApiBaseUrl } from './apiBase'
 import { apiFetch } from './apiClient'
 import { readApiErrorBody } from './readApiError'
 
@@ -75,6 +76,65 @@ function buildLabResultReviewMessage(params: AiReviewParams): string {
     result_pdf_url: params.downloadUrl?.trim() || null,
   }
   return JSON.stringify(payload)
+}
+
+/** Path on the lab API host for a download URL, if it points at this API. */
+function apiHostedFilePath(downloadUrl: string): string | null {
+  const api = getApiBaseUrl()
+  if (!api) return null
+  try {
+    const file = new URL(downloadUrl.trim())
+    const base = new URL(api)
+    if (file.origin === base.origin) {
+      return `${file.pathname}${file.search}`
+    }
+  } catch {
+    /* ignore */
+  }
+  return null
+}
+
+/**
+ * Resolve a lab-result PDF URL for fetch in the browser.
+ * In dev, API `/uploads/...` URLs are rewritten to same-origin paths (Vite proxy).
+ */
+function resolveLabResultPdfFetchUrl(downloadUrl: string): string {
+  const trimmed = downloadUrl.trim()
+  if (!import.meta.env.DEV) return trimmed
+  const apiPath = apiHostedFilePath(trimmed)
+  if (apiPath?.startsWith('/uploads/')) return apiPath
+  return trimmed
+}
+
+async function readPdfBlob(res: Response): Promise<Blob | null> {
+  if (!res.ok) return null
+  const blob = await res.blob()
+  return blob.size > 0 ? blob : null
+}
+
+/** Download the result PDF so it can be posted as multipart `file` to POST /api/conversations. */
+async function fetchLabResultPdfBlob(downloadUrl: string): Promise<Blob> {
+  const trimmed = downloadUrl.trim()
+  if (!trimmed) {
+    throw new Error('No result PDF URL.')
+  }
+
+  const proxiedUrl = resolveLabResultPdfFetchUrl(trimmed)
+  if (proxiedUrl !== trimmed) {
+    const blob = await readPdfBlob(await fetch(proxiedUrl))
+    if (blob) return blob
+  }
+
+  const apiPath = apiHostedFilePath(trimmed)
+  if (apiPath) {
+    const blob = await readPdfBlob(await apiFetch(apiPath))
+    if (blob) return blob
+  }
+
+  const blob = await readPdfBlob(await fetch(trimmed))
+  if (blob) return blob
+
+  throw new Error('Could not download the result PDF for AI review.')
 }
 
 function stopLine(stop: CollectionRouteStop): string {
@@ -442,43 +502,22 @@ export async function reviewLabResultWithAi(params: AiReviewParams): Promise<str
     throw new Error('No Laboratory Report Validation prompt configured.')
   }
 
+  const downloadUrl = params.downloadUrl?.trim()
+  if (!downloadUrl) {
+    throw new Error('Upload a result PDF for this test first.')
+  }
+
   const message = buildLabResultReviewMessage(params)
-  const url = params.downloadUrl?.trim()
-  let pdfBlob: Blob | null = null
-  if (url) {
-    try {
-      const fileRes = await fetch(url, { credentials: 'include' })
-      if (fileRes.ok) {
-        const blob = await fileRes.blob()
-        if (blob.size > 0) pdfBlob = blob
-      }
-    } catch {
-      /* fall back to URL in message JSON */
-    }
-  }
+  const pdfBlob = await fetchLabResultPdfBlob(downloadUrl)
 
-  if (pdfBlob) {
-    const fd = new FormData()
-    fd.append('ai_config_id', params.ai_config_id)
-    fd.append('prompt_id', promptId)
-    fd.append('message', message)
-    fd.append('stream', 'false')
-    fd.append('file', pdfBlob, 'lab-result.pdf')
-    const res = await apiFetch('/api/conversations', { method: 'POST', body: fd })
-    if (!res.ok) throw new Error(await readApiErrorBody(res))
-    const data = (await res.json()) as { reply?: string }
-    return String(data.reply ?? '').trim() || 'No text returned from AI.'
-  }
+  const fd = new FormData()
+  fd.append('ai_config_id', params.ai_config_id)
+  fd.append('prompt_id', promptId)
+  fd.append('message', message)
+  fd.append('stream', 'false')
+  fd.append('file', pdfBlob, 'lab-result.pdf')
 
-  const res = await apiFetch('/api/conversations', {
-    method: 'POST',
-    body: JSON.stringify({
-      ai_config_id: params.ai_config_id,
-      prompt_id: promptId,
-      message,
-      stream: false,
-    }),
-  })
+  const res = await apiFetch('/api/conversations', { method: 'POST', body: fd })
   if (!res.ok) throw new Error(await readApiErrorBody(res))
   const data = (await res.json()) as { reply?: string }
   return String(data.reply ?? '').trim() || 'No text returned from AI.'

@@ -450,6 +450,14 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
     return '${lines.length} selected tests';
   }
 
+  void _goBack(BuildContext context) {
+    if (context.canPop()) {
+      context.pop();
+      return;
+    }
+    context.go('/home');
+  }
+
   @override
   Widget build(BuildContext context) {
     final session = SessionScope.of(context);
@@ -459,7 +467,11 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        automaticallyImplyLeading: false,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          tooltip: 'Back',
+          onPressed: () => _goBack(context),
+        ),
         titleSpacing: 12,
         title: const AppBrandingRow(markSize: 32, iconSize: 16, borderRadius: 8),
       ),

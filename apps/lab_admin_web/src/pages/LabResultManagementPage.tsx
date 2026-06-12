@@ -247,6 +247,15 @@ export function LabResultManagementPage() {
     detail && detail.items.length > 0 && uploadedItems.length === detail.items.length,
   )
 
+  const hasIncorrectAiReview = useMemo(() => {
+    if (!detail) return false
+    return detail.items.some((it) => {
+      const entry = aiReviewByTestId[it.test_id]
+      if (!entry) return false
+      return parseAiReviewReply(entry.reply).verdict === 'fail'
+    })
+  }, [detail, aiReviewByTestId])
+
   const canUploadPdfs = detail ? canUploadResultPdfs(detail.status) : false
 
   async function refreshOrderDetail(id: string) {
@@ -386,6 +395,10 @@ export function LabResultManagementPage() {
     }
     if (!allTestsHavePdf) {
       showError('Upload result PDFs for all tests before release.')
+      return
+    }
+    if (hasIncorrectAiReview) {
+      showError('Cannot release: one or more tests were marked incorrect by AI review. Fix results and re-run review.')
       return
     }
     setReleaseSubmitting(true)
@@ -714,7 +727,11 @@ export function LabResultManagementPage() {
                 <p className="lab-result-entry__workflow-text">
                   Lab run complete. Upload result PDFs, run AI review, then use{' '}
                   <strong>Release to patient</strong> when you are ready to deliver.
-                  {allTestsHavePdf ? ' All tests have PDFs — you can release when review is done.' : null}
+                  {hasIncorrectAiReview
+                    ? ' One or more tests failed AI review — fix results before releasing.'
+                    : allTestsHavePdf
+                      ? ' All tests have PDFs — you can release when review is done.'
+                      : null}
                 </p>
               ) : detail.status === 'delivered' ? (
                 <p className="lab-result-entry__workflow-text">
@@ -857,16 +874,18 @@ export function LabResultManagementPage() {
                   ? 'Complete the lab run before uploading results or releasing.'
                   : uploadedItems.length === 0
                     ? 'Upload result PDFs for all tests to continue.'
-                    : allTestsHavePdf
-                      ? 'All tests have PDFs. Release to patient when review is complete.'
-                      : `${uploadedItems.length} of ${detail.items.length} PDFs uploaded — upload all tests before releasing.`}
+                    : hasIncorrectAiReview
+                      ? 'One or more tests failed AI review. Fix results and re-run review before releasing.'
+                      : allTestsHavePdf
+                        ? 'All tests have PDFs. Release to patient when review is complete.'
+                        : `${uploadedItems.length} of ${detail.items.length} PDFs uploaded — upload all tests before releasing.`}
             </p>
             {detail.status === 'completed' ? (
               <button
                 type="button"
                 className="btn btn-primary"
                 onClick={() => void releaseToPatient()}
-                disabled={!allTestsHavePdf || releaseSubmitting}
+                disabled={!allTestsHavePdf || hasIncorrectAiReview || releaseSubmitting}
               >
                 {releaseSubmitting ? 'Releasing…' : 'Release to patient'}
               </button>

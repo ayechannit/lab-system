@@ -1,15 +1,25 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../app/session_scope.dart';
 import '../../services/rest_lab_user_api.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/theme_extensions.dart';
 import '../../widgets/common/app_branding_row.dart';
+import '../../widgets/common/app_markdown_text.dart';
 import '../../widgets/common/app_toast.dart';
 import '../../widgets/navigation/lab_main_bottom_nav.dart';
 
 class AiAnalysisScreen extends StatelessWidget {
   const AiAnalysisScreen({super.key});
+
+  void _goBack(BuildContext context) {
+    if (context.canPop()) {
+      context.pop();
+      return;
+    }
+    context.go('/lab-results');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -30,7 +40,11 @@ class AiAnalysisScreen extends StatelessWidget {
 
         return Scaffold(
           appBar: AppBar(
-            automaticallyImplyLeading: false,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back),
+              tooltip: 'Back',
+              onPressed: () => _goBack(context),
+            ),
             titleSpacing: 4,
             title: const AppBrandingRow(
               markSize: 24,
@@ -150,7 +164,7 @@ class AiAnalysisScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: const Color(0x66E1E2EC)),
       ),
-      child: Text(text, style: const TextStyle(height: 1.35)),
+      child: AppMarkdownText(text),
     );
   }
 }

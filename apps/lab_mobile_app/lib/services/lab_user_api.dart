@@ -90,6 +90,13 @@ abstract class LabUserApi {
     required String userId,
     required String orderId,
   });
+
+  /// Authenticated download of a released result PDF (`GET .../result-file`).
+  Future<List<int>> downloadResultPdf({
+    required String orderId,
+    required String testId,
+  });
+
   Future<List<OrderRatingSummary>> listUserRatings(
     String userId, {
     int limit = 100,

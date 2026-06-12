@@ -75,6 +75,49 @@ class StorageService {
       return `${host}${fileKey}`;
     }
   }
+
+  static localAbsolutePath(fileKey) {
+    if (!fileKey || !fileKey.startsWith('/uploads/')) return null;
+    const uploadsRoot = path.join(__dirname, '../../uploads');
+    const abs = path.join(uploadsRoot, path.basename(fileKey));
+    if (!abs.startsWith(uploadsRoot)) return null;
+    return abs;
+  }
+
+  /**
+   * Open a stored result file for streaming (local disk or S3).
+   * @returns {{ stream, contentType, filename }} or null if missing.
+   */
+  static async openFile(fileKey) {
+    if (!fileKey) return null;
+
+    if (process.env.NODE_ENV === 'production' && !fileKey.startsWith('/uploads/')) {
+      try {
+        const command = new GetObjectCommand({
+          Bucket: bucketName,
+          Key: fileKey,
+        });
+        const response = await s3Client.send(command);
+        if (!response.Body) return null;
+        return {
+          stream: response.Body,
+          contentType: response.ContentType || 'application/pdf',
+          filename: path.basename(fileKey),
+        };
+      } catch (error) {
+        console.error('S3 open file error:', error);
+        return null;
+      }
+    }
+
+    const abs = StorageService.localAbsolutePath(fileKey);
+    if (!abs || !fs.existsSync(abs)) return null;
+    return {
+      stream: fs.createReadStream(abs),
+      contentType: 'application/pdf',
+      filename: path.basename(abs),
+    };
+  }
 }
 
 module.exports = StorageService;

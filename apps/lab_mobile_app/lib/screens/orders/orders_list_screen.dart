@@ -19,6 +19,17 @@ class OrdersListScreen extends StatefulWidget {
 }
 
 class _OrdersListScreenState extends State<OrdersListScreen> {
+  static const _allStatuses = <String>[
+    'pending',
+    'scheduled',
+    'collecting',
+    'running',
+    'completed',
+  ];
+
+  /// Empty string = All.
+  String _statusFilter = '';
+
   @override
   void initState() {
     super.initState();
@@ -29,6 +40,24 @@ class _OrdersListScreenState extends State<OrdersListScreen> {
     });
   }
 
+  String _normalizeStatus(LabOrderSummary order) =>
+      (order.backendStatus ?? 'pending').trim().toLowerCase();
+
+  int _countForStatus(List<LabOrderSummary> orders, String status) {
+    if (status.isEmpty) return orders.length;
+    return orders.where((o) => _normalizeStatus(o) == status).length;
+  }
+
+  List<LabOrderSummary> _filteredOrders(List<LabOrderSummary> orders) {
+    if (_statusFilter.isEmpty) return orders;
+    return orders.where((o) => _normalizeStatus(o) == _statusFilter).toList();
+  }
+
+  String _filterLabel(String status) {
+    if (status.isEmpty) return 'All';
+    return orderStatusStyleFor(status).label;
+  }
+
   @override
   Widget build(BuildContext context) {
     final session = SessionScope.of(context);
@@ -36,6 +65,7 @@ class _OrdersListScreenState extends State<OrdersListScreen> {
       listenable: session,
       builder: (context, _) {
         final orders = session.activeOrders;
+        final filtered = _filteredOrders(orders);
         void openNewOrder() => context.push('/order-lab-test');
 
         return Scaffold(
@@ -103,17 +133,46 @@ class _OrdersListScreenState extends State<OrdersListScreen> {
                         ),
                   ),
                   const SizedBox(height: 10),
-                  ...orders.map((order) => _OrderListTile(
-                        order: order,
-                        rating: session.ratingForOrder(order.id),
-                        onTap: session.busy
-                            ? null
-                            : () async {
-                                await session.selectTrackingOrder(order.id);
-                                if (!context.mounted) return;
-                                context.push('/order-tracking');
-                              },
-                      )),
+                  _OrderStatusTabs(
+                    selected: _statusFilter,
+                    statuses: _allStatuses,
+                    countFor: (status) => _countForStatus(orders, status),
+                    onSelected: (status) => setState(() => _statusFilter = status),
+                  ),
+                  const SizedBox(height: 12),
+                  if (filtered.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 24),
+                      child: Column(
+                        children: [
+                          Icon(Icons.filter_list_off_outlined, size: 40, color: context.cs.onSurfaceVariant),
+                          const SizedBox(height: 10),
+                          Text(
+                            'No ${_filterLabel(_statusFilter).toLowerCase()} orders',
+                            textAlign: TextAlign.center,
+                            style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Try another status tab or place a new order.',
+                            textAlign: TextAlign.center,
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: context.cs.onSurfaceVariant),
+                          ),
+                        ],
+                      ),
+                    )
+                  else
+                    ...filtered.map((order) => _OrderListTile(
+                          order: order,
+                          rating: session.ratingForOrder(order.id),
+                          onTap: session.busy
+                              ? null
+                              : () async {
+                                  await session.selectTrackingOrder(order.id);
+                                  if (!context.mounted) return;
+                                  context.push('/order-tracking');
+                                },
+                        )),
                 ],
               ],
             ),
@@ -121,6 +180,87 @@ class _OrdersListScreenState extends State<OrdersListScreen> {
           bottomNavigationBar: const LabMainBottomNav(current: LabMainTab.orders),
         );
       },
+    );
+  }
+}
+
+class _OrderStatusTabs extends StatelessWidget {
+  const _OrderStatusTabs({
+    required this.selected,
+    required this.statuses,
+    required this.countFor,
+    required this.onSelected,
+  });
+
+  final String selected;
+  final List<String> statuses;
+  final int Function(String status) countFor;
+  final ValueChanged<String> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final tabs = ['', ...statuses];
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          for (final status in tabs) ...[
+            _StatusTabChip(
+              label: status.isEmpty ? 'All' : orderStatusStyleFor(status).label,
+              count: countFor(status),
+              selected: selected == status,
+              onTap: () => onSelected(status),
+            ),
+            if (status != tabs.last) const SizedBox(width: 8),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _StatusTabChip extends StatelessWidget {
+  const _StatusTabChip({
+    required this.label,
+    required this.count,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final int count;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = context.cs;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(999),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          decoration: BoxDecoration(
+            color: selected ? cs.primary : cs.surfaceContainerHighest.withValues(alpha: 0.65),
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(
+              color: selected ? cs.primary : cs.outlineVariant.withValues(alpha: 0.55),
+            ),
+          ),
+          child: Text(
+            '$label ($count)',
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  color: selected ? cs.onPrimary : cs.onSurfaceVariant,
+                  fontWeight: FontWeight.w600,
+                ),
+          ),
+        ),
+      ),
     );
   }
 }

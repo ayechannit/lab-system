@@ -245,6 +245,46 @@ const uploadTestResult = async (req, res) => {
   }
 };
 
+const downloadTestResult = async (req, res) => {
+  try {
+    const { id, testId } = req.params;
+    const order = await Order.getById(id);
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    const isStaff = req.user?.type === 'staff';
+    const isOwner =
+      order.user_id &&
+      req.user?.id &&
+      String(order.user_id).toLowerCase() === String(req.user.id).toLowerCase();
+    if (!isStaff && !isOwner) {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+    if (!isStaff && order.status !== 'delivered') {
+      return res.status(403).json({ message: 'Results not released yet' });
+    }
+
+    const item = (order.items || []).find(
+      (row) => String(row.test_id).toLowerCase() === String(testId).toLowerCase(),
+    );
+    if (!item?.result_file_url) {
+      return res.status(404).json({ message: 'No result file for this test' });
+    }
+
+    const opened = await StorageService.openFile(item.result_file_url);
+    if (!opened) {
+      return res.status(404).json({ message: 'Result file not found on server' });
+    }
+
+    res.setHeader('Content-Type', opened.contentType);
+    res.setHeader('Content-Disposition', `attachment; filename="${opened.filename}"`);
+    opened.stream.pipe(res);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   getAllOrders,
   getOrderById,
@@ -255,4 +295,5 @@ module.exports = {
   deleteOrder,
   generateQrCode,
   uploadTestResult,
+  downloadTestResult,
 };

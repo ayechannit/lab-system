@@ -379,6 +379,23 @@
   align-items: center;
 }
 
+.rating-stars {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.05rem;
+  font-size: 1rem;
+  line-height: 1;
+  letter-spacing: 0.02em;
+}
+
+.rating-stars__star {
+  color: var(--border);
+}
+
+.rating-stars__star--filled {
+  color: #f5a623;
+}
+
 .data-table {
   width: 100%;
   border-collapse: collapse;

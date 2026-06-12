@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
@@ -37,6 +39,20 @@ abstract final class LabReportPdfService {
     }
 
     final saved = await savePdfBytes(response.bodyBytes, filename);
+    if (kIsWeb) {
+      return filename;
+    }
+    return saved;
+  }
+
+  static Future<String> saveBytes({
+    required List<int> bytes,
+    required String filename,
+  }) async {
+    if (bytes.isEmpty) {
+      throw LabReportPdfException('The report file is empty.');
+    }
+    final saved = await savePdfBytes(Uint8List.fromList(bytes), filename);
     if (kIsWeb) {
       return filename;
     }

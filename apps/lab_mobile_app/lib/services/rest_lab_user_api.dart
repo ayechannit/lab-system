@@ -642,14 +642,18 @@ class RestLabUserApi implements LabUserApi {
   LabResultReport _mapOrderDetailToResult(Map<String, dynamic> o, String orderId) {
     final items = o['items'];
     String? pdf;
+    String? resultTestId;
     DateTime? released;
     var sampleRef = '';
     if (items is List) {
       for (final it in items) {
         final m = _asObj(it);
         final u = _gv(m, 'download_url') ?? _gv(m, 'downloadUrl');
-        if (u != null && '$u'.isNotEmpty) {
-          pdf = '$u';
+        final fileKey = _gv(m, 'result_file_url') ?? _gv(m, 'resultFileUrl');
+        if ((u != null && '$u'.isNotEmpty) || (fileKey != null && '$fileKey'.isNotEmpty)) {
+          pdf = u != null && '$u'.isNotEmpty ? '$u' : null;
+          resultTestId = '${_gv(m, 'test_id') ?? _gv(m, 'testId')}'.trim();
+          if (resultTestId.isEmpty) resultTestId = null;
           released = _asDt(_gv(m, 'updated_at') ?? _gv(m, 'updatedAt')) ?? DateTime.now();
           sampleRef = '${_gv(m, 'test_name') ?? _gv(m, 'testName')}'.trim();
           break;
@@ -671,7 +675,24 @@ class RestLabUserApi implements LabUserApi {
       releasedAt: released ?? DateTime.now(),
       lines: const [],
       resultPdfUrl: pdf,
+      resultTestId: resultTestId,
     );
+  }
+
+  @override
+  Future<List<int>> downloadResultPdf({
+    required String orderId,
+    required String testId,
+  }) async {
+    final r = await http.get(
+      Uri.parse('$_base/api/orders/$orderId/tests/$testId/result-file'),
+      headers: _jsonHeaders(),
+    );
+    if (r.statusCode >= 400) _throwFromResponse(r);
+    if (r.bodyBytes.isEmpty) {
+      throw LabApiException('The report file is empty.');
+    }
+    return r.bodyBytes;
   }
 
   @override
@@ -703,7 +724,8 @@ class RestLabUserApi implements LabUserApi {
     final released = await listReleasedOrders(userId, limit: 30);
     for (final order in released) {
       final report = await getResultForOrder(userId: userId, orderId: order.id);
-      if (report?.resultPdfUrl != null && report!.resultPdfUrl!.isNotEmpty) {
+      if (report?.resultTestId != null ||
+          (report?.resultPdfUrl != null && report!.resultPdfUrl!.isNotEmpty)) {
         return report;
       }
     }
@@ -827,15 +849,25 @@ class RestLabUserApi implements LabUserApi {
     final aiId = await _resolveAiConfigId();
 
     List<int>? pdfBytes;
-    final firstPdfUrl = '${tests.first['result_pdf_url']}';
-    if (firstPdfUrl.isNotEmpty) {
+    final firstTestId = '${tests.first['test_id']}'.trim();
+    if (firstTestId.isNotEmpty) {
       try {
-        final pdfRes = await http.get(Uri.parse(_absoluteUrl(firstPdfUrl)), headers: _jsonHeaders());
-        if (pdfRes.statusCode < 400 && pdfRes.bodyBytes.isNotEmpty) {
-          pdfBytes = pdfRes.bodyBytes;
-        }
+        pdfBytes = await downloadResultPdf(orderId: orderId, testId: firstTestId);
       } catch (_) {
-        /* fall back to URL-only message */
+        /* fall back to URL fetch below */
+      }
+    }
+    if (pdfBytes == null) {
+      final firstPdfUrl = '${tests.first['result_pdf_url']}';
+      if (firstPdfUrl.isNotEmpty) {
+        try {
+          final pdfRes = await http.get(Uri.parse(_absoluteUrl(firstPdfUrl)), headers: _jsonHeaders());
+          if (pdfRes.statusCode < 400 && pdfRes.bodyBytes.isNotEmpty) {
+            pdfBytes = pdfRes.bodyBytes;
+          }
+        } catch (_) {
+          /* fall back to URL-only message */
+        }
       }
     }
 

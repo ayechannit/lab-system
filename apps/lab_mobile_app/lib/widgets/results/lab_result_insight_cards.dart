@@ -33,25 +33,25 @@ class _LabResultInsightCardsState extends State<LabResultInsightCards> {
 
   LabResultReport? get report => widget.report;
 
-  Future<void> _downloadPdf(String url) async {
+  Future<void> _downloadPdf() async {
     if (_downloading) return;
     final r = report;
     if (r == null) return;
 
     setState(() => _downloading = true);
     try {
-      final filename = LabReportPdfService.buildFilename(
-        sampleId: r.sampleId,
-        orderId: r.orderId,
-      );
-      final saved = await LabReportPdfService.download(url: url, filename: filename);
+      final session = SessionScope.of(context);
+      final saved = await session.downloadReportPdf(r);
       if (!mounted) return;
-      if (kIsWeb) {
-        AppToast.successInShell(context, filename, title: 'Download started');
-      } else {
-        AppToast.successInShell(context, saved, title: 'Report saved');
-      }
+      AppToast.successInShell(
+        context,
+        saved,
+        title: kIsWeb ? 'Download started' : 'Report saved',
+      );
     } on LabReportPdfException catch (e) {
+      if (!mounted) return;
+      AppToast.errorInShell(context, e.message);
+    } on LabApiException catch (e) {
       if (!mounted) return;
       AppToast.errorInShell(context, e.message);
     } catch (_) {
@@ -84,10 +84,10 @@ class _LabResultInsightCardsState extends State<LabResultInsightCards> {
   @override
   Widget build(BuildContext context) {
     final lines = report?.lines ?? const <LabResultLine>[];
-    final pdfUrl = report?.resultPdfUrl;
-    final hasStructured = lines.isNotEmpty;
-    final hasPdf = pdfUrl != null && pdfUrl.isNotEmpty;
-    final canAi = report != null && (hasStructured || hasPdf);
+    final hasPdf = report != null &&
+        ((report!.resultTestId != null && report!.resultTestId!.isNotEmpty) ||
+            (report!.resultPdfUrl != null && report!.resultPdfUrl!.isNotEmpty));
+    final canAi = report != null && (lines.isNotEmpty || hasPdf);
     final gap = widget.compact ? 10.0 : 14.0;
     final cs = context.cs;
     final borderColor = cs.outlineVariant.withValues(alpha: 0.55);
@@ -99,7 +99,7 @@ class _LabResultInsightCardsState extends State<LabResultInsightCards> {
           hasPdf: hasPdf,
           downloading: _downloading,
           borderColor: borderColor,
-          onDownload: hasPdf ? () => _downloadPdf(pdfUrl) : null,
+          onDownload: hasPdf ? _downloadPdf : null,
         ),
         SizedBox(height: gap),
         _AiCheckCard(
@@ -280,23 +280,28 @@ class _AiCheckCard extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: FilledButton.tonalIcon(
-                onPressed: onPressed,
+                onPressed: running ? () {} : onPressed,
                 icon: running
                     ? SizedBox(
                         width: 18,
                         height: 18,
                         child: CircularProgressIndicator(
-                          strokeWidth: 2,
+                          strokeWidth: 2.5,
                           color: cs.primary,
                         ),
                       )
                     : const Icon(Icons.bolt_rounded),
-                label: Text(running ? 'Running AI Check…' : 'Run AI Check'),
+                label: Text(
+                  running ? 'Running AI Check…' : 'Run AI Check',
+                  style: TextStyle(
+                    fontWeight: running ? FontWeight.w600 : FontWeight.w500,
+                  ),
+                ),
                 style: FilledButton.styleFrom(
                   backgroundColor: Colors.white,
                   foregroundColor: cs.primary,
-                  disabledBackgroundColor: Colors.white.withValues(alpha: 0.45),
-                  disabledForegroundColor: cs.primary.withValues(alpha: 0.5),
+                  disabledBackgroundColor: Colors.white.withValues(alpha: 0.72),
+                  disabledForegroundColor: cs.primary.withValues(alpha: 0.38),
                   padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
               ),

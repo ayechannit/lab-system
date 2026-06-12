@@ -26,9 +26,10 @@ class LabResultDetailScreen extends StatelessWidget {
       builder: (context, _) {
         final report = session.latestResult;
         final lines = report?.lines ?? const <LabResultLine>[];
-        final pdfUrl = report?.resultPdfUrl;
         final hasStructured = lines.isNotEmpty;
-        final hasPdf = pdfUrl != null && pdfUrl.isNotEmpty;
+        final hasPdf = report != null &&
+            ((report!.resultTestId != null && report!.resultTestId!.isNotEmpty) ||
+                (report!.resultPdfUrl != null && report!.resultPdfUrl!.isNotEmpty));
         final borderColor = context.cs.outlineVariant.withValues(alpha: 0.55);
         final title = hasStructured
             ? lines.first.name
@@ -127,19 +128,35 @@ class _ReportHeroCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              const _ReleasedChip(),
-              if (hasPdf)
-                _MetaChip(
-                  icon: Icons.picture_as_pdf_outlined,
-                  label: 'PDF ready',
-                  color: const Color(0xFFC62828),
-                  background: const Color(0xFFE53935).withValues(alpha: 0.1),
-                ),
-            ],
+          LayoutBuilder(
+            builder: (context, constraints) {
+              const releasedChip = _ReleasedChip();
+              if (!hasPdf) return releasedChip;
+
+              const pdfChip = _MetaChip(
+                icon: Icons.picture_as_pdf_outlined,
+                label: 'PDF ready',
+                color: Color(0xFFC62828),
+                background: Color(0x1AE53935),
+              );
+
+              // Side-by-side when there is room; stack on narrow viewports.
+              if (constraints.maxWidth >= 200) {
+                return Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [releasedChip, pdfChip],
+                );
+              }
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  releasedChip,
+                  const SizedBox(height: 8),
+                  pdfChip,
+                ],
+              );
+            },
           ),
           const SizedBox(height: 14),
           Text(
