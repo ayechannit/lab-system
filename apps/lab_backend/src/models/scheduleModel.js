@@ -49,6 +49,15 @@ class Schedule {
       `);
     return result.recordset[0];
   }
+
+  static async bulkUpsert(schedulesArray, updatedBy = null) {
+    const results = [];
+    for (const data of schedulesArray) {
+      const res = await this.upsert(data, updatedBy);
+      results.push(res);
+    }
+    return results;
+  }
 }
 
 module.exports = Schedule;

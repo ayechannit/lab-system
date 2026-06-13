@@ -343,6 +343,63 @@ class Order {
     }
   }
 
+  static async bulkUpdateStatus(ids, newStatus, staffId, note, updatedBy = null) {
+    const pool = await poolPromise;
+    const transaction = new sql.Transaction(pool);
+    
+    try {
+      await transaction.begin();
+      const updatedOrders = [];
+
+      for (const id of ids) {
+        // 1. Get old status
+        const getOldStatusReq = new sql.Request(transaction);
+        const oldStatusResult = await getOldStatusReq
+          .input('id', sql.UniqueIdentifier, id)
+          .query('SELECT status FROM lab_orders WHERE id = @id AND is_deleted = 0');
+        
+        const oldStatus = oldStatusResult.recordset[0]?.status;
+        if (!oldStatus) throw new Error(`Order ${id} not found or deleted`);
+
+        // 2. Update status
+        const updateReq = new sql.Request(transaction);
+        const result = await updateReq
+          .input('id', sql.UniqueIdentifier, id)
+          .input('status', sql.VarChar, newStatus)
+          .input('updated_user', sql.UniqueIdentifier, updatedBy || staffId)
+          .query(`
+            UPDATE lab_orders SET status = @status, updated_user = @updated_user, updated_at = GETDATE() 
+            OUTPUT INSERTED.*
+            WHERE id = @id AND is_deleted = 0
+          `);
+
+        const updatedOrder = result.recordset[0];
+        if (!updatedOrder) throw new Error(`Failed to update status for order ${id}`);
+        updatedOrders.push(updatedOrder);
+
+        // 3. Log change
+        const logReq = new sql.Request(transaction);
+        await logReq
+          .input('order_id', sql.UniqueIdentifier, id)
+          .input('changed_by', sql.UniqueIdentifier, staffId)
+          .input('old_status', sql.VarChar, oldStatus)
+          .input('new_status', sql.VarChar, newStatus)
+          .input('note', sql.Text, note)
+          .input('created_user', sql.UniqueIdentifier, updatedBy || staffId)
+          .query(`
+            INSERT INTO order_status_logs (id, order_id, changed_by, old_status, new_status, note, created_user)
+            VALUES (NEWID(), @order_id, @changed_by, @old_status, @new_status, @note, @created_user)
+          `);
+      }
+
+      await transaction.commit();
+      return updatedOrders;
+    } catch (err) {
+      await transaction.rollback();
+      throw err;
+    }
+  }
+
   static async delete(id, updatedBy = null) {
     const pool = await poolPromise;
     const result = await pool.request()

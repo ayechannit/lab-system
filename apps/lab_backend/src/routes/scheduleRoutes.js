@@ -110,6 +110,61 @@ router.use(authMiddleware);
  *               $ref: '#/components/schemas/Schedule'
  */
 
+/**
+ * @swagger
+ * /api/schedules/bulk:
+ *   post:
+ *     summary: Bulk create or update multiple schedules
+ *     tags: [Schedules]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - schedules
+ *             properties:
+ *               schedules:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   required:
+ *                     - order_id
+ *                   properties:
+ *                     order_id:
+ *                       type: string
+ *                       format: uuid
+ *                     collecting_person:
+ *                       type: string
+ *                     collection_time:
+ *                       type: string
+ *                       format: date-time
+ *                     running_time:
+ *                       type: string
+ *                       format: date-time
+ *                     report_out_time:
+ *                       type: string
+ *                       format: date-time
+ *                     accepted_by_user:
+ *                       type: boolean
+ *     responses:
+ *       200:
+ *         description: Schedules updated/created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 schedules:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Schedule'
+ */
+
+router.post('/bulk', scheduleController.bulkUpsertSchedules);
 router.get('/:order_id', scheduleController.getScheduleByOrderId);
 router.post('/', scheduleController.upsertSchedule);
 

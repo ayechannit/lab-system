@@ -43,7 +43,57 @@ const upsertSchedule = async (req, res) => {
   }
 };
 
+const bulkUpsertSchedules = async (req, res) => {
+  try {
+    const { schedules } = req.body;
+
+    if (!Array.isArray(schedules) || schedules.length === 0) {
+      return res.status(400).json({ message: 'A non-empty schedules array is required' });
+    }
+
+    // Basic validation
+    for (const s of schedules) {
+      if (!s.order_id) {
+        return res.status(400).json({ message: 'Each schedule must have order_id' });
+      }
+    }
+
+    const results = await Schedule.bulkUpsert(schedules, req.user?.id);
+
+    // Notify users of their updated schedule
+    for (const schedule of results) {
+      if (schedule) {
+        try {
+          const order = await Order.getById(schedule.order_id);
+          if (order && order.user_id) {
+            let body = 'Your lab schedule has been updated.';
+            if (schedule.collecting_person && schedule.collection_time) {
+              const formattedTime = new Date(schedule.collection_time).toLocaleString();
+              body = `Your sample collection schedule is set. ${schedule.collecting_person} will collect samples on ${formattedTime}.`;
+            }
+            
+            NotificationService.sendToUser(
+              order.user_id,
+              'user',
+              'Sample Collection Scheduled',
+              body,
+              { order_id: schedule.order_id, event: 'schedule_updated', collecting_person: schedule.collecting_person }
+            ).catch(err => console.error(`Error sending schedule notification for order ${schedule.order_id}:`, err.message));
+          }
+        } catch (notifyError) {
+          console.error(`Failed to send notification for schedule update on order ${schedule.order_id}:`, notifyError.message);
+        }
+      }
+    }
+
+    res.json({ message: `${results.length} schedules created/updated successfully`, schedules: results });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 module.exports = {
   getScheduleByOrderId,
   upsertSchedule,
+  bulkUpsertSchedules,
 };

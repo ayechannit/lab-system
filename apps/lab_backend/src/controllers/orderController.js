@@ -263,6 +263,48 @@ const uploadTestResult = async (req, res) => {
   }
 };
 
+const bulkUpdateOrderStatus = async (req, res) => {
+  try {
+    const { order_ids, status, staff_id, note } = req.body;
+
+    if (!Array.isArray(order_ids) || order_ids.length === 0) {
+      return res.status(400).json({ message: 'A non-empty order_ids array is required' });
+    }
+
+    if (!status) {
+      return res.status(400).json({ message: 'A new status is required' });
+    }
+
+    const validStatuses = ['pending', 'scheduled', 'collecting', 'running', 'completed', 'delivered'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ message: `Invalid status. Must be one of: ${validStatuses.join(', ')}` });
+    }
+
+    const updatedOrders = await Order.bulkUpdateStatus(
+      order_ids,
+      status,
+      staff_id || req.user?.id,
+      note || 'Bulk status update',
+      req.user?.id
+    );
+
+    // Send background notifications to users
+    for (const order of updatedOrders) {
+      NotificationService.sendToUser(
+        order.user_id,
+        'user',
+        'Order Status Updated',
+        `Your order for patient "${order.patient_name}" status has been updated to "${status}".`,
+        { order_id: order.id, status: status, event: 'order_status_updated' }
+      ).catch(err => console.error(`Error sending status update notification for order ${order.id}:`, err.message));
+    }
+
+    res.json({ message: `${updatedOrders.length} orders updated successfully`, orders: updatedOrders });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   getAllOrders,
   getOrderById,
@@ -270,6 +312,7 @@ module.exports = {
   addOrderItems,
   updateOrder,
   updateOrderStatus,
+  bulkUpdateOrderStatus,
   deleteOrder,
   generateQrCode,
   uploadTestResult,

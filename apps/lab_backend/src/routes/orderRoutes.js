@@ -438,6 +438,52 @@ router.use(authMiddleware);
  *         description: Order or test not found
  */
 
+/**
+ * @swagger
+ * /api/orders/bulk-status:
+ *   put:
+ *     summary: Bulk update multiple orders status and log the changes
+ *     tags: [Orders]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - order_ids
+ *               - status
+ *             properties:
+ *               order_ids:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: uuid
+ *               status:
+ *                 type: string
+ *                 enum: [pending, scheduled, collecting, running, completed, delivered]
+ *               staff_id:
+ *                 type: string
+ *                 format: uuid
+ *               note:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Bulk status updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 orders:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Order'
+ */
+
+router.put('/bulk-status', orderController.bulkUpdateOrderStatus);
 router.get('/', orderController.getAllOrders);
 router.get('/:id', orderController.getOrderById);
 router.post('/', upload.single('prescription'), orderController.createOrder);
