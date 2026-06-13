@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { createPortal } from 'react-dom'
-import { DatetimeLocalField } from '../components/common/DatetimeLocalField'
+import { Link } from 'react-router-dom'
 import { TimeField } from '../components/common/TimeField'
 import { ListFilterSearchField } from '../components/common/ListFilterSearchField'
 import { PageHeader } from '../components/common/PageHeader'
@@ -9,11 +9,10 @@ import { useToast } from '../hooks/ToastContext'
 import { useErrorToast } from '../hooks/usePageNotify'
 import { LoadingSpinner } from '../components/common/LoadingSpinner'
 import { DEFAULT_TABLE_PAGE_SIZE, TablePagination } from '../components/common/TablePagination'
-import { formatCoordPair, LocationMapPicker } from '../components/users/LocationMapPicker'
-import type { StaffListRow, StaffRole } from '../model/types'
+import { formatCoordPair } from '../components/users/LocationMapPicker'
+import type { StaffListRow } from '../model/types'
 import { isApiMode } from '../services/apiBase'
 import {
-  fetchOrderById,
   fetchOrders,
   updateOrderStatus,
   type ApiOrderDetailItem,
@@ -22,7 +21,7 @@ import {
   type FetchOrdersParams,
 } from '../services/orderService'
 import { fetchStaffList } from '../services/staffService'
-import { upsertSchedule, type ApiOrderSchedule } from '../services/scheduleService'
+import { upsertSchedule } from '../services/scheduleService'
 import {
   planCollectionRouteWithAi,
   type CollectionRouteResult,
@@ -31,67 +30,10 @@ import {
 import { fetchSystemSettings } from '../services/systemSettingService'
 import { suggestCollectionRoute } from '../services/aiDemo'
 import { friendlyAiReviewErrorMessage } from '../hooks/usePageNotify'
-import {
-  COLLECTOR_OTHER_VALUE,
-  collectorRoleStaffList,
-  collectorStaffDropdownList,
-} from '../utils/collectorStaff'
-import { datetimeLocalToIso, toDatetimeLocalValue } from '../utils/datetimeLocal'
+import { collectorRoleStaffList } from '../utils/collectorStaff'
 import '../components/common/ui.css'
 
 const ROUTING_STATUSES: ApiOrderStatus[] = ['pending', 'scheduled', 'collecting']
-
-function staffRoleShort(role: StaffRole): string {
-  const map: Record<StaffRole, string> = {
-    admin: 'Admin',
-    lab_technician: 'Lab tech',
-    reception: 'Reception',
-    manager: 'Manager',
-    collector: 'Collector',
-  }
-  return map[role] ?? role
-}
-
-function applySchedulePrefill(
-  pre: ApiOrderSchedule | null,
-  staff: StaffListRow[],
-  setters: {
-    setCollectorSelect: (v: string) => void
-    setCollectingPerson: (v: string) => void
-    setCollectionTime: (v: string) => void
-    setRunningTime: (v: string) => void
-    setReportOutTime: (v: string) => void
-    setAcceptedByUser: (v: boolean) => void
-  },
-) {
-  const opts = collectorStaffDropdownList(staff)
-  const raw = (pre?.collecting_person ?? '').trim()
-  if (opts.length === 0) {
-    setters.setCollectorSelect(COLLECTOR_OTHER_VALUE)
-    setters.setCollectingPerson(raw)
-  } else {
-    const match = opts.find((s) => s.name.trim().toLowerCase() === raw.toLowerCase())
-    if (match) {
-      setters.setCollectorSelect(match.id)
-      setters.setCollectingPerson('')
-    } else if (raw) {
-      setters.setCollectorSelect(COLLECTOR_OTHER_VALUE)
-      setters.setCollectingPerson(raw)
-    } else {
-      setters.setCollectorSelect(opts[0]?.id ?? '')
-      setters.setCollectingPerson('')
-    }
-  }
-  setters.setCollectionTime(toDatetimeLocalValue(pre?.collection_time ?? null))
-  setters.setRunningTime(toDatetimeLocalValue(pre?.running_time ?? null))
-  setters.setReportOutTime(toDatetimeLocalValue(pre?.report_out_time ?? null))
-  setters.setAcceptedByUser(Boolean(pre?.accepted_by_user))
-}
-
-const ORDER_STATUS_OPTIONS: { value: ApiOrderStatus; label: string }[] = [
-  { value: 'pending', label: 'Pending' },
-  { value: 'scheduled', label: 'Scheduled' },
-]
 
 function fmtWhen(iso: string | undefined): string {
   if (!iso) return '—'
@@ -113,17 +55,6 @@ function labStartLocation(settings: Awaited<ReturnType<typeof fetchSystemSetting
 }
 
 
-function routeStartLocationFromState(
-  latitude: number | '',
-  longitude: number | '',
-): { lat: number; lng: number } | null {
-  const lat = typeof latitude === 'number' ? latitude : Number.parseFloat(String(latitude))
-  const lng = typeof longitude === 'number' ? longitude : Number.parseFloat(String(longitude))
-  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null
-  if (lat === 0 && lng === 0) return null
-  return { lat, lng }
-}
-
 function parseRouteCollectionDuration(value: number | ''): number | null {
   const minutes = typeof value === 'number' ? value : Number.parseInt(String(value), 10)
   if (!Number.isFinite(minutes) || minutes <= 0) return null
@@ -137,6 +68,39 @@ function parseRouteStartTimeInput(value: string): string | null {
   if (!Number.isFinite(h) || !Number.isFinite(m) || h > 23 || m > 59) return null
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
 }
+
+/** Combine today's date with a route clock time (HH:MM) for schedule storage. */
+function clockTimeOnTodayToIso(clock: string): string | null {
+  const normalized = parseRouteStartTimeInput(clock)
+  if (!normalized) return null
+  const [h, m] = normalized.split(':').map(Number)
+  const d = new Date()
+  d.setHours(h, m, 0, 0)
+  if (!Number.isFinite(d.getTime())) return null
+  return d.toISOString()
+}
+
+function stopCollectionIso(
+  orderId: string,
+  stopIndex: number,
+  routeResult: CollectionRouteResult | null,
+  baseIso: string,
+  minutesPerStop: number,
+): string {
+  const stopDetail = routeResult ? routeStopDetailForOrder(routeResult.routeStops, orderId) : undefined
+  const clock = stopDetail?.collectionStart ?? stopDetail?.arrivalTime
+  if (clock) {
+    const iso = clockTimeOnTodayToIso(clock)
+    if (iso) return iso
+  }
+  const baseMs = new Date(baseIso).getTime()
+  return new Date(baseMs + stopIndex * minutesPerStop * 60_000).toISOString()
+}
+
+const ORDER_STATUS_OPTIONS: { value: ApiOrderStatus; label: string }[] = [
+  { value: 'pending', label: 'Pending' },
+  { value: 'scheduled', label: 'Scheduled' },
+]
 
 function orderCoords(order: ApiOrderListRow): { lat: number; lng: number } | null {
   const lat = Number(order.latitude)
@@ -200,8 +164,11 @@ export function SampleCollectionPage() {
   const [routeResult, setRouteResult] = useState<CollectionRouteResult | null>(null)
   const [routePlanOrders, setRoutePlanOrders] = useState<ApiOrderListRow[]>([])
   const [routePlanning, setRoutePlanning] = useState(false)
-  const [routeStartLatitude, setRouteStartLatitude] = useState<number | ''>('')
-  const [routeStartLongitude, setRouteStartLongitude] = useState<number | ''>('')
+  const [labRouteStart, setLabRouteStart] = useState<{
+    lat: number
+    lng: number
+    address: string | null
+  } | null>(null)
   const [routeStartTime, setRouteStartTime] = useState(() => formatRouteStartTime())
   const [routeCollectionDurationMinutes, setRouteCollectionDurationMinutes] = useState<number | ''>(10)
   const [patientInput, setPatientInput] = useState('')
@@ -211,21 +178,10 @@ export function SampleCollectionPage() {
   const [ordersPageSize, setOrdersPageSize] = useState(DEFAULT_TABLE_PAGE_SIZE)
   const [refreshTick, setRefreshTick] = useState(0)
   const [staff, setStaff] = useState<StaffListRow[]>([])
-
-  const [scheduleOpen, setScheduleOpen] = useState(false)
-  const [scheduleTargets, setScheduleTargets] = useState<ApiOrderListRow[]>([])
-  const [schCollectorSelect, setSchCollectorSelect] = useState('')
-  const [schCollectingPerson, setSchCollectingPerson] = useState('')
-  const [schCollectionTime, setSchCollectionTime] = useState('')
-  const [schRunningTime, setSchRunningTime] = useState('')
-  const [schReportOutTime, setSchReportOutTime] = useState('')
-  const [schAcceptedByUser, setSchAcceptedByUser] = useState(false)
-  const [scheduleSubmitting, setScheduleSubmitting] = useState(false)
-  const [scheduleError, setScheduleError] = useState<string | null>(null)
+  const [collectionSubmitting, setCollectionSubmitting] = useState(false)
 
   const [routeAssignOpen, setRouteAssignOpen] = useState(false)
   const [routeCollectorId, setRouteCollectorId] = useState('')
-  const [routeCollectionTime, setRouteCollectionTime] = useState('')
   const [routeAssignSubmitting, setRouteAssignSubmitting] = useState(false)
   const [routeAssignError, setRouteAssignError] = useState<string | null>(null)
   const [routeAssignments, setRouteAssignments] = useState<
@@ -233,7 +189,6 @@ export function SampleCollectionPage() {
   >({})
 
   const isScheduleMode = statusFilter === 'scheduled'
-  const collectorStaffOptions = useMemo(() => collectorStaffDropdownList(staff), [staff])
   const routeCollectorOptions = useMemo(() => collectorRoleStaffList(staff), [staff])
 
   useEffect(() => {
@@ -298,10 +253,15 @@ export function SampleCollectionPage() {
         const settings = await fetchSystemSettings()
         if (cancelled) return
         const loc = labStartLocation(settings)
-        if (loc) {
-          setRouteStartLatitude(loc.lat)
-          setRouteStartLongitude(loc.lng)
-        }
+        setLabRouteStart(
+          loc
+            ? {
+                lat: loc.lat,
+                lng: loc.lng,
+                address: settings.address?.trim() || null,
+              }
+            : null,
+        )
       } catch {
         /* optional prefill only */
       }
@@ -315,8 +275,6 @@ export function SampleCollectionPage() {
     setSelectedIds(new Set())
     setRouteResult(null)
     setRoutePlanOrders([])
-    setScheduleOpen(false)
-    setScheduleTargets([])
   }, [ordersListQuery])
 
   const routable = useMemo(
@@ -330,16 +288,16 @@ export function SampleCollectionPage() {
   )
 
   const routeSetupReady = useMemo(() => {
-    if (routeStartLocationFromState(routeStartLatitude, routeStartLongitude) == null) return false
+    if (labRouteStart == null) return false
     if (parseRouteStartTimeInput(routeStartTime) == null) return false
     if (parseRouteCollectionDuration(routeCollectionDurationMinutes) == null) return false
     return true
-  }, [routeStartLatitude, routeStartLongitude, routeStartTime, routeCollectionDurationMinutes])
+  }, [labRouteStart, routeStartTime, routeCollectionDurationMinutes])
 
   const canPlanRoute =
     hasApi && !loading && !routePlanning && selectedRoutableCount >= 2 && routeSetupReady
 
-  const canUpdateSchedule = hasApi && !loading && selectedRoutableCount >= 1
+  const canStartCollection = hasApi && !loading && !collectionSubmitting && selectedRoutableCount >= 1
 
   const toggle = (id: string) => {
     setSelectedIds((prev) => {
@@ -383,9 +341,8 @@ export function SampleCollectionPage() {
       return
     }
 
-    const startLocation = routeStartLocationFromState(routeStartLatitude, routeStartLongitude)
-    if (!startLocation) {
-      showError('Set the route start location on the map before planning.')
+    if (!labRouteStart) {
+      showError('Configure the lab location in System settings before planning a route.')
       return
     }
 
@@ -404,7 +361,7 @@ export function SampleCollectionPage() {
     setRoutePlanning(true)
     try {
       const result = await planCollectionRouteWithAi({
-        startLocation,
+        startLocation: { lat: labRouteStart.lat, lng: labRouteStart.lng },
         startTime,
         collectionDurationMinutes,
         stops: picked.map((o) => {
@@ -433,7 +390,6 @@ export function SampleCollectionPage() {
     if (routePlanOrders.length === 0) return
     setRouteAssignError(null)
     setRouteCollectorId(routeCollectorOptions[0]?.id ?? '')
-    setRouteCollectionTime('')
     setRouteAssignOpen(true)
   }
 
@@ -447,13 +403,15 @@ export function SampleCollectionPage() {
       setRouteAssignError('Select a collector staff member.')
       return
     }
-    if (!routeCollectionTime.trim()) {
-      setRouteAssignError('Enter the route start / collection time.')
+
+    const startClock = parseRouteStartTimeInput(routeStartTime)
+    if (!startClock) {
+      setRouteAssignError('Set a valid start time in Route setup before assigning a collector.')
       return
     }
-    const baseIso = datetimeLocalToIso(routeCollectionTime)
+    const baseIso = clockTimeOnTodayToIso(startClock)
     if (!baseIso) {
-      setRouteAssignError('Collection date and time is invalid.')
+      setRouteAssignError('Route start time from Route setup is invalid.')
       return
     }
 
@@ -462,15 +420,13 @@ export function SampleCollectionPage() {
       routeResult?.estimatedMinutes != null && routePlanOrders.length > 1
         ? Math.max(8, Math.round(routeResult.estimatedMinutes / routePlanOrders.length))
         : parseRouteCollectionDuration(routeCollectionDurationMinutes) ?? 10
-    const baseMs = new Date(baseIso).getTime()
 
     setRouteAssignSubmitting(true)
     const nextAssignments: Record<string, { collectorName: string; collectionTime: string }> = {}
     try {
       for (let i = 0; i < routePlanOrders.length; i++) {
         const order = routePlanOrders[i]
-        const stopMs = baseMs + i * minutesPerStop * 60_000
-        const stopIso = new Date(stopMs).toISOString()
+        const stopIso = stopCollectionIso(order.id, i, routeResult, baseIso, minutesPerStop)
         await upsertSchedule({
           order_id: order.id,
           collecting_person: collector.name.trim(),
@@ -502,84 +458,38 @@ export function SampleCollectionPage() {
     }
   }
 
-  async function openUpdateSchedule() {
+  async function startCollectionForSelected() {
     const picked = routable.filter((o) => selectedIds.has(o.id))
     if (picked.length === 0) {
-      showError('Select at least one order to update its schedule.')
+      showError('Select at least one order to start collection.')
       return
     }
-    setScheduleError(null)
-    setScheduleTargets(picked)
-    let pre: ApiOrderSchedule | null = null
+    const staffId = account?.id
+    if (!staffId) {
+      showError('Sign in with a staff account to update order status.')
+      return
+    }
+
+    setCollectionSubmitting(true)
     try {
-      const detail = await fetchOrderById(picked[0].id)
-      pre = detail?.schedule ?? null
-    } catch {
-      pre = null
-    }
-    applySchedulePrefill(pre, staff, {
-      setCollectorSelect: setSchCollectorSelect,
-      setCollectingPerson: setSchCollectingPerson,
-      setCollectionTime: setSchCollectionTime,
-      setRunningTime: setSchRunningTime,
-      setReportOutTime: setSchReportOutTime,
-      setAcceptedByUser: setSchAcceptedByUser,
-    })
-    setScheduleOpen(true)
-  }
-
-  async function submitUpdateSchedule(e: FormEvent) {
-    e.preventDefault()
-    if (scheduleTargets.length === 0) return
-    setScheduleError(null)
-
-    const opts = collectorStaffDropdownList(staff)
-    let collectingPerson = ''
-    if (opts.length === 0 || schCollectorSelect === COLLECTOR_OTHER_VALUE) {
-      collectingPerson = schCollectingPerson.trim()
-    } else if (schCollectorSelect) {
-      collectingPerson = opts.find((s) => s.id === schCollectorSelect)?.name.trim() ?? ''
-    }
-    if (!collectingPerson) {
-      return setScheduleError(
-        opts.length === 0
-          ? 'Enter who will perform collection.'
-          : schCollectorSelect === COLLECTOR_OTHER_VALUE
-            ? 'Enter a name or team for collection.'
-            : 'Select who will perform collection.',
-      )
-    }
-    if (!schCollectionTime.trim()) return setScheduleError('Enter collection date and time.')
-    const cIso = datetimeLocalToIso(schCollectionTime)
-    if (!cIso) return setScheduleError('Collection date and time is invalid.')
-
-    const runningIso = schRunningTime.trim() ? datetimeLocalToIso(schRunningTime) : null
-    const reportIso = schReportOutTime.trim() ? datetimeLocalToIso(schReportOutTime) : null
-
-    setScheduleSubmitting(true)
-    try {
-      for (const order of scheduleTargets) {
-        await upsertSchedule({
-          order_id: order.id,
-          collecting_person: collectingPerson,
-          collection_time: cIso,
-          running_time: runningIso,
-          report_out_time: reportIso,
-          accepted_by_user: schAcceptedByUser,
+      for (const order of picked) {
+        await updateOrderStatus(order.id, {
+          status: 'collecting',
+          staff_id: staffId,
+          note: 'Sample collection started',
         })
       }
-      setScheduleOpen(false)
-      setScheduleTargets([])
+      setSelectedIds(new Set())
       setRefreshTick((t) => t + 1)
       showSuccess(
-        scheduleTargets.length === 1
-          ? 'Schedule updated.'
-          : `Schedule updated for ${scheduleTargets.length} orders.`,
+        picked.length === 1
+          ? 'Order status updated to collecting.'
+          : `${picked.length} orders updated to collecting.`,
       )
     } catch (err) {
-      setScheduleError(err instanceof Error ? err.message : 'Schedule update failed')
+      showError(err instanceof Error ? err.message : 'Status update failed')
     } finally {
-      setScheduleSubmitting(false)
+      setCollectionSubmitting(false)
     }
   }
 
@@ -589,7 +499,7 @@ export function SampleCollectionPage() {
         title="Collection & routing"
         description={
           isScheduleMode
-            ? 'Review scheduled pickups and update collector, collection time, and related schedule details.'
+            ? 'Review scheduled pickups and mark orders as collecting when sample collection begins.'
             : 'Choose orders that need a sample pickup, then plan an efficient multi-stop collection route.'
         }
       />
@@ -661,7 +571,7 @@ export function SampleCollectionPage() {
         </h3>
         <p style={{ margin: '0 0 0.75rem', color: 'var(--muted)', fontSize: '0.875rem' }}>
           {isScheduleMode
-            ? 'Select one or more orders, then update collector, collection time, and optional lab / report times.'
+            ? 'Select one or more scheduled orders, then mark them as collecting when pickup starts.'
             : 'Select at least two orders below, then set route start details and plan an optimized multi-stop route with AI.'}
         </p>
         <div className="table-wrap">
@@ -737,9 +647,23 @@ export function SampleCollectionPage() {
             <div className="route-setup">
               <h4 className="route-setup__title">Route setup</h4>
               <p className="route-setup__hint">
-                {selectedRoutableCount} orders selected — set start location, departure time, and on-site
-                minutes per stop, then click Plan route.
+                {selectedRoutableCount} orders selected — routes start from your lab location in System
+                settings. Set departure time and on-site minutes per stop, then click Plan route.
               </p>
+              <div className="route-setup__location" aria-live="polite">
+                <p className="route-setup__location-label">Route start (lab location)</p>
+                {labRouteStart ? (
+                  <div className="route-setup__location-info">
+                    {labRouteStart.address ? <p>{labRouteStart.address}</p> : null}
+                    <p className="route-setup__coords">{formatCoordPair(labRouteStart.lat, labRouteStart.lng)}</p>
+                  </div>
+                ) : (
+                  <p className="route-setup__location-missing">
+                    No lab location configured. Set it under{' '}
+                    <Link to="/system-settings">System settings</Link> → Location &amp; contact.
+                  </p>
+                )}
+              </div>
               <div className="route-setup__grid">
                 <div className="field">
                   <label htmlFor="route-start-time">Start time</label>
@@ -768,25 +692,6 @@ export function SampleCollectionPage() {
                   />
                 </div>
               </div>
-              <div className="route-setup__map user-form-modal__location-card">
-                <div className="field" style={{ marginBottom: '0.5rem' }}>
-                  <span style={{ fontWeight: 600, fontSize: '0.875rem', color: 'var(--heading)' }}>
-                    Start location
-                  </span>
-                </div>
-                <LocationMapPicker
-                  latitude={routeStartLatitude}
-                  longitude={routeStartLongitude}
-                  mapHeight={200}
-                  onPick={(lat, lng) => {
-                    setRouteStartLatitude(lat)
-                    setRouteStartLongitude(lng)
-                  }}
-                />
-                <p className="user-form-modal__coords" aria-live="polite">
-                  {formatCoordPair(routeStartLatitude, routeStartLongitude)}
-                </p>
-              </div>
             </div>
           ) : (
             <p style={{ margin: '1rem 0 0', fontSize: '0.875rem', color: 'var(--muted)' }}>
@@ -796,19 +701,23 @@ export function SampleCollectionPage() {
         ) : null}
         <div className="row-actions" style={{ marginTop: '1rem', alignItems: 'center' }}>
           {isScheduleMode ? (
-            canUpdateSchedule ? (
+            canStartCollection ? (
               <button
                 type="button"
                 className="btn btn-primary"
-                onClick={() => void openUpdateSchedule()}
+                onClick={() => void startCollectionForSelected()}
+                disabled={collectionSubmitting}
+                aria-busy={collectionSubmitting}
               >
-                {selectedRoutableCount === 1
-                  ? 'Update schedule'
-                  : `Update schedules (${selectedRoutableCount})`}
+                {collectionSubmitting
+                  ? 'Updating…'
+                  : selectedRoutableCount === 1
+                    ? 'Start collecting'
+                    : `Start collecting (${selectedRoutableCount})`}
               </button>
             ) : (
               <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--muted)' }}>
-                Select one or more orders in the table above to update their schedules.
+                Select one or more orders in the table above to mark them as collecting.
               </p>
             )
           ) : selectedRoutableCount >= 2 ? (
@@ -829,185 +738,6 @@ export function SampleCollectionPage() {
           ) : null}
         </div>
       </div>
-
-      {scheduleOpen && scheduleTargets.length > 0
-        ? createPortal(
-            <div
-              className="modal-backdrop"
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="update-schedule-title"
-              onMouseDown={(e) =>
-                e.target === e.currentTarget && !scheduleSubmitting && setScheduleOpen(false)
-              }
-            >
-              <div className="modal-card modal-card--status-update" onMouseDown={(e) => e.stopPropagation()}>
-                <div className="modal-head">
-                  <h2 className="modal-title" id="update-schedule-title">
-                    Update schedule
-                  </h2>
-              <button
-                type="button"
-                className="btn btn-ghost modal-close"
-                onClick={() => !scheduleSubmitting && setScheduleOpen(false)}
-                aria-label="Close"
-                disabled={scheduleSubmitting}
-              >
-                ×
-              </button>
-            </div>
-            <div className="modal-card--status-update__body">
-              <form className="form-grid status-update-form" onSubmit={(e) => void submitUpdateSchedule(e)}>
-                {scheduleTargets.length === 1 ? (
-                  <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--muted)' }}>
-                    <strong>{scheduleTargets[0].patient_name}</strong>
-                    {scheduleTargets[0].address?.trim() ? ` · ${scheduleTargets[0].address.trim()}` : ''}
-                  </p>
-                ) : (
-                  <div style={{ fontSize: '0.9rem', color: 'var(--muted)' }}>
-                    <p style={{ margin: '0 0 0.35rem' }}>
-                      Updating <strong>{scheduleTargets.length}</strong> orders with the same schedule details.
-                    </p>
-                    <ul style={{ margin: 0, paddingLeft: '1.1rem' }}>
-                      {scheduleTargets.map((o) => (
-                        <li key={o.id}>
-                          {o.patient_name}
-                          {o.address?.trim() ? ` · ${o.address.trim()}` : ''}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                <div className="status-update-schedule">
-                  <div className="field">
-                    <label htmlFor="sc-collector">Collecting person / team</label>
-                    {collectorStaffOptions.length === 0 ? (
-                      <>
-                        <p className="status-update-hint status-update-hint--above-field">
-                          No staff profiles yet — type who will collect.
-                        </p>
-                        <input
-                          id="sc-collector"
-                          value={schCollectingPerson}
-                          onChange={(e) => setSchCollectingPerson(e.target.value)}
-                          disabled={scheduleSubmitting}
-                          placeholder="e.g. Partner lab — driver"
-                          autoComplete="off"
-                        />
-                      </>
-                    ) : (
-                      <>
-                        <select
-                          id="sc-collector"
-                          className="select-chevron-left"
-                          value={schCollectorSelect}
-                          onChange={(e) => {
-                            const v = e.target.value
-                            setSchCollectorSelect(v)
-                            if (v !== COLLECTOR_OTHER_VALUE) setSchCollectingPerson('')
-                          }}
-                          disabled={scheduleSubmitting}
-                        >
-                          <option value="">Select team member…</option>
-                          {collectorStaffOptions.map((s) => (
-                            <option key={s.id} value={s.id}>
-                              {s.name} ({staffRoleShort(s.role)})
-                            </option>
-                          ))}
-                          <option value={COLLECTOR_OTHER_VALUE}>Other name or team…</option>
-                        </select>
-                        {schCollectorSelect === COLLECTOR_OTHER_VALUE ? (
-                          <input
-                            id="sc-collector-custom"
-                            type="text"
-                            className="status-update-custom-collector"
-                            value={schCollectingPerson}
-                            onChange={(e) => setSchCollectingPerson(e.target.value)}
-                            disabled={scheduleSubmitting}
-                            placeholder="e.g. City courier — Aung"
-                            autoComplete="off"
-                            aria-label="Custom collecting person or team"
-                          />
-                        ) : null}
-                      </>
-                    )}
-                  </div>
-                  <div className="status-update-datetime-row">
-                    <div className="field">
-                      <label htmlFor="sc-collect-at">Collection time</label>
-                      <DatetimeLocalField
-                        id="sc-collect-at"
-                        value={schCollectionTime}
-                        onChange={setSchCollectionTime}
-                        disabled={scheduleSubmitting}
-                        allowClear={false}
-                        schedule
-                      />
-                    </div>
-                    <div className="field">
-                      <label htmlFor="sc-running">Running / processing time (optional)</label>
-                      <DatetimeLocalField
-                        id="sc-running"
-                        value={schRunningTime}
-                        onChange={setSchRunningTime}
-                        disabled={scheduleSubmitting}
-                        schedule
-                      />
-                    </div>
-                  </div>
-                  <div className="field">
-                    <label htmlFor="sc-report">Report out time (optional)</label>
-                    <DatetimeLocalField
-                      id="sc-report"
-                      value={schReportOutTime}
-                      onChange={setSchReportOutTime}
-                      disabled={scheduleSubmitting}
-                      schedule
-                    />
-                  </div>
-                  <div className="auth-checkbox-row auth-checkbox-row--center status-update-accepted">
-                    <input
-                      id="sc-accepted"
-                      className="auth-checkbox"
-                      type="checkbox"
-                      checked={schAcceptedByUser}
-                      onChange={() => setSchAcceptedByUser((v) => !v)}
-                      disabled={scheduleSubmitting}
-                    />
-                    <label className="auth-checkbox-label" htmlFor="sc-accepted">
-                      Accepted by patient / requester
-                    </label>
-                  </div>
-                </div>
-                {scheduleError ? (
-                  <div className="form-alert form-alert--error" role="alert">
-                    {scheduleError}
-                  </div>
-                ) : null}
-                <div className="row-actions" style={{ justifyContent: 'flex-end' }}>
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    onClick={() => setScheduleOpen(false)}
-                    disabled={scheduleSubmitting}
-                  >
-                    Cancel
-                  </button>
-                  <button type="submit" className="btn btn-primary" disabled={scheduleSubmitting}>
-                    {scheduleSubmitting
-                      ? 'Saving…'
-                      : scheduleTargets.length === 1
-                        ? 'Save schedule'
-                        : `Save ${scheduleTargets.length} schedules`}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-            </div>,
-            document.body,
-          )
-        : null}
 
       {!isScheduleMode && routeResult && routePlanOrders.length > 0 ? (
         <div className="route-panel">
@@ -1130,8 +860,9 @@ export function SampleCollectionPage() {
                   <form className="form-grid status-update-form" onSubmit={(e) => void submitRouteAssign(e)}>
                     <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--muted)' }}>
                       Assigns a staff member with role <strong>Collector</strong> to all{' '}
-                      <strong>{routePlanOrders.length}</strong> stops. Pending orders move to{' '}
-                      <strong>scheduled</strong>; collection times are staggered along the route.
+                      <strong>{routePlanOrders.length}</strong> stops using the start time from{' '}
+                      <strong>Route setup</strong> ({routeStartTime || '—'}). Pending orders move to{' '}
+                      <strong>scheduled</strong>; per-stop times follow the planned route when available.
                     </p>
                     {routeCollectorOptions.length === 0 ? (
                       <div className="form-alert form-alert--error" role="alert">
@@ -1157,17 +888,6 @@ export function SampleCollectionPage() {
                         </select>
                       </div>
                     )}
-                    <div className="field">
-                      <label htmlFor="route-collect-at">Route start / first collection time</label>
-                      <DatetimeLocalField
-                        id="route-collect-at"
-                        value={routeCollectionTime}
-                        onChange={setRouteCollectionTime}
-                        disabled={routeAssignSubmitting}
-                        allowClear={false}
-                        schedule
-                      />
-                    </div>
                     {routeAssignError ? (
                       <div className="form-alert form-alert--error" role="alert">
                         {routeAssignError}

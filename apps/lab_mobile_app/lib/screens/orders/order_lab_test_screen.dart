@@ -15,6 +15,7 @@ import '../../config/map_defaults.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/theme_extensions.dart';
 import '../../widgets/common/app_branding_row.dart';
+import '../../widgets/common/app_toast.dart';
 import '../../widgets/common/app_dropdown_form_field.dart';
 import '../../widgets/common/app_field_decoration.dart';
 import '../../widgets/location/address_location_fields.dart';
@@ -282,8 +283,9 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
       _applyPrescriptionFile(bytes, name);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not ${source == ImageSource.camera ? 'capture' : 'load'} image: $e')),
+      AppToast.error(
+        context,
+        'Could not ${source == ImageSource.camera ? 'capture' : 'load'} image: $e',
       );
     }
   }
@@ -322,9 +324,7 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
 
   void _showPrescriptionReadError() {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Could not read the selected file.')),
-    );
+    AppToast.error(context, 'Could not read the selected file.');
   }
 
   Future<void> _openTestCatalogSheet(UserRole role) async {
@@ -450,6 +450,14 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
     return '${lines.length} selected tests';
   }
 
+  void _goBack(BuildContext context) {
+    if (context.canPop()) {
+      context.pop();
+      return;
+    }
+    context.go('/home');
+  }
+
   @override
   Widget build(BuildContext context) {
     final session = SessionScope.of(context);
@@ -459,7 +467,11 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        automaticallyImplyLeading: false,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          tooltip: 'Back',
+          onPressed: () => _goBack(context),
+        ),
         titleSpacing: 12,
         title: const AppBrandingRow(markSize: 32, iconSize: 16, borderRadius: 8),
       ),
@@ -887,32 +899,24 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
                     : () async {
                         if (!_formKey.currentState!.validate()) return;
                         if (!hasMeaningfulCoordinates(_collectionLat, _collectionLng)) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                'Set collection coordinates — type the address or choose on the map.',
-                              ),
-                            ),
+                          AppToast.warning(
+                            context,
+                            'Set collection coordinates — type the address or choose on the map.',
                           );
                           return;
                         }
 
                         final ageYears = int.tryParse(_age.text.trim());
                         if (ageYears == null || ageYears <= 0) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Enter a valid age (whole number).')),
-                          );
+                          AppToast.warning(context, 'Enter a valid age (whole number).');
                           return;
                         }
 
                         final builtLines = _linesForRole(user.role);
                         if (_mode == _OrderMode.catalogTests && builtLines.isEmpty) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                'Selected tests could not be loaded. Wait for the catalog or pick tests again.',
-                              ),
-                            ),
+                          AppToast.warning(
+                            context,
+                            'Selected tests could not be loaded. Wait for the catalog or pick tests again.',
                           );
                           return;
                         }
@@ -943,15 +947,15 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
                         try {
                           await session.submitLabOrder(order);
                           if (!context.mounted) return;
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Order submitted — status: pending')),
+                          AppToast.successInShell(
+                            context,
+                            'Status is pending — the lab will review your request.',
+                            title: 'Order submitted',
                           );
                           context.go('/order-success');
                         } catch (e) {
                           if (!context.mounted) return;
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('$e')),
-                          );
+                          AppToast.errorInShell(context, '$e', title: 'Order failed');
                         }
                       },
                 icon: const Icon(Icons.save_outlined),

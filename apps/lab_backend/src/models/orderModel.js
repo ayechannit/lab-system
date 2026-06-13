@@ -57,6 +57,10 @@ class Order {
       query += ' AND status = @status';
       request.input('status', sql.VarChar, filters.status);
     }
+    if (filters.exclude_status) {
+      query += ' AND status <> @exclude_status';
+      request.input('exclude_status', sql.VarChar, filters.exclude_status);
+    }
     if (filters.user_id) {
       query += ' AND user_id = @user_id';
       request.input('user_id', sql.UniqueIdentifier, filters.user_id);

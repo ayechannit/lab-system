@@ -34,7 +34,7 @@ class Rating {
     
     let query = `
       SELECT r.*, 
-             u.name as user_name, u.email as user_email, u.phone as user_phone,
+             u.name as user_name, u.email as user_email, u.phone as user_phone, u.role as user_role,
              o.patient_name, o.patient_age, o.status as order_status, o.priority, o.final_price_mmk, o.created_at as order_created_at,
              (SELECT t.test_name, t.test_code 
               FROM lab_order_items oi 
@@ -87,7 +87,7 @@ class Rating {
       .input('order_id', sql.UniqueIdentifier, orderId)
       .query(`
         SELECT r.*, 
-               u.name as user_name, u.email as user_email, u.phone as user_phone,
+               u.name as user_name, u.email as user_email, u.phone as user_phone, u.role as user_role,
                o.patient_name, o.patient_age, o.status as order_status, o.priority, o.final_price_mmk, o.created_at as order_created_at,
                (SELECT t.test_name, t.test_code 
                 FROM lab_order_items oi 

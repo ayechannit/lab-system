@@ -8,6 +8,7 @@ import '../models/loyalty.dart';
 import '../models/rating.dart';
 import '../models/user_role.dart';
 import 'lab_user_api.dart';
+import 'lab_report_pdf_service.dart';
 
 class SessionController extends ChangeNotifier {
   SessionController({required LabUserApi api}) : _api = api;
@@ -15,6 +16,9 @@ class SessionController extends ChangeNotifier {
   final LabUserApi _api;
   AppUser? _user;
   final List<LabOrderRequest> _orders = <LabOrderRequest>[];
+  List<LabOrderSummary> _activeOrders = const [];
+  List<LabOrderSummary> _releasedOrders = const [];
+  Map<String, OrderRatingSummary> _orderRatings = const {};
   LabOrderSummary? _trackingOrder;
   LabResultReport? _latestResult;
   AiAnalysisResult? _aiAnalysis;
@@ -25,6 +29,10 @@ class SessionController extends ChangeNotifier {
   bool get isLoggedIn => _user != null;
   bool get busy => _busy;
   List<LabOrderRequest> get orders => List.unmodifiable(_orders);
+  List<LabOrderSummary> get activeOrders => List.unmodifiable(_activeOrders);
+  List<LabOrderSummary> get releasedOrders => List.unmodifiable(_releasedOrders);
+  Map<String, OrderRatingSummary> get orderRatings => Map.unmodifiable(_orderRatings);
+  OrderRatingSummary? ratingForOrder(String orderId) => _orderRatings[orderId];
   LabOrderSummary? get trackingOrder => _trackingOrder;
   LabResultReport? get latestResult => _latestResult;
   AiAnalysisResult? get aiAnalysis => _aiAnalysis;
@@ -78,6 +86,9 @@ class SessionController extends ChangeNotifier {
     _api.clearAuth();
     _user = null;
     _orders.clear();
+    _activeOrders = const [];
+    _releasedOrders = const [];
+    _orderRatings = const {};
     _trackingOrder = null;
     _latestResult = null;
     _aiAnalysis = null;
@@ -114,6 +125,8 @@ class SessionController extends ChangeNotifier {
     try {
       _trackingOrder = await _api.createOrder(userId: u.id, request: order);
       _orders.insert(0, order);
+      await refreshActiveOrders();
+      await refreshReleasedOrders();
       _latestResult = await _api.getLatestResult(u.id);
       _loyalty = await _api.getLoyaltySnapshot(u.id);
       if (_latestResult != null) {
@@ -147,10 +160,67 @@ class SessionController extends ChangeNotifier {
     }
   }
 
+  Future<void> refreshActiveOrders() async {
+    final u = _user;
+    if (u == null) return;
+    _activeOrders = await _api.listActiveOrders(u.id);
+    notifyListeners();
+  }
+
+  Future<void> refreshReleasedOrders() async {
+    final u = _user;
+    if (u == null) return;
+    _releasedOrders = await _api.listReleasedOrders(u.id);
+    notifyListeners();
+  }
+
+  Future<void> refreshOrderRatings() async {
+    final u = _user;
+    if (u == null) return;
+    final list = await _api.listUserRatings(u.id);
+    _orderRatings = {for (final r in list) r.orderId: r};
+    notifyListeners();
+  }
+
+  Future<void> selectResult(String orderId) async {
+    final u = _user;
+    if (u == null) return;
+    _setBusy(true);
+    try {
+      _latestResult = await _api.getResultForOrder(userId: u.id, orderId: orderId);
+      if (_latestResult != null) {
+        _aiAnalysis = await _api.getAiAnalysis(userId: u.id, orderId: orderId);
+      } else {
+        _aiAnalysis = null;
+      }
+      notifyListeners();
+    } finally {
+      _setBusy(false);
+    }
+  }
+
+  Future<void> selectTrackingOrder(String orderId) async {
+    final u = _user;
+    if (u == null) return;
+    _setBusy(true);
+    try {
+      _trackingOrder = await _api.getOrderSummary(orderId);
+      notifyListeners();
+    } finally {
+      _setBusy(false);
+    }
+  }
+
   Future<void> refreshTracking() async {
     final u = _user;
     if (u == null) return;
-    _trackingOrder = await _api.getTrackingOrder(u.id);
+    final currentId = _trackingOrder?.id;
+    if (currentId != null) {
+      _trackingOrder = await _api.getOrderSummary(currentId);
+    } else {
+      _trackingOrder = await _api.getTrackingOrder(u.id);
+    }
+    await refreshActiveOrders();
     notifyListeners();
   }
 
@@ -159,34 +229,74 @@ class SessionController extends ChangeNotifier {
     final orderId = _latestResult?.orderId;
     if (u == null || orderId == null) return;
     _setBusy(true);
-    _aiAnalysis = await _api.runAiAnalysis(userId: u.id, orderId: orderId);
-    _setBusy(false);
+    try {
+      _aiAnalysis = await _api.runAiAnalysis(userId: u.id, orderId: orderId);
+      notifyListeners();
+    } finally {
+      _setBusy(false);
+    }
+  }
+
+  Future<String> downloadReportPdf(LabResultReport report) async {
+    final filename = LabReportPdfService.buildFilename(
+      sampleId: report.sampleId,
+      orderId: report.orderId,
+    );
+    final testId = report.resultTestId;
+    if (testId != null && testId.isNotEmpty) {
+      final bytes = await _api.downloadResultPdf(orderId: report.orderId, testId: testId);
+      return LabReportPdfService.saveBytes(bytes: bytes, filename: filename);
+    }
+    final url = report.resultPdfUrl;
+    if (url == null || url.trim().isEmpty) {
+      throw LabReportPdfException('No PDF is available for this report.');
+    }
+    return LabReportPdfService.download(url: url, filename: filename);
+  }
+
+  Future<void> submitOrderRating({
+    required String orderId,
+    required int stars,
+    String remark = '',
+  }) async {
+    final u = _user;
+    if (u == null) return;
+    _setBusy(true);
+    try {
+      final saved = await _api.submitRating(
+        userId: u.id,
+        rating: RatingDraft(
+          orderId: orderId,
+          stars: stars,
+          remark: remark,
+          createdAt: DateTime.now(),
+        ),
+      );
+      _orderRatings = {..._orderRatings, orderId: saved};
+      _loyalty = await _api.getLoyaltySnapshot(u.id);
+      notifyListeners();
+    } finally {
+      _setBusy(false);
+    }
   }
 
   Future<void> submitRating({
     required int stars,
     required String remark,
+    String? orderId,
   }) async {
-    final u = _user;
-    final orderId = _latestResult?.orderId ?? _trackingOrder?.id;
-    if (u == null || orderId == null) return;
-    _setBusy(true);
-    await _api.submitRating(
-      userId: u.id,
-      rating: RatingDraft(
-        orderId: orderId,
-        stars: stars,
-        remark: remark,
-        createdAt: DateTime.now(),
-      ),
-    );
-    _loyalty = await _api.getLoyaltySnapshot(u.id);
-    _setBusy(false);
+    final id = orderId ?? _latestResult?.orderId ?? _trackingOrder?.id;
+    if (id == null) return;
+    await submitOrderRating(orderId: id, stars: stars, remark: remark);
   }
 
   Future<void> _hydrateUserData() async {
     final u = _user;
     if (u == null) return;
+    _activeOrders = await _api.listActiveOrders(u.id);
+    _releasedOrders = await _api.listReleasedOrders(u.id);
+    final ratings = await _api.listUserRatings(u.id);
+    _orderRatings = {for (final r in ratings) r.orderId: r};
     _trackingOrder = await _api.getTrackingOrder(u.id);
     _latestResult = await _api.getLatestResult(u.id);
     _loyalty = await _api.getLoyaltySnapshot(u.id);

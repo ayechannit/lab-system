@@ -14,13 +14,13 @@ export function friendlyAiReviewErrorMessage(
   const lower = raw.toLowerCase()
 
   if (/api key not valid|invalid api key|api_key_invalid|incorrect api key/i.test(raw)) {
-    return 'The AI API key is invalid or expired. Update it under AI configuration, then try again.'
+    return 'The AI API key is invalid or expired. Check your provider API key in the database ai_configs record, then try again.'
   }
   if (/quota|rate limit|resource exhausted|429/.test(lower)) {
     return 'AI usage limit reached. Wait a moment or check your provider quota, then try again.'
   }
   if (/model.*not found|404.*model/i.test(lower)) {
-    return 'The selected AI model is unavailable. Choose another model in AI configuration.'
+    return 'The selected AI model is unavailable. Check the model name in your ai_configs record.'
   }
   if (/failed to fetch|network error|econnrefused|enotfound/i.test(lower)) {
     return 'Could not reach the AI service. Check your network and API settings.'

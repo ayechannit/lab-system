@@ -158,14 +158,23 @@ const updateOrderStatus = async (req, res) => {
   const order = await Order.updateStatus(req.params.id, status, staff_id || req.user?.id, note, req.user?.id);
   if (!order) return res.status(404).json({ message: 'Order not found' });
 
-  // Send background notification to user
-  NotificationService.sendToUser(
-    order.user_id,
-    'user',
-    'Order Status Updated',
-    `Your order for patient "${order.patient_name}" status has been updated to "${status}".`,
-    { order_id: order.id, status: status, event: 'order_status_updated' }
-  ).catch(err => console.error('Error sending status update notification:', err.message));
+  if (status === 'delivered') {
+    NotificationService.sendToUser(
+      order.user_id,
+      'user',
+      'Lab Results Ready',
+      `All lab test results for patient "${order.patient_name}" are ready and available for download.`,
+      { order_id: order.id, event: 'results_ready' }
+    ).catch(err => console.error('Error sending lab results notification:', err.message));
+  } else {
+    NotificationService.sendToUser(
+      order.user_id,
+      'user',
+      'Order Status Updated',
+      `Your order for patient "${order.patient_name}" status has been updated to "${status}".`,
+      { order_id: order.id, status: status, event: 'order_status_updated' }
+    ).catch(err => console.error('Error sending status update notification:', err.message));
+  }
 
   res.json(order);
 };
@@ -216,40 +225,13 @@ const uploadTestResult = async (req, res) => {
       return res.status(404).json({ message: 'Test not found in this order' });
     }
 
-    // Check if all results are uploaded for this order
-    const allUploaded = await Order.areAllResultsUploaded(id);
-    if (allUploaded) {
-      // Automatically update order status to delivered
-      try {
-        await Order.updateStatus(
-          id, 
-          'delivered', 
-          req.user?.id, 
-          'All test results uploaded - automatically marked as delivered',
-          req.user?.id
-        );
-
-        // Notify user that all results are ready
-        NotificationService.sendToUser(
-          order.user_id,
-          'user',
-          'Lab Results Ready',
-          `All lab test results for patient "${order.patient_name}" are ready and available for download.`,
-          { order_id: id, event: 'results_ready' }
-        ).catch(err => console.error('Error sending lab results notification:', err.message));
-      } catch (statusError) {
-        console.error('Failed to auto-update order status:', statusError);
-      }
-    } else {
-      // Notify user that a specific result was uploaded
-      NotificationService.sendToUser(
-        order.user_id,
-        'user',
-        'Test Result Uploaded',
-        `A new test result has been uploaded for patient "${order.patient_name}".`,
-        { order_id: id, event: 'result_uploaded' }
-      ).catch(err => console.error('Error sending single result upload notification:', err.message));
-    }
+    NotificationService.sendToUser(
+      order.user_id,
+      'user',
+      'Test Result Uploaded',
+      `A new test result has been uploaded for patient "${order.patient_name}".`,
+      { order_id: id, event: 'result_uploaded' }
+    ).catch(err => console.error('Error sending result upload notification:', err.message));
 
     const downloadUrl = await StorageService.getFileUrl(fileUrl);
 
@@ -258,6 +240,46 @@ const uploadTestResult = async (req, res) => {
       fileUrl: fileUrl,
       downloadUrl: downloadUrl
     });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+const downloadTestResult = async (req, res) => {
+  try {
+    const { id, testId } = req.params;
+    const order = await Order.getById(id);
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    const isStaff = req.user?.type === 'staff';
+    const isOwner =
+      order.user_id &&
+      req.user?.id &&
+      String(order.user_id).toLowerCase() === String(req.user.id).toLowerCase();
+    if (!isStaff && !isOwner) {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+    if (!isStaff && order.status !== 'delivered') {
+      return res.status(403).json({ message: 'Results not released yet' });
+    }
+
+    const item = (order.items || []).find(
+      (row) => String(row.test_id).toLowerCase() === String(testId).toLowerCase(),
+    );
+    if (!item?.result_file_url) {
+      return res.status(404).json({ message: 'No result file for this test' });
+    }
+
+    const opened = await StorageService.openFile(item.result_file_url);
+    if (!opened) {
+      return res.status(404).json({ message: 'Result file not found on server' });
+    }
+
+    res.setHeader('Content-Type', opened.contentType);
+    res.setHeader('Content-Disposition', `attachment; filename="${opened.filename}"`);
+    opened.stream.pipe(res);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -316,4 +338,5 @@ module.exports = {
   deleteOrder,
   generateQrCode,
   uploadTestResult,
+  downloadTestResult,
 };

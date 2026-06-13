@@ -8,6 +8,7 @@ import '../../theme/theme_extensions.dart';
 import '../../app/app_settings_scope.dart';
 import '../../services/rest_lab_user_api.dart';
 import '../../widgets/common/app_brand_mark.dart';
+import '../../widgets/common/app_toast.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key, this.routeExtra});
@@ -36,7 +37,7 @@ class _LoginScreenState extends State<LoginScreen> {
       _email.text = ex.email;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(ex.message)));
+        AppToast.info(context, ex.message);
       });
     }
   }
@@ -187,17 +188,20 @@ class _LoginScreenState extends State<LoginScreen> {
                                   if (!context.mounted) return;
                                   final msg = e is LabApiException ? e.message : '$e';
                                   final pending = e is LabApiException && e.statusCode == 403;
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
+                                  if (pending) {
+                                    AppToast.warning(
+                                      context,
+                                      '$msg\n\nAsk lab staff to approve your account in the admin portal.',
+                                      title: 'Account pending approval',
                                       duration: const Duration(seconds: 6),
-                                      backgroundColor: pending ? const Color(0xFFB45309) : null,
-                                      content: Text(
-                                        pending
-                                            ? '$msg\n\nAsk lab staff to approve your account in the admin portal.'
-                                            : msg,
-                                      ),
-                                    ),
-                                  );
+                                    );
+                                  } else {
+                                    AppToast.error(
+                                      context,
+                                      msg,
+                                      title: 'Couldn\'t sign in',
+                                    );
+                                  }
                                 }
                               },
                               iconAlignment: IconAlignment.end,

@@ -17,4 +17,10 @@ abstract final class LabApiConfig {
 
   /// Optional; if empty, the app uses the first AI config from `GET /api/ai-configs`.
   static const String aiConfigId = String.fromEnvironment('LAB_AI_CONFIG_ID', defaultValue: '');
+
+  /// Managed prompt for patient-facing lab result summaries (`Lab Result Summarized`).
+  static const String labResultSummarizedPromptId = String.fromEnvironment(
+    'LAB_RESULT_SUMMARIZED_PROMPT_ID',
+    defaultValue: '982c00c9-06dc-4f9f-811f-c40110e55e43',
+  );
 }

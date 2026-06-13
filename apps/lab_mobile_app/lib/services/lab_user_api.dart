@@ -59,7 +59,28 @@ abstract class LabUserApi {
     required String userId,
     required LabOrderRequest request,
   });
+  /// Orders for the user where status is not [excludeStatus] (default `delivered`).
+  Future<List<LabOrderSummary>> listActiveOrders(
+    String userId, {
+    String excludeStatus = 'delivered',
+    int limit = 50,
+    int page = 1,
+  });
+
+  Future<LabOrderSummary> getOrderSummary(String orderId);
+
+  /// Orders released to the patient (`status=delivered`).
+  Future<List<LabOrderSummary>> listReleasedOrders(
+    String userId, {
+    int limit = 50,
+    int page = 1,
+  });
+
   Future<LabOrderSummary?> getTrackingOrder(String userId);
+  Future<LabResultReport?> getResultForOrder({
+    required String userId,
+    required String orderId,
+  });
   Future<LabResultReport?> getLatestResult(String userId);
   Future<AiAnalysisResult?> getAiAnalysis({
     required String userId,
@@ -69,7 +90,22 @@ abstract class LabUserApi {
     required String userId,
     required String orderId,
   });
-  Future<void> submitRating({
+
+  /// Authenticated download of a released result PDF (`GET .../result-file`).
+  Future<List<int>> downloadResultPdf({
+    required String orderId,
+    required String testId,
+  });
+
+  Future<List<OrderRatingSummary>> listUserRatings(
+    String userId, {
+    int limit = 100,
+    int page = 1,
+  });
+
+  Future<OrderRatingSummary?> getOrderRating(String orderId);
+
+  Future<OrderRatingSummary> submitRating({
     required String userId,
     required RatingDraft rating,
   });

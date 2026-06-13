@@ -21,7 +21,7 @@ The backend implements automatic background-dispatched push and in-app notificat
 * **\`PUT /api/orders/:id/status\`** - Notifies user on status progress changes: *"Order Status Updated"*.
 
 #### 3. Lab Results & Quality Checks (\`/api/lab-results\`)
-* **\`POST /api/orders/:id/test/:testId/result\`** - Uploading a test result notifies user. If all uploaded, auto-delivers and notifies *"Lab Results Ready"*.
+* **\`POST /api/orders/:id/test/:testId/result\`** - Uploading a test result notifies user. Mark the order delivered separately via status update when staff release results.
 * **\`POST /api/lab-results/:resultId/ai-check\`** - Failed AI quality checks notify admin/staff topic: *"AI Quality Check Issue"*.
 
 #### 4. Appointments & Scheduling (\`/api/schedules\`)

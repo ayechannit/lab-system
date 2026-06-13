@@ -9,6 +9,7 @@ import '../../theme/app_colors.dart';
 import '../../theme/theme_extensions.dart';
 import '../../app/app_settings_scope.dart';
 import '../../widgets/common/app_brand_mark.dart';
+import '../../widgets/common/app_toast.dart';
 import '../../widgets/location/address_location_fields.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -291,21 +292,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           onPressed: () async {
                             if (!_formKey.currentState!.validate()) return;
                             if (!_agreeTerms) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Please agree to Terms of Service and Privacy Policy.'),
-                                ),
+                              AppToast.warning(
+                                context,
+                                'Please agree to Terms of Service and Privacy Policy.',
                               );
                               return;
                             }
                             if (!hasMeaningfulCoordinates(_addressLat, _addressLng) ||
                                 _addressLine.trim().isEmpty) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'Choose a location on the map and confirm it to set your address.',
-                                  ),
-                                ),
+                              AppToast.warning(
+                                context,
+                                'Choose a location on the map and confirm it to set your address.',
                               );
                               return;
                             }
@@ -335,9 +332,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               );
                             } catch (e) {
                               if (!context.mounted) return;
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('$e')),
-                              );
+                              AppToast.error(context, '$e');
                             }
                           },
                           iconAlignment: IconAlignment.end,

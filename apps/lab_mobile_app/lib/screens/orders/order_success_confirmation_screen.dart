@@ -6,6 +6,7 @@ import '../../app/session_scope.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/theme_extensions.dart';
 import '../../widgets/common/app_branding_row.dart';
+import '../../widgets/common/app_toast.dart';
 
 class OrderSuccessConfirmationScreen extends StatelessWidget {
   const OrderSuccessConfirmationScreen({super.key});
@@ -161,9 +162,7 @@ class OrderSuccessConfirmationScreen extends StatelessWidget {
                             onPressed: () async {
                               await Clipboard.setData(ClipboardData(text: order.id));
                               if (!context.mounted) return;
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Reference copied')),
-                              );
+                              AppToast.successInShell(context, 'Reference copied');
                             },
                             icon: const Icon(Icons.copy_outlined, size: 18),
                             label: const Text('Copy'),

@@ -7,6 +7,7 @@ import '../screens/auth/splash_screen.dart';
 import '../screens/feedback/rating_feedback_screen.dart';
 import '../screens/home/home_dashboard_screen.dart';
 import '../screens/loyalty/loyalty_points_screen.dart';
+import '../screens/orders/orders_list_screen.dart';
 import '../screens/orders/order_lab_test_screen.dart';
 import '../screens/orders/order_success_confirmation_screen.dart';
 import '../screens/orders/order_tracking_screen.dart';
@@ -14,7 +15,8 @@ import '../screens/profile/edit_profile_screen.dart';
 import '../screens/profile/profile_screen.dart';
 import '../screens/settings/lab_info_screen.dart';
 import '../screens/results/ai_analysis_screen.dart';
-import '../screens/results/lab_results_screen.dart';
+import '../screens/results/lab_result_detail_screen.dart';
+import '../screens/results/results_list_screen.dart';
 import '../models/user_role.dart';
 import '../services/session_controller.dart';
 
@@ -48,10 +50,12 @@ GoRouter createAppRouter(SessionController session) {
       }),
       GoRoute(path: '/role-select', builder: (_, __) => const RoleSelectionScreen()),
       GoRoute(path: '/home', builder: (_, __) => const HomeDashboardScreen()),
+      GoRoute(path: '/orders', builder: (_, __) => const OrdersListScreen()),
       GoRoute(path: '/order-lab-test', builder: (_, __) => const OrderLabTestScreen()),
       GoRoute(path: '/order-success', builder: (_, __) => const OrderSuccessConfirmationScreen()),
       GoRoute(path: '/order-tracking', builder: (_, __) => const OrderTrackingScreen()),
-      GoRoute(path: '/lab-results', builder: (_, __) => const LabResultsScreen()),
+      GoRoute(path: '/lab-results', builder: (_, __) => const ResultsListScreen()),
+      GoRoute(path: '/lab-result-detail', builder: (_, __) => const LabResultDetailScreen()),
       GoRoute(path: '/ai-analysis', builder: (_, __) => const AiAnalysisScreen()),
       GoRoute(path: '/loyalty', builder: (_, __) => const LoyaltyPointsScreen()),
       GoRoute(path: '/rating-feedback', builder: (_, __) => const RatingFeedbackScreen()),
