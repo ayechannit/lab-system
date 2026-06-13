@@ -100,6 +100,18 @@ const userController = require('../controllers/userController');
  *           type: integer
  *           minimum: 1
  *         description: Number of items per page for pagination
+ *       - in: query
+ *         name: sortBy
+ *         schema:
+ *           type: string
+ *           enum: [created_at, updated_at, name, email, role, total_points]
+ *         description: Sort field for users
+ *       - in: query
+ *         name: sortOrder
+ *         schema:
+ *           type: string
+ *           enum: [asc, desc, ASC, DESC]
+ *         description: Sort order (ASC or DESC)
  *     responses:
  *       200:
  *         description: List of all users

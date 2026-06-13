@@ -115,7 +115,15 @@ class Discount {
       request.input('test_code', sql.VarChar, `%${filters.test_code}%`);
     }
 
-    query += ` ORDER BY sd.created_at DESC`;
+    const validSortFields = ['created_at', 'updated_at', 'discount_percent', 'role', 'test_name'];
+    let sortBy = 'sd.created_at';
+    if (filters.sortBy === 'test_name') {
+      sortBy = 't.test_name';
+    } else if (validSortFields.includes(filters.sortBy)) {
+      sortBy = `sd.${filters.sortBy}`;
+    }
+    const sortOrder = filters.sortOrder === 'ASC' || filters.sortOrder === 'asc' ? 'ASC' : 'DESC';
+    query += ` ORDER BY ${sortBy} ${sortOrder}`;
 
     if (filters.page && filters.limit) {
       const page = parseInt(filters.page, 10);

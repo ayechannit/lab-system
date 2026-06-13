@@ -109,6 +109,18 @@ router.use(authMiddleware);
  *           type: integer
  *           minimum: 1
  *         description: Number of items per page for pagination
+ *       - in: query
+ *         name: sortBy
+ *         schema:
+ *           type: string
+ *           enum: [created_at, updated_at, test_name, test_code, base_price_mmk, category]
+ *         description: Sort field for tests
+ *       - in: query
+ *         name: sortOrder
+ *         schema:
+ *           type: string
+ *           enum: [asc, desc, ASC, DESC]
+ *         description: Sort order (ASC or DESC)
  *     responses:
  *       200:
  *         description: The list of tests

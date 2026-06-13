@@ -158,6 +158,18 @@ router.use(authMiddleware);
  *           type: integer
  *           minimum: 1
  *         description: Number of items per page for pagination
+ *       - in: query
+ *         name: sortBy
+ *         schema:
+ *           type: string
+ *           enum: [created_at, updated_at, status, patient_name, final_price_mmk, priority]
+ *         description: Sort field for orders
+ *       - in: query
+ *         name: sortOrder
+ *         schema:
+ *           type: string
+ *           enum: [asc, desc, ASC, DESC]
+ *         description: Sort order (ASC or DESC)
  *     responses:
  *       200:
  *         description: List of all orders

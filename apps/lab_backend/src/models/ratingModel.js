@@ -57,7 +57,15 @@ class Rating {
       request.input('user_id', sql.UniqueIdentifier, filters.user_id);
     }
 
-    query += ' ORDER BY r.created_at DESC';
+    const validSortFields = ['created_at', 'updated_at', 'rating', 'patient_name'];
+    let sortBy = 'r.created_at';
+    if (filters.sortBy === 'patient_name') {
+      sortBy = 'o.patient_name';
+    } else if (validSortFields.includes(filters.sortBy)) {
+      sortBy = `r.${filters.sortBy}`;
+    }
+    const sortOrder = filters.sortOrder === 'ASC' || filters.sortOrder === 'asc' ? 'ASC' : 'DESC';
+    query += ` ORDER BY ${sortBy} ${sortOrder}`;
 
     if (filters.page && filters.limit) {
       const page = parseInt(filters.page, 10);

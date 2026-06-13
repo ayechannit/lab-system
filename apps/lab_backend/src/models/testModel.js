@@ -27,7 +27,10 @@ class LabTest {
       request.input('test_code', sql.VarChar, `%${filters.test_code}%`);
     }
 
-    query += ' ORDER BY created_at DESC';
+    const validSortFields = ['created_at', 'updated_at', 'test_name', 'test_code', 'base_price_mmk', 'category'];
+    const sortBy = validSortFields.includes(filters.sortBy) ? filters.sortBy : 'created_at';
+    const sortOrder = filters.sortOrder === 'ASC' || filters.sortOrder === 'asc' ? 'ASC' : 'DESC';
+    query += ` ORDER BY ${sortBy} ${sortOrder}`;
 
     if (filters.page && filters.limit) {
       const page = parseInt(filters.page, 10);
@@ -202,7 +205,10 @@ class LabTest {
       request.input('test_code', sql.VarChar, `%${filters.test_code}%`);
     }
 
-    query += ' ORDER BY t.created_at DESC';
+    const validSortFields = ['created_at', 'updated_at', 'test_name', 'test_code', 'base_price_mmk', 'category'];
+    const sortBy = validSortFields.includes(filters.sortBy) ? `t.${filters.sortBy}` : 't.created_at';
+    const sortOrder = filters.sortOrder === 'ASC' || filters.sortOrder === 'asc' ? 'ASC' : 'DESC';
+    query += ` ORDER BY ${sortBy} ${sortOrder}`;
 
     if (filters.page && filters.limit) {
       const page = parseInt(filters.page, 10);

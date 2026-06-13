@@ -24,7 +24,10 @@ class User {
       request.input('is_approved', sql.Bit, filters.is_approved === 'true' || filters.is_approved === true ? 1 : 0);
     }
 
-    query += ' ORDER BY created_at DESC';
+    const validSortFields = ['created_at', 'updated_at', 'name', 'email', 'role', 'total_points'];
+    const sortBy = validSortFields.includes(filters.sortBy) ? filters.sortBy : 'created_at';
+    const sortOrder = filters.sortOrder === 'ASC' || filters.sortOrder === 'asc' ? 'ASC' : 'DESC';
+    query += ` ORDER BY ${sortBy} ${sortOrder}`;
 
     if (filters.page && filters.limit) {
       const page = parseInt(filters.page, 10);
