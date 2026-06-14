@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { authMiddleware } = require('../middlewares/authMiddleware');
+const { uploadProfile } = require('../middlewares/upload');
 const staffController = require('../controllers/staffController');
 
 router.use(authMiddleware);
@@ -227,10 +228,64 @@ router.use(authMiddleware);
  *         description: Staff not found
  */
 
+/**
+ * @swagger
+ * /api/staff/{id}/profile-image:
+ *   post:
+ *     summary: Upload profile image for a collector staff member
+ *     description: |
+ *       Allows uploading/updating a profile image (avatar) for a staff member of role `'collector'`.
+ *       - Admins or Managers can upload for any collector staff member.
+ *       - Collectors can upload for their own account.
+ *     tags: [Staff]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: The staff member ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - image
+ *             properties:
+ *               image:
+ *                 type: string
+ *                 format: binary
+ *                 description: The profile image file (JPEG, PNG, GIF, WEBP)
+ *     responses:
+ *       200:
+ *         description: Profile image uploaded successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 staff:
+ *                   $ref: '#/components/schemas/Staff'
+ *       400:
+ *         description: Bad Request (not a collector, or no file uploaded)
+ *       403:
+ *         description: Forbidden (no permission to update this staff member)
+ *       404:
+ *         description: Staff member not found
+ *       500:
+ *         description: Server error
+ */
+
 router.get('/', staffController.getAllStaff);
 router.get('/:id', staffController.getStaffById);
 router.post('/', staffController.createStaff);
 router.put('/:id', staffController.updateStaff);
 router.delete('/:id', staffController.deleteStaff);
+router.post('/:id/profile-image', uploadProfile.single('image'), staffController.uploadProfileImage);
 
 module.exports = router;

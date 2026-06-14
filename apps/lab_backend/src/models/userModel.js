@@ -117,7 +117,7 @@ class User {
     return result.recordset[0];
   }
 
-  static async addPoints(id, pointsToAdd, updatedBy = null) {
+  static async addPoints(id, pointsToAdd, updatedBy = null, transactionType = 'earn', description = null, referenceId = null) {
     const pool = await poolPromise;
     const result = await pool.request()
       .input('id', sql.UniqueIdentifier, id)
@@ -129,7 +129,21 @@ class User {
         OUTPUT INSERTED.id, INSERTED.name, INSERTED.email, INSERTED.phone, INSERTED.role, INSERTED.address, INSERTED.latitude, INSERTED.longitude, INSERTED.total_points, INSERTED.license_number, INSERTED.is_approved, INSERTED.created_user, INSERTED.updated_user, INSERTED.created_at, INSERTED.updated_at
         WHERE id = @id AND is_deleted = 0
       `);
-    return result.recordset[0];
+
+    const updatedUser = result.recordset[0];
+    if (updatedUser) {
+      const PointTransaction = require('./pointTransactionModel');
+      await PointTransaction.create({
+        user_id: id,
+        points: pointsToAdd,
+        transaction_type: transactionType,
+        description: description || `Points adjustment: ${pointsToAdd >= 0 ? '+' : ''}${pointsToAdd}`,
+        reference_id: referenceId,
+        created_user: updatedBy
+      });
+    }
+
+    return updatedUser;
   }
 
   static async approve(id, updatedBy = null) {

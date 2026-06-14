@@ -5,7 +5,7 @@ class Staff {
   static async getAll(filters = {}) {
     const pool = await poolPromise;
     const request = pool.request();
-    let query = 'SELECT id, name, email, role, is_active, created_user, updated_user, created_at, updated_at FROM lab_staff WHERE is_deleted = 0';
+    let query = 'SELECT id, name, email, role, is_active, profile_image_url, created_user, updated_user, created_at, updated_at FROM lab_staff WHERE is_deleted = 0';
 
     if (filters.role) {
       query += ' AND role = @role';
@@ -42,7 +42,7 @@ class Staff {
     const pool = await poolPromise;
     const result = await pool.request()
       .input('id', sql.UniqueIdentifier, id)
-      .query('SELECT id, name, email, role, is_active, created_user, updated_user, created_at, updated_at FROM lab_staff WHERE id = @id AND is_deleted = 0');
+      .query('SELECT id, name, email, role, is_active, profile_image_url, created_user, updated_user, created_at, updated_at FROM lab_staff WHERE id = @id AND is_deleted = 0');
     return result.recordset[0];
   }
 
@@ -65,7 +65,7 @@ class Staff {
       .input('created_user', sql.UniqueIdentifier, createdBy)
       .query(`
         INSERT INTO lab_staff (id, name, email, password_hash, role, is_active, created_user, updated_user, is_deleted)
-        OUTPUT INSERTED.id, INSERTED.name, INSERTED.email, INSERTED.role, INSERTED.is_active, INSERTED.created_user, INSERTED.updated_user, INSERTED.created_at, INSERTED.updated_at
+        OUTPUT INSERTED.id, INSERTED.name, INSERTED.email, INSERTED.role, INSERTED.is_active, INSERTED.profile_image_url, INSERTED.created_user, INSERTED.updated_user, INSERTED.created_at, INSERTED.updated_at
         VALUES (NEWID(), @name, @email, @password_hash, @role, 1, @created_user, @created_user, 0)
       `);
     return result.recordset[0];
@@ -76,6 +76,7 @@ class Staff {
 
     let passwordFragment = '';
     let emailFragment = '';
+    let profileImageFragment = '';
     const request = pool
       .request()
       .input('id', sql.UniqueIdentifier, id)
@@ -95,14 +96,35 @@ class Staff {
       request.input('email', sql.VarChar, String(data.email).trim().toLowerCase());
     }
 
+    if (data.profile_image_url !== undefined) {
+      profileImageFragment = ', profile_image_url = @profile_image_url';
+      request.input('profile_image_url', sql.NVarChar(500), data.profile_image_url);
+    }
+
     const result = await request.query(`
       UPDATE lab_staff
       SET name = @name, is_active = @is_active, updated_user = @updated_user, updated_at = GETDATE()
           ${emailFragment}
           ${passwordFragment}
-      OUTPUT INSERTED.id, INSERTED.name, INSERTED.email, INSERTED.role, INSERTED.is_active, INSERTED.created_user, INSERTED.updated_user, INSERTED.created_at, INSERTED.updated_at
+          ${profileImageFragment}
+      OUTPUT INSERTED.id, INSERTED.name, INSERTED.email, INSERTED.role, INSERTED.is_active, INSERTED.profile_image_url, INSERTED.created_user, INSERTED.updated_user, INSERTED.created_at, INSERTED.updated_at
       WHERE id = @id AND is_deleted = 0
     `);
+    return result.recordset[0];
+  }
+
+  static async updateProfileImage(id, profileImageUrl, updatedBy = null) {
+    const pool = await poolPromise;
+    const result = await pool.request()
+      .input('id', sql.UniqueIdentifier, id)
+      .input('profile_image_url', sql.NVarChar(500), profileImageUrl)
+      .input('updated_user', sql.UniqueIdentifier, updatedBy)
+      .query(`
+        UPDATE lab_staff
+        SET profile_image_url = @profile_image_url, updated_user = @updated_user, updated_at = GETDATE()
+        OUTPUT INSERTED.id, INSERTED.name, INSERTED.email, INSERTED.role, INSERTED.is_active, INSERTED.profile_image_url, INSERTED.created_user, INSERTED.updated_user, INSERTED.created_at, INSERTED.updated_at
+        WHERE id = @id AND is_deleted = 0
+      `);
     return result.recordset[0];
   }
 

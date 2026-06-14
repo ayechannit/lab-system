@@ -58,7 +58,14 @@ async function awardPointsForVerifiedPayment(payment, updatedBy) {
   if (pointsEarned > 0) {
     const order = await Order.getById(payment.order_id);
     if (order?.user_id) {
-      await User.addPoints(order.user_id, pointsEarned, updatedBy);
+      await User.addPoints(
+        order.user_id, 
+        pointsEarned, 
+        updatedBy, 
+        'earn', 
+        `Points earned from payment of ${payment.amount_mmk} MMK for Order #${order.id}`, 
+        payment.id
+      );
     }
   }
 }

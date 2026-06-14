@@ -108,10 +108,54 @@ const deleteStaff = async (req, res) => {
   }
 };
 
+const uploadProfileImage = async (req, res) => {
+  try {
+    const targetId = req.params.id;
+    const selfId = req.user?.id;
+    const isAdmin = req.user?.role === 'admin';
+    const isManager = req.user?.role === 'manager';
+
+    const staff = await Staff.getById(targetId);
+    if (!staff) {
+      return res.status(404).json({ message: 'Staff member not found' });
+    }
+
+    if (staff.role !== 'collector') {
+      return res.status(400).json({ message: 'Profile image uploads are only allowed for staff with the collector role.' });
+    }
+
+    const same =
+      String(targetId).replace(/[{}]/g, '').toLowerCase() ===
+      String(selfId).replace(/[{}]/g, '').toLowerCase();
+
+    if (!same && !isAdmin && !isManager) {
+      return res.status(403).json({ message: 'You can only upload a profile image for your own account' });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ message: 'No image file uploaded' });
+    }
+
+    const StorageService = require('../utils/storageService');
+    const fileKey = await StorageService.uploadFile(req.file, 'profiles');
+    const fileUrl = (await StorageService.getFileUrl(fileKey)) || fileKey;
+
+    const updatedStaff = await Staff.updateProfileImage(targetId, fileUrl, selfId);
+
+    res.json({
+      message: 'Profile image uploaded successfully',
+      staff: updatedStaff
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 module.exports = {
   getAllStaff,
   getStaffById,
   createStaff,
   updateStaff,
   deleteStaff,
+  uploadProfileImage
 };
