@@ -38,6 +38,13 @@ class LabResultReport {
 
   /// Test catalog id for the item that has the result PDF.
   final String? resultTestId;
+
+  bool get hasPdfPayload {
+    final testId = resultTestId;
+    final url = resultPdfUrl;
+    return (testId != null && testId.isNotEmpty) ||
+        (url != null && url.isNotEmpty);
+  }
 }
 
 class AiAnalysisResult {

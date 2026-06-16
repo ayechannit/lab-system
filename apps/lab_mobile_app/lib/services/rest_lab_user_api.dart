@@ -71,6 +71,30 @@ class RestLabUserApi implements LabUserApi {
     return h;
   }
 
+  Uri _userOrdersUri(
+    String userId, {
+    String? status,
+    String? excludeStatus,
+    String sortBy = 'created_at',
+    String sortOrder = 'DESC',
+    int limit = 50,
+    int page = 1,
+  }) {
+    final q = <String, String>{
+      'limit': '$limit',
+      'page': '$page',
+      'sortBy': sortBy,
+      'sortOrder': sortOrder.toUpperCase(),
+    };
+    if (status != null && status.trim().isNotEmpty) {
+      q['status'] = status.trim().toLowerCase();
+    }
+    if (excludeStatus != null && excludeStatus.trim().isNotEmpty) {
+      q['exclude_status'] = excludeStatus.trim().toLowerCase();
+    }
+    return Uri.parse('$_base/api/users/$userId/orders').replace(queryParameters: q);
+  }
+
   Never _throwFromResponse(http.Response r) {
     String msg = 'Request failed (${r.statusCode})';
     try {
@@ -563,12 +587,20 @@ class RestLabUserApi implements LabUserApi {
   Future<List<LabOrderSummary>> listActiveOrders(
     String userId, {
     String excludeStatus = 'delivered',
+    String sortBy = 'created_at',
+    String sortOrder = 'DESC',
     int limit = 50,
     int page = 1,
   }) async {
-    final exclude = Uri.encodeQueryComponent(excludeStatus.trim().toLowerCase());
     final r = await http.get(
-      Uri.parse('$_base/api/users/$userId/orders?exclude_status=$exclude&limit=$limit&page=$page'),
+      _userOrdersUri(
+        userId,
+        excludeStatus: excludeStatus,
+        sortBy: sortBy,
+        sortOrder: sortOrder,
+        limit: limit,
+        page: page,
+      ),
       headers: _jsonHeaders(),
     );
     if (r.statusCode >= 400) _throwFromResponse(r);
@@ -620,11 +652,20 @@ class RestLabUserApi implements LabUserApi {
   @override
   Future<List<LabOrderSummary>> listReleasedOrders(
     String userId, {
+    String sortBy = 'updated_at',
+    String sortOrder = 'DESC',
     int limit = 50,
     int page = 1,
   }) async {
     final r = await http.get(
-      Uri.parse('$_base/api/users/$userId/orders?status=delivered&limit=$limit&page=$page'),
+      _userOrdersUri(
+        userId,
+        status: 'delivered',
+        sortBy: sortBy,
+        sortOrder: sortOrder,
+        limit: limit,
+        page: page,
+      ),
       headers: _jsonHeaders(),
     );
     if (r.statusCode >= 400) _throwFromResponse(r);
@@ -724,8 +765,7 @@ class RestLabUserApi implements LabUserApi {
     final released = await listReleasedOrders(userId, limit: 30);
     for (final order in released) {
       final report = await getResultForOrder(userId: userId, orderId: order.id);
-      if (report?.resultTestId != null ||
-          (report?.resultPdfUrl != null && report!.resultPdfUrl!.isNotEmpty)) {
+      if (report != null && report.hasPdfPayload) {
         return report;
       }
     }

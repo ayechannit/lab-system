@@ -160,17 +160,31 @@ class SessionController extends ChangeNotifier {
     }
   }
 
-  Future<void> refreshActiveOrders() async {
+  Future<void> refreshActiveOrders({
+    String sortBy = 'created_at',
+    String sortOrder = 'DESC',
+  }) async {
     final u = _user;
     if (u == null) return;
-    _activeOrders = await _api.listActiveOrders(u.id);
+    _activeOrders = await _api.listActiveOrders(
+      u.id,
+      sortBy: sortBy,
+      sortOrder: sortOrder,
+    );
     notifyListeners();
   }
 
-  Future<void> refreshReleasedOrders() async {
+  Future<void> refreshReleasedOrders({
+    String sortBy = 'updated_at',
+    String sortOrder = 'DESC',
+  }) async {
     final u = _user;
     if (u == null) return;
-    _releasedOrders = await _api.listReleasedOrders(u.id);
+    _releasedOrders = await _api.listReleasedOrders(
+      u.id,
+      sortBy: sortBy,
+      sortOrder: sortOrder,
+    );
     notifyListeners();
   }
 

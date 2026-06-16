@@ -3,10 +3,13 @@ import 'package:go_router/go_router.dart';
 
 import '../../app/session_scope.dart';
 import '../../models/lab_order.dart';
+import '../../models/order_list_sort.dart';
 import '../../models/rating.dart';
+import '../../services/session_controller.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/theme_extensions.dart';
 import '../../widgets/common/app_branding_row.dart';
+import '../../widgets/common/order_list_sort_button.dart';
 import '../../widgets/common/order_rating_bar.dart';
 import '../../widgets/common/order_status_chip.dart';
 import '../../widgets/navigation/lab_main_bottom_nav.dart';
@@ -29,14 +32,21 @@ class _OrdersListScreenState extends State<OrdersListScreen> {
 
   /// Empty string = All.
   String _statusFilter = '';
+  OrderListSort _sort = OrderListSort.activeDefault;
+
+  Future<void> _reloadOrders(SessionController session) async {
+    await session.refreshActiveOrders(
+      sortBy: _sort.sortBy,
+      sortOrder: _sort.sortOrder,
+    );
+    await session.refreshOrderRatings();
+  }
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      final session = SessionScope.of(context);
-      await session.refreshActiveOrders();
-      await session.refreshOrderRatings();
+      await _reloadOrders(SessionScope.of(context));
     });
   }
 
@@ -85,10 +95,7 @@ class _OrdersListScreenState extends State<OrdersListScreen> {
             ],
           ),
           body: RefreshIndicator(
-            onRefresh: () async {
-              await session.refreshActiveOrders();
-              await session.refreshOrderRatings();
-            },
+            onRefresh: () => _reloadOrders(session),
             child: ListView(
               physics: const ClampingScrollPhysics(),
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
@@ -124,13 +131,31 @@ class _OrdersListScreenState extends State<OrdersListScreen> {
                     ),
                   )
                 else ...[
-                  Text(
-                    'Active orders (${orders.length})',
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w700,
-                          color: context.cs.onSurfaceVariant,
-                          letterSpacing: 0.2,
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Active orders (${orders.length})',
+                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.w700,
+                                color: context.cs.onSurfaceVariant,
+                                letterSpacing: 0.2,
+                              ),
                         ),
+                      ),
+                      OrderListSortButton(
+                        selected: _sort,
+                        options: OrderListSort.activeOptions,
+                        onSelected: (sort) async {
+                          setState(() => _sort = sort);
+                          await session.refreshActiveOrders(
+                            sortBy: sort.sortBy,
+                            sortOrder: sort.sortOrder,
+                          );
+                        },
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 10),
                   _OrderStatusTabs(

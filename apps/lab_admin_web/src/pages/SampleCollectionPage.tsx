@@ -13,8 +13,8 @@ import { formatCoordPair } from '../components/users/LocationMapPicker'
 import type { StaffListRow } from '../model/types'
 import { isApiMode } from '../services/apiBase'
 import {
+  bulkUpdateOrderStatus,
   fetchOrders,
-  updateOrderStatus,
   type ApiOrderDetailItem,
   type ApiOrderListRow,
   type ApiOrderStatus,
@@ -423,6 +423,7 @@ export function SampleCollectionPage() {
 
     setRouteAssignSubmitting(true)
     const nextAssignments: Record<string, { collectorName: string; collectionTime: string }> = {}
+    const pendingToSchedule: string[] = []
     try {
       for (let i = 0; i < routePlanOrders.length; i++) {
         const order = routePlanOrders[i]
@@ -436,16 +437,20 @@ export function SampleCollectionPage() {
           accepted_by_user: false,
         })
         if (order.status === 'pending') {
-          await updateOrderStatus(order.id, {
-            status: 'scheduled',
-            staff_id: actingStaffId,
-            note: `Route stop ${i + 1} — assigned to ${collector.name.trim()}`,
-          })
+          pendingToSchedule.push(order.id)
         }
         nextAssignments[order.id] = {
           collectorName: collector.name.trim(),
           collectionTime: stopIso,
         }
+      }
+      if (pendingToSchedule.length > 0) {
+        await bulkUpdateOrderStatus({
+          order_ids: pendingToSchedule,
+          status: 'scheduled',
+          staff_id: actingStaffId,
+          note: `Route assigned to ${collector.name.trim()}`,
+        })
       }
       setRouteAssignments(nextAssignments)
       setRouteAssignOpen(false)
@@ -472,13 +477,12 @@ export function SampleCollectionPage() {
 
     setCollectionSubmitting(true)
     try {
-      for (const order of picked) {
-        await updateOrderStatus(order.id, {
-          status: 'collecting',
-          staff_id: staffId,
-          note: 'Sample collection started',
-        })
-      }
+      await bulkUpdateOrderStatus({
+        order_ids: picked.map((o) => o.id),
+        status: 'collecting',
+        staff_id: staffId,
+        note: 'Sample collection started',
+      })
       setSelectedIds(new Set())
       setRefreshTick((t) => t + 1)
       showSuccess(

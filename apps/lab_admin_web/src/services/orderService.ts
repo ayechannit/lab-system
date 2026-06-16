@@ -235,6 +235,29 @@ export async function updateOrderStatus(
   return res.json()
 }
 
+export type BulkUpdateOrderStatusBody = {
+  order_ids: string[]
+  status: ApiOrderStatus
+  staff_id: string
+  note?: string | null
+}
+
+export type BulkUpdateOrderStatusResult = {
+  message: string
+  orders: ApiOrderListRow[]
+}
+
+export async function bulkUpdateOrderStatus(
+  body: BulkUpdateOrderStatusBody,
+): Promise<BulkUpdateOrderStatusResult> {
+  const res = await apiFetch('/api/orders/bulk-status', {
+    method: 'PUT',
+    body: JSON.stringify(body),
+  })
+  if (!res.ok) throw new Error(await readApiErrorBody(res))
+  return res.json() as Promise<BulkUpdateOrderStatusResult>
+}
+
 export async function addOrderItems(
   orderId: string,
   body: {

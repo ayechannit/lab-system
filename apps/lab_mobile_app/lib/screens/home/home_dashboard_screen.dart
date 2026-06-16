@@ -45,8 +45,7 @@ class HomeDashboardScreen extends StatelessWidget {
     final latestReport = session.latestResult;
     final loyalty = session.loyalty;
     final hasReportPayload = (latestReport?.lines.isNotEmpty ?? false) ||
-        (latestReport?.resultTestId ?? '').isNotEmpty ||
-        (latestReport?.resultPdfUrl ?? '').isNotEmpty;
+        (latestReport?.hasPdfPayload ?? false);
 
     return Scaffold(
       appBar: AppBar(

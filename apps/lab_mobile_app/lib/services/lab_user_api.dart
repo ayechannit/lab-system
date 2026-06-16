@@ -63,6 +63,8 @@ abstract class LabUserApi {
   Future<List<LabOrderSummary>> listActiveOrders(
     String userId, {
     String excludeStatus = 'delivered',
+    String sortBy = 'created_at',
+    String sortOrder = 'DESC',
     int limit = 50,
     int page = 1,
   });
@@ -72,6 +74,8 @@ abstract class LabUserApi {
   /// Orders released to the patient (`status=delivered`).
   Future<List<LabOrderSummary>> listReleasedOrders(
     String userId, {
+    String sortBy = 'updated_at',
+    String sortOrder = 'DESC',
     int limit = 50,
     int page = 1,
   });

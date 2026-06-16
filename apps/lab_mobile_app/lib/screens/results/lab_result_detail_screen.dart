@@ -27,14 +27,13 @@ class LabResultDetailScreen extends StatelessWidget {
         final report = session.latestResult;
         final lines = report?.lines ?? const <LabResultLine>[];
         final hasStructured = lines.isNotEmpty;
-        final hasPdf = report != null &&
-            ((report!.resultTestId != null && report!.resultTestId!.isNotEmpty) ||
-                (report!.resultPdfUrl != null && report!.resultPdfUrl!.isNotEmpty));
+        final hasPdf = report?.hasPdfPayload ?? false;
         final borderColor = context.cs.outlineVariant.withValues(alpha: 0.55);
+        final sampleId = report?.sampleId ?? '';
         final title = hasStructured
             ? lines.first.name
-            : (report?.sampleId.isNotEmpty ?? false)
-                ? report!.sampleId
+            : sampleId.isNotEmpty
+                ? sampleId
                 : 'Lab report';
 
         return Scaffold(

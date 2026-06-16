@@ -1630,6 +1630,12 @@ export function OrderManagementPage() {
                             },
                           },
                           {
+                            label: 'Update status',
+                            onSelect: () => {
+                              void openStatusUpdate(o)
+                            },
+                          },
+                          {
                             label: 'Add payment',
                             onSelect: () => {
                               openPaymentUpdate(o)
@@ -2651,6 +2657,30 @@ export function OrderManagementPage() {
               </div>
             </div>
             <div className="modal-card--order-detail__footer row-actions">
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => {
+                  const row = rows.find((r) => r.id === detailOrder.id)
+                  if (row) void openStatusUpdate(row, detailOrder.schedule ?? null)
+                  else {
+                    void openStatusUpdate(
+                      {
+                        id: detailOrder.id,
+                        patient_name: detailOrder.patient_name,
+                        priority: detailOrder.priority,
+                        status: detailOrder.status,
+                        original_price_mmk: detailOrder.original_price_mmk,
+                        final_price_mmk: detailOrder.final_price_mmk,
+                        created_at: detailOrder.created_at,
+                      },
+                      detailOrder.schedule ?? null,
+                    )
+                  }
+                }}
+              >
+                Update status
+              </button>
               <button
                 type="button"
                 className="btn btn-secondary"

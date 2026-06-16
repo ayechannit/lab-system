@@ -84,9 +84,7 @@ class _LabResultInsightCardsState extends State<LabResultInsightCards> {
   @override
   Widget build(BuildContext context) {
     final lines = report?.lines ?? const <LabResultLine>[];
-    final hasPdf = report != null &&
-        ((report!.resultTestId != null && report!.resultTestId!.isNotEmpty) ||
-            (report!.resultPdfUrl != null && report!.resultPdfUrl!.isNotEmpty));
+    final hasPdf = report?.hasPdfPayload ?? false;
     final canAi = report != null && (lines.isNotEmpty || hasPdf);
     final gap = widget.compact ? 10.0 : 14.0;
     final cs = context.cs;
