@@ -1,3 +1,4 @@
+const path = require('path');
 const swaggerJsdoc = require('swagger-jsdoc');
 
 const options = {
@@ -48,7 +49,7 @@ The backend implements automatic background-dispatched push and in-app notificat
       },
     ],
   },
-  apis: ['./src/routes/*.js'], // Path to the API docs
+  apis: [path.join(__dirname, '../routes/*.js')], // Path to the API docs
 };
 
 const specs = swaggerJsdoc(options);
