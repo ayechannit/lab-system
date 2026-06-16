@@ -39,6 +39,10 @@ The backend implements automatic background-dispatched push and in-app notificat
     },
     servers: [
       {
+        url: '/',
+        description: 'Current Server (Auto-detect)',
+      },
+      {
         url: 'http://localhost:3000',
         description: 'Development server',
       },
