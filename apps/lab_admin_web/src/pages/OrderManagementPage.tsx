@@ -1635,6 +1635,12 @@ export function OrderManagementPage() {
                               openPaymentUpdate(o)
                             },
                           },
+                          {
+                            label: 'Update status',
+                            onSelect: () => {
+                              void openStatusUpdate(o)
+                            },
+                          },
                           ...(canAddTestFromListRow(o)
                             ? [
                                 {
