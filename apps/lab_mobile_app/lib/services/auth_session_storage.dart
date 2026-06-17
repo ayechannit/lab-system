@@ -1,0 +1,58 @@
+import 'package:shared_preferences/shared_preferences.dart';
+
+/// Persists JWT for "Remember this device" — frontend only, no backend API.
+abstract final class AuthSessionStorage {
+  static const _tokenKey = 'lab_patient_access_token';
+  static const _rememberKey = 'lab_patient_remember_me';
+  static const _emailKey = 'lab_patient_remembered_email';
+
+  static Future<void> saveSession({
+    required String token,
+    required bool remember,
+    String? email,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_rememberKey, remember);
+    if (remember) {
+      await prefs.setString(_tokenKey, token);
+      final trimmed = email?.trim().toLowerCase();
+      if (trimmed != null && trimmed.isNotEmpty) {
+        await prefs.setString(_emailKey, trimmed);
+      }
+    } else {
+      await prefs.remove(_tokenKey);
+      await prefs.remove(_emailKey);
+    }
+  }
+
+  static Future<String?> readAccessToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!(prefs.getBool(_rememberKey) ?? false)) return null;
+    final token = prefs.getString(_tokenKey);
+    if (token == null || token.trim().isEmpty) return null;
+    return token.trim();
+  }
+
+  static Future<bool> readRememberPreference() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_rememberKey) ?? false;
+  }
+
+  static Future<String?> readRememberedEmail() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_emailKey);
+  }
+
+  /// Drop token after expiry while keeping email / remember preference for the login form.
+  static Future<void> clearAccessToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_tokenKey);
+  }
+
+  static Future<void> clear() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_tokenKey);
+    await prefs.remove(_rememberKey);
+    await prefs.remove(_emailKey);
+  }
+}

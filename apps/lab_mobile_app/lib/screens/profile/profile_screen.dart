@@ -119,39 +119,37 @@ class ProfileScreen extends StatelessWidget {
             onTap: () => context.push('/lab-info'),
           ),
           const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: cs.primary,
+          Material(
+            color: cs.primary,
+            borderRadius: BorderRadius.circular(12),
+            child: InkWell(
+              onTap: () => context.push('/loyalty'),
               borderRadius: BorderRadius.circular(12),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'LOYALTY STATUS',
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        color: cs.onPrimary.withValues(alpha: 0.75),
-                        letterSpacing: 1.2,
-                      ),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'LOYALTY STATUS',
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                            color: cs.onPrimary.withValues(alpha: 0.75),
+                            letterSpacing: 1.2,
+                          ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      session.loyalty.balance > 0
+                          ? '${session.loyalty.balance} points'
+                          : 'View loyalty points',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            color: cs.onPrimary,
+                            fontWeight: FontWeight.w700,
+                          ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  'Elite Wellness',
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        color: cs.onPrimary,
-                        fontWeight: FontWeight.w800,
-                      ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  '${user.pointsBalance} Points',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: cs.onPrimary,
-                        fontWeight: FontWeight.w700,
-                      ),
-                ),
-              ],
+              ),
             ),
           ),
           const SizedBox(height: 14),

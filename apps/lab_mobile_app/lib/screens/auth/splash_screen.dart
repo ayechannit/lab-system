@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -25,9 +23,11 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
       vsync: this,
       duration: const Duration(milliseconds: 1200),
     )..repeat();
-    Timer(const Duration(milliseconds: 1400), () {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
       final session = SessionScope.of(context);
+      await session.tryRestoreSession();
+      if (!mounted) return;
       context.go(session.isLoggedIn ? session.homeRoute : '/login');
     });
   }

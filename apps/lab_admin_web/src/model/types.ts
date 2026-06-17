@@ -13,6 +13,7 @@ export interface StaffListRow {
   role: StaffRole
   is_active: boolean
   is_deleted: boolean
+  profile_image_url: string | null
   created_at: string
   updated_at: string
 }

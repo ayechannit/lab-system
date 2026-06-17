@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
 import '../models/app_user.dart';
@@ -6,9 +8,11 @@ import '../models/lab_result.dart';
 import '../models/lab_test_pick.dart';
 import '../models/loyalty.dart';
 import '../models/rating.dart';
+import '../models/user_report.dart';
 import '../models/user_role.dart';
 import 'lab_user_api.dart';
 import 'lab_report_pdf_service.dart';
+import 'auth_session_storage.dart';
 
 class SessionController extends ChangeNotifier {
   SessionController({required LabUserApi api}) : _api = api;
@@ -22,11 +26,17 @@ class SessionController extends ChangeNotifier {
   LabOrderSummary? _trackingOrder;
   LabResultReport? _latestResult;
   AiAnalysisResult? _aiAnalysis;
-  LoyaltySnapshot _loyalty = const LoyaltySnapshot(balance: 0, entries: <LoyaltyEntry>[]);
+  String? _aiAnalysisTestId;
+  LoyaltySnapshot _loyalty = const LoyaltySnapshot(balance: 0, entries: <LoyaltyEntry>[], earnRules: <PointEarnRule>[]);
+  UserReportSummary? _userReport;
+  bool _homeSummaryLoading = false;
+  String? _homeSummaryError;
   bool _busy = false;
+  bool _sessionRestoreAttempted = false;
 
   AppUser? get user => _user;
   bool get isLoggedIn => _user != null;
+  bool get sessionRestoreAttempted => _sessionRestoreAttempted;
   bool get busy => _busy;
   List<LabOrderRequest> get orders => List.unmodifiable(_orders);
   List<LabOrderSummary> get activeOrders => List.unmodifiable(_activeOrders);
@@ -36,18 +46,58 @@ class SessionController extends ChangeNotifier {
   LabOrderSummary? get trackingOrder => _trackingOrder;
   LabResultReport? get latestResult => _latestResult;
   AiAnalysisResult? get aiAnalysis => _aiAnalysis;
+  String? get aiAnalysisTestId => _aiAnalysisTestId;
   LoyaltySnapshot get loyalty => _loyalty;
+  UserReportSummary? get userReport => _userReport;
+  bool get homeSummaryLoading => _homeSummaryLoading;
+  String? get homeSummaryError => _homeSummaryError;
   /// All end-user roles (patient, doctor, clinic) share the same home shell.
   String get homeRoute => _user == null ? '/login' : '/home';
 
   Future<void> login({
     required String email,
     required String password,
+    bool remember = false,
   }) async {
     _setBusy(true);
-    _user = await _api.login(LoginRequest(email: email, password: password));
-    await _hydrateUserData();
-    _setBusy(false);
+    try {
+      _user = await _api.login(LoginRequest(email: email, password: password));
+      final token = _api.accessToken;
+      if (token != null) {
+        await AuthSessionStorage.saveSession(
+          token: token,
+          remember: remember,
+          email: email,
+        );
+      }
+      await _hydrateUserData();
+    } finally {
+      _setBusy(false);
+    }
+  }
+
+  /// Restores a remembered session from device storage (`GET /api/auth/me`).
+  Future<void> tryRestoreSession() async {
+    if (_sessionRestoreAttempted) return;
+    _sessionRestoreAttempted = true;
+    if (_user != null) return;
+
+    final token = await AuthSessionStorage.readAccessToken();
+    if (token == null) {
+      notifyListeners();
+      return;
+    }
+
+    _api.setAccessToken(token);
+    try {
+      _user = await _api.getCurrentUser();
+      await _hydrateUserData();
+    } catch (_) {
+      _api.clearAuth();
+      _user = null;
+      await AuthSessionStorage.clearAccessToken();
+      notifyListeners();
+    }
   }
 
   /// Creates the account on the server only. Caller should navigate to `/login`;
@@ -84,6 +134,7 @@ class SessionController extends ChangeNotifier {
 
   void logout() {
     _api.clearAuth();
+    unawaited(AuthSessionStorage.clear());
     _user = null;
     _orders.clear();
     _activeOrders = const [];
@@ -92,7 +143,11 @@ class SessionController extends ChangeNotifier {
     _trackingOrder = null;
     _latestResult = null;
     _aiAnalysis = null;
-    _loyalty = const LoyaltySnapshot(balance: 0, entries: <LoyaltyEntry>[]);
+    _aiAnalysisTestId = null;
+    _loyalty = const LoyaltySnapshot(balance: 0, entries: <LoyaltyEntry>[], earnRules: <PointEarnRule>[]);
+    _userReport = null;
+    _homeSummaryLoading = false;
+    _homeSummaryError = null;
     notifyListeners();
   }
 
@@ -202,15 +257,29 @@ class SessionController extends ChangeNotifier {
     _setBusy(true);
     try {
       _latestResult = await _api.getResultForOrder(userId: u.id, orderId: orderId);
-      if (_latestResult != null) {
-        _aiAnalysis = await _api.getAiAnalysis(userId: u.id, orderId: orderId);
-      } else {
-        _aiAnalysis = null;
-      }
+      _aiAnalysis = null;
+      _aiAnalysisTestId = null;
       notifyListeners();
     } finally {
       _setBusy(false);
     }
+  }
+
+  Future<AiAnalysisResult?> loadAiAnalysisForTest(String testId) async {
+    final u = _user;
+    final orderId = _latestResult?.orderId;
+    if (u == null || orderId == null) return null;
+    final analysis = await _api.getAiAnalysis(
+      userId: u.id,
+      orderId: orderId,
+      testId: testId,
+    );
+    if (analysis != null) {
+      _aiAnalysis = analysis;
+      _aiAnalysisTestId = testId;
+      notifyListeners();
+    }
+    return analysis;
   }
 
   Future<void> selectTrackingOrder(String orderId) async {
@@ -238,20 +307,78 @@ class SessionController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> runAiAnalysis() async {
+  Future<void> refreshLoyalty() async {
+    final u = _user;
+    if (u == null) return;
+    _loyalty = await _api.getLoyaltySnapshot(u.id);
+    notifyListeners();
+  }
+
+  Future<void> refreshHomeSummary() async {
+    final u = _user;
+    if (u == null) return;
+    _homeSummaryLoading = true;
+    _homeSummaryError = null;
+    notifyListeners();
+    try {
+      _userReport = await _api.fetchUserReportSummary();
+    } catch (e) {
+      _homeSummaryError = 'Could not load your summary. Pull down to retry.';
+    } finally {
+      _homeSummaryLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> runAiAnalysis({String? testId}) async {
     final u = _user;
     final orderId = _latestResult?.orderId;
     if (u == null || orderId == null) return;
     _setBusy(true);
     try {
-      _aiAnalysis = await _api.runAiAnalysis(userId: u.id, orderId: orderId);
+      _aiAnalysisTestId = testId;
+      _aiAnalysis = await _api.runAiAnalysis(
+        userId: u.id,
+        orderId: orderId,
+        testId: testId,
+      );
       notifyListeners();
     } finally {
       _setBusy(false);
     }
   }
 
+  Future<String> downloadTestResultPdf({
+    required LabResultTestItem test,
+    required LabResultReport report,
+  }) async {
+    final filename = LabReportPdfService.buildFilename(
+      sampleId: report.sampleId,
+      orderId: report.orderId,
+      testCode: test.testCode.isNotEmpty ? test.testCode : test.testName,
+    );
+    if (test.testId.isNotEmpty) {
+      final bytes = await _api.downloadResultPdf(orderId: report.orderId, testId: test.testId);
+      return LabReportPdfService.saveBytes(bytes: bytes, filename: filename);
+    }
+    final url = test.pdfUrl;
+    if (url == null || url.trim().isEmpty) {
+      throw LabReportPdfException('No PDF is available for this test.');
+    }
+    return LabReportPdfService.download(url: url, filename: filename);
+  }
+
   Future<String> downloadReportPdf(LabResultReport report) async {
+    LabResultTestItem? test;
+    for (final t in report.tests) {
+      if (t.hasPdf) {
+        test = t;
+        break;
+      }
+    }
+    if (test != null) {
+      return downloadTestResultPdf(test: test, report: report);
+    }
     final filename = LabReportPdfService.buildFilename(
       sampleId: report.sampleId,
       orderId: report.orderId,
@@ -314,6 +441,13 @@ class SessionController extends ChangeNotifier {
     _trackingOrder = await _api.getTrackingOrder(u.id);
     _latestResult = await _api.getLatestResult(u.id);
     _loyalty = await _api.getLoyaltySnapshot(u.id);
+    try {
+      _userReport = await _api.fetchUserReportSummary();
+      _homeSummaryError = null;
+    } catch (_) {
+      _userReport = null;
+      _homeSummaryError = 'Could not load your summary. Pull down to retry.';
+    }
     if (_latestResult != null) {
       _aiAnalysis = await _api.getAiAnalysis(
         userId: u.id,

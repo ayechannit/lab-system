@@ -2,9 +2,11 @@ import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { BrandMark } from '../components/common/BrandMark'
 import { MyProfileModal } from '../components/profile/MyProfileModal'
+import { StaffAvatar } from '../components/staff/StaffAvatar'
 import { useAuth } from '../hooks/AuthContext'
 import { useSystemBranding } from '../hooks/SystemBrandingContext'
 import { useToast } from '../hooks/ToastContext'
+import { fetchStaffById } from '../services/staffService'
 import type { SessionRole } from '../model/types'
 import './admin-layout.css'
 
@@ -76,6 +78,26 @@ export function AdminLayout() {
   const { pathname } = useLocation()
   const headerTitle = headerTitleForPath(pathname)
   const [profileOpen, setProfileOpen] = useState(false)
+  const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!account || role !== 'collector') {
+      setProfileImageUrl(null)
+      return
+    }
+    let cancelled = false
+    void (async () => {
+      try {
+        const row = await fetchStaffById(account.id)
+        if (!cancelled) setProfileImageUrl(row.profile_image_url)
+      } catch {
+        if (!cancelled) setProfileImageUrl(null)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [account, role, profileOpen])
 
   const [isMobile, setIsMobile] = useState(
     () =>
@@ -241,9 +263,17 @@ export function AdminLayout() {
                   aria-expanded={profileOpen}
                   onClick={() => setProfileOpen(true)}
                 >
-                  <span className="admin-profile__avatar" aria-hidden="true">
-                    {initialsFromName(account.name)}
-                  </span>
+                  {role === 'collector' ? (
+                    <StaffAvatar
+                      name={account.name}
+                      profileImageUrl={profileImageUrl}
+                      className="admin-profile__avatar"
+                    />
+                  ) : (
+                    <span className="admin-profile__avatar" aria-hidden="true">
+                      {initialsFromName(account.name)}
+                    </span>
+                  )}
                   <div className="admin-profile__meta">
                     <span className="admin-profile__name">{account.name}</span>
                     <span className="admin-profile__role">{roleDisplay(role)}</span>

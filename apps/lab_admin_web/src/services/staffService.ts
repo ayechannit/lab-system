@@ -3,6 +3,7 @@ import { apiFetch } from './apiClient'
 import { readApiErrorBody } from './readApiError'
 
 function normalizeStaffRow(raw: Record<string, unknown>): StaffListRow {
+  const profileImage = raw.profile_image_url
   return {
     id: String(raw.id),
     name: String(raw.name ?? ''),
@@ -10,6 +11,8 @@ function normalizeStaffRow(raw: Record<string, unknown>): StaffListRow {
     role: raw.role as StaffRole,
     is_active: Boolean(raw.is_active),
     is_deleted: Boolean(raw.is_deleted),
+    profile_image_url:
+      profileImage == null || profileImage === '' ? null : String(profileImage),
     created_at: String(raw.created_at ?? ''),
     updated_at: String(raw.updated_at ?? ''),
   }
@@ -84,4 +87,20 @@ export async function updateStaff(id: string, body: StaffUpdateBody): Promise<St
 export async function deleteStaff(id: string): Promise<void> {
   const res = await apiFetch(`/api/staff/${encodeURIComponent(id)}`, { method: 'DELETE' })
   if (!res.ok) throw new Error(await readApiErrorBody(res))
+}
+
+export async function uploadStaffProfileImage(id: string, file: File): Promise<StaffListRow> {
+  const fd = new FormData()
+  fd.append('image', file)
+  const res = await apiFetch(`/api/staff/${encodeURIComponent(id)}/profile-image`, {
+    method: 'POST',
+    body: fd,
+  })
+  if (!res.ok) throw new Error(await readApiErrorBody(res))
+  const payload = (await res.json()) as Record<string, unknown>
+  const staff = payload.staff
+  if (staff && typeof staff === 'object') {
+    return normalizeStaffRow({ ...(staff as Record<string, unknown>), is_deleted: false })
+  }
+  return fetchStaffById(id)
 }

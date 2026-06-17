@@ -4,14 +4,16 @@ import type { SessionRole, StaffListRow, StaffRole } from '../../model/types'
 import {
   fetchStaffById,
   updateStaff as updateStaffApi,
+  uploadStaffProfileImage,
   type StaffUpdateBody,
 } from '../../services/staffService'
 import type { StoredAccount } from '../../services/authSession'
+import { StaffProfileImageField } from '../staff/StaffProfileImageField'
 import '../common/ui.css'
 
 const MIN_PASSWORD_LENGTH = 8
 
-const STAFF_ROLES: readonly StaffRole[] = ['admin', 'lab_technician', 'reception', 'manager']
+const STAFF_ROLES: readonly StaffRole[] = ['admin', 'lab_technician', 'reception', 'manager', 'collector']
 
 function isStaffRole(r: string): r is StaffRole {
   return (STAFF_ROLES as readonly string[]).includes(r)
@@ -53,6 +55,8 @@ export function MyProfileModal({
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [staffRow, setStaffRow] = useState<StaffListRow | null>(null)
+  const [profileImageFile, setProfileImageFile] = useState<File | null>(null)
+  const [profilePreviewUrl, setProfilePreviewUrl] = useState<string | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -63,6 +67,8 @@ export function MyProfileModal({
     setLoadError(null)
     setPassword('')
     setConfirmPassword('')
+    setProfileImageFile(null)
+    setProfilePreviewUrl(null)
     setSubmitting(false)
     setName(account.name)
     setEmail(account.email)
@@ -82,6 +88,14 @@ export function MyProfileModal({
       cancelled = true
     }
   }, [open, account.id, account.name, account.email])
+
+  useEffect(() => {
+    return () => {
+      if (profilePreviewUrl?.startsWith('blob:')) {
+        URL.revokeObjectURL(profilePreviewUrl)
+      }
+    }
+  }, [profilePreviewUrl])
 
   useEffect(() => {
     if (!open) return
@@ -147,7 +161,11 @@ export function MyProfileModal({
         is_active: staffRow.is_active,
       }
       if (pw !== '') body.password_hash = pw
-      await updateStaffApi(account.id, body)
+      let updated = await updateStaffApi(account.id, body)
+      if (account.role === 'collector' && profileImageFile) {
+        updated = await uploadStaffProfileImage(account.id, profileImageFile)
+      }
+      setStaffRow(updated)
       await onSuccess()
       onClose()
     } catch (err) {
@@ -228,6 +246,29 @@ export function MyProfileModal({
               aria-readonly="true"
             />
           </div>
+          {account.role === 'collector' ? (
+            <StaffProfileImageField
+              id="mp-profile-image"
+              savedImageUrl={staffRow?.profile_image_url ?? null}
+              previewSrc={profilePreviewUrl}
+              pickedFileName={profileImageFile?.name ?? null}
+              onFileSelected={(file) => {
+                if (profilePreviewUrl?.startsWith('blob:')) {
+                  URL.revokeObjectURL(profilePreviewUrl)
+                }
+                setProfileImageFile(file)
+                setProfilePreviewUrl(URL.createObjectURL(file))
+              }}
+              onClear={() => {
+                setProfileImageFile(null)
+                if (profilePreviewUrl?.startsWith('blob:')) {
+                  URL.revokeObjectURL(profilePreviewUrl)
+                }
+                setProfilePreviewUrl(null)
+              }}
+              disabled={submitting || !staffRow}
+            />
+          ) : null}
           <div className="field">
             <label htmlFor="mp-pw">New password (optional, min. {MIN_PASSWORD_LENGTH} characters)</label>
             <input

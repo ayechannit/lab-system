@@ -7,7 +7,7 @@ export type StaffLoginResponse = {
   staff: { id: string; name: string; email: string; role: string }
 }
 
-const STAFF_ROLES = new Set(['admin', 'lab_technician', 'reception', 'manager'])
+const STAFF_ROLES = new Set(['admin', 'lab_technician', 'reception', 'manager', 'collector'])
 
 function accountFromMePayload(raw: Record<string, unknown>): StoredAccount {
   const role = String(raw.role ?? '')

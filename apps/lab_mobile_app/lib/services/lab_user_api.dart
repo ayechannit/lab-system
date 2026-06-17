@@ -4,6 +4,7 @@ import '../models/lab_result.dart';
 import '../models/lab_test_pick.dart';
 import '../models/loyalty.dart';
 import '../models/rating.dart';
+import '../models/user_report.dart';
 import '../models/user_role.dart';
 
 class RegisterRequest {
@@ -42,6 +43,14 @@ class LoginRequest {
 
 /// Contract-first API for user app features.
 abstract class LabUserApi {
+  /// In-memory bearer token (also restored from device storage when remember-me is on).
+  String? get accessToken;
+
+  void setAccessToken(String? token);
+
+  /// `GET /api/auth/me` using the current bearer token.
+  Future<AppUser> getCurrentUser();
+
   /// Creates the account via `POST /api/users` only — does not sign the user in.
   Future<void> register(RegisterRequest request);
   Future<AppUser> login(LoginRequest request);
@@ -89,10 +98,12 @@ abstract class LabUserApi {
   Future<AiAnalysisResult?> getAiAnalysis({
     required String userId,
     required String orderId,
+    String? testId,
   });
   Future<AiAnalysisResult> runAiAnalysis({
     required String userId,
     required String orderId,
+    String? testId,
   });
 
   /// Authenticated download of a released result PDF (`GET .../result-file`).
@@ -114,6 +125,12 @@ abstract class LabUserApi {
     required RatingDraft rating,
   });
   Future<LoyaltySnapshot> getLoyaltySnapshot(String userId);
+
+  /// Personalized home metrics from `GET /api/reports/user-summary`.
+  Future<UserReportSummary> fetchUserReportSummary({
+    DateTime? startDate,
+    DateTime? endDate,
+  });
 
   /// Confirm the lab-proposed collection schedule (quotation: scheduling from lab).
   Future<void> acceptSchedule({

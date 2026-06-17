@@ -2,12 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/session_scope.dart';
-import '../../services/rest_lab_user_api.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/theme_extensions.dart';
 import '../../widgets/common/app_branding_row.dart';
 import '../../widgets/common/app_markdown_text.dart';
-import '../../widgets/common/app_toast.dart';
 import '../../widgets/navigation/lab_main_bottom_nav.dart';
 
 class AiAnalysisScreen extends StatelessWidget {
@@ -31,10 +29,11 @@ class AiAnalysisScreen extends StatelessWidget {
         final ai = session.aiAnalysis;
         final report = session.latestResult;
         final hasReport = report != null;
-        final busy = session.busy;
+        final testLabel = ai?.testName?.trim();
+        final testId = session.aiAnalysisTestId ?? ai?.testId;
         final summaryCardText = ai == null
             ? (hasReport
-                ? 'Run analysis to request a plain-language summary from the lab AI service (uses your report PDF and the Lab Result Summarized prompt).'
+                ? 'Run analysis on a specific test from the report detail screen to get a plain-language summary.'
                 : 'Load a completed order with results, then run analysis.')
             : (ai.summary.isNotEmpty ? ai.summary : 'No summary text returned.');
 
@@ -89,42 +88,22 @@ class AiAnalysisScreen extends StatelessWidget {
               Text(
                 !hasReport
                     ? 'No lab report is loaded for your account yet.'
-                    : 'Order ${report.orderId.length >= 8 ? report.orderId.substring(0, 8) : report.orderId} · ${ai != null ? 'Analysis on file' : 'Run analysis to fetch text from the lab API'}',
+                    : testLabel != null && testLabel.isNotEmpty
+                        ? '$testLabel · ${ai != null ? 'Analysis on file' : 'Run from report detail'}'
+                        : 'Order ${report.orderId.length >= 8 ? report.orderId.substring(0, 8) : report.orderId} · ${ai != null ? 'Analysis on file' : 'Run from report detail'}',
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: context.cs.onSurfaceVariant),
               ),
               const SizedBox(height: 14),
               _plainCard(context, summaryCardText),
-              const SizedBox(height: 12),
-              SizedBox(
-                height: 48,
-                child: FilledButton.icon(
-                  onPressed: !hasReport || busy
-                      ? null
-                      : () async {
-                          try {
-                            await session.runAiAnalysis();
-                          } on LabApiException catch (e) {
-                            if (!context.mounted) return;
-                            AppToast.errorInShell(context, e.message);
-                          } catch (_) {
-                            if (!context.mounted) return;
-                            AppToast.errorInShell(context, 'Could not run analysis. Try again.');
-                          }
-                        },
-                  icon: busy
-                      ? SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: context.cs.onPrimary,
-                          ),
-                        )
-                      : const Icon(Icons.bolt_outlined),
-                  label: Text(busy ? 'Running analysis…' : 'Run analysis'),
+              if (ai == null && hasReport && testId == null) ...[
+                const SizedBox(height: 12),
+                Text(
+                  'Open a released report and tap Run AI Check on the test you want summarized.',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: context.cs.onSurfaceVariant),
                 ),
-              ),
+              ],
               if (ai != null) ...[
                 const SizedBox(height: 16),
                 Text(

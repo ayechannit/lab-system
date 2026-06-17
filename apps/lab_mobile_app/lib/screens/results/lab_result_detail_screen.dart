@@ -5,7 +5,7 @@ import '../../app/session_scope.dart';
 import '../../models/lab_result.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/theme_extensions.dart';
-import '../../widgets/results/lab_result_insight_cards.dart';
+import '../../widgets/results/lab_result_test_card.dart';
 
 class LabResultDetailScreen extends StatelessWidget {
   const LabResultDetailScreen({super.key});
@@ -25,16 +25,9 @@ class LabResultDetailScreen extends StatelessWidget {
       listenable: session,
       builder: (context, _) {
         final report = session.latestResult;
-        final lines = report?.lines ?? const <LabResultLine>[];
-        final hasStructured = lines.isNotEmpty;
-        final hasPdf = report?.hasPdfPayload ?? false;
         final borderColor = context.cs.outlineVariant.withValues(alpha: 0.55);
-        final sampleId = report?.sampleId ?? '';
-        final title = hasStructured
-            ? lines.first.name
-            : sampleId.isNotEmpty
-                ? sampleId
-                : 'Lab report';
+        final tests = report?.tests ?? const <LabResultTestItem>[];
+        final releasedCount = report?.releasedTestCount ?? 0;
 
         return Scaffold(
           appBar: AppBar(
@@ -45,45 +38,88 @@ class LabResultDetailScreen extends StatelessWidget {
             ),
             title: const Text('Lab report'),
           ),
-          body: ListView(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
-            children: [
-              if (report == null)
-                _EmptyState(borderColor: borderColor)
-              else ...[
-                _ReportHeroCard(
-                  title: title,
-                  subtitle: hasStructured ? report.sampleId : 'Official PDF report',
-                  releasedAt: report.releasedAt,
-                  hasPdf: hasPdf,
-                  borderColor: borderColor,
-                ),
-                const SizedBox(height: 16),
-                if (!hasStructured && !hasPdf)
-                  _InfoBanner(
-                    message:
-                        'This order was released but the PDF is not available yet. Pull to refresh on Results or contact the lab.',
+          body: RefreshIndicator(
+            onRefresh: () async {
+              final orderId = report?.orderId;
+              if (orderId != null) {
+                await session.selectResult(orderId);
+              }
+            },
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
+              physics: const AlwaysScrollableScrollPhysics(),
+              children: [
+                if (report == null)
+                  _EmptyState(borderColor: borderColor)
+                else ...[
+                  _OrderHeroCard(
+                    report: report,
+                    testCount: tests.length,
+                    releasedCount: releasedCount,
                     borderColor: borderColor,
-                  )
-                else if (hasStructured) ...[
+                  ),
+                  const SizedBox(height: 20),
                   Text(
-                    'Key results',
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w700,
+                    'TESTS IN THIS ORDER',
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
                           color: context.cs.onSurfaceVariant,
-                          letterSpacing: 0.2,
+                          letterSpacing: 1.0,
                         ),
                   ),
-                  const SizedBox(height: 10),
-                  ...lines.map((line) => Padding(
+                  const SizedBox(height: 6),
+                  Text(
+                    tests.length == 1 ? '1 test' : '${tests.length} tests',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Download the official PDF or run AI Check for each test separately.',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: context.cs.onSurfaceVariant,
+                          height: 1.4,
+                        ),
+                  ),
+                  const SizedBox(height: 14),
+                  if (tests.isEmpty)
+                    _InfoBanner(
+                      message: 'No test line items were found for this order.',
+                      borderColor: borderColor,
+                    )
+                  else if (releasedCount == 0)
+                    _InfoBanner(
+                      message:
+                          'The lab has released this order, but PDFs are not uploaded yet. Check back soon or contact the lab.',
+                      borderColor: borderColor,
+                    ),
+                  ...List.generate(tests.length, (i) {
+                    return LabResultTestCard(
+                      test: tests[i],
+                      report: report,
+                      index: i,
+                    );
+                  }),
+                  if (report.lines.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      'Summary values',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: context.cs.onSurfaceVariant,
+                          ),
+                    ),
+                    const SizedBox(height: 10),
+                    ...report.lines.map(
+                      (line) => Padding(
                         padding: const EdgeInsets.only(bottom: 10),
                         child: _ResultLineCard(line: line),
-                      )),
-                  const SizedBox(height: 6),
+                      ),
+                    ),
+                  ],
                 ],
-                LabResultInsightCards(report: report),
               ],
-            ],
+            ),
           ),
         );
       },
@@ -91,97 +127,101 @@ class LabResultDetailScreen extends StatelessWidget {
   }
 }
 
-class _ReportHeroCard extends StatelessWidget {
-  const _ReportHeroCard({
-    required this.title,
-    required this.subtitle,
-    required this.releasedAt,
-    required this.hasPdf,
+class _OrderHeroCard extends StatelessWidget {
+  const _OrderHeroCard({
+    required this.report,
+    required this.testCount,
+    required this.releasedCount,
     required this.borderColor,
   });
 
-  final String title;
-  final String subtitle;
-  final DateTime releasedAt;
-  final bool hasPdf;
+  final LabResultReport report;
+  final int testCount;
+  final int releasedCount;
   final Color borderColor;
 
   @override
   Widget build(BuildContext context) {
     final cs = context.cs;
+    final orderRef = report.orderId.length >= 8
+        ? report.orderId.substring(0, 8).toUpperCase()
+        : report.orderId.toUpperCase();
 
     return Container(
       decoration: BoxDecoration(
-        color: context.cardFill,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: borderColor),
+        gradient: const LinearGradient(
+          colors: [Color(0xFF082457), Color(0xFF0B4BB3)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: cs.shadow.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
+            color: cs.primary.withValues(alpha: 0.2),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          LayoutBuilder(
-            builder: (context, constraints) {
-              const releasedChip = _ReleasedChip();
-              if (!hasPdf) return releasedChip;
-
-              const pdfChip = _MetaChip(
-                icon: Icons.picture_as_pdf_outlined,
-                label: 'PDF ready',
-                color: Color(0xFFC62828),
-                background: Color(0x1AE53935),
-              );
-
-              // Side-by-side when there is room; stack on narrow viewports.
-              if (constraints.maxWidth >= 200) {
-                return Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [releasedChip, pdfChip],
-                );
-              }
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  releasedChip,
-                  const SizedBox(height: 8),
-                  pdfChip,
-                ],
-              );
-            },
-          ),
-          const SizedBox(height: 14),
-          Text(
-            title,
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            subtitle,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
-          ),
-          const SizedBox(height: 12),
           Row(
             children: [
-              Icon(Icons.event_outlined, size: 16, color: cs.onSurfaceVariant),
-              const SizedBox(width: 6),
-              Expanded(
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.18),
+                  borderRadius: BorderRadius.circular(999),
+                ),
                 child: Text(
-                  'Released ${_fmtDate(releasedAt)}',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: cs.onSurfaceVariant,
-                        fontWeight: FontWeight.w500,
+                  'Released',
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
                       ),
                 ),
               ),
+              const Spacer(),
+              if (releasedCount > 0)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.18),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.picture_as_pdf_outlined, size: 14, color: Colors.white),
+                      const SizedBox(width: 4),
+                      Text(
+                        '$releasedCount/$testCount PDF${testCount == 1 ? '' : 's'}',
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                            ),
+                      ),
+                    ],
+                  ),
+                ),
             ],
+          ),
+          const SizedBox(height: 14),
+          Text(
+            report.sampleId,
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Order $orderRef · ${_fmtDate(report.releasedAt)}',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Colors.white.withValues(alpha: 0.88),
+                ),
           ),
         ],
       ),
@@ -190,68 +230,6 @@ class _ReportHeroCard extends StatelessWidget {
 
   String _fmtDate(DateTime dt) {
     return '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}';
-  }
-}
-
-class _ReleasedChip extends StatelessWidget {
-  const _ReleasedChip();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: AppColors.accentGreen.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: AppColors.accentGreen.withValues(alpha: 0.25)),
-      ),
-      child: Text(
-        'Released',
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: AppColors.accentGreen,
-              fontWeight: FontWeight.w700,
-            ),
-      ),
-    );
-  }
-}
-
-class _MetaChip extends StatelessWidget {
-  const _MetaChip({
-    required this.icon,
-    required this.label,
-    required this.color,
-    required this.background,
-  });
-
-  final IconData icon;
-  final String label;
-  final Color color;
-  final Color background;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: background,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14, color: color),
-          const SizedBox(width: 4),
-          Text(
-            label,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: color,
-                  fontWeight: FontWeight.w600,
-                ),
-          ),
-        ],
-      ),
-    );
   }
 }
 
@@ -264,7 +242,7 @@ class _InfoBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.only(bottom: 12),
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
@@ -280,7 +258,10 @@ class _InfoBanner extends StatelessWidget {
             Expanded(
               child: Text(
                 message,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: context.cs.onSurfaceVariant),
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: context.cs.onSurfaceVariant,
+                      height: 1.4,
+                    ),
               ),
             ),
           ],
@@ -358,7 +339,10 @@ class _ResultLineCard extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: Text(line.name, style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
+                child: Text(
+                  line.name,
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+                ),
               ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),

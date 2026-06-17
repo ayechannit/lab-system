@@ -162,6 +162,7 @@ class LabOrderSummary {
     required this.createdAtLabel,
     this.collectionAcceptedAt,
     this.collectorName,
+    this.collectorProfileImageUrl,
     this.runningAt,
     this.reportOutAt,
     this.scheduleAcceptedByUser = true,
@@ -181,6 +182,7 @@ class LabOrderSummary {
   final String createdAtLabel;
   final DateTime? collectionAcceptedAt;
   final String? collectorName;
+  final String? collectorProfileImageUrl;
   final DateTime? runningAt;
   final DateTime? reportOutAt;
 
@@ -215,6 +217,7 @@ class LabOrderSummary {
       createdAtLabel: createdAtLabel,
       collectionAcceptedAt: collectionAcceptedAt,
       collectorName: collectorName,
+      collectorProfileImageUrl: collectorProfileImageUrl,
       runningAt: runningAt,
       reportOutAt: reportOutAt,
       scheduleAcceptedByUser: scheduleAcceptedByUser ?? this.scheduleAcceptedByUser,

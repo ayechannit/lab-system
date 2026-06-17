@@ -10,6 +10,7 @@ import '../models/lab_result.dart';
 import '../models/lab_test_pick.dart';
 import '../models/loyalty.dart';
 import '../models/rating.dart';
+import '../models/user_report.dart';
 import '../models/user_role.dart';
 import 'lab_user_api.dart';
 
@@ -47,6 +48,16 @@ class RestLabUserApi implements LabUserApi {
   final String _base;
   String? _token;
 
+  @override
+  String? get accessToken => _token;
+
+  @override
+  void setAccessToken(String? token) {
+    final t = token?.trim();
+    _token = (t == null || t.isEmpty) ? null : t;
+  }
+  Map<String, String>? _collectorProfileImageByName;
+
   static String _normalizeBase(String b) {
     var s = b.trim();
     while (s.endsWith('/')) {
@@ -63,12 +74,25 @@ class RestLabUserApi implements LabUserApi {
     return '$_base/$trimmed';
   }
 
-  Map<String, String> _jsonHeaders({bool withAuth = true}) {
+  Map<String, String> _jsonHeaders({bool withAuth = true, bool noCache = false}) {
     final h = <String, String>{'Content-Type': 'application/json', 'Accept': 'application/json'};
+    if (noCache) {
+      h['Cache-Control'] = 'no-cache';
+      h['Pragma'] = 'no-cache';
+    }
     if (withAuth && _token != null) {
       h['Authorization'] = 'Bearer $_token';
     }
     return h;
+  }
+
+  dynamic _decodeResponseJson(http.Response r) {
+    final body = r.body.trim();
+    if (body.isEmpty) {
+      if (r.statusCode == 304) return <dynamic>[];
+      throw LabApiException('Empty response (${r.statusCode})', r.statusCode);
+    }
+    return jsonDecode(body);
   }
 
   Uri _userOrdersUri(
@@ -204,6 +228,16 @@ class RestLabUserApi implements LabUserApi {
   }
 
   @override
+  Future<AppUser> getCurrentUser() async {
+    if (_token == null || _token!.isEmpty) {
+      throw LabApiException('Not signed in');
+    }
+    final me = await http.get(Uri.parse('$_base/api/auth/me'), headers: _jsonHeaders());
+    if (me.statusCode >= 400) _throwFromResponse(me);
+    return _userFromMe(_asObj(jsonDecode(me.body)));
+  }
+
+  @override
   Future<AppUser> login(LoginRequest request) async {
     final r = await http.post(
       Uri.parse('$_base/api/auth/login/user'),
@@ -219,9 +253,7 @@ class RestLabUserApi implements LabUserApi {
     if (_token == null || _token!.isEmpty) {
       throw LabApiException('Login response missing token');
     }
-    final me = await http.get(Uri.parse('$_base/api/auth/me'), headers: _jsonHeaders());
-    if (me.statusCode >= 400) _throwFromResponse(me);
-    return _userFromMe(_asObj(jsonDecode(me.body)));
+    return getCurrentUser();
   }
 
   @override
@@ -419,7 +451,70 @@ class RestLabUserApi implements LabUserApi {
     if (r.statusCode >= 400) _throwFromResponse(r);
     final o = _asObj(jsonDecode(r.body));
     final sched = o['schedule'] != null ? _asObj(o['schedule']) : await _fetchSchedule(orderId);
-    return _mapOrderToSummary(o, sched);
+    final summary = _mapOrderToSummary(o, sched);
+    final collectorImageUrl = await _resolveCollectorProfileImageUrl(summary.collectorName, sched);
+    if (collectorImageUrl == null) return summary;
+    return LabOrderSummary(
+      id: summary.id,
+      userId: summary.userId,
+      patientName: summary.patientName,
+      testType: summary.testType,
+      description: summary.description,
+      priority: summary.priority,
+      address: summary.address,
+      createdAt: summary.createdAt,
+      timeline: summary.timeline,
+      createdAtLabel: summary.createdAtLabel,
+      collectionAcceptedAt: summary.collectionAcceptedAt,
+      collectorName: summary.collectorName,
+      collectorProfileImageUrl: collectorImageUrl,
+      runningAt: summary.runningAt,
+      reportOutAt: summary.reportOutAt,
+      scheduleAcceptedByUser: summary.scheduleAcceptedByUser,
+      backendStatus: summary.backendStatus,
+      lineItems: summary.lineItems,
+    );
+  }
+
+  Future<void> _ensureCollectorProfileCache() async {
+    if (_collectorProfileImageByName != null) return;
+    _collectorProfileImageByName = {};
+    try {
+      final r = await http.get(
+        Uri.parse('$_base/api/staff?role=collector&is_active=true'),
+        headers: _jsonHeaders(),
+      );
+      if (r.statusCode >= 400) return;
+      final data = jsonDecode(r.body);
+      if (data is! List) return;
+      for (final entry in data) {
+        final m = _asObj(entry);
+        final name = '${_gv(m, 'name')}'.trim().toLowerCase();
+        final url = '${_gv(m, 'profile_image_url') ?? ''}'.trim();
+        if (name.isNotEmpty && url.isNotEmpty) {
+          _collectorProfileImageByName![name] = _absoluteUrl(url);
+        }
+      }
+    } catch (_) {}
+  }
+
+  Future<String?> _resolveCollectorProfileImageUrl(
+    String? collectorName,
+    Map<String, dynamic>? sched,
+  ) async {
+    if (sched != null) {
+      for (final key in [
+        'collector_profile_image_url',
+        'collecting_person_profile_image_url',
+        'profile_image_url',
+      ]) {
+        final raw = '${_gv(sched, key) ?? ''}'.trim();
+        if (raw.isNotEmpty) return _absoluteUrl(raw);
+      }
+    }
+    if (collectorName == null || collectorName.trim().isEmpty) return null;
+    await _ensureCollectorProfileCache();
+    return _collectorProfileImageByName![collectorName.trim().toLowerCase()];
   }
 
   LabOrderSummary _mapOrderToSummary(Map<String, dynamic> o, Map<String, dynamic>? sched) {
@@ -682,25 +777,59 @@ class RestLabUserApi implements LabUserApi {
 
   LabResultReport _mapOrderDetailToResult(Map<String, dynamic> o, String orderId) {
     final items = o['items'];
-    String? pdf;
-    String? resultTestId;
-    DateTime? released;
+    final tests = <LabResultTestItem>[];
+    DateTime? latestReleased;
     var sampleRef = '';
+
     if (items is List) {
       for (final it in items) {
         final m = _asObj(it);
-        final u = _gv(m, 'download_url') ?? _gv(m, 'downloadUrl');
-        final fileKey = _gv(m, 'result_file_url') ?? _gv(m, 'resultFileUrl');
-        if ((u != null && '$u'.isNotEmpty) || (fileKey != null && '$fileKey'.isNotEmpty)) {
-          pdf = u != null && '$u'.isNotEmpty ? '$u' : null;
-          resultTestId = '${_gv(m, 'test_id') ?? _gv(m, 'testId')}'.trim();
-          if (resultTestId.isEmpty) resultTestId = null;
-          released = _asDt(_gv(m, 'updated_at') ?? _gv(m, 'updatedAt')) ?? DateTime.now();
-          sampleRef = '${_gv(m, 'test_name') ?? _gv(m, 'testName')}'.trim();
-          break;
+        final testId = '${_gv(m, 'test_id') ?? _gv(m, 'testId')}'.trim();
+        if (testId.isEmpty) continue;
+
+        var name = '${_gv(m, 'test_name') ?? _gv(m, 'testName') ?? ''}'.trim();
+        var code = '${_gv(m, 'test_code') ?? _gv(m, 'testCode') ?? ''}'.trim();
+        var category = '${_gv(m, 'category') ?? ''}'.trim();
+        final nested = m['test'];
+        if (nested is Map) {
+          final tm = _asObj(nested);
+          if (name.isEmpty) {
+            name = '${_gv(tm, 'test_name') ?? _gv(tm, 'testName') ?? ''}'.trim();
+          }
+          if (code.isEmpty) {
+            code = '${_gv(tm, 'test_code') ?? _gv(tm, 'testCode') ?? ''}'.trim();
+          }
+          if (category.isEmpty) {
+            category = '${_gv(tm, 'category') ?? ''}'.trim();
+          }
         }
+        if (name.isEmpty) name = 'Lab test';
+
+        final url = _gv(m, 'download_url') ?? _gv(m, 'downloadUrl');
+        final fileKey = _gv(m, 'result_file_url') ?? _gv(m, 'resultFileUrl');
+        final released = _asDt(_gv(m, 'updated_at') ?? _gv(m, 'updatedAt'));
+        if (released != null) {
+          if (latestReleased == null || released.isAfter(latestReleased)) {
+            latestReleased = released;
+          }
+        }
+        if (sampleRef.isEmpty && name.isNotEmpty) sampleRef = name;
+
+        tests.add(
+          LabResultTestItem(
+            testId: testId,
+            testName: name,
+            testCode: code,
+            category: category,
+            pdfUrl: (url != null && '$url'.isNotEmpty)
+                ? '$url'
+                : (fileKey != null && '$fileKey'.isNotEmpty ? fileKey.toString() : null),
+            releasedAt: released,
+          ),
+        );
       }
     }
+
     if (sampleRef.isEmpty) {
       sampleRef = '${_gv(o, 'description')}'.trim();
     }
@@ -710,13 +839,18 @@ class RestLabUserApi implements LabUserApi {
     if (sampleRef.isEmpty && orderId.length >= 8) {
       sampleRef = orderId.substring(0, 8);
     }
+
+    final withPdf = tests.where((t) => t.hasPdf).toList();
+    final firstPdf = withPdf.isNotEmpty ? withPdf.first : null;
+
     return LabResultReport(
       orderId: orderId,
       sampleId: sampleRef.isEmpty ? orderId : sampleRef,
-      releasedAt: released ?? DateTime.now(),
+      releasedAt: latestReleased ?? DateTime.now(),
+      tests: tests,
       lines: const [],
-      resultPdfUrl: pdf,
-      resultTestId: resultTestId,
+      resultPdfUrl: firstPdf?.pdfUrl,
+      resultTestId: firstPdf?.testId,
     );
   }
 
@@ -772,13 +906,25 @@ class RestLabUserApi implements LabUserApi {
     return null;
   }
 
-  bool _historyMessageMatchesOrder(String userMessage, String orderId) {
+  bool _historyMessageMatches({
+    required String userMessage,
+    required String orderId,
+    String? testId,
+  }) {
     try {
       final parsed = jsonDecode(userMessage);
       if (parsed is! Map) return false;
       final m = _asObj(parsed);
       final oid = '${_gv(m, 'order_id') ?? _gv(m, 'orderId')}';
-      return oid.toLowerCase() == orderId.toLowerCase();
+      if (oid.toLowerCase() != orderId.toLowerCase()) return false;
+      final tid = testId?.trim();
+      if (tid != null && tid.isNotEmpty) {
+        final msgTestId = '${_gv(m, 'test_id') ?? _gv(m, 'testId') ?? ''}'.trim();
+        if (msgTestId.isNotEmpty && msgTestId.toLowerCase() != tid.toLowerCase()) {
+          return false;
+        }
+      }
+      return true;
     } catch (_) {
       return userMessage.toLowerCase().contains(orderId.toLowerCase());
     }
@@ -788,6 +934,8 @@ class RestLabUserApi implements LabUserApi {
     required String orderId,
     required String reply,
     DateTime? generatedAt,
+    String? testId,
+    String? testName,
   }) {
     final trimmed = reply.trim();
     return AiAnalysisResult(
@@ -796,6 +944,8 @@ class RestLabUserApi implements LabUserApi {
       summary: trimmed.length > 160 ? '${trimmed.substring(0, 157)}...' : trimmed,
       observation: trimmed,
       recommendation: 'Discuss these findings with your clinician if you have symptoms or concerns.',
+      testId: testId,
+      testName: testName,
     );
   }
 
@@ -803,6 +953,7 @@ class RestLabUserApi implements LabUserApi {
   Future<AiAnalysisResult?> getAiAnalysis({
     required String userId,
     required String orderId,
+    String? testId,
   }) async {
     try {
       final r = await http.get(
@@ -817,11 +968,32 @@ class RestLabUserApi implements LabUserApi {
         final m = _asObj(list[i]);
         final userMsg = '${_gv(m, 'user_message') ?? _gv(m, 'userMessage') ?? ''}';
         final reply = '${_gv(m, 'ai_response') ?? _gv(m, 'aiResponse') ?? ''}'.trim();
-        if (reply.isEmpty || !_historyMessageMatchesOrder(userMsg, orderId)) continue;
+        if (reply.isEmpty ||
+            !_historyMessageMatches(userMessage: userMsg, orderId: orderId, testId: testId)) {
+          continue;
+        }
+        String? parsedTestId;
+        String? parsedTestName;
+        try {
+          final parsed = jsonDecode(userMsg);
+          if (parsed is Map) {
+            final pm = _asObj(parsed);
+            parsedTestId = '${_gv(pm, 'test_id') ?? _gv(pm, 'testId') ?? ''}'.trim();
+            if (parsedTestId.isEmpty) parsedTestId = null;
+            final tests = pm['tests'];
+            if (tests is List && tests.isNotEmpty) {
+              final tm = _asObj(tests.first);
+              parsedTestName = '${_gv(tm, 'test_name') ?? _gv(tm, 'testName') ?? ''}'.trim();
+              if (parsedTestName.isEmpty) parsedTestName = null;
+            }
+          }
+        } catch (_) {}
         return _mapConversationToAnalysis(
           orderId: orderId,
           reply: reply,
           generatedAt: _asDt(_gv(m, 'created_at') ?? _gv(m, 'createdAt')),
+          testId: parsedTestId ?? testId,
+          testName: parsedTestName,
         );
       }
     } catch (_) {
@@ -847,6 +1019,7 @@ class RestLabUserApi implements LabUserApi {
   Future<AiAnalysisResult> runAiAnalysis({
     required String userId,
     required String orderId,
+    String? testId,
   }) async {
     final promptId = LabApiConfig.labResultSummarizedPromptId.trim();
     if (promptId.isEmpty) {
@@ -867,38 +1040,51 @@ class RestLabUserApi implements LabUserApi {
     if (items is List) {
       for (final it in items) {
         final m = _asObj(it);
+        final id = '${_gv(m, 'test_id') ?? _gv(m, 'testId')}'.trim();
+        if (id.isEmpty) continue;
+        if (testId != null && testId.isNotEmpty && id.toLowerCase() != testId.toLowerCase()) {
+          continue;
+        }
         final url = _gv(m, 'download_url') ?? _gv(m, 'downloadUrl');
-        if (url == null || '$url'.isEmpty) continue;
+        final fileKey = _gv(m, 'result_file_url') ?? _gv(m, 'resultFileUrl');
+        if ((url == null || '$url'.isEmpty) && (fileKey == null || '$fileKey'.isEmpty)) continue;
         tests.add({
-          'test_id': _gv(m, 'test_id') ?? _gv(m, 'testId'),
+          'test_id': id,
           'test_name': _gv(m, 'test_name') ?? _gv(m, 'testName'),
           'test_code': _gv(m, 'test_code') ?? _gv(m, 'testCode'),
-          'result_pdf_url': '$url',
+          'result_pdf_url': url != null && '$url'.isNotEmpty ? '$url' : null,
         });
       }
     }
     if (tests.isEmpty) {
-      throw LabApiException('No result PDF is available for this order yet.');
+      throw LabApiException(
+        testId != null && testId.isNotEmpty
+            ? 'No result PDF is available for this test yet.'
+            : 'No result PDF is available for this order yet.',
+      );
     }
+
+    final selectedTestId = '${tests.first['test_id']}'.trim();
+    final selectedTestName = '${tests.first['test_name'] ?? 'Lab test'}'.trim();
 
     final message = jsonEncode({
       'order_id': orderId,
+      if (selectedTestId.isNotEmpty) 'test_id': selectedTestId,
       'patient_name': _gv(o, 'patient_name') ?? _gv(o, 'patientName'),
       'tests': tests,
     });
     final aiId = await _resolveAiConfigId();
 
     List<int>? pdfBytes;
-    final firstTestId = '${tests.first['test_id']}'.trim();
-    if (firstTestId.isNotEmpty) {
+    if (selectedTestId.isNotEmpty) {
       try {
-        pdfBytes = await downloadResultPdf(orderId: orderId, testId: firstTestId);
+        pdfBytes = await downloadResultPdf(orderId: orderId, testId: selectedTestId);
       } catch (_) {
         /* fall back to URL fetch below */
       }
     }
     if (pdfBytes == null) {
-      final firstPdfUrl = '${tests.first['result_pdf_url']}';
+      final firstPdfUrl = '${tests.first['result_pdf_url'] ?? ''}';
       if (firstPdfUrl.isNotEmpty) {
         try {
           final pdfRes = await http.get(Uri.parse(_absoluteUrl(firstPdfUrl)), headers: _jsonHeaders());
@@ -951,7 +1137,12 @@ class RestLabUserApi implements LabUserApi {
     if (reply.isEmpty) {
       throw LabApiException('No text returned from AI.');
     }
-    return _mapConversationToAnalysis(orderId: orderId, reply: reply);
+    return _mapConversationToAnalysis(
+      orderId: orderId,
+      reply: reply,
+      testId: selectedTestId.isEmpty ? null : selectedTestId,
+      testName: selectedTestName.isEmpty ? null : selectedTestName,
+    );
   }
 
   OrderRatingSummary? _parseRatingSummary(dynamic raw) {
@@ -1025,11 +1216,167 @@ class RestLabUserApi implements LabUserApi {
 
   @override
   Future<LoyaltySnapshot> getLoyaltySnapshot(String userId) async {
-    final me = await http.get(Uri.parse('$_base/api/auth/me'), headers: _jsonHeaders());
-    if (me.statusCode >= 400) _throwFromResponse(me);
-    final m = _asObj(jsonDecode(me.body));
-    final bal = _asInt(_gv(m, 'total_points'));
-    return LoyaltySnapshot(balance: bal, entries: const []);
+    final meRes = await http.get(
+      Uri.parse('$_base/api/auth/me'),
+      headers: _jsonHeaders(noCache: true),
+    );
+    if (meRes.statusCode >= 400) _throwFromResponse(meRes);
+    final me = _asObj(_decodeResponseJson(meRes));
+    final bal = _asInt(_gv(me, 'total_points'));
+    final meId = '${_gv(me, 'id') ?? userId}'.trim();
+
+    Future<http.Response> fetchTransactions({required bool withUserId}) {
+      final uri = withUserId && meId.isNotEmpty
+          ? Uri.parse('$_base/api/point-transactions').replace(
+              queryParameters: {'user_id': meId},
+            )
+          : Uri.parse('$_base/api/point-transactions');
+      return http.get(uri, headers: _jsonHeaders(noCache: true));
+    }
+
+    var txRes = await fetchTransactions(withUserId: true);
+    if (txRes.statusCode == 403) {
+      txRes = await fetchTransactions(withUserId: false);
+    }
+    if (txRes.statusCode >= 400) _throwFromResponse(txRes);
+    final entries = _parsePointTransactions(_decodeResponseJson(txRes));
+    final earnRules = await _fetchActivePointEarnRules();
+    return LoyaltySnapshot(balance: bal, entries: entries, earnRules: earnRules);
+  }
+
+  @override
+  Future<UserReportSummary> fetchUserReportSummary({
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
+    final qp = <String, String>{};
+    if (startDate != null) qp['startDate'] = startDate.toUtc().toIso8601String();
+    if (endDate != null) qp['endDate'] = endDate.toUtc().toIso8601String();
+    final uri = Uri.parse('$_base/api/reports/user-summary').replace(
+      queryParameters: qp.isEmpty ? null : qp,
+    );
+    final res = await http.get(uri, headers: _jsonHeaders(noCache: true));
+    if (res.statusCode >= 400) _throwFromResponse(res);
+    final raw = _decodeResponseJson(res);
+    if (raw is Map && raw['data'] != null) {
+      return _parseUserReportSummary(_asObj(raw['data']));
+    }
+    return _parseUserReportSummary(_asObj(raw));
+  }
+
+  UserReportSummary _parseUserReportSummary(Map<String, dynamic> data) {
+    final kpisRaw = _asObj(data['kpis']);
+    final kpis = UserReportKpis(
+      totalSpent: _asDouble(_gv(kpisRaw, 'total_spent')),
+      totalOrders: _asInt(_gv(kpisRaw, 'total_orders')),
+      completedOrders: _asInt(_gv(kpisRaw, 'completed_orders')),
+      pendingOrders: _asInt(_gv(kpisRaw, 'pending_orders')),
+      loyaltyPoints: _asInt(_gv(kpisRaw, 'loyalty_points')),
+    );
+    final trendRaw = data['spendTrend'];
+    final spendTrend = trendRaw is List
+        ? trendRaw.map((row) {
+            final m = _asObj(row);
+            return UserSpendTrendPoint(
+              date: _asDt(_gv(m, 'date')),
+              spent: _asDouble(_gv(m, 'spent') ?? _gv(m, 'revenue')),
+              orderCount: _asInt(_gv(m, 'order_count')),
+            );
+          }).toList()
+        : <UserSpendTrendPoint>[];
+    final testsRaw = data['topTests'];
+    final topTests = testsRaw is List
+        ? testsRaw.map((row) {
+            final m = _asObj(row);
+            return UserTopTestRow(
+              testName: '${_gv(m, 'test_name') ?? ''}'.trim(),
+              testCode: '${_gv(m, 'test_code') ?? ''}'.trim(),
+              category: '${_gv(m, 'category') ?? ''}'.trim(),
+              orderCount: _asInt(_gv(m, 'order_count')),
+              totalSpent: _asDouble(_gv(m, 'total_spent')),
+            );
+          }).toList()
+        : <UserTopTestRow>[];
+    return UserReportSummary(kpis: kpis, spendTrend: spendTrend, topTests: topTests);
+  }
+
+  Future<List<PointEarnRule>> _fetchActivePointEarnRules() async {
+    final res = await http.get(
+      Uri.parse('$_base/api/point-settings'),
+      headers: _jsonHeaders(noCache: true),
+    );
+    if (res.statusCode >= 400) return const [];
+    final raw = _decodeResponseJson(res);
+    if (raw is! List) return const [];
+    final now = DateTime.now();
+    final out = <PointEarnRule>[];
+    for (final item in raw) {
+      final m = _asObj(item);
+      if (!_asBool(_gv(m, 'is_active'), false)) continue;
+      final start = _asDt(_gv(m, 'start_date') ?? _gv(m, 'startDate'));
+      final end = _asDt(_gv(m, 'end_date') ?? _gv(m, 'endDate'));
+      if (start != null && now.isBefore(start)) continue;
+      if (end != null && now.isAfter(end)) continue;
+      final id = '${_gv(m, 'id')}'.trim();
+      if (id.isEmpty) continue;
+      out.add(
+        PointEarnRule(
+          id: id,
+          name: '${_gv(m, 'name') ?? 'Earn rule'}'.trim(),
+          spendAmountMmk: _asDouble(_gv(m, 'spend_amount_mmk') ?? _gv(m, 'spendAmountMmk')),
+          pointsReward: _asInt(_gv(m, 'points_reward') ?? _gv(m, 'pointsReward')),
+        ),
+      );
+    }
+    out.sort((a, b) => b.spendAmountMmk.compareTo(a.spendAmountMmk));
+    return out;
+  }
+
+  List<LoyaltyEntry> _parsePointTransactions(dynamic raw) {
+    if (raw is! List) return const [];
+    final out = <LoyaltyEntry>[];
+    for (final item in raw) {
+      final m = _asObj(item);
+      final id = '${_gv(m, 'id')}'.trim();
+      final points = _asInt(_gv(m, 'points'));
+      final type = PointTransactionType.from('${_gv(m, 'transaction_type') ?? ''}');
+      final desc = '${_gv(m, 'description') ?? ''}'.trim();
+      final refRaw = '${_gv(m, 'reference_id') ?? _gv(m, 'referenceId') ?? ''}'.trim();
+      final createdAt = _asDt(_gv(m, 'created_at') ?? _gv(m, 'createdAt'));
+      out.add(
+        LoyaltyEntry(
+          id: id.isEmpty ? null : id,
+          label: desc.isNotEmpty ? desc : _defaultTransactionLabel(type),
+          delta: points,
+          atLabel: _formatLoyaltyDate(createdAt),
+          createdAt: createdAt,
+          transactionType: type,
+          sourceOrderId: refRaw.isEmpty ? null : refRaw,
+        ),
+      );
+    }
+    return out;
+  }
+
+  String _defaultTransactionLabel(PointTransactionType type) {
+    return switch (type) {
+      PointTransactionType.earn => 'Points earned from lab visit',
+      PointTransactionType.redeem => 'Points redeemed',
+      PointTransactionType.adjustment => 'Points adjustment by lab',
+      PointTransactionType.unknown => 'Point transaction',
+    };
+  }
+
+  String _formatLoyaltyDate(DateTime? dt) {
+    if (dt == null) return '—';
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final day = DateTime(dt.year, dt.month, dt.day);
+    final time =
+        '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+    if (day == today) return 'Today · $time';
+    if (day == today.subtract(const Duration(days: 1))) return 'Yesterday · $time';
+    return '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')} · $time';
   }
 
   @override

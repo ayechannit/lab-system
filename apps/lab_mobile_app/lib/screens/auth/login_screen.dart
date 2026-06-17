@@ -6,6 +6,7 @@ import '../../models/post_register_login_hint.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/theme_extensions.dart';
 import '../../app/app_settings_scope.dart';
+import '../../services/auth_session_storage.dart';
 import '../../services/rest_lab_user_api.dart';
 import '../../widgets/common/app_brand_mark.dart';
 import '../../widgets/common/app_toast.dart';
@@ -32,6 +33,7 @@ class _LoginScreenState extends State<LoginScreen> {
     super.initState();
     _email = TextEditingController();
     _password = TextEditingController();
+    _loadRememberedLogin();
     final ex = widget.routeExtra;
     if (ex is PostRegisterLoginHint) {
       _email.text = ex.email;
@@ -40,6 +42,18 @@ class _LoginScreenState extends State<LoginScreen> {
         AppToast.info(context, ex.message);
       });
     }
+  }
+
+  Future<void> _loadRememberedLogin() async {
+    final remember = await AuthSessionStorage.readRememberPreference();
+    final email = await AuthSessionStorage.readRememberedEmail();
+    if (!mounted) return;
+    setState(() {
+      _remember = remember;
+      if (email != null && email.isNotEmpty && _email.text.isEmpty) {
+        _email.text = email;
+      }
+    });
   }
 
   @override
@@ -181,6 +195,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   await session.login(
                                     email: _email.text.trim(),
                                     password: _password.text,
+                                    remember: _remember,
                                   );
                                   if (!context.mounted) return;
                                   context.go(session.homeRoute);

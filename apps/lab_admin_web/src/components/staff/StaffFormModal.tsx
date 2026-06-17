@@ -4,9 +4,11 @@ import type { StaffListRow, StaffRole } from '../../model/types'
 import {
   createStaff as createStaffApi,
   updateStaff as updateStaffApi,
+  uploadStaffProfileImage,
   type StaffCreateBody,
   type StaffUpdateBody,
 } from '../../services/staffService'
+import { StaffProfileImageField } from './StaffProfileImageField'
 import '../common/ui.css'
 
 const MIN_INITIAL_PASSWORD_LENGTH = 8
@@ -44,6 +46,9 @@ export function StaffFormModal({
   const [isActive, setIsActive] = useState(true)
   /** Sent as `password_hash` (plain in this admin build — hash in production). */
   const [password, setPassword] = useState('')
+  const [profileImageFile, setProfileImageFile] = useState<File | null>(null)
+  const [profilePreviewUrl, setProfilePreviewUrl] = useState<string | null>(null)
+  const [savedProfileImageUrl, setSavedProfileImageUrl] = useState<string | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
@@ -51,19 +56,42 @@ export function StaffFormModal({
     if (!open) return
     setFormError(null)
     setPassword('')
+    setProfileImageFile(null)
+    setProfilePreviewUrl(null)
     setSubmitting(false)
     if (mode === 'edit' && initial) {
       setName(initial.name)
       setEmail(initial.email)
       setRole(initial.role)
       setIsActive(initial.is_active)
+      setSavedProfileImageUrl(initial.role === 'collector' ? initial.profile_image_url : null)
     } else {
       setName('')
       setEmail('')
       setRole('admin')
       setIsActive(true)
+      setSavedProfileImageUrl(null)
     }
   }, [open, mode, initial])
+
+  useEffect(() => {
+    return () => {
+      if (profilePreviewUrl?.startsWith('blob:')) {
+        URL.revokeObjectURL(profilePreviewUrl)
+      }
+    }
+  }, [profilePreviewUrl])
+
+  useEffect(() => {
+    if (role !== 'collector') {
+      setProfileImageFile(null)
+      if (profilePreviewUrl?.startsWith('blob:')) {
+        URL.revokeObjectURL(profilePreviewUrl)
+      }
+      setProfilePreviewUrl(null)
+      if (mode === 'create') setSavedProfileImageUrl(null)
+    }
+  }, [role, mode, profilePreviewUrl])
 
   useEffect(() => {
     if (!open) return
@@ -126,6 +154,7 @@ export function StaffFormModal({
 
     setSubmitting(true)
     try {
+      let staffId = initial?.id
       if (mode === 'create') {
         const body: StaffCreateBody = {
           name: n,
@@ -134,7 +163,8 @@ export function StaffFormModal({
           is_active: isActive,
           password_hash: password.trim(),
         }
-        await createStaffApi(body)
+        const created = await createStaffApi(body)
+        staffId = created.id
       } else if (initial) {
         const body: StaffUpdateBody = {
           name: n,
@@ -145,7 +175,19 @@ export function StaffFormModal({
         const nextPassword = password.trim()
         if (nextPassword !== '') body.password_hash = nextPassword
         await updateStaffApi(initial.id, body)
+        staffId = initial.id
       }
+
+      if (role === 'collector' && profileImageFile && staffId) {
+        const updated = await uploadStaffProfileImage(staffId, profileImageFile)
+        setSavedProfileImageUrl(updated.profile_image_url)
+        setProfileImageFile(null)
+        if (profilePreviewUrl?.startsWith('blob:')) {
+          URL.revokeObjectURL(profilePreviewUrl)
+        }
+        setProfilePreviewUrl(null)
+      }
+
       onSuccess()
       onClose()
     } catch (err) {
@@ -229,6 +271,29 @@ export function StaffFormModal({
               ))}
             </select>
           </div>
+          {role === 'collector' ? (
+            <StaffProfileImageField
+              id="sf-profile-image"
+              savedImageUrl={savedProfileImageUrl}
+              previewSrc={profilePreviewUrl}
+              pickedFileName={profileImageFile?.name ?? null}
+              onFileSelected={(file) => {
+                if (profilePreviewUrl?.startsWith('blob:')) {
+                  URL.revokeObjectURL(profilePreviewUrl)
+                }
+                setProfileImageFile(file)
+                setProfilePreviewUrl(URL.createObjectURL(file))
+              }}
+              onClear={() => {
+                setProfileImageFile(null)
+                if (profilePreviewUrl?.startsWith('blob:')) {
+                  URL.revokeObjectURL(profilePreviewUrl)
+                }
+                setProfilePreviewUrl(null)
+              }}
+              disabled={submitting}
+            />
+          ) : null}
           <label htmlFor={staffActiveId} className="form-switch">
             <span className="form-switch__control">
               <input

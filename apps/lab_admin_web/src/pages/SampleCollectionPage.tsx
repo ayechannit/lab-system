@@ -31,6 +31,7 @@ import { fetchSystemSettings } from '../services/systemSettingService'
 import { suggestCollectionRoute } from '../services/aiDemo'
 import { friendlyAiReviewErrorMessage } from '../hooks/usePageNotify'
 import { collectorRoleStaffList } from '../utils/collectorStaff'
+import { StaffAvatar } from '../components/staff/StaffAvatar'
 import '../components/common/ui.css'
 
 const ROUTING_STATUSES: ApiOrderStatus[] = ['pending', 'scheduled', 'collecting']
@@ -86,7 +87,15 @@ function stopCollectionIso(
   routeResult: CollectionRouteResult | null,
   baseIso: string,
   minutesPerStop: number,
+  editableStops: Record<string, EditableRouteStopTimes>,
 ): string {
+  const edited = editableStops[orderId]
+  const editedClock = edited?.collectionStart?.trim() || edited?.arrivalTime?.trim()
+  if (editedClock) {
+    const iso = clockTimeOnTodayToIso(editedClock)
+    if (iso) return iso
+  }
+
   const stopDetail = routeResult ? routeStopDetailForOrder(routeResult.routeStops, orderId) : undefined
   const clock = stopDetail?.collectionStart ?? stopDetail?.arrivalTime
   if (clock) {
@@ -151,6 +160,64 @@ function routeStopDetailForOrder(
   return routeStops.find((stop) => stop.orderId.toLowerCase() === orderId.toLowerCase())
 }
 
+type EditableRouteStopTimes = {
+  arrivalTime: string
+  collectionStart: string
+  collectionEnd: string
+}
+
+function buildEditableRouteStops(
+  result: CollectionRouteResult,
+  orders: ApiOrderListRow[],
+  startClock: string,
+  minutesPerStop: number,
+): Record<string, EditableRouteStopTimes> {
+  const out: Record<string, EditableRouteStopTimes> = {}
+
+  if (result.routeStops.length > 0) {
+    for (const stop of result.routeStops) {
+      out[stop.orderId] = {
+        arrivalTime: stop.arrivalTime ?? '',
+        collectionStart: stop.collectionStart ?? stop.arrivalTime ?? '',
+        collectionEnd: stop.collectionEnd ?? '',
+      }
+    }
+    return out
+  }
+
+  const baseIso = clockTimeOnTodayToIso(startClock)
+  const baseMs = baseIso ? new Date(baseIso).getTime() : Date.now()
+  const sortedOrders = orderStopsInRouteOrder(orders, result.orderedStops)
+  for (let i = 0; i < sortedOrders.length; i++) {
+    const arrivalMs = baseMs + i * minutesPerStop * 60_000
+    const collectEndMs = arrivalMs + minutesPerStop * 60_000
+    const arrival = formatRouteStartTime(new Date(arrivalMs))
+    const end = formatRouteStartTime(new Date(collectEndMs))
+    out[sortedOrders[i].id] = {
+      arrivalTime: arrival,
+      collectionStart: arrival,
+      collectionEnd: end,
+    }
+  }
+  return out
+}
+
+function latestClockTime(clocks: string[]): string | null {
+  let latest: string | null = null
+  let latestMin = -1
+  for (const clock of clocks) {
+    const norm = parseRouteStartTimeInput(clock)
+    if (!norm) continue
+    const [h, m] = norm.split(':').map(Number)
+    const total = h * 60 + m
+    if (total > latestMin) {
+      latestMin = total
+      latest = norm
+    }
+  }
+  return latest
+}
+
 export function SampleCollectionPage() {
   const hasApi = isApiMode()
   const { account } = useAuth()
@@ -187,9 +254,14 @@ export function SampleCollectionPage() {
   const [routeAssignments, setRouteAssignments] = useState<
     Record<string, { collectorName: string; collectionTime: string }>
   >({})
+  const [editableRouteStops, setEditableRouteStops] = useState<Record<string, EditableRouteStopTimes>>({})
 
   const isScheduleMode = statusFilter === 'scheduled'
   const routeCollectorOptions = useMemo(() => collectorRoleStaffList(staff), [staff])
+  const selectedRouteCollector = useMemo(
+    () => routeCollectorOptions.find((s) => s.id === routeCollectorId) ?? null,
+    [routeCollectorOptions, routeCollectorId],
+  )
 
   useEffect(() => {
     const id = window.setTimeout(() => setPatientName(patientInput.trim()), 350)
@@ -275,6 +347,7 @@ export function SampleCollectionPage() {
     setSelectedIds(new Set())
     setRouteResult(null)
     setRoutePlanOrders([])
+    setEditableRouteStops({})
   }, [ordersListQuery])
 
   const routable = useMemo(
@@ -299,6 +372,14 @@ export function SampleCollectionPage() {
 
   const canStartCollection = hasApi && !loading && !collectionSubmitting && selectedRoutableCount >= 1
 
+  const displayEstimatedFinish = useMemo(() => {
+    const ends = Object.values(editableRouteStops)
+      .map((stop) => stop.collectionEnd.trim())
+      .filter(Boolean)
+    const latest = latestClockTime(ends)
+    return latest ?? routeResult?.estimatedFinishTime ?? '—'
+  }, [editableRouteStops, routeResult?.estimatedFinishTime])
+
   const toggle = (id: string) => {
     setSelectedIds((prev) => {
       const next = new Set(prev)
@@ -306,6 +387,22 @@ export function SampleCollectionPage() {
       else next.add(id)
       return next
     })
+  }
+
+  function updateRouteStopTime(
+    orderId: string,
+    field: keyof EditableRouteStopTimes,
+    value: string,
+  ) {
+    setEditableRouteStops((prev) => ({
+      ...prev,
+      [orderId]: {
+        arrivalTime: prev[orderId]?.arrivalTime ?? '',
+        collectionStart: prev[orderId]?.collectionStart ?? '',
+        collectionEnd: prev[orderId]?.collectionEnd ?? '',
+        [field]: value,
+      },
+    }))
   }
 
   const runAiRoute = async () => {
@@ -320,14 +417,19 @@ export function SampleCollectionPage() {
         (o) => `${o.id}: ${o.patient_name} — ${o.address?.trim() || '—'}`,
       )
       const result = suggestCollectionRoute(addresses)
-      setRouteResult({
+      const startTime = parseRouteStartTimeInput(routeStartTime) ?? formatRouteStartTime()
+      const minutesPerStop = parseRouteCollectionDuration(routeCollectionDurationMinutes) ?? 10
+      const fullResult: CollectionRouteResult = {
         orderedStops: result.orderedStops,
         summary: result.summary,
         estimatedFinishTime: null,
         estimatedMinutes: result.estimatedMinutes,
         routeStops: [],
-      })
-      setRoutePlanOrders(orderStopsInRouteOrder(picked, result.orderedStops))
+      }
+      setRouteResult(fullResult)
+      const plannedOrders = orderStopsInRouteOrder(picked, result.orderedStops)
+      setRoutePlanOrders(plannedOrders)
+      setEditableRouteStops(buildEditableRouteStops(fullResult, plannedOrders, startTime, minutesPerStop))
       setRouteAssignments({})
       showSuccess('Collection route generated.')
       return
@@ -376,7 +478,11 @@ export function SampleCollectionPage() {
         }),
       })
       setRouteResult(result)
-      setRoutePlanOrders(orderStopsFromRouteDetails(picked, result.routeStops))
+      const plannedOrders = orderStopsFromRouteDetails(picked, result.routeStops)
+      setRoutePlanOrders(plannedOrders)
+      setEditableRouteStops(
+        buildEditableRouteStops(result, plannedOrders, startTime, collectionDurationMinutes),
+      )
       setRouteAssignments({})
       showSuccess('Collection route generated.')
     } catch (err) {
@@ -427,7 +533,14 @@ export function SampleCollectionPage() {
     try {
       for (let i = 0; i < routePlanOrders.length; i++) {
         const order = routePlanOrders[i]
-        const stopIso = stopCollectionIso(order.id, i, routeResult, baseIso, minutesPerStop)
+        const stopIso = stopCollectionIso(
+          order.id,
+          i,
+          routeResult,
+          baseIso,
+          minutesPerStop,
+          editableRouteStops,
+        )
         await upsertSchedule({
           order_id: order.id,
           collecting_person: collector.name.trim(),
@@ -761,7 +874,7 @@ export function SampleCollectionPage() {
               </button>
               <div className="route-panel__eta">
                 <span className="route-panel__eta-label">Est. finish</span>
-                <span className="route-panel__eta-value">{routeResult.estimatedFinishTime ?? '—'}</span>
+                <span className="route-panel__eta-value">{displayEstimatedFinish}</span>
               </div>
             </div>
           </div>
@@ -772,12 +885,16 @@ export function SampleCollectionPage() {
             </p>
           ) : null}
 
+          <p className="route-panel__hint">
+            Adjust arrival and collection times below before assigning a collector.
+          </p>
+
           <ol className="route-stops" aria-label="Collection stops in route order">
             {routePlanOrders.map((order, stopIndex) => {
               const items: ApiOrderDetailItem[] = order.items ?? []
               const stop = stopIndex + 1
               const assigned = routeAssignments[order.id]
-              const stopDetail = routeStopDetailForOrder(routeResult.routeStops, order.id)
+              const stopTimes = editableRouteStops[order.id]
               return (
                 <li key={order.id} className="route-stop-card">
                   <div className="route-stop-card__marker" aria-hidden>
@@ -791,15 +908,42 @@ export function SampleCollectionPage() {
                         {order.address?.trim() || 'No address on file'}
                       </span>
                     </div>
-                    {stopDetail?.arrivalTime ? (
-                      <p className="route-stop-card__schedule">
-                        Arrive {stopDetail.arrivalTime}
-                        {stopDetail.collectionStart && stopDetail.collectionEnd
-                          ? ` · collect ${stopDetail.collectionStart}–${stopDetail.collectionEnd}`
-                          : stopDetail.collectionEnd
-                            ? ` · finish ${stopDetail.collectionEnd}`
-                            : null}
-                      </p>
+                    {stopTimes ? (
+                      <div className="route-stop-card__schedule-edit">
+                        <p className="route-stop-card__schedule-label">Stop schedule</p>
+                        <div className="route-stop-card__schedule-grid">
+                          <div className="field">
+                            <label htmlFor={`stop-${order.id}-arrive`}>Arrive</label>
+                            <TimeField
+                              id={`stop-${order.id}-arrive`}
+                              value={stopTimes.arrivalTime}
+                              onChange={(value) => updateRouteStopTime(order.id, 'arrivalTime', value)}
+                              disabled={routeAssignSubmitting}
+                              placeholder="Arrive"
+                            />
+                          </div>
+                          <div className="field">
+                            <label htmlFor={`stop-${order.id}-collect-start`}>Collect from</label>
+                            <TimeField
+                              id={`stop-${order.id}-collect-start`}
+                              value={stopTimes.collectionStart}
+                              onChange={(value) => updateRouteStopTime(order.id, 'collectionStart', value)}
+                              disabled={routeAssignSubmitting}
+                              placeholder="Start"
+                            />
+                          </div>
+                          <div className="field">
+                            <label htmlFor={`stop-${order.id}-collect-end`}>Collect until</label>
+                            <TimeField
+                              id={`stop-${order.id}-collect-end`}
+                              value={stopTimes.collectionEnd}
+                              onChange={(value) => updateRouteStopTime(order.id, 'collectionEnd', value)}
+                              disabled={routeAssignSubmitting}
+                              placeholder="End"
+                            />
+                          </div>
+                        </div>
+                      </div>
                     ) : null}
                     {assigned ? (
                       <p className="route-stop-card__assigned">
@@ -864,9 +1008,8 @@ export function SampleCollectionPage() {
                   <form className="form-grid status-update-form" onSubmit={(e) => void submitRouteAssign(e)}>
                     <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--muted)' }}>
                       Assigns a staff member with role <strong>Collector</strong> to all{' '}
-                      <strong>{routePlanOrders.length}</strong> stops using the start time from{' '}
-                      <strong>Route setup</strong> ({routeStartTime || '—'}). Pending orders move to{' '}
-                      <strong>scheduled</strong>; per-stop times follow the planned route when available.
+                      <strong>{routePlanOrders.length}</strong> stops using the edited per-stop times above.
+                      Pending orders move to <strong>scheduled</strong>.
                     </p>
                     {routeCollectorOptions.length === 0 ? (
                       <div className="form-alert form-alert--error" role="alert">
@@ -890,6 +1033,28 @@ export function SampleCollectionPage() {
                             </option>
                           ))}
                         </select>
+                        {selectedRouteCollector ? (
+                          <div className="route-collector-preview" aria-live="polite">
+                            <StaffAvatar
+                              name={selectedRouteCollector.name}
+                              profileImageUrl={selectedRouteCollector.profile_image_url}
+                              className="route-collector-preview__avatar"
+                            />
+                            <div className="route-collector-preview__meta">
+                              <span className="route-collector-preview__name">
+                                {selectedRouteCollector.name}
+                              </span>
+                              <span className="route-collector-preview__email">
+                                {selectedRouteCollector.email}
+                              </span>
+                              {!selectedRouteCollector.profile_image_url ? (
+                                <span className="route-collector-preview__hint">
+                                  No profile photo — add one under Staff → Edit collector.
+                                </span>
+                              ) : null}
+                            </div>
+                          </div>
+                        ) : null}
                       </div>
                     )}
                     {routeAssignError ? (

@@ -86,14 +86,9 @@ class OrderTrackingScreen extends StatelessWidget {
                 const SizedBox(height: 16),
                 Card(
                   child: ListTile(
-                    leading: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: context.cs.primary.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Icon(Icons.local_shipping_outlined, color: context.cs.primary),
+                    leading: _CollectorAvatar(
+                      name: order.collectorName,
+                      imageUrl: order.collectorProfileImageUrl,
                     ),
                     title: const Text('Lab schedule'),
                     subtitle: Text(
@@ -186,5 +181,50 @@ class OrderTrackingScreen extends StatelessWidget {
     if (dt == null) return 'Pending';
     return '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')} '
         '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+  }
+}
+
+class _CollectorAvatar extends StatelessWidget {
+  const _CollectorAvatar({
+    required this.name,
+    required this.imageUrl,
+  });
+
+  final String? name;
+  final String? imageUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = context.cs;
+    final initial = (name?.trim().isNotEmpty ?? false) ? name!.trim()[0].toUpperCase() : '?';
+    final url = imageUrl?.trim();
+    return Container(
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(
+        color: cs.primary.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: url != null && url.isNotEmpty
+          ? Image.network(
+              url,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => Center(
+                child: Text(
+                  initial,
+                  style: TextStyle(color: cs.primary, fontWeight: FontWeight.w700),
+                ),
+              ),
+            )
+          : Center(
+              child: name?.trim().isNotEmpty ?? false
+                  ? Text(
+                      initial,
+                      style: TextStyle(color: cs.primary, fontWeight: FontWeight.w700),
+                    )
+                  : Icon(Icons.local_shipping_outlined, color: cs.primary),
+            ),
+    );
   }
 }

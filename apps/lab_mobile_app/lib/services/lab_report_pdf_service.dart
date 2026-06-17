@@ -12,9 +12,19 @@ class LabReportPdfException implements Exception {
 }
 
 abstract final class LabReportPdfService {
-  static String buildFilename({required String sampleId, String? orderId}) {
-    final base = sampleId.trim().isEmpty ? (orderId ?? 'report') : sampleId;
-    final safe = base.replaceAll(RegExp(r'[\\/:*?"<>|\s]+'), '_');
+  static String buildFilename({
+    required String sampleId,
+    String? orderId,
+    String? testCode,
+  }) {
+    final parts = <String>[];
+    if (testCode != null && testCode.trim().isNotEmpty) {
+      parts.add(testCode.trim());
+    }
+    final base = sampleId.trim().isEmpty ? (orderId ?? 'report') : sampleId.trim();
+    parts.add(base);
+    final joined = parts.join('-');
+    final safe = joined.replaceAll(RegExp(r'[\\/:*?"<>|\s]+'), '_');
     return 'lab-report-$safe.pdf';
   }
 
