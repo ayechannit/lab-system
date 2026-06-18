@@ -99,6 +99,7 @@ class Order {
 
     const result = await request.query(query);
     const orders = result.recordset;
+    const StorageService = require('../utils/storageService');
     for (let order of orders) {
       if (order.schedule) {
         try {
@@ -109,6 +110,12 @@ class Order {
         }
       } else {
         order.schedule = null;
+      }
+
+      if (order.prescription_url) {
+        const fullUrl = await StorageService.getFileUrl(order.prescription_url);
+        order.prescription_url = fullUrl;
+        order.prescription_download_url = fullUrl;
       }
     }
     return orders;
@@ -146,6 +153,24 @@ class Order {
       order.schedule = order.schedule ? JSON.parse(order.schedule)[0] : null;
       order.payments = order.payments ? JSON.parse(order.payments) : [];
       order.balance_mmk = order.final_price_mmk - order.total_paid_mmk;
+
+      const StorageService = require('../utils/storageService');
+      if (order.prescription_url) {
+        const fullUrl = await StorageService.getFileUrl(order.prescription_url);
+        order.prescription_url = fullUrl;
+        order.prescription_download_url = fullUrl;
+      }
+
+      if (order.items && order.items.length > 0) {
+        for (let item of order.items) {
+          if (item.result_file_url) {
+            const fullUrl = await StorageService.getFileUrl(item.result_file_url);
+            item.result_file_url = fullUrl;
+            item.download_url = fullUrl;
+          }
+        }
+      }
+
       return order;
     }
     return null;

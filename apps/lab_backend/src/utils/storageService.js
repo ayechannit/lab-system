@@ -55,6 +55,9 @@ class StorageService {
    */
   static async getFileUrl(fileKey) {
     if (!fileKey) return null;
+    if (fileKey.startsWith('http://') || fileKey.startsWith('https://')) {
+      return fileKey;
+    }
 
     if (process.env.NODE_ENV === 'production' && !fileKey.startsWith('/uploads/')) {
       // Generate Pre-signed S3 URL (valid for 1 hour)

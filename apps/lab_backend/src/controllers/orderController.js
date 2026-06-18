@@ -11,20 +11,6 @@ const getAllOrders = async (req, res) => {
 const getOrderById = async (req, res) => {
   const order = await Order.getById(req.params.id);
   if (!order) return res.status(404).json({ message: 'Order not found' });
-  
-  // Convert local relative paths or S3 keys to full URLs for download
-  if (order.items && order.items.length > 0) {
-    for (let item of order.items) {
-      if (item.result_file_url) {
-        item.download_url = await StorageService.getFileUrl(item.result_file_url);
-      }
-    }
-  }
-
-  if (order.prescription_url) {
-    order.prescription_download_url = await StorageService.getFileUrl(order.prescription_url);
-  }
-
   res.json(order);
 };
 
