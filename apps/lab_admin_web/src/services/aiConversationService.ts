@@ -3,7 +3,6 @@ import {
   getCollectionRoutePromptId,
   getLabResultValidationPromptId,
 } from '../config/aiEnv'
-import { getApiBaseUrl } from './apiBase'
 import { apiFetch } from './apiClient'
 import { readApiErrorBody } from './readApiError'
 
