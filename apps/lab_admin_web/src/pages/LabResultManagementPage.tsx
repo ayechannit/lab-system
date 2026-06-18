@@ -34,11 +34,18 @@ type AiReviewEntry = {
 
 type AiReviewVerdict = 'pass' | 'fail' | 'neutral'
 
+type AlertDetail = {
+  Status: string
+  Summary: string
+}
+
 type ParsedAiReview = {
   verdict: AiReviewVerdict | null
   label: string | null
   detail: string | null
   isCompact: boolean
+  profileAlert?: AlertDetail | null
+  testResultAlert?: AlertDetail | null
 }
 
 const AI_REVIEW_VERDICT_PATTERNS: { verdict: AiReviewVerdict; re: RegExp; label: string }[] = [
@@ -48,10 +55,68 @@ const AI_REVIEW_VERDICT_PATTERNS: { verdict: AiReviewVerdict; re: RegExp; label:
   { verdict: 'pass', re: /^(pass|passed|valid|approved?)\b/i, label: 'Passed' },
 ]
 
+function extractJsonObject(text: string): any {
+  const trimmed = text.trim()
+  try {
+    return JSON.parse(trimmed)
+  } catch {
+    /* try other shapes */
+  }
+
+  const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i)
+  if (fenced) {
+    try {
+      return JSON.parse(fenced[1].trim())
+    } catch {
+      /* continue */
+    }
+  }
+
+  const start = trimmed.indexOf('{')
+  const end = trimmed.lastIndexOf('}')
+  if (start >= 0 && end > start) {
+    try {
+      return JSON.parse(trimmed.slice(start, end + 1))
+    } catch {
+      /* continue */
+    }
+  }
+  return null
+}
+
 function parseAiReviewReply(reply: string): ParsedAiReview {
   const trimmed = reply.trim()
   if (!trimmed) {
     return { verdict: null, label: null, detail: null, isCompact: true }
+  }
+
+  // Attempt to parse structured JSON
+  const jsonObj = extractJsonObject(trimmed)
+  if (jsonObj && typeof jsonObj === 'object') {
+    const profile = jsonObj.ProfileAlert as AlertDetail | undefined
+    const testResult = jsonObj.TestResultAlert as AlertDetail | undefined
+
+    if (profile || testResult) {
+      let verdict: AiReviewVerdict = 'pass'
+      const statusP = profile?.Status?.toUpperCase() || ''
+      const statusT = testResult?.Status?.toUpperCase() || ''
+
+      if (statusP.includes('ERROR') || statusP.includes('FAIL') || statusP.includes('INCORRECT') ||
+          statusT.includes('ERROR') || statusT.includes('FAIL') || statusT.includes('INCORRECT')) {
+        verdict = 'fail'
+      } else if (statusP.includes('WARN') || statusT.includes('WARN')) {
+        verdict = 'neutral'
+      }
+
+      return {
+        verdict,
+        label: verdict === 'pass' ? 'Correct' : verdict === 'fail' ? 'Incorrect' : 'Warning',
+        detail: null,
+        isCompact: false,
+        profileAlert: profile || null,
+        testResultAlert: testResult || null
+      }
+    }
   }
 
   for (const pattern of AI_REVIEW_VERDICT_PATTERNS) {
@@ -452,6 +517,86 @@ export function LabResultManagementPage() {
 
     const parsed = parseAiReviewReply(entry.reply)
     const reviewedLabel = `Reviewed ${formatAiReviewedAt(entry.reviewedAt)}`
+
+    if (parsed.profileAlert || parsed.testResultAlert) {
+      const getStatusBadge = (status?: string) => {
+        const s = status?.toUpperCase() || ''
+        if (s.includes('ERROR') || s.includes('FAIL') || s.includes('INCORRECT')) {
+          return <span className="badge badge--danger" style={{ backgroundColor: '#fee2e2', color: '#dc2626', borderColor: '#fca5a5', borderWidth: '1px', borderStyle: 'solid', padding: '0.15rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600 }}>{status}</span>
+        }
+        if (s.includes('WARN')) {
+          return <span className="badge badge--warn" style={{ backgroundColor: '#fef3c7', color: '#d97706', borderColor: '#fcd34d', borderWidth: '1px', borderStyle: 'solid', padding: '0.15rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600 }}>{status}</span>
+        }
+        return <span className="badge badge--success" style={{ backgroundColor: '#dcfce7', color: '#15803d', borderColor: '#86efac', borderWidth: '1px', borderStyle: 'solid', padding: '0.15rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600 }}>{status}</span>
+      }
+
+      const getCardBorderColor = (status?: string) => {
+        const s = status?.toUpperCase() || ''
+        if (s.includes('ERROR') || s.includes('FAIL') || s.includes('INCORRECT')) return '#fecaca'
+        if (s.includes('WARN')) return '#fde68a'
+        return '#bbf7d0'
+      }
+
+      const getCardBgColor = (status?: string) => {
+        const s = status?.toUpperCase() || ''
+        if (s.includes('ERROR') || s.includes('FAIL') || s.includes('INCORRECT')) return '#fff5f5'
+        if (s.includes('WARN')) return '#fffbeb'
+        return '#f9fdfa'
+      }
+
+      return (
+        <div className="stack" style={{ gap: '0.75rem', padding: '1rem', backgroundColor: 'var(--card-muted-bg, #f8fafc)', borderRadius: '8px', border: '1px solid #e2e8f0', width: '100%' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary, #1e293b)' }}>AI Analysis Results</span>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted, #64748b)' }}>{reviewedLabel}</span>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '0.75rem' }}>
+            {parsed.profileAlert && (
+              <div style={{
+                padding: '0.85rem',
+                borderRadius: '6px',
+                border: '1px solid',
+                borderColor: getCardBorderColor(parsed.profileAlert.Status),
+                backgroundColor: getCardBgColor(parsed.profileAlert.Status),
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.35rem'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <strong style={{ fontSize: '0.8rem', color: 'var(--text-primary, #0f172a)' }}>Profile Alignment</strong>
+                  {getStatusBadge(parsed.profileAlert.Status)}
+                </div>
+                <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-muted, #334155)', lineHeight: 1.45 }}>
+                  {parsed.profileAlert.Summary}
+                </p>
+              </div>
+            )}
+
+            {parsed.testResultAlert && (
+              <div style={{
+                padding: '0.85rem',
+                borderRadius: '6px',
+                border: '1px solid',
+                borderColor: getCardBorderColor(parsed.testResultAlert.Status),
+                backgroundColor: getCardBgColor(parsed.testResultAlert.Status),
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.35rem'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <strong style={{ fontSize: '0.8rem', color: 'var(--text-primary, #0f172a)' }}>Medical Verification</strong>
+                  {getStatusBadge(parsed.testResultAlert.Status)}
+                </div>
+                <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-muted, #334155)', lineHeight: 1.45 }}>
+                  {parsed.testResultAlert.Summary}
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )
+    }
 
     if (parsed.verdict && parsed.label) {
       return (
