@@ -21,7 +21,8 @@ class StorageService {
    */
   static async uploadFile(file, folder = 'results') {
     const safeFolder = String(folder || 'results').replace(/^\/+|\/+$/g, '') || 'results';
-    if (process.env.NODE_ENV === 'production') {
+    const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1';
+    if (isProduction) {
       // S3 Upload
       const fileStream = fs.createReadStream(file.path);
       const key = `${safeFolder}/${file.filename}`;
@@ -59,7 +60,8 @@ class StorageService {
       return fileKey;
     }
 
-    if (process.env.NODE_ENV === 'production' && !fileKey.startsWith('/uploads/')) {
+    const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1';
+    if (isProduction && !fileKey.startsWith('/uploads/')) {
       // Generate Pre-signed S3 URL (valid for 1 hour)
       try {
         const command = new GetObjectCommand({
@@ -94,7 +96,8 @@ class StorageService {
   static async openFile(fileKey) {
     if (!fileKey) return null;
 
-    if (process.env.NODE_ENV === 'production' && !fileKey.startsWith('/uploads/')) {
+    const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1';
+    if (isProduction && !fileKey.startsWith('/uploads/')) {
       try {
         const command = new GetObjectCommand({
           Bucket: bucketName,
