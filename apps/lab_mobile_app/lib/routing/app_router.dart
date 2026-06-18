@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../screens/auth/login_screen.dart';
@@ -26,8 +27,11 @@ const _legacyHomePaths = <String>{
   '/home-clinic',
 };
 
+final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
+
 GoRouter createAppRouter(SessionController session) {
   return GoRouter(
+    navigatorKey: rootNavigatorKey,
     initialLocation: '/splash',
     refreshListenable: session,
     redirect: (context, state) {

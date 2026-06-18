@@ -1,4 +1,6 @@
 const admin = require('firebase-admin');
+const path = require('path');
+const fs = require('fs');
 
 // Initialize Firebase Admin
 try {
@@ -6,7 +8,8 @@ try {
   // Otherwise, fallback to application default credentials 
   // (which looks for GOOGLE_APPLICATION_CREDENTIALS environment variable)
   if (process.env.FIREBASE_SERVICE_ACCOUNT_PATH) {
-    const serviceAccount = require(process.env.FIREBASE_SERVICE_ACCOUNT_PATH);
+    const configPath = path.resolve(process.cwd(), process.env.FIREBASE_SERVICE_ACCOUNT_PATH);
+    const serviceAccount = JSON.parse(fs.readFileSync(configPath, 'utf8'));
     admin.initializeApp({
       credential: admin.credential.cert(serviceAccount),
     });

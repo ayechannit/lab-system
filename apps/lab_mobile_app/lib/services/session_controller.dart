@@ -13,6 +13,7 @@ import '../models/user_role.dart';
 import 'lab_user_api.dart';
 import 'lab_report_pdf_service.dart';
 import 'auth_session_storage.dart';
+import 'notification_service.dart';
 
 class SessionController extends ChangeNotifier {
   SessionController({required LabUserApi api}) : _api = api;
@@ -434,6 +435,11 @@ class SessionController extends ChangeNotifier {
   Future<void> _hydrateUserData() async {
     final u = _user;
     if (u == null) return;
+
+    // Initialize Firebase and register FCM device token in background
+    MobileNotificationService.initializeAndRegister(_api).catchError((e) {
+      debugPrint('FCM background auto-registration warning: $e');
+    });
     _activeOrders = await _api.listActiveOrders(u.id);
     _releasedOrders = await _api.listReleasedOrders(u.id);
     final ratings = await _api.listUserRatings(u.id);

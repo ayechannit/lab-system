@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "889715110090",
+    "project_id": "lab-notification-4635b",
+    "storage_bucket": "lab-notification-4635b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:889715110090:android:28b797b976cf88e6314433",
+        "android_client_info": {
+          "package_name": "com.healthlab.lab_patient_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBVm0_-faW1Io3uEQYH2A4FcSKshgdfOxE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

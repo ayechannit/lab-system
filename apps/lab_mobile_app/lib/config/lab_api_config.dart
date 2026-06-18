@@ -12,7 +12,7 @@
 abstract final class LabApiConfig {
   static const String baseUrl = String.fromEnvironment(
     'LAB_API_BASE_URL',
-    defaultValue: 'http://127.0.0.1:3000',
+    defaultValue: 'http://10.0.2.2:3000',
   );
 
   /// Optional; if empty, the app uses the first AI config from `GET /api/ai-configs`.

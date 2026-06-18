@@ -138,6 +138,9 @@ abstract class LabUserApi {
     required String orderId,
   });
 
+  /// Register the FCM device token with the server.
+  Future<void> registerFcmToken(String token);
+
   /// Clear credentials after logout (REST client clears bearer token).
   void clearAuth();
 }

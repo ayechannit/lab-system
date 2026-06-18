@@ -9,6 +9,8 @@ enum AppToastPosition { top, bottom }
 
 /// Floating in-app feedback — tinted surfaces, clear hierarchy, safe placement.
 abstract final class AppToast {
+  static GlobalKey<NavigatorState>? navigatorKey;
+
   static const Duration _successDuration = Duration(milliseconds: 2600);
   static const Duration _errorDuration = Duration(milliseconds: 4500);
   static const Duration _infoDuration = Duration(milliseconds: 3200);
@@ -124,9 +126,6 @@ abstract final class AppToast {
     double? bottomMargin,
     Duration? duration,
   }) {
-    final messenger = ScaffoldMessenger.maybeOf(context);
-    if (messenger == null) return;
-
     final cs = context.cs;
     final style = _styleFor(kind, cs);
     final toastDuration = duration ?? _durationFor(kind);
@@ -136,12 +135,15 @@ abstract final class AppToast {
       message: message,
     );
 
-    messenger.hideCurrentSnackBar();
-
     if (position == AppToastPosition.top) {
       _showTopOverlay(context, card: card, duration: toastDuration);
       return;
     }
+
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    if (messenger == null) return;
+
+    messenger.hideCurrentSnackBar();
 
     final edge = MediaQuery.paddingOf(context);
     final margin = EdgeInsets.fromLTRB(
@@ -171,7 +173,7 @@ abstract final class AppToast {
     required Duration duration,
   }) {
     _dismissTopOverlay();
-    final overlay = Overlay.maybeOf(context);
+    final overlay = navigatorKey?.currentState?.overlay ?? Overlay.maybeOf(context);
     if (overlay == null) return;
 
     final top = MediaQuery.paddingOf(context).top + _topOverlayInset;

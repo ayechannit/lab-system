@@ -1,12 +1,16 @@
+import 'dart:async';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../config/lab_api_config.dart';
 import '../routing/app_router.dart';
 import '../services/app_settings_controller.dart';
+import '../services/notification_service.dart';
 import '../services/rest_lab_user_api.dart';
 import '../services/session_controller.dart';
 import '../theme/app_settings_theme.dart';
+import '../widgets/common/app_toast.dart';
 import 'app_settings_scope.dart';
 import 'session_scope.dart';
 
@@ -29,6 +33,7 @@ class _LabPatientAppState extends State<LabPatientApp> with WidgetsBindingObserv
   @override
   void initState() {
     super.initState();
+    AppToast.navigatorKey = rootNavigatorKey;
     WidgetsBinding.instance.addObserver(this);
     void loadSettings() => _settings.load();
     loadSettings();
@@ -67,10 +72,56 @@ class _LabPatientAppState extends State<LabPatientApp> with WidgetsBindingObserv
               themeMode: _settings.themeMode,
               routerConfig: _router,
               debugShowCheckedModeBanner: false,
+              builder: (context, child) {
+                return ForegroundNotificationListener(child: child!);
+              },
             ),
           ),
         );
       },
     );
+  }
+}
+
+class ForegroundNotificationListener extends StatefulWidget {
+  final Widget child;
+  const ForegroundNotificationListener({super.key, required this.child});
+
+  @override
+  State<ForegroundNotificationListener> createState() => _ForegroundNotificationListenerState();
+}
+
+class _ForegroundNotificationListenerState extends State<ForegroundNotificationListener> {
+  StreamSubscription<RemoteMessage>? _subscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _subscription = MobileNotificationService.onForegroundMessage.listen((message) {
+      final title = message.notification?.title;
+      final body = message.notification?.body;
+      final navContext = rootNavigatorKey.currentContext;
+      if (title != null && body != null && navContext != null) {
+        // Show local toast inside the active overlay
+        AppToast.warning(
+          navContext,
+          body,
+          title: title,
+          position: AppToastPosition.top,
+          duration: const Duration(seconds: 4),
+        );
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _subscription?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return widget.child;
   }
 }

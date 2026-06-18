@@ -1405,6 +1405,16 @@ class RestLabUserApi implements LabUserApi {
   }
 
   @override
+  Future<void> registerFcmToken(String token) async {
+    final r = await http.put(
+      Uri.parse('$_base/api/users/fcm-token'),
+      headers: _jsonHeaders(),
+      body: jsonEncode({'fcm_token': token}),
+    );
+    if (r.statusCode >= 400) _throwFromResponse(r);
+  }
+
+  @override
   void clearAuth() {
     _token = null;
   }

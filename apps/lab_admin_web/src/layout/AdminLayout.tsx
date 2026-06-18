@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { BrandMark } from '../components/common/BrandMark'
+import { NotificationBell } from '../components/common/NotificationBell'
 import { MyProfileModal } from '../components/profile/MyProfileModal'
 import { StaffAvatar } from '../components/staff/StaffAvatar'
 import { useAuth } from '../hooks/AuthContext'
@@ -254,6 +255,7 @@ export function AdminLayout() {
           <div className="admin-header-right">
             {account ? (
               <>
+                <NotificationBell />
                 <button
                   type="button"
                   className="admin-profile"
