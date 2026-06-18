@@ -313,6 +313,31 @@ const bulkUpdateOrderStatus = async (req, res) => {
   }
 };
 
+const saveAiReview = async (req, res) => {
+  try {
+    const { id, testId } = req.params;
+    const { ai_verdict, ai_raw_response } = req.body;
+
+    if (!ai_verdict) {
+      return res.status(400).json({ message: 'ai_verdict is required' });
+    }
+
+    const order = await Order.getById(id);
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    const success = await Order.saveAiReview(id, testId, ai_verdict, ai_raw_response, req.user?.id);
+    if (!success) {
+      return res.status(404).json({ message: 'Test not found on this order' });
+    }
+
+    res.json({ message: 'AI review results saved successfully' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 module.exports = {
   getAllOrders,
   getOrderById,
@@ -325,4 +350,5 @@ module.exports = {
   generateQrCode,
   uploadTestResult,
   downloadTestResult,
+  saveAiReview,
 };

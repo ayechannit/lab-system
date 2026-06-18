@@ -506,6 +506,7 @@ router.put('/:id/status', orderController.updateOrderStatus);
 router.delete('/:id', orderController.deleteOrder);
 router.get('/:id/qrcode', orderController.generateQrCode);
 router.post('/:id/tests/:testId/upload-result', upload.single('file'), orderController.uploadTestResult);
+router.post('/:id/tests/:testId/ai-review', orderController.saveAiReview);
 router.get('/:id/tests/:testId/result-file', orderController.downloadTestResult);
 
 module.exports = router;

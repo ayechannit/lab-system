@@ -474,6 +474,22 @@ class Order {
     return result.rowsAffected[0] > 0;
   }
 
+  static async saveAiReview(orderId, testId, verdict, rawResponse, updatedBy = null) {
+    const pool = await poolPromise;
+    const result = await pool.request()
+      .input('order_id', sql.UniqueIdentifier, orderId)
+      .input('test_id', sql.UniqueIdentifier, testId)
+      .input('ai_verdict', sql.VarChar, verdict)
+      .input('ai_raw_response', sql.NVarChar, rawResponse)
+      .input('updated_user', sql.UniqueIdentifier, updatedBy)
+      .query(`
+        UPDATE lab_order_items 
+        SET ai_verdict = @ai_verdict, ai_raw_response = @ai_raw_response, updated_user = @updated_user, updated_at = GETDATE()
+        WHERE order_id = @order_id AND test_id = @test_id
+      `);
+    return result.rowsAffected[0] > 0;
+  }
+
   static async areAllResultsUploaded(orderId) {
     const pool = await poolPromise;
     const result = await pool.request()

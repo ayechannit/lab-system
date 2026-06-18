@@ -21,6 +21,8 @@ export type ApiOrderDetailItem = {
   test_code?: string | null
   result_file_url?: string | null
   download_url?: string | null
+  ai_verdict?: string | null
+  ai_raw_response?: string | null
 }
 
 export type ApiOrderListRow = {
@@ -65,6 +67,8 @@ function normalizeOrderItems(raw: unknown): ApiOrderDetailItem[] {
       test_code: it.test_code ?? null,
       result_file_url: it.result_file_url ?? null,
       download_url: it.download_url ?? null,
+      ai_verdict: it.ai_verdict ?? null,
+      ai_raw_response: it.ai_raw_response ?? null,
     }
   })
 }
@@ -281,6 +285,22 @@ export async function uploadOrderTestResult(orderId: string, testId: string, fil
   const res = await apiFetch(
     `/api/orders/${encodeURIComponent(orderId)}/tests/${encodeURIComponent(testId)}/upload-result`,
     { method: 'POST', body: fd },
+  )
+  if (!res.ok) throw new Error(await readApiErrorBody(res))
+  return res.json()
+}
+
+export async function saveOrderTestAiReview(
+  orderId: string,
+  testId: string,
+  body: { ai_verdict: string; ai_raw_response: string },
+): Promise<unknown> {
+  const res = await apiFetch(
+    `/api/orders/${encodeURIComponent(orderId)}/tests/${encodeURIComponent(testId)}/ai-review`,
+    {
+      method: 'POST',
+      body: JSON.stringify(body),
+    },
   )
   if (!res.ok) throw new Error(await readApiErrorBody(res))
   return res.json()

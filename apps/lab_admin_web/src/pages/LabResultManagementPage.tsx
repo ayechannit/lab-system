@@ -19,6 +19,7 @@ import {
   fetchOrders,
   updateOrderStatus,
   uploadOrderTestResult,
+  saveOrderTestAiReview,
   type ApiOrderDetailItem,
   type ApiOrderDetail,
   type ApiOrderListRow,
@@ -288,7 +289,16 @@ export function LabResultManagementPage() {
           } else {
             setDetail(d)
             setDetailError(null)
-            setAiReviewByTestId({})
+            const preMap: Record<string, AiReviewEntry> = {}
+            for (const item of d.items) {
+              if (item.ai_verdict && item.ai_raw_response) {
+                preMap[item.test_id] = {
+                  reply: item.ai_raw_response,
+                  reviewedAt: d.updated_at || d.created_at,
+                }
+              }
+            }
+            setAiReviewByTestId(preMap)
             setAiReviewErrorByTestId({})
           }
         }
@@ -430,6 +440,13 @@ export function LabResultManagementPage() {
         testCode: it.test_code?.trim() || undefined,
         downloadUrl: url,
       })
+
+      const verdict = parseAiReviewReply(reply).verdict || 'pass'
+      await saveOrderTestAiReview(detail.id, testId, {
+        ai_verdict: verdict,
+        ai_raw_response: reply,
+      })
+
       setAiReviewByTestId((prev) => ({
         ...prev,
         [testId]: { reply, reviewedAt: new Date().toISOString() },
