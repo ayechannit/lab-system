@@ -508,16 +508,17 @@ export async function reviewLabResultWithAi(params: AiReviewParams): Promise<str
   }
 
   const message = buildLabResultReviewMessage(params)
-  const pdfBlob = await fetchLabResultPdfBlob(downloadUrl)
 
-  const fd = new FormData()
-  fd.append('ai_config_id', params.ai_config_id)
-  fd.append('prompt_id', promptId)
-  fd.append('message', message)
-  fd.append('stream', 'false')
-  fd.append('file', pdfBlob, 'lab-result.pdf')
-
-  const res = await apiFetch('/api/conversations', { method: 'POST', body: fd })
+  const res = await apiFetch('/api/conversations', {
+    method: 'POST',
+    body: JSON.stringify({
+      ai_config_id: params.ai_config_id,
+      prompt_id: promptId,
+      message,
+      stream: false,
+      file_url: downloadUrl,
+    }),
+  })
   if (!res.ok) throw new Error(await readApiErrorBody(res))
   const data = (await res.json()) as { reply?: string }
   return String(data.reply ?? '').trim() || 'No text returned from AI.'

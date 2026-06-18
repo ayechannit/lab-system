@@ -4,15 +4,61 @@ const Conversation = require('../models/conversationModel');
 const AiService = require('../services/aiService');
 const fs = require('fs');
 
+function extractFileKeyFromUrl(urlStr) {
+  if (!urlStr) return null;
+  const trimmed = urlStr.trim();
+  try {
+    const url = new URL(trimmed);
+    let pathname = decodeURIComponent(url.pathname);
+    if (pathname.startsWith('/')) {
+      pathname = pathname.substring(1);
+    }
+    if (pathname.startsWith('uploads/')) {
+      return '/' + pathname;
+    }
+    return pathname;
+  } catch {
+    return trimmed;
+  }
+}
+
 /**
  * Handle AI chat request, storing history in the database.
  */
 const chat = async (req, res) => {
   let filePath = null;
   try {
-    let { ai_config_id, prompt_id, message, stream } = req.body;
-    const file = req.file;
-    if (file) filePath = file.path;
+    let { ai_config_id, prompt_id, message, stream, file_url } = req.body;
+    let file = req.file;
+
+    // If file is not uploaded via multipart but file_url is provided, download/open the file directly on the backend
+    if (!file && file_url) {
+      const StorageService = require('../utils/storageService');
+      const opened = await StorageService.openFile(extractFileKeyFromUrl(file_url));
+      if (opened) {
+        const path = require('path');
+        const os = require('os');
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+        const tempPath = path.join(os.tmpdir(), 'conv-' + uniqueSuffix + '-' + opened.filename);
+        
+        // Write stream to temp file so it matches Multer's file structure
+        const writeStream = fs.createWriteStream(tempPath);
+        await new Promise((resolve, reject) => {
+          opened.stream.pipe(writeStream);
+          writeStream.on('finish', resolve);
+          writeStream.on('error', reject);
+        });
+        
+        file = {
+          path: tempPath,
+          filename: opened.filename,
+          mimetype: opened.contentType
+        };
+        filePath = tempPath;
+      }
+    }
+
+    if (file && !filePath) filePath = file.path;
 
     // When using multipart/form-data, boolean fields might come as strings
     if (typeof stream === 'string') stream = stream === 'true';
