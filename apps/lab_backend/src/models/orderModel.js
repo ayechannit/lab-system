@@ -51,7 +51,12 @@ class Order {
   static async getAll(filters = {}) {
     const pool = await poolPromise;
     const request = pool.request();
-    let query = 'SELECT *, created_user, updated_user FROM lab_orders WHERE is_deleted = 0';
+    let query = `
+      SELECT *, created_user, updated_user,
+             (SELECT * FROM order_schedules WHERE order_id = lab_orders.id FOR JSON PATH) as schedule
+      FROM lab_orders
+      WHERE is_deleted = 0
+    `;
 
     if (filters.status) {
       query += ' AND status = @status';
@@ -93,7 +98,20 @@ class Order {
     }
 
     const result = await request.query(query);
-    return result.recordset;
+    const orders = result.recordset;
+    for (let order of orders) {
+      if (order.schedule) {
+        try {
+          const parsed = JSON.parse(order.schedule);
+          order.schedule = parsed && parsed.length > 0 ? parsed[0] : null;
+        } catch (e) {
+          order.schedule = null;
+        }
+      } else {
+        order.schedule = null;
+      }
+    }
+    return orders;
   }
 
   static async getById(id) {

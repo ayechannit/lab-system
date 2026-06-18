@@ -3,15 +3,214 @@
   "info": {
     "title": "Lab System API",
     "version": "1.0.0",
-    "description": "API documentation for the Lab System backend"
+    "description": "API documentation for the Lab System backend.\n\n### 🔔 System Notification Triggers Guide\nThe backend implements automatic background-dispatched push and in-app notifications on critical events. Below is the integration list of which endpoints automatically trigger dispatches:\n\n#### 1. Accounts & Approvals (`/api/users`)\n* **`POST /api/users`** - When professional accounts register (doctor/clinic/phlebotomist), notifies admin/staff on `staff_notifications` topic.\n* **`PUT /api/users/:id/approve`** - When approved, notifies user's device FCM token: *\"Account Approved\"*.\n* **`PUT /api/users/fcm-token`** - Registers/updates active FCM registration tokens for devices.\n\n#### 2. Order Management (`/api/orders`)\n* **`POST /api/orders`** - Notifies user (*\"Order Placed Successfully\"*) and staff (*\"New Order Received\"*).\n* **`PUT /api/orders/:id/status`** - Notifies user on status progress changes: *\"Order Status Updated\"*.\n\n#### 3. Lab Results & Quality Checks (`/api/lab-results`)\n* **`POST /api/orders/:id/test/:testId/result`** - Uploading a test result notifies user. Mark the order delivered separately via status update when staff release results.\n* **`POST /api/lab-results/:resultId/ai-check`** - Failed AI quality checks notify admin/staff topic: *\"AI Quality Check Issue\"*.\n\n#### 4. Appointments & Scheduling (`/api/schedules`)\n* **`POST /api/schedules`** - Notifies user of sample collector and time: *\"Sample Collection Scheduled\"*.\n\n#### 5. Payments Processing (`/api/payments`)\n* **`POST /api/payments`** - Notifies user: *\"Payment Submitted\"*.\n* **`PUT /api/payments/:id/status`** - Notifies user on verification (*\"Payment Verified Successfully\"*) or rejection (*\"Payment Verification Failed\"*).\n\n#### 6. Customer Feedback (`/api/ratings`)\n* **`POST /api/ratings`** - Notifies staff topic of incoming review scores: *\"New Order Rating\"*.\n\n#### 7. Campaigns & Discounts (`/api/discounts`)\n* **`POST /api/discounts`** - Launches active discounts, broadcasting to `all_users` or targeted roles (e.g. `clinic_notifications`, `patient_notifications`)."
   },
   "servers": [
+    {
+      "url": "/",
+      "description": "Current Server (Auto-detect)"
+    },
     {
       "url": "http://localhost:3000",
       "description": "Development server"
     }
   ],
   "paths": {
+    "/api/ai-configs": {
+      "get": {
+        "summary": "Get all AI configurations",
+        "tags": [
+          "AiConfigs"
+        ],
+        "responses": {
+          "200": {
+            "description": "List of AI configurations",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AiConfig"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a new AI configuration",
+        "tags": [
+          "AiConfigs"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "model_name",
+                  "api_key",
+                  "type"
+                ],
+                "properties": {
+                  "model_name": {
+                    "type": "string"
+                  },
+                  "api_key": {
+                    "type": "string"
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "gemini",
+                      "openai"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "AI configuration created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiConfig"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error"
+          }
+        }
+      }
+    },
+    "/api/ai-configs/{id}": {
+      "get": {
+        "summary": "Get a specific AI configuration by id",
+        "tags": [
+          "AiConfigs"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "AI configuration details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiConfig"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "AI Config not found"
+          }
+        }
+      },
+      "put": {
+        "summary": "Update an AI configuration",
+        "tags": [
+          "AiConfigs"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "model_name",
+                  "api_key",
+                  "type"
+                ],
+                "properties": {
+                  "model_name": {
+                    "type": "string"
+                  },
+                  "api_key": {
+                    "type": "string"
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "gemini",
+                      "openai"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "AI configuration updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiConfig"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "AI Config not found"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Soft delete an AI configuration",
+        "tags": [
+          "AiConfigs"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "AI configuration deleted"
+          },
+          "404": {
+            "description": "AI Config not found"
+          }
+        }
+      }
+    },
     "/api/auth/login/user": {
       "post": {
         "summary": "User login",
@@ -101,6 +300,175 @@
         }
       }
     },
+    "/api/conversations": {
+      "post": {
+        "summary": "Send a message to an AI model and get a response (supports optional PDF or image upload)",
+        "tags": [
+          "Conversations"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "ai_config_id",
+                  "message"
+                ],
+                "properties": {
+                  "ai_config_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "ID of the AI Config to use (API Key, Model Name, Type)"
+                  },
+                  "prompt_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "Optional ID of the Prompt to use as system context"
+                  },
+                  "message": {
+                    "type": "string",
+                    "description": "The user's input message"
+                  },
+                  "history": {
+                    "type": "string",
+                    "description": "Optional conversation history (JSON string)"
+                  },
+                  "stream": {
+                    "type": "boolean",
+                    "description": "If true, returns a Server-Sent Events (SSE) stream. If false, returns a standard JSON response.",
+                    "default": false
+                  },
+                  "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "Optional PDF or image file (JPEG, PNG, WEBP)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response. If stream=true, Content-Type is text/event-stream. If stream=false, returns JSON.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "reply": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error (missing ai_config_id or message)"
+          },
+          "404": {
+            "description": "AI Config or Prompt not found"
+          }
+        }
+      }
+    },
+    "/api/conversations/history": {
+      "get": {
+        "summary": "Get conversation history for the logged-in user",
+        "tags": [
+          "Conversations"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 50
+            },
+            "description": "Maximum number of conversation message pairs to retrieve"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A list of conversation message pairs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "user_id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "user_message": {
+                        "type": "string"
+                      },
+                      "ai_response": {
+                        "type": "string"
+                      },
+                      "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Clear conversation history for the logged-in user",
+        "tags": [
+          "Conversations"
+        ],
+        "responses": {
+          "200": {
+            "description": "Conversation history cleared successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
     "/api/discounts": {
       "get": {
         "summary": "Get all test-specific discounts",
@@ -163,6 +531,35 @@
               "minimum": 1
             },
             "description": "Number of items per page for pagination"
+          },
+          {
+            "in": "query",
+            "name": "sortBy",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "created_at",
+                "updated_at",
+                "discount_percent",
+                "role",
+                "test_name"
+              ]
+            },
+            "description": "Sort field for discounts"
+          },
+          {
+            "in": "query",
+            "name": "sortOrder",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc",
+                "ASC",
+                "DESC"
+              ]
+            },
+            "description": "Sort order (ASC or DESC)"
           }
         ],
         "responses": {
@@ -192,7 +589,34 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Discount"
+                "type": "object",
+                "required": [
+                  "test_id",
+                  "role",
+                  "discount_percent"
+                ],
+                "properties": {
+                  "test_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "clinic",
+                      "doctor",
+                      "patient",
+                      "phlebotomist",
+                      "all"
+                    ]
+                  },
+                  "discount_percent": {
+                    "type": "number"
+                  },
+                  "is_active": {
+                    "type": "boolean"
+                  }
+                }
               }
             }
           }
@@ -296,6 +720,78 @@
         }
       }
     },
+    "/api/discounts/bulk": {
+      "post": {
+        "summary": "Bulk create or update discounts",
+        "description": "Accepts an array of discounts and upserts them.",
+        "tags": [
+          "Discounts"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "discounts"
+                ],
+                "properties": {
+                  "discounts": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "test_id",
+                        "role",
+                        "discount_percent"
+                      ],
+                      "properties": {
+                        "test_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "role": {
+                          "type": "string",
+                          "enum": [
+                            "clinic",
+                            "doctor",
+                            "patient",
+                            "phlebotomist",
+                            "all"
+                          ]
+                        },
+                        "discount_percent": {
+                          "type": "number"
+                        },
+                        "is_active": {
+                          "type": "boolean"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The created/updated discounts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Discount"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/discounts/{id}": {
       "delete": {
         "summary": "Soft delete a specific discount entry",
@@ -323,9 +819,428 @@
         }
       }
     },
+    "/api/health": {
+      "get": {
+        "summary": "Check system health status",
+        "tags": [
+          "Health"
+        ],
+        "responses": {
+          "200": {
+            "description": "System is healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string"
+                    },
+                    "database": {
+                      "type": "string"
+                    },
+                    "timestamp": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/lab-results": {
+      "post": {
+        "summary": "Create a new lab result record",
+        "tags": [
+          "LabResults"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "order_id",
+                  "result_summary"
+                ],
+                "properties": {
+                  "order_id": {
+                    "type": "string"
+                  },
+                  "result_summary": {
+                    "type": "string"
+                  },
+                  "pdf_url": {
+                    "type": "string"
+                  },
+                  "uploaded_by": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created"
+          }
+        }
+      }
+    },
+    "/api/lab-results/order/{orderId}": {
+      "get": {
+        "summary": "Get lab result by order ID",
+        "tags": [
+          "LabResults"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orderId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lab result data",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": true,
+                  "data": {
+                    "id": "result-uuid",
+                    "order_id": "order-uuid",
+                    "result_summary": "Patient shows normal glucose levels.",
+                    "pdf_url": "/uploads/result.pdf",
+                    "quality_checked": true,
+                    "ai_checks": {
+                      "verdict": "pass",
+                      "analysis_detail": "All values within normal range."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/lab-results/{id}/quality-check": {
+      "patch": {
+        "summary": "Update quality check status",
+        "tags": [
+          "LabResults"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "quality_checked": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated"
+          }
+        }
+      }
+    },
+    "/api/lab-results/{resultId}/ai-check": {
+      "post": {
+        "summary": "Add an AI quality check to a result",
+        "tags": [
+          "LabResults"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "resultId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "verdict",
+                  "analysis_detail"
+                ],
+                "properties": {
+                  "verdict": {
+                    "type": "string",
+                    "enum": [
+                      "pass",
+                      "warning",
+                      "fail"
+                    ]
+                  },
+                  "analysis_detail": {
+                    "type": "string"
+                  },
+                  "raw_ai_response": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "AI check added"
+          }
+        }
+      }
+    },
+    "/api/notifications": {
+      "get": {
+        "summary": "Get in-app notification inbox history",
+        "description": "Returns the list of persistent notifications for the currently logged-in user or staff.",
+        "tags": [
+          "Notifications"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 50
+            },
+            "description": "Maximum number of notifications to retrieve"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of notifications",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "user_id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "user_type": {
+                        "type": "string"
+                      },
+                      "title": {
+                        "type": "string"
+                      },
+                      "body": {
+                        "type": "string"
+                      },
+                      "data_payload": {
+                        "type": "string",
+                        "description": "JSON string of custom payload"
+                      },
+                      "is_read": {
+                        "type": "boolean"
+                      },
+                      "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
+    "/api/notifications/read-all": {
+      "put": {
+        "summary": "Mark all notifications as read",
+        "description": "Marks all unread notifications for the currently logged-in user or staff as read.",
+        "tags": [
+          "Notifications"
+        ],
+        "responses": {
+          "200": {
+            "description": "All notifications marked as read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
+    "/api/notifications/{id}/read": {
+      "put": {
+        "summary": "Mark a single notification as read",
+        "description": "Marks a specific notification in the user's inbox as read.",
+        "tags": [
+          "Notifications"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "The unique identifier of the notification"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Notification marked as read successfully"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "404": {
+            "description": "Notification not found"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
+    "/api/notifications/send": {
+      "post": {
+        "summary": "Send a manual push notification (admin/staff use)",
+        "description": "Sends a push notification to a specific device token or a topic. You must provide either 'token' OR 'topic'.",
+        "tags": [
+          "Notifications"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "title",
+                  "body"
+                ],
+                "properties": {
+                  "token": {
+                    "type": "string",
+                    "description": "The target device FCM token"
+                  },
+                  "topic": {
+                    "type": "string",
+                    "description": "The target FCM topic name (e.g., 'all_users')"
+                  },
+                  "title": {
+                    "type": "string",
+                    "description": "The notification title"
+                  },
+                  "body": {
+                    "type": "string",
+                    "description": "The notification body/message"
+                  },
+                  "data": {
+                    "type": "object",
+                    "description": "Optional key-value pairs for background data payload"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Notification sent successfully"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "500": {
+            "description": "Firebase Cloud Messaging error"
+          }
+        }
+      }
+    },
     "/api/orders": {
       "get": {
         "summary": "Get all orders",
+        "description": "Retrieve all orders matching optional filters. Each returned order includes its associated schedule details from order_schedules under the \"schedule\" field.",
         "tags": [
           "Orders"
         ],
@@ -391,6 +1306,36 @@
               "minimum": 1
             },
             "description": "Number of items per page for pagination"
+          },
+          {
+            "in": "query",
+            "name": "sortBy",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "created_at",
+                "updated_at",
+                "status",
+                "patient_name",
+                "final_price_mmk",
+                "priority"
+              ]
+            },
+            "description": "Sort field for orders"
+          },
+          {
+            "in": "query",
+            "name": "sortOrder",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc",
+                "ASC",
+                "DESC"
+              ]
+            },
+            "description": "Sort order (ASC or DESC)"
           }
         ],
         "responses": {
@@ -660,9 +1605,9 @@
         }
       }
     },
-    "/api/orders/{id}/tests/{testId}/qrcode": {
+    "/api/orders/{id}/qrcode": {
       "get": {
-        "summary": "Generate a QR code for a specific test in an order",
+        "summary": "Generate a QR code for an order containing all tests",
         "tags": [
           "Orders"
         ],
@@ -676,16 +1621,6 @@
               "format": "uuid"
             },
             "description": "The order ID"
-          },
-          {
-            "in": "path",
-            "name": "testId",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "description": "The test ID"
           }
         ],
         "responses": {
@@ -715,11 +1650,19 @@
                         "address": {
                           "type": "string"
                         },
-                        "test_name": {
-                          "type": "string"
-                        },
-                        "test_code": {
-                          "type": "string"
+                        "tests": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "test_name": {
+                                "type": "string"
+                              },
+                              "test_code": {
+                                "type": "string"
+                              }
+                            }
+                          }
                         }
                       }
                     }
@@ -729,7 +1672,7 @@
             }
           },
           "404": {
-            "description": "Order or test not found"
+            "description": "Order not found"
           }
         }
       }
@@ -810,6 +1753,78 @@
         }
       }
     },
+    "/api/orders/bulk-status": {
+      "put": {
+        "summary": "Bulk update multiple orders status and log the changes",
+        "tags": [
+          "Orders"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "order_ids",
+                  "status"
+                ],
+                "properties": {
+                  "order_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "pending",
+                      "scheduled",
+                      "collecting",
+                      "running",
+                      "completed",
+                      "delivered"
+                    ]
+                  },
+                  "staff_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "note": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Bulk status updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "orders": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Order"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/payments/{order_id}": {
       "get": {
         "summary": "Get payment summary and history for a specific order",
@@ -877,7 +1892,41 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Payment"
+                "type": "object",
+                "required": [
+                  "order_id",
+                  "amount_mmk",
+                  "method"
+                ],
+                "properties": {
+                  "order_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "amount_mmk": {
+                    "type": "number"
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "pending",
+                      "received",
+                      "verified",
+                      "failed"
+                    ]
+                  },
+                  "method": {
+                    "type": "string",
+                    "enum": [
+                      "cash",
+                      "bank_transfer",
+                      "mobile_pay"
+                    ]
+                  },
+                  "reference_no": {
+                    "type": "string"
+                  }
+                }
               }
             }
           }
@@ -975,7 +2024,34 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/PointSetting"
+                "type": "object",
+                "required": [
+                  "name",
+                  "spend_amount_mmk",
+                  "points_reward"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "spend_amount_mmk": {
+                    "type": "number"
+                  },
+                  "points_reward": {
+                    "type": "integer"
+                  },
+                  "start_date": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "end_date": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "is_active": {
+                    "type": "boolean"
+                  }
+                }
               }
             }
           }
@@ -1019,7 +2095,29 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/PointSetting"
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "spend_amount_mmk": {
+                    "type": "number"
+                  },
+                  "points_reward": {
+                    "type": "integer"
+                  },
+                  "start_date": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "end_date": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "is_active": {
+                    "type": "boolean"
+                  }
+                }
               }
             }
           }
@@ -1059,6 +2157,293 @@
         }
       }
     },
+    "/api/point-transactions": {
+      "get": {
+        "summary": "Retrieve point transactions history",
+        "description": "Retrieves point transactions.\n- Patients/Clinics/Doctors without admin privilege will get only their own transactions.\n- Admin/Manager users can get all transactions or filter by user_id.\n",
+        "tags": [
+          "PointTransactions"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "user_id",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Filter by user ID (Admin/Manager only, or matches logged-in user)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A list of point transactions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PointTransaction"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Access denied"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
+    "/api/point-transactions/adjust": {
+      "post": {
+        "summary": "Manually adjust/reward/deduct user points (Admin/Manager only)",
+        "description": "Allows administrators or managers to manually credit or debit points for any user, creating a point transaction log.",
+        "tags": [
+          "PointTransactions"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PointAdjustment"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Point adjustment applied successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "user": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "email": {
+                          "type": "string"
+                        },
+                        "total_points": {
+                          "type": "integer"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request (validation failed or insufficient points balance)"
+          },
+          "403": {
+            "description": "Access denied"
+          },
+          "404": {
+            "description": "User not found"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
+    "/api/prompts": {
+      "get": {
+        "summary": "Get all AI prompts",
+        "tags": [
+          "Prompts"
+        ],
+        "responses": {
+          "200": {
+            "description": "List of AI prompts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Prompt"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a new AI prompt",
+        "tags": [
+          "Prompts"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "name",
+                  "prompt_text"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "prompt_text": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "AI prompt created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Prompt"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error"
+          }
+        }
+      }
+    },
+    "/api/prompts/{id}": {
+      "get": {
+        "summary": "Get a specific AI prompt by id",
+        "tags": [
+          "Prompts"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "AI prompt details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Prompt"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Prompt not found"
+          }
+        }
+      },
+      "put": {
+        "summary": "Update an AI prompt",
+        "tags": [
+          "Prompts"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "name",
+                  "prompt_text"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "prompt_text": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "AI prompt updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Prompt"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Prompt not found"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Soft delete an AI prompt",
+        "tags": [
+          "Prompts"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "AI prompt deleted"
+          },
+          "404": {
+            "description": "Prompt not found"
+          }
+        }
+      }
+    },
     "/api/ratings": {
       "post": {
         "summary": "Submit a rating for an order",
@@ -1070,7 +2455,30 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Rating"
+                "type": "object",
+                "required": [
+                  "order_id",
+                  "user_id",
+                  "rating"
+                ],
+                "properties": {
+                  "order_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "user_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "rating": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 5
+                  },
+                  "remark": {
+                    "type": "string"
+                  }
+                }
               }
             }
           }
@@ -1139,6 +2547,34 @@
               "minimum": 1
             },
             "description": "Number of items per page for pagination"
+          },
+          {
+            "in": "query",
+            "name": "sortBy",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "created_at",
+                "updated_at",
+                "rating",
+                "patient_name"
+              ]
+            },
+            "description": "Sort field for ratings"
+          },
+          {
+            "in": "query",
+            "name": "sortOrder",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc",
+                "ASC",
+                "DESC"
+              ]
+            },
+            "description": "Sort order (ASC or DESC)"
           }
         ],
         "responses": {
@@ -1193,6 +2629,686 @@
         }
       }
     },
+    "/api/reports/dashboard-kpis": {
+      "get": {
+        "summary": "Get high-level KPI data for the dashboard",
+        "tags": [
+          "Reports"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "startDate",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "description": "Start date for the reporting period"
+          },
+          {
+            "in": "query",
+            "name": "endDate",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "description": "End date for the reporting period"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dashboard KPI data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "object"
+                    }
+                  }
+                },
+                "example": {
+                  "success": true,
+                  "data": {
+                    "kpis": {
+                      "total_revenue": 1500000,
+                      "total_orders": 125,
+                      "urgent_orders": 45,
+                      "total_users": 320,
+                      "ai_pass_count": 110,
+                      "ai_issue_count": 15
+                    },
+                    "revenueTrend": [
+                      {
+                        "date": "2024-05-15",
+                        "revenue": 250000,
+                        "order_count": 18
+                      },
+                      {
+                        "date": "2024-05-16",
+                        "revenue": 310000,
+                        "order_count": 22
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reports/test-categories": {
+      "get": {
+        "summary": "Get distribution of tests by category",
+        "tags": [
+          "Reports"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "startDate",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "in": "query",
+            "name": "endDate",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "in": "query",
+            "name": "category",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter by a specific test category"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Test category distribution data",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": true,
+                  "data": [
+                    {
+                      "category": "Blood Work",
+                      "test_count": 85,
+                      "total_revenue": 850000
+                    },
+                    {
+                      "category": "Imaging",
+                      "test_count": 12,
+                      "total_revenue": 1200000
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reports/tat": {
+      "get": {
+        "summary": "Get Turnaround Time (TAT) report",
+        "tags": [
+          "Reports"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "startDate",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "in": "query",
+            "name": "endDate",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "in": "query",
+            "name": "priority",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "urgent",
+                "elective"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "TAT report data",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": true,
+                  "data": [
+                    {
+                      "order_id": "uuid-1",
+                      "patient_name": "John Doe",
+                      "priority": "urgent",
+                      "collection_time": "2024-05-20T10:00:00Z",
+                      "report_out_time": "2024-05-20T14:30:00Z",
+                      "tat_minutes": 270
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reports/revenue-by-channel": {
+      "get": {
+        "summary": "Get revenue breakdown by user role (channel)",
+        "tags": [
+          "Reports"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "startDate",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "in": "query",
+            "name": "endDate",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Revenue by channel data",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": true,
+                  "data": [
+                    {
+                      "role": "clinic",
+                      "revenue": 5000000,
+                      "order_count": 40
+                    },
+                    {
+                      "role": "patient",
+                      "revenue": 1200000,
+                      "order_count": 15
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reports/pending-queue": {
+      "get": {
+        "summary": "Get list of pending orders that require action",
+        "tags": [
+          "Reports"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "priority",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "urgent",
+                "elective"
+              ]
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "pending",
+                "scheduled",
+                "collecting",
+                "running",
+                "completed"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Pending results queue data",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": true,
+                  "data": [
+                    {
+                      "order_id": "uuid-1",
+                      "patient_name": "Jane Smith",
+                      "status": "collecting",
+                      "priority": "urgent",
+                      "hours_elapsed": 5
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reports/staff-activity": {
+      "get": {
+        "summary": "Get staff performance and activity audit",
+        "tags": [
+          "Reports"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "startDate",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "in": "query",
+            "name": "endDate",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "in": "query",
+            "name": "staffId",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Staff activity data",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": true,
+                  "data": [
+                    {
+                      "staff_name": "Alice Tech",
+                      "staff_role": "lab_technician",
+                      "actions_performed": 450,
+                      "last_action_at": "2024-05-22T09:00:00Z"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reports/collection-report": {
+      "get": {
+        "summary": "Get sample collection performance report (for collectors)",
+        "tags": [
+          "Reports"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "startDate",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "in": "query",
+            "name": "endDate",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Collection report data",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": true,
+                  "data": [
+                    {
+                      "staff_id": "uuid",
+                      "staff_name": "John Collector",
+                      "collections_count": 50,
+                      "avg_assignment_to_collection_minutes": 45.5
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reports/discount-impact": {
+      "get": {
+        "summary": "Get financial analysis of discounts given",
+        "tags": [
+          "Reports"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "startDate",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "in": "query",
+            "name": "endDate",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "in": "query",
+            "name": "role",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "clinic",
+                "doctor",
+                "patient"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Discount impact data",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": true,
+                  "data": {
+                    "total_original_value": 5000000,
+                    "total_final_revenue": 4500000,
+                    "total_discount_given": 500000,
+                    "effective_discount_percent": 10
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reports/ratings-summary": {
+      "get": {
+        "summary": "Get customer satisfaction summary and latest reviews",
+        "tags": [
+          "Reports"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "startDate",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "in": "query",
+            "name": "endDate",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "in": "query",
+            "name": "minRating",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 5
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ratings summary data",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": true,
+                  "data": {
+                    "stats": {
+                      "average_rating": 4.7,
+                      "total_reviews": 150,
+                      "positive_reviews": 135,
+                      "negative_reviews": 5
+                    },
+                    "latestReviews": [
+                      {
+                        "rating": 5,
+                        "remark": "Very fast service!",
+                        "user_name": "Bob Client",
+                        "created_at": "2024-05-21T15:00:00Z"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reports/user-summary": {
+      "get": {
+        "summary": "Get summary metrics and analytics for the logged-in user",
+        "description": "Returns personalized KPIs (total orders, spent, points, order statuses), daily spend trends, and top ordered lab tests for the authenticated user/client.",
+        "tags": [
+          "Reports"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "startDate",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "in": "query",
+            "name": "endDate",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Personalized user report data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "kpis": {
+                          "type": "object",
+                          "properties": {
+                            "total_spent": {
+                              "type": "number"
+                            },
+                            "total_orders": {
+                              "type": "integer"
+                            },
+                            "completed_orders": {
+                              "type": "integer"
+                            },
+                            "pending_orders": {
+                              "type": "integer"
+                            },
+                            "loyalty_points": {
+                              "type": "integer"
+                            }
+                          }
+                        },
+                        "spendTrend": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "date": {
+                                "type": "string"
+                              },
+                              "spent": {
+                                "type": "number"
+                              },
+                              "order_count": {
+                                "type": "integer"
+                              }
+                            }
+                          }
+                        },
+                        "topTests": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "test_name": {
+                                "type": "string"
+                              },
+                              "test_code": {
+                                "type": "string"
+                              },
+                              "category": {
+                                "type": "string"
+                              },
+                              "order_count": {
+                                "type": "integer"
+                              },
+                              "total_spent": {
+                                "type": "number"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
     "/api/schedules/{order_id}": {
       "get": {
         "summary": "Get schedule for a specific order",
@@ -1238,7 +3354,34 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Schedule"
+                "type": "object",
+                "required": [
+                  "order_id"
+                ],
+                "properties": {
+                  "order_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "collecting_person": {
+                    "type": "string"
+                  },
+                  "collection_time": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "running_time": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "report_out_time": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "accepted_by_user": {
+                    "type": "boolean"
+                  }
+                }
               }
             }
           }
@@ -1250,6 +3393,85 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Schedule"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/schedules/bulk": {
+      "post": {
+        "summary": "Bulk create or update multiple schedules",
+        "tags": [
+          "Schedules"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "schedules"
+                ],
+                "properties": {
+                  "schedules": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "order_id"
+                      ],
+                      "properties": {
+                        "order_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "collecting_person": {
+                          "type": "string"
+                        },
+                        "collection_time": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "running_time": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "report_out_time": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "accepted_by_user": {
+                          "type": "boolean"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Schedules updated/created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "schedules": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Schedule"
+                      }
+                    }
+                  }
                 }
               }
             }
@@ -1312,6 +3534,35 @@
               "minimum": 1
             },
             "description": "Number of items per page for pagination"
+          },
+          {
+            "in": "query",
+            "name": "sortBy",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "created_at",
+                "updated_at",
+                "name",
+                "email",
+                "role"
+              ]
+            },
+            "description": "Sort field for staff"
+          },
+          {
+            "in": "query",
+            "name": "sortOrder",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc",
+                "ASC",
+                "DESC"
+              ]
+            },
+            "description": "Sort order (ASC or DESC)"
           }
         ],
         "responses": {
@@ -1340,7 +3591,37 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Staff"
+                "type": "object",
+                "required": [
+                  "name",
+                  "email",
+                  "password_hash",
+                  "role"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "email": {
+                    "type": "string"
+                  },
+                  "password_hash": {
+                    "type": "string"
+                  },
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "admin",
+                      "lab_technician",
+                      "reception",
+                      "manager",
+                      "collector"
+                    ]
+                  },
+                  "is_active": {
+                    "type": "boolean"
+                  }
+                }
               }
             }
           }
@@ -1416,7 +3697,18 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Staff"
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "password": {
+                    "type": "string"
+                  },
+                  "is_active": {
+                    "type": "boolean"
+                  }
+                }
               }
             }
           }
@@ -1463,27 +3755,269 @@
         }
       }
     },
+    "/api/staff/{id}/profile-image": {
+      "post": {
+        "summary": "Upload profile image for a collector staff member",
+        "description": "Allows uploading/updating a profile image (avatar) for a staff member of role `'collector'`.\n- Admins or Managers can upload for any collector staff member.\n- Collectors can upload for their own account.\n",
+        "tags": [
+          "Staff"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "The staff member ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "image"
+                ],
+                "properties": {
+                  "image": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "The profile image file (JPEG, PNG, GIF, WEBP)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Profile image uploaded successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "staff": {
+                      "$ref": "#/components/schemas/Staff"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request (not a collector, or no file uploaded)"
+          },
+          "403": {
+            "description": "Forbidden (no permission to update this staff member)"
+          },
+          "404": {
+            "description": "Staff member not found"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
+    "/api/system-settings": {
+      "get": {
+        "summary": "Get current system settings",
+        "tags": [
+          "SystemSettings"
+        ],
+        "responses": {
+          "200": {
+            "description": "Current system settings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "lab_name": {
+                      "type": "string"
+                    },
+                    "mode": {
+                      "type": "string"
+                    },
+                    "logo_url": {
+                      "type": "string"
+                    },
+                    "primary_color": {
+                      "type": "string"
+                    },
+                    "secondary_color": {
+                      "type": "string"
+                    },
+                    "custom_colors": {
+                      "type": "string"
+                    },
+                    "latitude": {
+                      "type": "number"
+                    },
+                    "longitude": {
+                      "type": "number"
+                    },
+                    "address": {
+                      "type": "string"
+                    },
+                    "contact_phone": {
+                      "type": "string"
+                    },
+                    "contact_email": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Update system settings",
+        "tags": [
+          "SystemSettings"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "lab_name": {
+                    "type": "string"
+                  },
+                  "mode": {
+                    "type": "string"
+                  },
+                  "logo_url": {
+                    "type": "string"
+                  },
+                  "primary_color": {
+                    "type": "string"
+                  },
+                  "secondary_color": {
+                    "type": "string"
+                  },
+                  "custom_colors": {
+                    "type": "string"
+                  },
+                  "latitude": {
+                    "type": "number"
+                  },
+                  "longitude": {
+                    "type": "number"
+                  },
+                  "address": {
+                    "type": "string"
+                  },
+                  "contact_phone": {
+                    "type": "string"
+                  },
+                  "contact_email": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated system settings"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/system-settings/logo": {
+      "post": {
+        "summary": "Upload lab logo image (updates logo_url)",
+        "tags": [
+          "SystemSettings"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "logo": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated system settings with new logo_url"
+          },
+          "400": {
+            "description": "No file uploaded"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/system-settings/reset": {
+      "post": {
+        "summary": "Reset all system settings to application defaults",
+        "tags": [
+          "SystemSettings"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Settings reset to defaults"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
     "/api/tests": {
       "get": {
-        "summary": "Returns the list of all lab tests",
+        "summary": "Returns the list of all lab tests with their associated discounts",
         "tags": [
           "Tests"
         ],
         "parameters": [
-          {
-            "in": "query",
-            "name": "role",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "clinic",
-                "doctor",
-                "patient",
-                "phlebotomist"
-              ]
-            },
-            "description": "User role to calculate specific discounts"
-          },
           {
             "in": "query",
             "name": "category",
@@ -1499,6 +4033,14 @@
               "type": "boolean"
             },
             "description": "Filter by active status"
+          },
+          {
+            "in": "query",
+            "name": "is_package",
+            "schema": {
+              "type": "boolean"
+            },
+            "description": "Filter by whether it is a package"
           },
           {
             "in": "query",
@@ -1533,6 +4075,36 @@
               "minimum": 1
             },
             "description": "Number of items per page for pagination"
+          },
+          {
+            "in": "query",
+            "name": "sortBy",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "created_at",
+                "updated_at",
+                "test_name",
+                "test_code",
+                "base_price_mmk",
+                "category"
+              ]
+            },
+            "description": "Sort field for tests"
+          },
+          {
+            "in": "query",
+            "name": "sortOrder",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc",
+                "ASC",
+                "DESC"
+              ]
+            },
+            "description": "Sort order (ASC or DESC)"
           }
         ],
         "responses": {
@@ -1561,7 +4133,42 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/LabTest"
+                "type": "object",
+                "required": [
+                  "test_name",
+                  "test_code",
+                  "base_price_mmk"
+                ],
+                "properties": {
+                  "test_name": {
+                    "type": "string"
+                  },
+                  "test_code": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "base_price_mmk": {
+                    "type": "number"
+                  },
+                  "category": {
+                    "type": "string"
+                  },
+                  "is_package": {
+                    "type": "boolean"
+                  },
+                  "package_items": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "is_active": {
+                    "type": "boolean"
+                  }
+                }
               }
             }
           }
@@ -1637,7 +4244,37 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/LabTest"
+                "type": "object",
+                "properties": {
+                  "test_name": {
+                    "type": "string"
+                  },
+                  "test_code": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "base_price_mmk": {
+                    "type": "number"
+                  },
+                  "category": {
+                    "type": "string"
+                  },
+                  "is_package": {
+                    "type": "boolean"
+                  },
+                  "package_items": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "is_active": {
+                    "type": "boolean"
+                  }
+                }
               }
             }
           }
@@ -1723,6 +4360,14 @@
           },
           {
             "in": "query",
+            "name": "is_approved",
+            "schema": {
+              "type": "boolean"
+            },
+            "description": "Filter by approval status"
+          },
+          {
+            "in": "query",
             "name": "page",
             "schema": {
               "type": "integer",
@@ -1738,6 +4383,36 @@
               "minimum": 1
             },
             "description": "Number of items per page for pagination"
+          },
+          {
+            "in": "query",
+            "name": "sortBy",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "created_at",
+                "updated_at",
+                "name",
+                "email",
+                "role",
+                "total_points"
+              ]
+            },
+            "description": "Sort field for users"
+          },
+          {
+            "in": "query",
+            "name": "sortOrder",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc",
+                "ASC",
+                "DESC"
+              ]
+            },
+            "description": "Sort order (ASC or DESC)"
           }
         ],
         "responses": {
@@ -1766,7 +4441,49 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/User"
+                "type": "object",
+                "required": [
+                  "name",
+                  "email",
+                  "phone",
+                  "password_hash",
+                  "role"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "email": {
+                    "type": "string"
+                  },
+                  "phone": {
+                    "type": "string"
+                  },
+                  "password_hash": {
+                    "type": "string"
+                  },
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "clinic",
+                      "doctor",
+                      "patient",
+                      "phlebotomist"
+                    ]
+                  },
+                  "address": {
+                    "type": "string"
+                  },
+                  "latitude": {
+                    "type": "number"
+                  },
+                  "longitude": {
+                    "type": "number"
+                  },
+                  "license_number": {
+                    "type": "string"
+                  }
+                }
               }
             }
           }
@@ -1844,7 +4561,30 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/User"
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "phone": {
+                    "type": "string"
+                  },
+                  "password": {
+                    "type": "string"
+                  },
+                  "address": {
+                    "type": "string"
+                  },
+                  "latitude": {
+                    "type": "number"
+                  },
+                  "longitude": {
+                    "type": "number"
+                  },
+                  "license_number": {
+                    "type": "string"
+                  }
+                }
               }
             }
           }
@@ -1892,6 +4632,34 @@
         }
       }
     },
+    "/api/users/{id}/approve": {
+      "put": {
+        "summary": "Approve a pending doctor or clinic user",
+        "tags": [
+          "Users"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "The unique identifier of the user to approve"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User approved successfully"
+          },
+          "404": {
+            "description": "User not found"
+          }
+        }
+      }
+    },
     "/api/users/{id}/orders": {
       "get": {
         "summary": "Get all orders for a specific user",
@@ -1924,6 +4692,22 @@
               ]
             },
             "description": "Filter user's orders by status"
+          },
+          {
+            "in": "query",
+            "name": "exclude_status",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "pending",
+                "scheduled",
+                "collecting",
+                "running",
+                "completed",
+                "delivered"
+              ]
+            },
+            "description": "Exclude orders with this status (e.g. delivered for active order lists)"
           },
           {
             "in": "query",
@@ -1963,10 +4747,85 @@
           }
         }
       }
+    },
+    "/api/users/fcm-token": {
+      "put": {
+        "summary": "Register/update FCM token for notifications",
+        "description": "Registers or updates the Firebase Cloud Messaging (FCM) token for the currently authenticated user or staff.",
+        "tags": [
+          "Users"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "fcm_token"
+                ],
+                "properties": {
+                  "fcm_token": {
+                    "type": "string",
+                    "description": "The Firebase device token"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "FCM token registered successfully"
+          },
+          "400": {
+            "description": "Validation error (missing fcm_token)"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "404": {
+            "description": "Account not found"
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "AiConfig": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "model_name": {
+            "type": "string"
+          },
+          "api_key": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "gemini",
+              "openai"
+            ]
+          },
+          "is_deleted": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
       "Discount": {
         "type": "object",
         "required": [
@@ -2279,6 +5138,113 @@
           }
         }
       },
+      "PointTransaction": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "points": {
+            "type": "integer",
+            "description": "Number of points added (positive) or deducted (negative)"
+          },
+          "transaction_type": {
+            "type": "string",
+            "enum": [
+              "earn",
+              "redeem",
+              "adjustment"
+            ],
+            "description": "The category/type of the point transaction"
+          },
+          "description": {
+            "type": "string",
+            "description": "A detailed description explaining the transaction"
+          },
+          "reference_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Optional identifier referencing an order, payment, or other entity"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "created_user": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "user_name": {
+            "type": "string",
+            "description": "The name of the user (joined from users table)"
+          },
+          "user_email": {
+            "type": "string",
+            "description": "The email of the user (joined from users table)"
+          }
+        }
+      },
+      "PointAdjustment": {
+        "type": "object",
+        "required": [
+          "user_id",
+          "points",
+          "transaction_type"
+        ],
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "points": {
+            "type": "integer",
+            "description": "Number of points to add or deduct"
+          },
+          "transaction_type": {
+            "type": "string",
+            "enum": [
+              "earn",
+              "redeem",
+              "adjustment"
+            ]
+          },
+          "description": {
+            "type": "string",
+            "description": "Explanation for the adjustment"
+          }
+        }
+      },
+      "Prompt": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "prompt_text": {
+            "type": "string"
+          },
+          "is_deleted": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
       "Rating": {
         "type": "object",
         "required": [
@@ -2481,6 +5447,16 @@
           "category": {
             "type": "string"
           },
+          "is_package": {
+            "type": "boolean"
+          },
+          "package_items": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
           "is_active": {
             "type": "boolean"
           },
@@ -2490,6 +5466,25 @@
           "created_at": {
             "type": "string",
             "format": "date-time"
+          },
+          "discounts": {
+            "type": "array",
+            "description": "List of active role-based discounts for this test",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "role": {
+                  "type": "string"
+                },
+                "discount_percent": {
+                  "type": "number"
+                }
+              }
+            }
           }
         }
       },
@@ -2540,6 +5535,12 @@
           "total_points": {
             "type": "integer"
           },
+          "license_number": {
+            "type": "string"
+          },
+          "is_approved": {
+            "type": "boolean"
+          },
           "is_deleted": {
             "type": "boolean"
           },
@@ -2557,12 +5558,32 @@
   },
   "tags": [
     {
+      "name": "AiConfigs",
+      "description": "Management of AI models and API keys"
+    },
+    {
       "name": "Auth",
       "description": "Authentication for users and lab staff"
     },
     {
+      "name": "Conversations",
+      "description": "AI chat and conversations supporting streaming and non-streaming responses"
+    },
+    {
       "name": "Discounts",
       "description": "Test-specific role-based discount management"
+    },
+    {
+      "name": "Health",
+      "description": "System health and status checks"
+    },
+    {
+      "name": "LabResults",
+      "description": "Laboratory result management and AI quality checks"
+    },
+    {
+      "name": "Notifications",
+      "description": "Push notification management and in-app notification inbox history"
     },
     {
       "name": "Orders",
@@ -2577,8 +5598,20 @@
       "description": "Management of point reward rules for user purchases"
     },
     {
+      "name": "PointTransactions",
+      "description": "Loyalty point transaction tracking and administration"
+    },
+    {
+      "name": "Prompts",
+      "description": "Management of AI prompts"
+    },
+    {
       "name": "Ratings",
       "description": "Lab order rating management"
+    },
+    {
+      "name": "Reports",
+      "description": "Analytical reports and dashboard data"
     },
     {
       "name": "Schedules",
@@ -2587,6 +5620,10 @@
     {
       "name": "Staff",
       "description": "Lab staff management"
+    },
+    {
+      "name": "SystemSettings",
+      "description": "System-wide theme and configuration settings"
     },
     {
       "name": "Tests",

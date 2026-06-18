@@ -122,6 +122,7 @@ router.use(authMiddleware);
  * /api/orders:
  *   get:
  *     summary: Get all orders
+ *     description: Retrieve all orders matching optional filters. Each returned order includes its associated schedule details from order_schedules under the "schedule" field.
  *     tags: [Orders]
  *     parameters:
  *       - in: query
