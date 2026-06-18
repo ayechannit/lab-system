@@ -251,39 +251,42 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      CheckboxListTile(
-                        value: _agreeTerms,
-                        onChanged: (value) => setState(() => _agreeTerms = value ?? false),
-                        contentPadding: EdgeInsets.zero,
-                        controlAffinity: ListTileControlAffinity.leading,
-                        title: Text.rich(
-                          TextSpan(
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  color: context.cs.onSurfaceVariant,
-                                  height: 1.2,
+                      Material(
+                        color: Colors.transparent,
+                        child: CheckboxListTile(
+                          value: _agreeTerms,
+                          onChanged: (value) => setState(() => _agreeTerms = value ?? false),
+                          contentPadding: EdgeInsets.zero,
+                          controlAffinity: ListTileControlAffinity.leading,
+                          title: Text.rich(
+                            TextSpan(
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    color: context.cs.onSurfaceVariant,
+                                    height: 1.2,
+                                  ),
+                              children: [
+                                const TextSpan(text: 'I agree to the '),
+                                TextSpan(
+                                  text: 'Terms of Service',
+                                  style: TextStyle(
+                                    color: context.cs.primary,
+                                    fontWeight: FontWeight.w700,
+                                  ),
                                 ),
-                            children: [
-                              const TextSpan(text: 'I agree to the '),
-                              TextSpan(
-                                text: 'Terms of Service',
-                                style: TextStyle(
-                                  color: context.cs.primary,
-                                  fontWeight: FontWeight.w700,
+                                const TextSpan(text: ' and '),
+                                TextSpan(
+                                  text: 'Privacy Policy.',
+                                  style: TextStyle(
+                                    color: context.cs.primary,
+                                    fontWeight: FontWeight.w700,
+                                  ),
                                 ),
-                              ),
-                              const TextSpan(text: ' and '),
-                              TextSpan(
-                                text: 'Privacy Policy.',
-                                style: TextStyle(
-                                  color: context.cs.primary,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
+                          checkboxShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                          side: const BorderSide(color: AppColors.outline),
                         ),
-                        checkboxShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                        side: const BorderSide(color: AppColors.outline),
                       ),
                       const SizedBox(height: 12),
                       SizedBox(

@@ -170,20 +170,23 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           ),
                           const SizedBox(height: 10),
-                          CheckboxListTile(
-                            value: _remember,
-                            onChanged: (value) => setState(() => _remember = value ?? false),
-                            contentPadding: EdgeInsets.zero,
-                            controlAffinity: ListTileControlAffinity.leading,
-                            title: Text(
-                              'Remember this device',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodyLarge
-                                  ?.copyWith(color: context.cs.onSurfaceVariant),
+                          Material(
+                            color: Colors.transparent,
+                            child: CheckboxListTile(
+                              value: _remember,
+                              onChanged: (value) => setState(() => _remember = value ?? false),
+                              contentPadding: EdgeInsets.zero,
+                              controlAffinity: ListTileControlAffinity.leading,
+                              title: Text(
+                                'Remember this device',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyLarge
+                                    ?.copyWith(color: context.cs.onSurfaceVariant),
+                              ),
+                              checkboxShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                              side: const BorderSide(color: AppColors.outline),
                             ),
-                            checkboxShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                            side: const BorderSide(color: AppColors.outline),
                           ),
                           const SizedBox(height: 10),
                           SizedBox(

@@ -18,14 +18,9 @@ class MobileNotificationService {
     }
 
     try {
-      // 1. Initialize Firebase if not already initialized
-      if (Firebase.apps.isEmpty) {
-        await Firebase.initializeApp();
-      }
-
       final messaging = FirebaseMessaging.instance;
 
-      // 2. Request permission (especially for iOS and Android 13+)
+      // 1. Request permission (especially for iOS and Android 13+)
       final settings = await messaging.requestPermission(
         alert: true,
         announcement: false,
@@ -42,6 +37,16 @@ class MobileNotificationService {
         debugPrint('User granted provisional notification permission.');
       } else {
         debugPrint('User declined or has not selected notification permission.');
+      }
+
+      // 2. iOS-specific: check for APNS token before fetching FCM token
+      // Simulators do not support APNS and will fail if we attempt to get an FCM token.
+      if (Platform.isIOS) {
+        final apnsToken = await messaging.getAPNSToken();
+        if (apnsToken == null) {
+          debugPrint('APNS token is not set. FCM token registration skipped (expected on iOS simulator).');
+          return;
+        }
       }
 
       // 3. Get FCM device token
