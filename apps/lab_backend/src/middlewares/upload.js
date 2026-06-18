@@ -2,7 +2,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
-
+//deployment
 // Ensure upload directory exists. On Vercel serverless environments, the filesystem is read-only,
 // except for the temporary directory (os.tmpdir()).
 const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1';
