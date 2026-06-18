@@ -78,64 +78,7 @@ function buildLabResultReviewMessage(params: AiReviewParams): string {
   return JSON.stringify(payload)
 }
 
-/** Path on the lab API host for a download URL, if it points at this API. */
-function apiHostedFilePath(downloadUrl: string): string | null {
-  const api = getApiBaseUrl()
-  if (!api) return null
-  try {
-    const file = new URL(downloadUrl.trim())
-    const base = new URL(api)
-    if (file.origin === base.origin) {
-      return `${file.pathname}${file.search}`
-    }
-  } catch {
-    /* ignore */
-  }
-  return null
-}
 
-/**
- * Resolve a lab-result PDF URL for fetch in the browser.
- * In dev, API `/uploads/...` URLs are rewritten to same-origin paths (Vite proxy).
- */
-function resolveLabResultPdfFetchUrl(downloadUrl: string): string {
-  const trimmed = downloadUrl.trim()
-  if (!import.meta.env.DEV) return trimmed
-  const apiPath = apiHostedFilePath(trimmed)
-  if (apiPath?.startsWith('/uploads/')) return apiPath
-  return trimmed
-}
-
-async function readPdfBlob(res: Response): Promise<Blob | null> {
-  if (!res.ok) return null
-  const blob = await res.blob()
-  return blob.size > 0 ? blob : null
-}
-
-/** Download the result PDF so it can be posted as multipart `file` to POST /api/conversations. */
-async function fetchLabResultPdfBlob(downloadUrl: string): Promise<Blob> {
-  const trimmed = downloadUrl.trim()
-  if (!trimmed) {
-    throw new Error('No result PDF URL.')
-  }
-
-  const proxiedUrl = resolveLabResultPdfFetchUrl(trimmed)
-  if (proxiedUrl !== trimmed) {
-    const blob = await readPdfBlob(await fetch(proxiedUrl))
-    if (blob) return blob
-  }
-
-  const apiPath = apiHostedFilePath(trimmed)
-  if (apiPath) {
-    const blob = await readPdfBlob(await apiFetch(apiPath))
-    if (blob) return blob
-  }
-
-  const blob = await readPdfBlob(await fetch(trimmed))
-  if (blob) return blob
-
-  throw new Error('Could not download the result PDF for AI review.')
-}
 
 function stopLine(stop: CollectionRouteStop): string {
   return `${stop.orderId}: ${stop.patientName} — ${stop.address.trim() || '—'}`
