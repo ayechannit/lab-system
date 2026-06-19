@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { ConfirmDialog } from '../components/common/ConfirmDialog'
 import { LoadingSpinner } from '../components/common/LoadingSpinner'
 import { StaffFormModal } from '../components/staff/StaffFormModal'
+import { StaffAvatar } from '../components/staff/StaffAvatar'
 import { ListFilterSearchField } from '../components/common/ListFilterSearchField'
 import { PageHeader } from '../components/common/PageHeader'
 import { useToast } from '../hooks/ToastContext'
@@ -275,7 +276,16 @@ export function StaffManagementPage() {
                     <td>
                       <code style={{ fontSize: '0.72rem', wordBreak: 'break-all' }}>{r.id}</code>
                     </td>
-                    <td>{r.name}</td>
+                    <td>
+                      <span className="staff-name-cell">
+                        <StaffAvatar
+                          name={r.name}
+                          profileImageUrl={r.profile_image_url}
+                          className="staff-avatar staff-avatar--table"
+                        />
+                        <span>{r.name}</span>
+                      </span>
+                    </td>
                     <td>{r.email}</td>
                     <td>{roleLabel(r.role)}</td>
                     <td>

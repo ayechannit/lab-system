@@ -1049,7 +1049,7 @@ export function SampleCollectionPage() {
                               </span>
                               {!selectedRouteCollector.profile_image_url ? (
                                 <span className="route-collector-preview__hint">
-                                  No profile photo — add one under Staff → Edit collector.
+                                  No profile photo — add one under Staff → Edit staff.
                                 </span>
                               ) : null}
                             </div>

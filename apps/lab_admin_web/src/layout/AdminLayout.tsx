@@ -82,7 +82,7 @@ export function AdminLayout() {
   const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!account || role !== 'collector') {
+    if (!account || account.type !== 'staff') {
       setProfileImageUrl(null)
       return
     }
@@ -98,7 +98,9 @@ export function AdminLayout() {
     return () => {
       cancelled = true
     }
-  }, [account, role, profileOpen])
+  }, [account, profileOpen])
+
+  const isStaffAccount = account?.type === 'staff'
 
   const [isMobile, setIsMobile] = useState(
     () =>
@@ -265,7 +267,7 @@ export function AdminLayout() {
                   aria-expanded={profileOpen}
                   onClick={() => setProfileOpen(true)}
                 >
-                  {role === 'collector' ? (
+                  {isStaffAccount ? (
                     <StaffAvatar
                       name={account.name}
                       profileImageUrl={profileImageUrl}

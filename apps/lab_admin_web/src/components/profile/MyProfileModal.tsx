@@ -162,7 +162,7 @@ export function MyProfileModal({
       }
       if (pw !== '') body.password_hash = pw
       let updated = await updateStaffApi(account.id, body)
-      if (account.role === 'collector' && profileImageFile) {
+      if (profileImageFile) {
         updated = await uploadStaffProfileImage(account.id, profileImageFile)
       }
       setStaffRow(updated)
@@ -246,29 +246,27 @@ export function MyProfileModal({
               aria-readonly="true"
             />
           </div>
-          {account.role === 'collector' ? (
-            <StaffProfileImageField
-              id="mp-profile-image"
-              savedImageUrl={staffRow?.profile_image_url ?? null}
-              previewSrc={profilePreviewUrl}
-              pickedFileName={profileImageFile?.name ?? null}
-              onFileSelected={(file) => {
-                if (profilePreviewUrl?.startsWith('blob:')) {
-                  URL.revokeObjectURL(profilePreviewUrl)
-                }
-                setProfileImageFile(file)
-                setProfilePreviewUrl(URL.createObjectURL(file))
-              }}
-              onClear={() => {
-                setProfileImageFile(null)
-                if (profilePreviewUrl?.startsWith('blob:')) {
-                  URL.revokeObjectURL(profilePreviewUrl)
-                }
-                setProfilePreviewUrl(null)
-              }}
-              disabled={submitting || !staffRow}
-            />
-          ) : null}
+          <StaffProfileImageField
+            id="mp-profile-image"
+            savedImageUrl={staffRow?.profile_image_url ?? null}
+            previewSrc={profilePreviewUrl}
+            pickedFileName={profileImageFile?.name ?? null}
+            onFileSelected={(file) => {
+              if (profilePreviewUrl?.startsWith('blob:')) {
+                URL.revokeObjectURL(profilePreviewUrl)
+              }
+              setProfileImageFile(file)
+              setProfilePreviewUrl(URL.createObjectURL(file))
+            }}
+            onClear={() => {
+              setProfileImageFile(null)
+              if (profilePreviewUrl?.startsWith('blob:')) {
+                URL.revokeObjectURL(profilePreviewUrl)
+              }
+              setProfilePreviewUrl(null)
+            }}
+            disabled={submitting || !staffRow}
+          />
           <div className="field">
             <label htmlFor="mp-pw">New password (optional, min. {MIN_PASSWORD_LENGTH} characters)</label>
             <input
