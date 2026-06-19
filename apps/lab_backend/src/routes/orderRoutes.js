@@ -502,6 +502,107 @@ router.get('/:id', orderController.getOrderById);
 router.post('/', upload.single('prescription'), orderController.createOrder);
 router.post('/:id/items', orderController.addOrderItems);
 router.put('/:id', orderController.updateOrder);
+
+/**
+ * @swagger
+ * /api/orders/{id}/pending-sync:
+ *   put:
+ *     summary: Synchronize/fully update details, tests, and payments of a pending order
+ *     description: Fully updates the metadata, test items, and payments for an order. Allowed only if the order status is currently 'pending'. Staff members can update any pending order; regular users can only update orders they created.
+ *     tags: [Orders]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: The order ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - priority
+ *               - patient_name
+ *               - patient_age
+ *               - patient_phone
+ *               - address
+ *             properties:
+ *               description:
+ *                 type: string
+ *               priority:
+ *                 type: string
+ *                 enum: [urgent, elective]
+ *               patient_name:
+ *                 type: string
+ *               patient_age:
+ *                 type: integer
+ *               patient_phone:
+ *                 type: string
+ *               address:
+ *                 type: string
+ *               latitude:
+ *                 type: number
+ *               longitude:
+ *                 type: number
+ *               original_price_mmk:
+ *                 type: number
+ *               discount_percent:
+ *                 type: number
+ *               final_price_mmk:
+ *                 type: number
+ *               items:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   required:
+ *                     - test_id
+ *                   properties:
+ *                     test_id:
+ *                       type: string
+ *                       format: uuid
+ *                     quantity:
+ *                       type: integer
+ *                     unit_price_mmk:
+ *                       type: number
+ *                     subtotal_mmk:
+ *                       type: number
+ *               payments:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   required:
+ *                     - amount_mmk
+ *                     - method
+ *                   properties:
+ *                     amount_mmk:
+ *                       type: number
+ *                     status:
+ *                       type: string
+ *                       enum: [pending, received, verified, failed]
+ *                     method:
+ *                       type: string
+ *                       enum: [cash, bank_transfer, mobile_pay]
+ *                     reference_no:
+ *                       type: string
+ *     responses:
+ *       200:
+ *         description: Order synchronized successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Order'
+ *       400:
+ *         description: Missing required fields (priority, patient details)
+ *       403:
+ *         description: Access denied (user is not order creator/staff, or status is not pending)
+ *       404:
+ *         description: Order not found
+ */
+router.put('/:id/pending-sync', orderController.syncPendingOrder);
 router.put('/:id/status', orderController.updateOrderStatus);
 router.delete('/:id', orderController.deleteOrder);
 router.get('/:id/qrcode', orderController.generateQrCode);
