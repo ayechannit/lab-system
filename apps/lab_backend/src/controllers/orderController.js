@@ -1,4 +1,5 @@
 const Order = require('../models/orderModel');
+const Staff = require('../models/staffModel');
 const QRCode = require('qrcode');
 const StorageService = require('../utils/storageService');
 const NotificationService = require('../services/notificationService');
@@ -50,6 +51,7 @@ const createOrder = async (req, res) => {
     
     // Send background notifications
     if (order && order.id) {
+      // 1. Send in-app notification to the user/patient
       NotificationService.sendToUser(
         order.user_id,
         'user',
@@ -58,6 +60,22 @@ const createOrder = async (req, res) => {
         { order_id: order.id, event: 'order_created' }
       ).catch(err => console.error('Error sending user order notification:', err.message));
 
+      // 2. Fetch all active staff members and send in-app notifications to each of them
+      Staff.getAll({ is_active: true })
+        .then(activeStaff => {
+          for (const member of activeStaff) {
+            NotificationService.sendToUser(
+              member.id,
+              'staff',
+              'New Order Received',
+              `New ${order.priority} priority order placed for ${order.patient_name}.`,
+              { order_id: order.id, event: 'new_order_alert' }
+            ).catch(err => console.error(`Error sending staff notification to ${member.id}:`, err.message));
+          }
+        })
+        .catch(err => console.error('Error fetching staff list for notification:', err.message));
+
+      // 3. Send real-time push notification to topic 'staff_notifications'
       NotificationService.sendToTopic(
         'staff_notifications',
         'New Order Received',
