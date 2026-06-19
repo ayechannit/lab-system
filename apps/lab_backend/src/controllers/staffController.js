@@ -120,10 +120,6 @@ const uploadProfileImage = async (req, res) => {
       return res.status(404).json({ message: 'Staff member not found' });
     }
 
-    if (staff.role !== 'collector') {
-      return res.status(400).json({ message: 'Profile image uploads are only allowed for staff with the collector role.' });
-    }
-
     const same =
       String(targetId).replace(/[{}]/g, '').toLowerCase() ===
       String(selfId).replace(/[{}]/g, '').toLowerCase();

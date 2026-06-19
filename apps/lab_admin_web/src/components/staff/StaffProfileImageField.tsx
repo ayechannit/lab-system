@@ -60,7 +60,7 @@ export function StaffProfileImageField({
         Profile image
       </label>
       <p className="staff-profile-image-field__hint">
-        Required for collectors — shown to patients when a collector is assigned to their order.
+        Optional photo for this staff member — shown in the staff list and wherever their name appears (e.g. route assignment for collectors).
       </p>
 
       {displayPreview ? (

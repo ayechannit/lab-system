@@ -232,11 +232,11 @@ router.use(authMiddleware);
  * @swagger
  * /api/staff/{id}/profile-image:
  *   post:
- *     summary: Upload profile image for a collector staff member
+ *     summary: Upload profile image for a staff member
  *     description: |
- *       Allows uploading/updating a profile image (avatar) for a staff member of role `'collector'`.
- *       - Admins or Managers can upload for any collector staff member.
- *       - Collectors can upload for their own account.
+ *       Allows uploading/updating a profile image (avatar) for any lab staff account.
+ *       - Admins or Managers can upload for any staff member.
+ *       - Staff can upload for their own account.
  *     tags: [Staff]
  *     parameters:
  *       - in: path

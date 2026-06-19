@@ -64,7 +64,7 @@ export function StaffFormModal({
       setEmail(initial.email)
       setRole(initial.role)
       setIsActive(initial.is_active)
-      setSavedProfileImageUrl(initial.role === 'collector' ? initial.profile_image_url : null)
+      setSavedProfileImageUrl(initial.profile_image_url)
     } else {
       setName('')
       setEmail('')
@@ -81,17 +81,6 @@ export function StaffFormModal({
       }
     }
   }, [profilePreviewUrl])
-
-  useEffect(() => {
-    if (role !== 'collector') {
-      setProfileImageFile(null)
-      if (profilePreviewUrl?.startsWith('blob:')) {
-        URL.revokeObjectURL(profilePreviewUrl)
-      }
-      setProfilePreviewUrl(null)
-      if (mode === 'create') setSavedProfileImageUrl(null)
-    }
-  }, [role, mode, profilePreviewUrl])
 
   useEffect(() => {
     if (!open) return
@@ -178,7 +167,7 @@ export function StaffFormModal({
         staffId = initial.id
       }
 
-      if (role === 'collector' && profileImageFile && staffId) {
+      if (profileImageFile && staffId) {
         const updated = await uploadStaffProfileImage(staffId, profileImageFile)
         setSavedProfileImageUrl(updated.profile_image_url)
         setProfileImageFile(null)
@@ -271,29 +260,27 @@ export function StaffFormModal({
               ))}
             </select>
           </div>
-          {role === 'collector' ? (
-            <StaffProfileImageField
-              id="sf-profile-image"
-              savedImageUrl={savedProfileImageUrl}
-              previewSrc={profilePreviewUrl}
-              pickedFileName={profileImageFile?.name ?? null}
-              onFileSelected={(file) => {
-                if (profilePreviewUrl?.startsWith('blob:')) {
-                  URL.revokeObjectURL(profilePreviewUrl)
-                }
-                setProfileImageFile(file)
-                setProfilePreviewUrl(URL.createObjectURL(file))
-              }}
-              onClear={() => {
-                setProfileImageFile(null)
-                if (profilePreviewUrl?.startsWith('blob:')) {
-                  URL.revokeObjectURL(profilePreviewUrl)
-                }
-                setProfilePreviewUrl(null)
-              }}
-              disabled={submitting}
-            />
-          ) : null}
+          <StaffProfileImageField
+            id="sf-profile-image"
+            savedImageUrl={savedProfileImageUrl}
+            previewSrc={profilePreviewUrl}
+            pickedFileName={profileImageFile?.name ?? null}
+            onFileSelected={(file) => {
+              if (profilePreviewUrl?.startsWith('blob:')) {
+                URL.revokeObjectURL(profilePreviewUrl)
+              }
+              setProfileImageFile(file)
+              setProfilePreviewUrl(URL.createObjectURL(file))
+            }}
+            onClear={() => {
+              setProfileImageFile(null)
+              if (profilePreviewUrl?.startsWith('blob:')) {
+                URL.revokeObjectURL(profilePreviewUrl)
+              }
+              setProfilePreviewUrl(null)
+            }}
+            disabled={submitting}
+          />
           <label htmlFor={staffActiveId} className="form-switch">
             <span className="form-switch__control">
               <input

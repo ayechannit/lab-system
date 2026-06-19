@@ -2513,6 +2513,12 @@ a.btn {
   min-width: 0;
 }
 
+.staff-avatar--table {
+  width: 1.75rem;
+  height: 1.75rem;
+  font-size: 0.62rem;
+}
+
 .staff-name-cell__label {
   min-width: 0;
 }
