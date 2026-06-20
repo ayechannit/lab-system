@@ -5100,6 +5100,12 @@ a.btn {
   background: color-mix(in srgb, var(--primary) 3%, var(--card-bg));
 }
 
+.lab-result-test-card__toolbar--separate-only {
+  justify-content: flex-start;
+  padding-top: 0.55rem;
+  padding-bottom: 0.55rem;
+}
+
 .lab-result-test-card__toolbar-actions {
   display: flex;
   flex-wrap: wrap;

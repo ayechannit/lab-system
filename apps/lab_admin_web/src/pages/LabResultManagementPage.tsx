@@ -1588,7 +1588,11 @@ export function LabResultManagementPage() {
                             })}
                           </div>
                           {showPdfControls ? (
-                            <div className="lab-result-test-card__toolbar">
+                            <div
+                              className={`lab-result-test-card__toolbar${
+                                showBulkPdfUpload ? ' lab-result-test-card__toolbar--separate-only' : ''
+                              }`}
+                            >
                               <button
                                 type="button"
                                 className="lab-result-test-card__unlink-btn"
@@ -1601,41 +1605,43 @@ export function LabResultManagementPage() {
                                 </span>
                                 Separate PDFs
                               </button>
-                              <div className="lab-result-test-card__toolbar-actions">
-                                <button
-                                  type="button"
-                                  className="btn btn-secondary btn-sm lab-result-test-card__action-btn"
-                                  disabled={uploadBusy || !canUploadPdfs}
-                                  onClick={() => openPdfPicker(memberTestIds)}
-                                >
-                                  <span className="material-symbols-outlined" aria-hidden>
-                                    upload_file
-                                  </span>
-                                  {isGroupUploadBusy ? 'Applying…' : 'Replace PDF'}
-                                </button>
-                                {hasFile ? (
+                              {!showBulkPdfUpload ? (
+                                <div className="lab-result-test-card__toolbar-actions">
                                   <button
                                     type="button"
-                                    className="btn btn-primary btn-sm lab-result-test-card__action-btn lab-result-test-card__action-btn--ai"
-                                    disabled={
-                                      !aiReviewConfigured ||
-                                      isReviewing ||
-                                      uploadBusy ||
-                                      aiReviewLoadingTestIds.length > 0
-                                    }
-                                    onClick={() => void runAiReviewForSelectedTests(memberTestIds)}
+                                    className="btn btn-secondary btn-sm lab-result-test-card__action-btn"
+                                    disabled={uploadBusy || !canUploadPdfs}
+                                    onClick={() => openPdfPicker(memberTestIds)}
                                   >
                                     <span className="material-symbols-outlined" aria-hidden>
-                                      auto_awesome
+                                      upload_file
                                     </span>
-                                    {isReviewing
-                                      ? 'Reviewing…'
-                                      : rowStatus === 'reviewed'
-                                        ? 'Re-run AI review'
-                                        : `AI review (${items.length})`}
+                                    {isGroupUploadBusy ? 'Applying…' : 'Replace PDF'}
                                   </button>
-                                ) : null}
-                              </div>
+                                  {hasFile ? (
+                                    <button
+                                      type="button"
+                                      className="btn btn-primary btn-sm lab-result-test-card__action-btn lab-result-test-card__action-btn--ai"
+                                      disabled={
+                                        !aiReviewConfigured ||
+                                        isReviewing ||
+                                        uploadBusy ||
+                                        aiReviewLoadingTestIds.length > 0
+                                      }
+                                      onClick={() => void runAiReviewForSelectedTests(memberTestIds)}
+                                    >
+                                      <span className="material-symbols-outlined" aria-hidden>
+                                        auto_awesome
+                                      </span>
+                                      {isReviewing
+                                        ? 'Reviewing…'
+                                        : rowStatus === 'reviewed'
+                                          ? 'Re-run AI review'
+                                          : `AI review (${items.length})`}
+                                    </button>
+                                  ) : null}
+                                </div>
+                              ) : null}
                             </div>
                           ) : null}
                         </div>
