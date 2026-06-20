@@ -50,6 +50,21 @@ export type AiReviewParams = {
   downloadUrl?: string
 }
 
+export type AiReviewTestItem = {
+  testId: string
+  testName: string
+  testCode?: string
+}
+
+export type AiReviewBatchParams = {
+  ai_config_id: string
+  prompt_id?: string
+  orderId: string
+  patientName: string
+  downloadUrl: string
+  tests: AiReviewTestItem[]
+}
+
 function buildRoutePlanMessage(params: PlanCollectionRouteParams): string {
   const payload = {
     start_location: params.startLocation,
@@ -73,6 +88,20 @@ function buildLabResultReviewMessage(params: AiReviewParams): string {
     test_name: params.testName,
     test_code: params.testCode?.trim() || null,
     result_pdf_url: params.downloadUrl?.trim() || null,
+  }
+  return JSON.stringify(payload)
+}
+
+function buildLabResultReviewBatchMessage(params: AiReviewBatchParams): string {
+  const payload = {
+    order_id: params.orderId,
+    patient_name: params.patientName,
+    result_pdf_url: params.downloadUrl.trim(),
+    tests: params.tests.map((test) => ({
+      test_id: test.testId,
+      test_name: test.testName,
+      test_code: test.testCode?.trim() || null,
+    })),
   }
   return JSON.stringify(payload)
 }
@@ -450,6 +479,37 @@ export async function reviewLabResultWithAi(params: AiReviewParams): Promise<str
   }
 
   const message = buildLabResultReviewMessage(params)
+
+  const res = await apiFetch('/api/conversations', {
+    method: 'POST',
+    body: JSON.stringify({
+      ai_config_id: params.ai_config_id,
+      prompt_id: promptId,
+      message,
+      stream: false,
+      file_url: downloadUrl,
+    }),
+  })
+  if (!res.ok) throw new Error(await readApiErrorBody(res))
+  const data = (await res.json()) as { reply?: string }
+  return String(data.reply ?? '').trim() || 'No text returned from AI.'
+}
+
+export async function reviewLabResultBatchWithAi(params: AiReviewBatchParams): Promise<string> {
+  const promptId = params.prompt_id ?? getLabResultValidationPromptId()
+  if (!promptId) {
+    throw new Error('No Laboratory Report Validation prompt configured.')
+  }
+
+  const downloadUrl = params.downloadUrl?.trim()
+  if (!downloadUrl) {
+    throw new Error('Upload a result PDF for these tests first.')
+  }
+  if (params.tests.length === 0) {
+    throw new Error('Select at least one test.')
+  }
+
+  const message = buildLabResultReviewBatchMessage(params)
 
   const res = await apiFetch('/api/conversations', {
     method: 'POST',

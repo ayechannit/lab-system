@@ -13,7 +13,7 @@ import { LoadingSpinner } from '../components/common/LoadingSpinner'
 import { DEFAULT_TABLE_PAGE_SIZE, TablePagination } from '../components/common/TablePagination'
 import { isApiMode } from '../services/apiBase'
 import { getAiConfigId, getLabResultValidationPromptId, isLabResultReviewConfigured } from '../config/aiEnv'
-import { reviewLabResultWithAi } from '../services/aiConversationService'
+import { reviewLabResultBatchWithAi, reviewLabResultWithAi } from '../services/aiConversationService'
 import {
   fetchOrderById,
   fetchOrders,
@@ -101,39 +101,49 @@ function extractJsonObject(text: string): any {
   return null
 }
 
+function parseAiReviewFromObject(jsonObj: Record<string, unknown>): ParsedAiReview | null {
+  const profile = jsonObj.ProfileAlert as AlertDetail | undefined
+  const testResult = jsonObj.TestResultAlert as AlertDetail | undefined
+
+  if (!profile && !testResult) return null
+
+  let verdict: AiReviewVerdict = 'pass'
+  const statusP = profile?.Status?.toUpperCase() || ''
+  const statusT = testResult?.Status?.toUpperCase() || ''
+
+  if (
+    statusP.includes('ERROR') ||
+    statusP.includes('FAIL') ||
+    statusP.includes('INCORRECT') ||
+    statusT.includes('ERROR') ||
+    statusT.includes('FAIL') ||
+    statusT.includes('INCORRECT')
+  ) {
+    verdict = 'fail'
+  } else if (statusP.includes('WARN') || statusT.includes('WARN')) {
+    verdict = 'neutral'
+  }
+
+  return {
+    verdict,
+    label: verdict === 'pass' ? 'Correct' : verdict === 'fail' ? 'Incorrect' : 'Warning',
+    detail: null,
+    isCompact: false,
+    profileAlert: profile || null,
+    testResultAlert: testResult || null,
+  }
+}
+
 function parseAiReviewReply(reply: string): ParsedAiReview {
   const trimmed = reply.trim()
   if (!trimmed) {
     return { verdict: null, label: null, detail: null, isCompact: true }
   }
 
-  // Attempt to parse structured JSON
   const jsonObj = extractJsonObject(trimmed)
   if (jsonObj && typeof jsonObj === 'object') {
-    const profile = jsonObj.ProfileAlert as AlertDetail | undefined
-    const testResult = jsonObj.TestResultAlert as AlertDetail | undefined
-
-    if (profile || testResult) {
-      let verdict: AiReviewVerdict = 'pass'
-      const statusP = profile?.Status?.toUpperCase() || ''
-      const statusT = testResult?.Status?.toUpperCase() || ''
-
-      if (statusP.includes('ERROR') || statusP.includes('FAIL') || statusP.includes('INCORRECT') ||
-          statusT.includes('ERROR') || statusT.includes('FAIL') || statusT.includes('INCORRECT')) {
-        verdict = 'fail'
-      } else if (statusP.includes('WARN') || statusT.includes('WARN')) {
-        verdict = 'neutral'
-      }
-
-      return {
-        verdict,
-        label: verdict === 'pass' ? 'Correct' : verdict === 'fail' ? 'Incorrect' : 'Warning',
-        detail: null,
-        isCompact: false,
-        profileAlert: profile || null,
-        testResultAlert: testResult || null
-      }
-    }
+    const fromObj = parseAiReviewFromObject(jsonObj as Record<string, unknown>)
+    if (fromObj) return fromObj
   }
 
   for (const pattern of AI_REVIEW_VERDICT_PATTERNS) {
@@ -148,6 +158,80 @@ function parseAiReviewReply(reply: string): ParsedAiReview {
   }
 
   return { verdict: null, label: null, detail: trimmed, isCompact: false }
+}
+
+function parseAiReviewRepliesForTests(
+  reply: string,
+  testIds: string[],
+): Map<string, { reply: string; parsed: ParsedAiReview }> {
+  const result = new Map<string, { reply: string; parsed: ParsedAiReview }>()
+  const idByLower = new Map(testIds.map((id) => [id.toLowerCase(), id]))
+  const jsonObj = extractJsonObject(reply)
+
+  if (jsonObj && typeof jsonObj === 'object' && Array.isArray((jsonObj as { tests?: unknown }).tests)) {
+    for (const entry of (jsonObj as { tests: unknown[] }).tests) {
+      if (!entry || typeof entry !== 'object') continue
+      const row = entry as Record<string, unknown>
+      const rawId = String(row.test_id ?? '').trim()
+      const testId = idByLower.get(rawId.toLowerCase())
+      if (!testId) continue
+      const entryReply = JSON.stringify(entry)
+      result.set(testId, {
+        reply: entryReply,
+        parsed: parseAiReviewFromObject(row) ?? parseAiReviewReply(entryReply),
+      })
+    }
+  }
+
+  const fallback = parseAiReviewReply(reply)
+  for (const testId of testIds) {
+    if (!result.has(testId)) {
+      result.set(testId, { reply, parsed: fallback })
+    }
+  }
+  return result
+}
+
+function groupItemsBySharedPdf(
+  items: ApiOrderDetailItem[],
+  batchByTestId: Record<string, string>,
+): ApiOrderDetailItem[][] {
+  const buckets = new Map<string, ApiOrderDetailItem[]>()
+  for (const it of items) {
+    const batch = batchByTestId[it.test_id]
+    const url = testResultFileUrl(it)
+    const key = batch ? `batch:${batch}` : url ? `url:${url}` : `solo:${it.test_id}`
+    const list = buckets.get(key) ?? []
+    list.push(it)
+    buckets.set(key, list)
+  }
+  return [...buckets.values()]
+}
+
+function resolveSharedGroupAiDisplay(
+  testIds: string[],
+  aiReviewByTestId: Record<string, AiReviewEntry>,
+  aiReviewLoadingTestIds: string[],
+  aiReviewErrorByTestId: Record<string, string>,
+): {
+  entry: AiReviewEntry | undefined
+  loading: boolean
+  error: string | null
+  verdict: AiReviewVerdict | null
+} {
+  const loading = testIds.some((id) => aiReviewLoadingTestIds.includes(id))
+  const error = testIds.map((id) => aiReviewErrorByTestId[id]).find(Boolean) ?? null
+  const entries = testIds
+    .map((id) => aiReviewByTestId[id])
+    .filter((entry): entry is AiReviewEntry => Boolean(entry))
+  const entry =
+    entries.length === 0
+      ? undefined
+      : entries.reduce((best, current) =>
+          current.reply.length >= best.reply.length ? current : best,
+        )
+  const verdict = entry ? parseAiReviewReply(entry.reply).verdict : null
+  return { entry, loading, error, verdict }
 }
 
 function formatAiReviewedAt(iso: string): string {
@@ -842,6 +926,71 @@ export function LabResultManagementPage() {
     }
   }
 
+  async function reviewTestsBatch(items: ApiOrderDetailItem[]): Promise<boolean> {
+    if (!detail || items.length === 0) return false
+    const testIds = items.map((it) => it.test_id)
+    const url = testResultFileUrl(items[0])
+    if (!url) {
+      setAiReviewErrorByTestId((prev) => {
+        const next = { ...prev }
+        for (const testId of testIds) next[testId] = 'Upload a result PDF for this test first.'
+        return next
+      })
+      return false
+    }
+
+    setAiReviewByTestId((prev) => {
+      const next = { ...prev }
+      for (const testId of testIds) delete next[testId]
+      return next
+    })
+    setAiReviewErrorByTestId((prev) => {
+      const next = { ...prev }
+      for (const testId of testIds) delete next[testId]
+      return next
+    })
+
+    try {
+      const reply = await reviewLabResultBatchWithAi({
+        ai_config_id: aiConfigId,
+        prompt_id: promptId || undefined,
+        orderId: detail.id,
+        patientName: detail.patient_name,
+        downloadUrl: url,
+        tests: items.map((it) => ({
+          testId: it.test_id,
+          testName: it.test_name?.trim() || it.test_id,
+          testCode: it.test_code?.trim() || undefined,
+        })),
+      })
+
+      const perTest = parseAiReviewRepliesForTests(reply, testIds)
+      const reviewedAt = new Date().toISOString()
+      const sharedEntry: AiReviewEntry = { reply, reviewedAt }
+      for (const testId of testIds) {
+        const entry = perTest.get(testId) ?? { reply, parsed: parseAiReviewReply(reply) }
+        const verdict = entry.parsed.verdict || 'pass'
+        await saveOrderTestAiReview(detail.id, testId, {
+          ai_verdict: verdict,
+          ai_raw_response: reply,
+        })
+        setAiReviewByTestId((prev) => ({
+          ...prev,
+          [testId]: sharedEntry,
+        }))
+      }
+      return true
+    } catch (err) {
+      const msg = friendlyAiReviewErrorMessage(err)
+      setAiReviewErrorByTestId((prev) => {
+        const next = { ...prev }
+        for (const testId of testIds) next[testId] = msg
+        return next
+      })
+      return false
+    }
+  }
+
   async function reviewOneTest(testId: string): Promise<boolean> {
     if (!detail) return false
     const it = detail.items.find((i) => i.test_id === testId)
@@ -934,8 +1083,13 @@ export function LabResultManagementPage() {
     setAiReviewLoadingTestIds(selected)
     let okCount = 0
     try {
-      for (const testId of selected) {
-        if (await reviewOneTest(testId)) okCount += 1
+      const groups = groupItemsBySharedPdf(items, pdfUploadBatchByTestId)
+      for (const group of groups) {
+        if (group.length > 1) {
+          if (await reviewTestsBatch(group)) okCount += group.length
+        } else if (await reviewOneTest(group[0].test_id)) {
+          okCount += 1
+        }
       }
       if (okCount === selected.length) {
         showSuccess(
@@ -1523,6 +1677,21 @@ export function LabResultManagementPage() {
                         aiReviewByTestId[id] ||
                         aiReviewErrorByTestId[id],
                     )
+                    const groupAi = resolveSharedGroupAiDisplay(
+                      memberTestIds,
+                      aiReviewByTestId,
+                      aiReviewLoadingTestIds,
+                      aiReviewErrorByTestId,
+                    )
+                    const groupAiSectionClass = [
+                      'lab-result-test-card__ai',
+                      'lab-result-test-card__ai--shared-combined',
+                      groupAi.loading ? 'lab-result-test-card__ai--loading' : '',
+                      groupAi.verdict ? `lab-result-test-card__ai--${groupAi.verdict}` : '',
+                      groupAi.error ? 'lab-result-test-card__ai--error' : '',
+                    ]
+                      .filter(Boolean)
+                      .join(' ')
 
                     return (
                       <li
@@ -1647,38 +1816,12 @@ export function LabResultManagementPage() {
                         </div>
                         {showAiPanels ? (
                           <div className="lab-result-test-card__shared-ai">
-                            {items.map((it) => {
-                              const testName = it.test_name?.trim() || it.test_id
-                              const itemReviewing = aiReviewLoadingTestIds.includes(it.test_id)
-                              const aiEntry = aiReviewByTestId[it.test_id]
-                              const aiVerdict = aiEntry ? parseAiReviewReply(aiEntry.reply).verdict : null
-                              const aiSectionClass = [
-                                'lab-result-test-card__ai',
-                                'lab-result-test-card__ai--nested',
-                                itemReviewing ? 'lab-result-test-card__ai--loading' : '',
-                                aiVerdict ? `lab-result-test-card__ai--${aiVerdict}` : '',
-                                aiReviewErrorByTestId[it.test_id] ? 'lab-result-test-card__ai--error' : '',
-                              ]
-                                .filter(Boolean)
-                                .join(' ')
-                              if (
-                                !itemReviewing &&
-                                !aiReviewByTestId[it.test_id] &&
-                                !aiReviewErrorByTestId[it.test_id]
-                              ) {
-                                return null
-                              }
-                              return (
-                                <div key={it.test_id} className={aiSectionClass}>
-                                  <p className="lab-result-test-card__ai-test-label">{testName}</p>
-                                  {renderAiReviewBody(
-                                    aiReviewByTestId[it.test_id],
-                                    itemReviewing,
-                                    aiReviewErrorByTestId[it.test_id] ?? null,
-                                  )}
-                                </div>
-                              )
-                            })}
+                            <div className={groupAiSectionClass}>
+                              <p className="lab-result-test-card__ai-test-label">
+                                Combined analysis · {memberNames.join(' · ')}
+                              </p>
+                              {renderAiReviewBody(groupAi.entry, groupAi.loading, groupAi.error)}
+                            </div>
                           </div>
                         ) : null}
                       </li>

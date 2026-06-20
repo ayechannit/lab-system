@@ -5388,7 +5388,7 @@ a.btn {
   border-top: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
 }
 
-.lab-result-test-card__ai--nested:first-child {
+.lab-result-test-card__ai--shared-combined {
   border-top: none;
 }
 
