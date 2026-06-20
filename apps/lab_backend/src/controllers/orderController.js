@@ -457,65 +457,6 @@ const saveAiReview = async (req, res) => {
   }
 };
 
-const syncPendingOrder = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { 
-      description, priority, patient_name, patient_age, patient_phone, 
-      address, latitude, longitude, original_price_mmk, discount_percent, 
-      final_price_mmk, items, payments 
-    } = req.body;
-
-    if (!priority || !patient_name || !patient_age || !patient_phone || !address) {
-      return res.status(400).json({ message: 'priority, patient_name, patient_age, patient_phone, and address are required' });
-    }
-
-    const updatedOrder = await Order.syncPendingOrder(
-      id,
-      req.body,
-      req.user?.id,
-      req.user?.type
-    );
-
-    // Send notifications to users and staff about order update
-    if (updatedOrder) {
-      // 1. Notify ordering user/patient
-      NotificationService.sendToUser(
-        updatedOrder.user_id,
-        'user',
-        'Order Updated Successfully',
-        `Your lab order for patient "${updatedOrder.patient_name}" has been updated.`,
-        { order_id: updatedOrder.id, event: 'order_updated' }
-      ).catch(err => console.error('Error sending user order update notification:', err.message));
-
-      // 2. Notify all active staff members
-      Staff.getAll({ is_active: true })
-        .then(activeStaff => {
-          for (const member of activeStaff) {
-            NotificationService.sendToUser(
-              member.id,
-              'staff',
-              'Order Updated',
-              `Order for patient "${updatedOrder.patient_name}" has been updated by the creator/staff.`,
-              { order_id: updatedOrder.id, event: 'order_updated_alert' }
-            ).catch(err => console.error(`Error sending staff update notification to ${member.id}:`, err.message));
-          }
-        })
-        .catch(err => console.error('Error fetching staff list for update notification:', err.message));
-    }
-
-    res.json(updatedOrder);
-  } catch (error) {
-    if (error.statusCode === 403 || error.message.includes('Access denied') || error.message.includes('only be updated when')) {
-      return res.status(403).json({ message: error.message });
-    }
-    if (error.message.includes('not found') || error.message.includes('Order not found')) {
-      return res.status(404).json({ message: error.message });
-    }
-    res.status(500).json({ message: error.message });
-  }
-};
-
 module.exports = {
   getAllOrders,
   getOrderById,
@@ -531,5 +472,4 @@ module.exports = {
   uploadTestResult,
   downloadTestResult,
   saveAiReview,
-  syncPendingOrder,
 };
