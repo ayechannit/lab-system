@@ -167,6 +167,7 @@ function testResultStorageKey(item: ApiOrderDetailItem): string | null {
 }
 
 const PDF_UPLOAD_BATCH_STORAGE_PREFIX = 'lab-result-pdf-batch:'
+const PDF_SEPARATE_STORAGE_PREFIX = 'lab-result-pdf-separate:'
 
 function loadPdfUploadBatches(orderId: string): Record<string, string> {
   try {
@@ -201,6 +202,49 @@ function prunePdfUploadBatches(
     if (valid.has(testId)) next[testId] = batchKey
   }
   return next
+}
+
+function loadForceSeparatePdfTestIds(orderId: string): string[] {
+  try {
+    const raw = sessionStorage.getItem(`${PDF_SEPARATE_STORAGE_PREFIX}${orderId}`)
+    if (!raw) return []
+    const parsed = JSON.parse(raw) as unknown
+    if (!Array.isArray(parsed)) return []
+    return parsed.filter((id): id is string => typeof id === 'string')
+  } catch {
+    return []
+  }
+}
+
+function saveForceSeparatePdfTestIds(orderId: string, testIds: Set<string>) {
+  try {
+    sessionStorage.setItem(
+      `${PDF_SEPARATE_STORAGE_PREFIX}${orderId}`,
+      JSON.stringify([...testIds]),
+    )
+  } catch {
+    /* ignore quota / private mode */
+  }
+}
+
+function pruneForceSeparatePdfTestIds(
+  testIds: Set<string>,
+  items: ApiOrderDetailItem[],
+): Set<string> {
+  const valid = new Set(items.map((it) => it.test_id))
+  return new Set([...testIds].filter((id) => valid.has(id)))
+}
+
+function pdfGroupBucketKey(
+  item: ApiOrderDetailItem,
+  batchByTestId: Record<string, string>,
+  forceSeparateTestIds: Set<string>,
+): string | null {
+  const batchKey = batchByTestId[item.test_id]
+  const storageKey = testResultStorageKey(item)
+  if (!batchKey && !storageKey) return null
+  if (forceSeparateTestIds.has(item.test_id)) return `solo:${item.test_id}`
+  return batchKey ? `batch:${batchKey}` : storageKey
 }
 
 function labResultStatusBadgeClass(status: ApiOrderStatus): string {
@@ -254,12 +298,11 @@ type SharedPdfRowStatus = 'awaiting' | 'uploaded' | 'reviewing' | 'reviewed' | '
 function buildLabResultTestRows(
   items: ApiOrderDetailItem[],
   batchByTestId: Record<string, string> = {},
+  forceSeparateTestIds: Set<string> = new Set(),
 ): LabResultTestRow[] {
   const buckets = new Map<string, ApiOrderDetailItem[]>()
   for (const it of items) {
-    const batchKey = batchByTestId[it.test_id]
-    const storageKey = testResultStorageKey(it)
-    const key = batchKey ? `batch:${batchKey}` : storageKey
+    const key = pdfGroupBucketKey(it, batchByTestId, forceSeparateTestIds)
     if (!key) continue
     const list = buckets.get(key) ?? []
     list.push(it)
@@ -271,9 +314,7 @@ function buildLabResultTestRows(
   let groupIndex = 0
 
   for (const it of items) {
-    const batchKey = batchByTestId[it.test_id]
-    const storageKey = testResultStorageKey(it)
-    const bucketKey = batchKey ? `batch:${batchKey}` : storageKey
+    const bucketKey = pdfGroupBucketKey(it, batchByTestId, forceSeparateTestIds)
     if (!bucketKey) {
       rows.push({ kind: 'single', item: it })
       continue
@@ -321,20 +362,30 @@ function sharedPdfStatusBadge(
   status: SharedPdfRowStatus,
   groupMeta: SharedPdfGroupMeta | undefined,
 ): { className: string; label: string } {
-  const sharedSuffix =
-    groupMeta && groupMeta.memberCount > 1 ? ` · ${groupMeta.memberCount} tests` : ''
+  const isShared = Boolean(groupMeta && groupMeta.memberCount > 1)
+  const sharedSuffix = isShared ? ` · ${groupMeta!.memberCount} tests` : ''
+  const sharedClass = 'badge badge--shared-pdf lab-result-test-card__status-badge--shared'
 
   switch (status) {
     case 'reviewing':
-      return { className: 'badge badge--warn', label: `Reviewing shared PDF${sharedSuffix}` }
+      return {
+        className: isShared ? sharedClass : 'badge badge--warn',
+        label: isShared ? `Reviewing shared PDF${sharedSuffix}` : 'Reviewing…',
+      }
     case 'reviewed':
-      return { className: 'badge badge--success', label: `AI reviewed (shared)${sharedSuffix}` }
+      return {
+        className: isShared ? sharedClass : 'badge badge--success',
+        label: isShared ? `AI reviewed (shared)${sharedSuffix}` : 'AI reviewed',
+      }
     case 'error':
-      return { className: 'badge badge--warn', label: `Review issue (shared)${sharedSuffix}` }
+      return {
+        className: 'badge badge--warn',
+        label: isShared ? `Review issue (shared)${sharedSuffix}` : 'Review issue',
+      }
     case 'uploaded':
       return {
-        className: 'badge badge--success lab-result-test-card__status-badge--shared',
-        label: groupMeta ? `Shared PDF${sharedSuffix}` : 'PDF uploaded',
+        className: isShared ? sharedClass : 'badge badge--success',
+        label: isShared ? `Shared PDF${sharedSuffix}` : 'PDF uploaded',
       }
     default:
       return { className: 'badge badge--neutral', label: 'Awaiting PDF' }
@@ -367,6 +418,7 @@ export function LabResultManagementPage() {
   const [uploadingTestIds, setUploadingTestIds] = useState<string[]>([])
   const [bulkPdfSelectedIds, setBulkPdfSelectedIds] = useState<string[]>([])
   const [pdfUploadBatchByTestId, setPdfUploadBatchByTestId] = useState<Record<string, string>>({})
+  const [forceSeparatePdfTestIds, setForceSeparatePdfTestIds] = useState<Set<string>>(new Set())
   const pdfInputRef = useRef<HTMLInputElement>(null)
   const resultEntryRef = useRef<HTMLDivElement>(null)
   const [patientInput, setPatientInput] = useState('')
@@ -601,8 +653,13 @@ export function LabResultManagementPage() {
   const showBulkPdfUpload = Boolean(canUploadPdfs && detail && detail.items.length > 1)
 
   const labResultTestRows = useMemo(
-    () => buildLabResultTestRows(detail?.items ?? [], pdfUploadBatchByTestId),
-    [detail?.items, pdfUploadBatchByTestId],
+    () =>
+      buildLabResultTestRows(
+        detail?.items ?? [],
+        pdfUploadBatchByTestId,
+        forceSeparatePdfTestIds,
+      ),
+    [detail?.items, pdfUploadBatchByTestId, forceSeparatePdfTestIds],
   )
 
   const detailItemsById = useMemo(() => {
@@ -615,10 +672,17 @@ export function LabResultManagementPage() {
     setBulkPdfSelectedIds([])
     if (!detail?.id) {
       setPdfUploadBatchByTestId({})
+      setForceSeparatePdfTestIds(new Set())
       return
     }
     setPdfUploadBatchByTestId(
       prunePdfUploadBatches(loadPdfUploadBatches(detail.id), detail.items ?? []),
+    )
+    setForceSeparatePdfTestIds(
+      pruneForceSeparatePdfTestIds(
+        new Set(loadForceSeparatePdfTestIds(detail.id)),
+        detail.items ?? [],
+      ),
     )
   }, [detail?.id])
 
@@ -626,6 +690,11 @@ export function LabResultManagementPage() {
     if (!detail?.id) return
     savePdfUploadBatches(detail.id, pdfUploadBatchByTestId)
   }, [detail?.id, pdfUploadBatchByTestId])
+
+  useEffect(() => {
+    if (!detail?.id) return
+    saveForceSeparatePdfTestIds(detail.id, forceSeparatePdfTestIds)
+  }, [detail?.id, forceSeparatePdfTestIds])
 
   async function refreshOrderDetail(id: string) {
     const next = await fetchOrderById(id)
@@ -696,6 +765,24 @@ export function LabResultManagementPage() {
     setBulkPdfSelectedIds([])
   }
 
+  function separateSharedPdfGroup(testIds: string[]) {
+    if (testIds.length < 2) return
+    setForceSeparatePdfTestIds((prev) => {
+      const next = new Set(prev)
+      for (const testId of testIds) next.add(testId)
+      return next
+    })
+    setPdfUploadBatchByTestId((prev) => {
+      const next = { ...prev }
+      for (const testId of testIds) delete next[testId]
+      return next
+    })
+    setBulkPdfSelectedIds((prev) => prev.filter((id) => !testIds.includes(id)))
+    showSuccess(
+      'Tests split into separate rows. Use Replace PDF on each test to assign different reports.',
+    )
+  }
+
   const onPdfSelected: ChangeEventHandler<HTMLInputElement> = async (e) => {
     const file = e.target.files?.[0]
     const targets = uploadTargetTestIds
@@ -721,6 +808,11 @@ export function LabResultManagementPage() {
           const nextMap = { ...prev }
           for (const testId of uploaded) nextMap[testId] = batchKey
           return nextMap
+        })
+        setForceSeparatePdfTestIds((prev) => {
+          const next = new Set(prev)
+          for (const testId of uploaded) next.delete(testId)
+          return next
         })
       } else if (uploaded.length === 1) {
         setPdfUploadBatchByTestId((prev) => {
@@ -1142,9 +1234,6 @@ export function LabResultManagementPage() {
           <table className="data-table data-table--catalog">
             <thead>
               <tr>
-                <th scope="col" className="col-check">
-                  <span className="visually-hidden">Select</span>
-                </th>
                 <th scope="col">Patient</th>
                 <th scope="col">Status</th>
                 <th scope="col">Tests</th>
@@ -1155,13 +1244,13 @@ export function LabResultManagementPage() {
             <tbody>
               {listLoading ? (
                 <tr>
-                  <td colSpan={6} className="data-table__state data-table__state--loading">
+                  <td colSpan={5} className="data-table__state data-table__state--loading">
                     <LoadingSpinner label="Loading orders" />
                   </td>
                 </tr>
               ) : orders.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="data-table__state">
+                  <td colSpan={5} className="data-table__state">
                     {patientName || statusFilter
                       ? 'No orders match these filters.'
                       : 'No orders returned from the server.'}
@@ -1184,18 +1273,24 @@ export function LabResultManagementPage() {
                     aria-selected={orderId === o.id}
                     style={{ cursor: 'pointer' }}
                   >
-                    <td className="col-check" onClick={(e) => e.stopPropagation()}>
-                      <input
-                        type="radio"
-                        name="lab-result-order"
-                        className="data-table__check"
-                        checked={orderId === o.id}
-                        onChange={() => selectOrderForResults(o.id)}
+                    <td className="lab-result-order-patient">
+                      <label
+                        className="lab-result-order-pick"
                         onClick={(e) => e.stopPropagation()}
-                        aria-label={`Select order for ${o.patient_name}`}
-                      />
+                        onKeyDown={(e) => e.stopPropagation()}
+                      >
+                        <input
+                          type="radio"
+                          name="lab-result-order"
+                          className="data-table__check lab-result-order-pick__input"
+                          checked={orderId === o.id}
+                          onChange={() => selectOrderForResults(o.id)}
+                          onClick={(e) => e.stopPropagation()}
+                          aria-label={`Select order for ${o.patient_name}`}
+                        />
+                        <span className="lab-result-order-pick__name">{o.patient_name}</span>
+                      </label>
                     </td>
-                    <td>{o.patient_name}</td>
                     <td>{o.status}</td>
                     <td title={(o.items ?? []).map((it) => it.test_name ?? it.test_id).join(', ')}>
                       {orderTestsSummary(o)}
@@ -1349,14 +1444,18 @@ export function LabResultManagementPage() {
               <>
                 {showBulkPdfUpload ? (
                   <div className="lab-result-bulk-pdf" role="region" aria-label="Bulk test actions">
-                    <div className="lab-result-bulk-pdf__copy">
-                      <p className="lab-result-bulk-pdf__title">Bulk actions for selected tests</p>
-                      <p className="lab-result-bulk-pdf__hint">
-                        Check tests that share the same report PDF, then upload once or run AI review in one
-                        click. Use each row below for a different PDF or single-test review.
-                      </p>
-                    </div>
-                    <div className="lab-result-bulk-pdf__toolbar">
+                    <div className="lab-result-bulk-pdf__inner">
+                      <div className="lab-result-bulk-pdf__copy">
+                        <p className="lab-result-bulk-pdf__title">
+                          <span className="material-symbols-outlined lab-result-bulk-pdf__title-icon" aria-hidden>
+                            checklist
+                          </span>
+                          Bulk actions for selected tests
+                        </p>
+                        <p className="lab-result-bulk-pdf__hint">
+                          Select tests that share one report, upload once, or run AI review together.
+                        </p>
+                      </div>
                       <div className="lab-result-bulk-pdf__actions">
                         <button
                           type="button"
@@ -1447,6 +1546,7 @@ export function LabResultManagementPage() {
                         className={[
                           'lab-result-test-card',
                           'lab-result-test-card--shared-pdf',
+                          'lab-result-test-card--shared-bundle',
                           'lab-result-test-card--shared-only',
                           groupTone,
                           bulkSelected && showBulkPdfUpload ? 'lab-result-test-card--bulk-selected' : '',
@@ -1454,86 +1554,104 @@ export function LabResultManagementPage() {
                           .filter(Boolean)
                           .join(' ')}
                       >
-                        <div
-                          className={`lab-result-test-card__body${
-                            showPdfControls
-                              ? showBulkPdfUpload
-                                ? ' lab-result-test-card__body--selectable'
-                                : ''
-                              : ' lab-result-test-card__body--info-only'
-                          }`}
-                        >
-                          {showBulkPdfUpload && showPdfControls ? (
-                            <label className="lab-result-test-card__pick">
-                              <input
-                                type="checkbox"
-                                className="lab-result-test-card__pick-input"
-                                checked={bulkSelected}
-                                ref={(el) => {
-                                  if (el) el.indeterminate = bulkPartial
-                                }}
-                                disabled={uploadBusy}
-                                aria-label={`Include ${memberNames.join(', ')} in bulk actions`}
-                                onChange={() => toggleBulkPdfGroupSelect(memberTestIds)}
-                              />
-                            </label>
-                          ) : null}
-                          <div className="lab-result-test-card__info lab-result-test-card__info--shared">
-                            <div className="lab-result-test-card__name-row">
-                              <span className="lab-result-test-card__name">
-                                {memberNames.length} tests · one PDF
-                              </span>
-                              <span className="lab-result-test-card__group-chip">{label}</span>
+                        <div className="lab-result-test-card__bundle">
+                          <div className="lab-result-test-card__bundle-main">
+                            {showBulkPdfUpload && showPdfControls ? (
+                              <label className="lab-result-test-card__pick">
+                                <input
+                                  type="checkbox"
+                                  className="lab-result-test-card__pick-input"
+                                  checked={bulkSelected}
+                                  ref={(el) => {
+                                    if (el) el.indeterminate = bulkPartial
+                                  }}
+                                  disabled={uploadBusy}
+                                  aria-label={`Include ${memberNames.join(', ')} in bulk actions`}
+                                  onChange={() => toggleBulkPdfGroupSelect(memberTestIds)}
+                                />
+                              </label>
+                            ) : null}
+                            <div className="lab-result-test-card__bundle-icon" aria-hidden>
+                              <span className="material-symbols-outlined">picture_as_pdf</span>
                             </div>
-                            <ul className="lab-result-test-card__shared-tests">
-                              {items.map((it) => {
-                                const name = it.test_name?.trim() || it.test_id
-                                const code = it.test_code?.trim() || '—'
-                                return (
-                                  <li key={it.test_id} className="lab-result-test-card__shared-test">
-                                    <span className="lab-result-test-card__shared-test-name">{name}</span>
-                                    <span className="lab-result-test-card__shared-test-meta">
-                                      {code} · Qty {it.quantity}
-                                    </span>
-                                  </li>
-                                )
-                              })}
-                            </ul>
+                            <div className="lab-result-test-card__bundle-copy">
+                              <div className="lab-result-test-card__bundle-title-row">
+                                <h5 className="lab-result-test-card__bundle-title">Combined report</h5>
+                                <span className="lab-result-test-card__group-chip">{label}</span>
+                              </div>
+                              <p className="lab-result-test-card__bundle-sub">
+                                {memberNames.length} tests share one PDF
+                              </p>
+                            </div>
+                            {showPdfControls ? (
+                              <div className="lab-result-test-card__status lab-result-test-card__status--bundle">
+                                <span className={statusBadge.className}>{statusBadge.label}</span>
+                              </div>
+                            ) : null}
+                          </div>
+                          <div className="lab-result-test-card__chip-list" aria-label="Tests in this report">
+                            {items.map((it) => {
+                              const name = it.test_name?.trim() || it.test_id
+                              const code = it.test_code?.trim() || '—'
+                              return (
+                                <span key={it.test_id} className="lab-result-test-card__chip">
+                                  <span className="lab-result-test-card__chip-name">{name}</span>
+                                  <span className="lab-result-test-card__chip-meta">
+                                    {code} · Qty {it.quantity}
+                                  </span>
+                                </span>
+                              )
+                            })}
                           </div>
                           {showPdfControls ? (
-                            <div className="lab-result-test-card__status">
-                              <span className={statusBadge.className}>{statusBadge.label}</span>
-                            </div>
-                          ) : null}
-                          {showPdfControls ? (
-                            <div className="lab-result-test-card__actions">
+                            <div className="lab-result-test-card__toolbar">
                               <button
                                 type="button"
-                                className="btn btn-secondary btn-sm"
-                                disabled={uploadBusy || !canUploadPdfs}
-                                onClick={() => openPdfPicker(memberTestIds)}
+                                className="lab-result-test-card__unlink-btn"
+                                disabled={uploadBusy || isReviewing || aiReviewLoadingTestIds.length > 0}
+                                title="Split into separate rows so each test can have its own PDF"
+                                onClick={() => separateSharedPdfGroup(memberTestIds)}
                               >
-                                {isGroupUploadBusy ? 'Applying…' : 'Replace PDF'}
+                                <span className="material-symbols-outlined" aria-hidden>
+                                  call_split
+                                </span>
+                                Separate PDFs
                               </button>
-                              {hasFile ? (
+                              <div className="lab-result-test-card__toolbar-actions">
                                 <button
                                   type="button"
-                                  className="btn btn-secondary btn-sm"
-                                  disabled={
-                                    !aiReviewConfigured ||
-                                    isReviewing ||
-                                    uploadBusy ||
-                                    aiReviewLoadingTestIds.length > 0
-                                  }
-                                  onClick={() => void runAiReviewForSelectedTests(memberTestIds)}
+                                  className="btn btn-secondary btn-sm lab-result-test-card__action-btn"
+                                  disabled={uploadBusy || !canUploadPdfs}
+                                  onClick={() => openPdfPicker(memberTestIds)}
                                 >
-                                  {isReviewing
-                                    ? 'Reviewing…'
-                                    : rowStatus === 'reviewed'
-                                      ? 'Re-run AI review'
-                                      : `AI review (${items.length})`}
+                                  <span className="material-symbols-outlined" aria-hidden>
+                                    upload_file
+                                  </span>
+                                  {isGroupUploadBusy ? 'Applying…' : 'Replace PDF'}
                                 </button>
-                              ) : null}
+                                {hasFile ? (
+                                  <button
+                                    type="button"
+                                    className="btn btn-primary btn-sm lab-result-test-card__action-btn lab-result-test-card__action-btn--ai"
+                                    disabled={
+                                      !aiReviewConfigured ||
+                                      isReviewing ||
+                                      uploadBusy ||
+                                      aiReviewLoadingTestIds.length > 0
+                                    }
+                                    onClick={() => void runAiReviewForSelectedTests(memberTestIds)}
+                                  >
+                                    <span className="material-symbols-outlined" aria-hidden>
+                                      auto_awesome
+                                    </span>
+                                    {isReviewing
+                                      ? 'Reviewing…'
+                                      : rowStatus === 'reviewed'
+                                        ? 'Re-run AI review'
+                                        : `AI review (${items.length})`}
+                                  </button>
+                                ) : null}
+                              </div>
                             </div>
                           ) : null}
                         </div>
@@ -1612,7 +1730,13 @@ export function LabResultManagementPage() {
                   return (
                     <li
                       key={`${it.test_id}-${idx}`}
-                      className={`lab-result-test-card${bulkSelected && showBulkPdfUpload ? ' lab-result-test-card--bulk-selected' : ''}`}
+                      className={[
+                        'lab-result-test-card',
+                        'lab-result-test-card--single',
+                        bulkSelected && showBulkPdfUpload ? 'lab-result-test-card--bulk-selected' : '',
+                      ]
+                        .filter(Boolean)
+                        .join(' ')}
                     >
                       <div
                         className={`lab-result-test-card__body${
@@ -1635,11 +1759,16 @@ export function LabResultManagementPage() {
                             />
                           </label>
                         ) : null}
-                        <div className="lab-result-test-card__info">
-                          <span className="lab-result-test-card__name">{testName}</span>
-                          <span className="lab-result-test-card__sub">
-                            {testCode} · Qty {it.quantity}
+                        <div className="lab-result-test-card__info lab-result-test-card__info--single">
+                          <span className="lab-result-test-card__test-icon" aria-hidden>
+                            <span className="material-symbols-outlined">science</span>
                           </span>
+                          <div className="lab-result-test-card__info-text">
+                            <span className="lab-result-test-card__name">{testName}</span>
+                            <span className="lab-result-test-card__sub">
+                              {testCode} · Qty {it.quantity}
+                            </span>
+                          </div>
                         </div>
                         {showPdfControls ? (
                           <div className="lab-result-test-card__status">
@@ -1650,10 +1779,13 @@ export function LabResultManagementPage() {
                           <div className="lab-result-test-card__actions">
                             <button
                               type="button"
-                              className="btn btn-secondary btn-sm"
+                              className="btn btn-secondary btn-sm lab-result-test-card__action-btn"
                               disabled={uploadBusy || !canUploadPdfs}
                               onClick={() => openPdfPicker(it.test_id)}
                             >
+                              <span className="material-symbols-outlined" aria-hidden>
+                                upload_file
+                              </span>
                               {isSingleUploadBusy
                                 ? 'Uploading…'
                                 : hasFile
@@ -1665,7 +1797,7 @@ export function LabResultManagementPage() {
                             {hasFile ? (
                               <button
                                 type="button"
-                                className="btn btn-secondary btn-sm"
+                                className="btn btn-primary btn-sm lab-result-test-card__action-btn lab-result-test-card__action-btn--ai"
                                 disabled={
                                   !aiReviewConfigured ||
                                   isReviewing ||
@@ -1674,6 +1806,9 @@ export function LabResultManagementPage() {
                                 }
                                 onClick={() => void runAiReviewForTest(it.test_id)}
                               >
+                                <span className="material-symbols-outlined" aria-hidden>
+                                  auto_awesome
+                                </span>
                                 {isReviewing
                                   ? 'Reviewing…'
                                   : reviewed
