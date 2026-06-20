@@ -9,6 +9,7 @@ import '../../services/session_controller.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/theme_extensions.dart';
 import '../../widgets/common/app_branding_row.dart';
+import '../../widgets/common/notification_bell_button.dart';
 import '../../widgets/common/order_list_sort_button.dart';
 import '../../widgets/common/order_rating_bar.dart';
 import '../../widgets/navigation/lab_main_bottom_nav.dart';
@@ -51,6 +52,7 @@ class _ResultsListScreenState extends State<ResultsListScreen> {
             automaticallyImplyLeading: false,
             titleSpacing: 12,
             title: const AppBrandingRow(markSize: 32, iconSize: 16, borderRadius: 8),
+            actions: const [NotificationBellButton()],
           ),
           body: RefreshIndicator(
             onRefresh: () => _reloadOrders(session),

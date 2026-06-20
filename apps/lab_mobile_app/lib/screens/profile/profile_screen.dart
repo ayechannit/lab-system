@@ -5,6 +5,7 @@ import '../../app/session_scope.dart';
 import '../../theme/theme_extensions.dart';
 import '../../widgets/common/app_branding_row.dart';
 import '../../widgets/common/app_surface_card.dart';
+import '../../widgets/common/notification_bell_button.dart';
 import '../../widgets/navigation/lab_main_bottom_nav.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -27,6 +28,7 @@ class ProfileScreen extends StatelessWidget {
         automaticallyImplyLeading: false,
         titleSpacing: 12,
         title: const AppBrandingRow(markSize: 32, iconSize: 16, borderRadius: 8),
+        actions: const [NotificationBellButton()],
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),

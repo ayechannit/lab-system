@@ -101,8 +101,12 @@ class _ForegroundNotificationListenerState extends State<ForegroundNotificationL
       final title = message.notification?.title;
       final body = message.notification?.body;
       final navContext = rootNavigatorKey.currentContext;
-      if (title != null && body != null && navContext != null) {
-        // Show local toast inside the active overlay
+      if (navContext == null || !navContext.mounted) return;
+
+      final session = SessionScope.of(navContext);
+      unawaited(session.refreshNotifications(quiet: true));
+
+      if (title != null && body != null) {
         AppToast.warning(
           navContext,
           body,

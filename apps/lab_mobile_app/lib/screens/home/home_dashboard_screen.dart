@@ -7,6 +7,7 @@ import '../../models/user_report.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/theme_extensions.dart';
 import '../../widgets/common/app_branding_row.dart';
+import '../../widgets/common/notification_bell_button.dart';
 import '../../widgets/navigation/lab_main_bottom_nav.dart';
 
 /// Single home dashboard for **patient, doctor, and clinic** (same layout and actions).
@@ -25,6 +26,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
     await Future.wait([
       session.refreshHomeSummary(),
       session.refreshTracking(),
+      session.refreshNotifications(quiet: true),
     ]);
   }
 
@@ -57,6 +59,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
               onTap: () => context.push('/profile'),
               child: const AppBrandingRow(markSize: 36, iconSize: 18, borderRadius: 9),
             ),
+            actions: const [NotificationBellButton()],
           ),
           body: LayoutBuilder(
             builder: (context, constraints) {

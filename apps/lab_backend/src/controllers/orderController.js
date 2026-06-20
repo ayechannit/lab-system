@@ -116,6 +116,107 @@ const addOrderItems = async (req, res) => {
   }
 };
 
+const replaceOrderItems = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { items, original_price_mmk, discount_percent, final_price_mmk } = req.body;
+
+    if (!Array.isArray(items)) {
+      return res.status(400).json({ message: 'Items array is required' });
+    }
+
+    const totals = {
+      original_price_mmk: original_price_mmk || 0,
+      discount_percent: discount_percent || 0,
+      final_price_mmk: final_price_mmk || 0,
+    };
+
+    const updatedOrder = await Order.replaceItemsAndUpdateTotals(id, items, totals, req.user?.id);
+    if (!updatedOrder) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    res.json(updatedOrder);
+  } catch (error) {
+    const status = error.message?.includes('cannot') || error.message?.includes('only be updated') ? 400 : 500;
+    res.status(status).json({ message: error.message });
+  }
+};
+
+const syncPendingOrder = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      description,
+      priority,
+      patient_name,
+      patient_age,
+      patient_phone,
+      address,
+      latitude,
+      longitude,
+      original_price_mmk,
+      discount_percent,
+      final_price_mmk,
+      items,
+    } = req.body;
+
+    if (!priority || !patient_name || patient_age == null || !patient_phone || !address) {
+      return res.status(400).json({
+        message: 'priority, patient_name, patient_age, patient_phone, and address are required',
+      });
+    }
+
+    if (!Array.isArray(items)) {
+      return res.status(400).json({ message: 'items array is required' });
+    }
+
+    const updatedOrder = await Order.syncPendingOrder(
+      id,
+      {
+        description,
+        priority,
+        patient_name,
+        patient_age,
+        patient_phone,
+        address,
+        latitude,
+        longitude,
+        original_price_mmk,
+        discount_percent,
+        final_price_mmk,
+        items,
+      },
+      req.user?.id,
+      {
+        isStaff: req.user?.type === 'staff',
+        userId: req.user?.id,
+      },
+    );
+
+    if (!updatedOrder) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+    if (updatedOrder.error === 'not_found') {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+    if (updatedOrder.error === 'forbidden') {
+      return res.status(403).json({ message: 'You can only update orders you created.' });
+    }
+
+    res.json(updatedOrder);
+  } catch (error) {
+    const message = error.message || 'Failed to synchronize pending order';
+    const status =
+      message.includes('Only pending orders') ||
+      message.includes('cannot be changed') ||
+      message.includes('Test not found')
+        ? 400
+        : 500;
+    res.status(status).json({ message });
+  }
+};
+
 const updateOrder = async (req, res) => {
   try {
     const {
@@ -420,6 +521,8 @@ module.exports = {
   getOrderById,
   createOrder,
   addOrderItems,
+  replaceOrderItems,
+  syncPendingOrder,
   updateOrder,
   updateOrderStatus,
   bulkUpdateOrderStatus,

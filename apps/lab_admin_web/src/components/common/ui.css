@@ -4827,6 +4827,46 @@ a.btn {
   border: 1px dashed var(--border);
 }
 
+.lab-result-bulk-pdf {
+  margin-bottom: 0.85rem;
+  padding: 0.85rem 1rem;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--primary) 18%, var(--border));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--primary) 5%, var(--card-bg)) 0%, var(--card-bg) 100%);
+}
+
+.lab-result-bulk-pdf__copy {
+  margin-bottom: 0.65rem;
+}
+
+.lab-result-bulk-pdf__title {
+  margin: 0 0 0.25rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--heading);
+}
+
+.lab-result-bulk-pdf__hint {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+.lab-result-bulk-pdf__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem 0.85rem;
+}
+
+.lab-result-bulk-pdf__quick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
 .lab-result-test-list {
   list-style: none;
   margin: 0;
@@ -4848,6 +4888,11 @@ a.btn {
   box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
+.lab-result-test-card--bulk-selected {
+  border-color: color-mix(in srgb, var(--primary) 35%, var(--border));
+  background: color-mix(in srgb, var(--primary) 3%, var(--card-bg));
+}
+
 .lab-result-test-card__body {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto;
@@ -4856,8 +4901,32 @@ a.btn {
   padding: 0.8rem 1rem;
 }
 
+.lab-result-test-card__body--selectable {
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+}
+
 .lab-result-test-card__body--info-only {
   grid-template-columns: minmax(0, 1fr);
+}
+
+.lab-result-test-card__pick {
+  display: flex;
+  align-items: center;
+  margin: 0;
+  cursor: pointer;
+}
+
+.lab-result-test-card__pick-input {
+  width: 1rem;
+  height: 1rem;
+  margin: 0;
+  accent-color: var(--primary);
+  cursor: pointer;
+}
+
+.lab-result-test-card__shared-tag {
+  color: var(--primary);
+  font-weight: 600;
 }
 
 @media (max-width: 640px) {
@@ -4865,13 +4934,23 @@ a.btn {
     grid-template-columns: 1fr;
   }
 
-  .lab-result-test-card__body {
+  .lab-result-test-card__body,
+  .lab-result-test-card__body--selectable {
     grid-template-columns: 1fr;
     align-items: start;
   }
 
+  .lab-result-test-card__pick {
+    margin-bottom: -0.25rem;
+  }
+
   .lab-result-test-card__actions {
     justify-content: flex-start;
+  }
+
+  .lab-result-bulk-pdf__toolbar {
+    flex-direction: column;
+    align-items: stretch;
   }
 }
 
@@ -4927,6 +5006,13 @@ a.btn {
   border-top-color: var(--error-panel-border);
 }
 
+.lab-result-test-card__ai--loading {
+  background: color-mix(in srgb, var(--primary) 5%, var(--card-bg));
+  border-top-color: color-mix(in srgb, var(--primary) 18%, var(--border));
+  overflow: hidden;
+  contain: layout;
+}
+
 /* Flatten nested boxes inside the test-card AI strip */
 .lab-result-test-card__ai .lab-result-entry__ai-verdict,
 .lab-result-test-card__ai .lab-result-entry__ai-fail,
@@ -4941,8 +5027,54 @@ a.btn {
 }
 
 .lab-result-test-card__ai .lab-result-entry__ai-loading {
-  min-height: 2.25rem;
+  min-height: 0;
   justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.15rem 0;
+  border: none;
+  background: transparent;
+}
+
+.lab-result-entry__ai-loading .loading-spinner-wrap--inline,
+.lab-result-test-card__ai .loading-spinner-wrap--inline {
+  width: auto;
+  min-height: 0;
+  flex: 0 0 auto;
+  align-self: flex-start;
+  justify-content: flex-start;
+}
+
+.lab-result-entry__ai-loading {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  min-height: 0;
+  padding: 0.65rem 0.75rem;
+  background: var(--elevated-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.lab-result-entry__ai-loading-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.lab-result-entry__ai-loading-title {
+  margin: 0;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--heading);
+}
+
+.lab-result-entry__ai-loading-hint {
+  margin: 0;
+  font-size: 0.76rem;
+  line-height: 1.45;
+  color: var(--muted);
 }
 
 .lab-result-entry__warn {
@@ -4992,17 +5124,6 @@ a.btn {
 
 .lab-result-entry__ai-model {
   text-transform: capitalize;
-}
-
-.lab-result-entry__ai-loading {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 3.25rem;
-  padding: 0.65rem 0.75rem;
-  background: var(--elevated-bg);
-  border: 1px solid var(--border);
-  border-radius: 8px;
 }
 
 .lab-result-entry__ai-placeholder {
@@ -5960,6 +6081,21 @@ a.btn {
   color: var(--muted);
   border-bottom: 1px solid #e8ecf4;
   background: linear-gradient(180deg, rgba(0, 61, 155, 0.04) 0%, transparent 100%);
+}
+
+.order-test-multiselect-panel__footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 3;
+  display: flex;
+  justify-content: flex-end;
+  padding: 0.55rem 0.75rem;
+  background: var(--elevated-bg);
+  border-top: 1px solid var(--border);
+}
+
+.order-test-multiselect-panel__done {
+  min-width: 4.5rem;
 }
 
 /* Use .field label... so we beat `.field label { display: block }` (higher specificity). */

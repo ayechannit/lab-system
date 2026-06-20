@@ -31,6 +31,7 @@ import {
   type ApiOrderListRow,
   type ApiOrderStatus,
   type FetchOrdersParams,
+  syncPendingOrder,
   updateOrder,
   updateOrderStatus,
 } from '../services/orderService'
@@ -500,11 +501,13 @@ function OrderTestCheckboxPicker({
 
   useEffect(() => {
     if (!open) return
-    function onDocMouseDown(e: MouseEvent) {
-      if (!wrapRef.current?.contains(e.target as Node)) onOpenChange(false)
+    function onDocPointerDown(e: PointerEvent) {
+      const target = e.target
+      if (!(target instanceof Node)) return
+      if (!wrapRef.current?.contains(target)) onOpenChange(false)
     }
-    document.addEventListener('mousedown', onDocMouseDown)
-    return () => document.removeEventListener('mousedown', onDocMouseDown)
+    document.addEventListener('pointerdown', onDocPointerDown, true)
+    return () => document.removeEventListener('pointerdown', onDocPointerDown, true)
   }, [open, onOpenChange])
 
   useEffect(() => {
@@ -600,6 +603,15 @@ function OrderTestCheckboxPicker({
               )
             })
           )}
+          <div className="order-test-multiselect-panel__footer">
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm order-test-multiselect-panel__done"
+              onClick={() => onOpenChange(false)}
+            >
+              Done
+            </button>
+          </div>
         </div>
       ) : null}
       </div>
@@ -664,6 +676,10 @@ export function OrderManagementPage() {
   const [editDescription, setEditDescription] = useState('')
   const [editLatitude, setEditLatitude] = useState<number | ''>(0)
   const [editLongitude, setEditLongitude] = useState<number | ''>(0)
+  const [editOrderDetail, setEditOrderDetail] = useState<ApiOrderDetail | null>(null)
+  const [editSelectedTestIds, setEditSelectedTestIds] = useState<string[]>([])
+  const [editTestSearch, setEditTestSearch] = useState('')
+  const [editTestPickerOpen, setEditTestPickerOpen] = useState(false)
 
   const onCreateGeocodeCoords = useCallback((lat: number, lng: number) => {
     setCreateLatitude(lat)
@@ -829,6 +845,15 @@ export function OrderManagementPage() {
   }, [createOpen])
 
   useEffect(() => {
+    if (!editOpen) {
+      setEditTestPickerOpen(false)
+      setEditOrderDetail(null)
+      setEditSelectedTestIds([])
+      setEditTestSearch('')
+    }
+  }, [editOpen])
+
+  useEffect(() => {
     if (!assignOpen) {
       setAssignTestPickerOpen(false)
       setAssignOrderDetail(null)
@@ -880,6 +905,28 @@ export function OrderManagementPage() {
     () => filterTestsForOrderDropdown(tests, assignTestSearch, new Set(), ORDER_TEST_PICKER_LIMIT),
     [tests, assignTestSearch],
   )
+
+  const editPickerPanel = useMemo(
+    () => filterTestsForOrderDropdown(tests, editTestSearch, new Set(), ORDER_TEST_PICKER_LIMIT),
+    [tests, editTestSearch],
+  )
+
+  const editSelection = useMemo(() => {
+    const role = editOrderDetail ? resolveOrderingUserRole(editOrderDetail, userMap) : undefined
+    const lines: { testId: string; unit: number; pct: number; sub: number }[] = []
+    for (const id of editSelectedTestIds) {
+      const t = testMap.get(id)
+      if (!t) continue
+      const pct = activeDiscountPercentForOrder(testDiscounts, id, role)
+      const unit = Math.round(t.base_price_mmk * 100) / 100
+      const sub = Math.round(unit * (1 - Math.max(0, Math.min(100, pct)) / 100) * 100) / 100
+      lines.push({ testId: id, unit, pct, sub })
+    }
+    const originalSum = lines.reduce((s, l) => s + l.unit, 0)
+    const finalSum = lines.reduce((s, l) => s + l.sub, 0)
+    const blendedDisc = originalSum > 0 ? Math.round((1 - finalSum / originalSum) * 10000) / 100 : 0
+    return { lines, originalSum, finalSum, blendedDisc }
+  }, [editSelectedTestIds, testMap, testDiscounts, editOrderDetail, userMap])
 
   const sorted = useMemo(
     () => [...rows].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()),
@@ -988,6 +1035,14 @@ export function OrderManagementPage() {
     setCreateSelectedTestIds((prev) => prev.filter((id) => id !== testId))
   }
 
+  function toggleEditTest(testId: string) {
+    setEditSelectedTestIds((prev) => (prev.includes(testId) ? prev.filter((id) => id !== testId) : [...prev, testId]))
+  }
+
+  function removeEditTest(testId: string) {
+    setEditSelectedTestIds((prev) => prev.filter((id) => id !== testId))
+  }
+
   async function submitCreateOrder(e: FormEvent) {
     e.preventDefault()
     setCreateError(null)
@@ -1038,6 +1093,8 @@ export function OrderManagementPage() {
     setOpenMenuId(null)
     setEditError(null)
     setEditOrderId(row.id)
+    setEditTestSearch('')
+    setEditTestPickerOpen(false)
     try {
       const order = await fetchOrderById(row.id)
       if (!order) {
@@ -1045,6 +1102,8 @@ export function OrderManagementPage() {
         setEditOrderId(null)
         return
       }
+      setEditOrderDetail(order)
+      setEditSelectedTestIds(order.items.map((it) => it.test_id))
       setEditPriority(order.priority)
       setEditPatientName(order.patient_name)
       setEditPatientAge(order.patient_age ?? '')
@@ -1064,18 +1123,23 @@ export function OrderManagementPage() {
 
   async function submitEditOrder(e: FormEvent) {
     e.preventDefault()
-    if (!editOrderId) return
+    if (!editOrderId || !editOrderDetail) return
     setEditError(null)
+    setEditTestPickerOpen(false)
     if (!editPatientName.trim()) return setEditError('Enter patient name.')
     if (!editPatientPhone.trim()) return setEditError('Enter patient phone.')
     if (!editAddress.trim()) return setEditError('Enter address.')
     const age =
       typeof editPatientAge === 'number' ? editPatientAge : Number.parseInt(String(editPatientAge), 10)
     if (!Number.isFinite(age) || age < 0) return setEditError('Enter valid patient age.')
+    const testsEditable = canEditOrderTests(editOrderDetail.status)
+    if (testsEditable && editSelection.lines.length === 0) {
+      return setEditError('Select at least one test.')
+    }
     const { latitude: latApi, longitude: lngApi } = coordsForOrderApi(editLatitude, editLongitude)
     setEditSubmitting(true)
     try {
-      await updateOrder(editOrderId, {
+      const basePayload = {
         description: editDescription.trim() || null,
         priority: editPriority,
         patient_name: editPatientName.trim(),
@@ -1084,7 +1148,25 @@ export function OrderManagementPage() {
         address: editAddress.trim(),
         latitude: latApi,
         longitude: lngApi,
-      })
+      }
+
+      if (testsEditable) {
+        const { lines, originalSum, finalSum, blendedDisc } = editSelection
+        await syncPendingOrder(editOrderId, {
+          ...basePayload,
+          items: lines.map((l) => ({
+            test_id: l.testId,
+            quantity: 1,
+            unit_price_mmk: l.unit,
+            subtotal_mmk: l.sub,
+          })),
+          original_price_mmk: Math.round(originalSum * 100) / 100,
+          discount_percent: blendedDisc,
+          final_price_mmk: Math.round(finalSum * 100) / 100,
+        })
+      } else {
+        await updateOrder(editOrderId, basePayload)
+      }
       setEditOpen(false)
       setEditOrderId(null)
       showSuccess('Order updated.')
@@ -1136,9 +1218,13 @@ export function OrderManagementPage() {
     }
   }
 
-  function canAddTestFromListRow(o: ApiOrderListRow): boolean {
-    return o.status === 'pending' && !testsAssignedFlag(o.is_tests_assigned)
-  }
+function canAddTestFromListRow(o: ApiOrderListRow): boolean {
+  return o.status === 'pending' && !testsAssignedFlag(o.is_tests_assigned)
+}
+
+function canEditOrderTests(status: ApiOrderStatus): boolean {
+  return status === 'pending'
+}
 
   async function refreshDetailOrder(orderId?: string) {
     const id = orderId ?? detailOrder?.id
@@ -1630,12 +1716,6 @@ export function OrderManagementPage() {
                             },
                           },
                           {
-                            label: 'Update status',
-                            onSelect: () => {
-                              void openStatusUpdate(o)
-                            },
-                          },
-                          {
                             label: 'Add payment',
                             onSelect: () => {
                               openPaymentUpdate(o)
@@ -1916,9 +1996,129 @@ export function OrderManagementPage() {
             <form className="order-create-modal__form" onSubmit={(e) => void submitEditOrder(e)}>
               <div className="order-create-modal__body">
                 <div className="order-create-modal__stack">
-                  <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--muted)' }}>
-                    Update patient details, address, and map pin. Tests, pricing, and status are changed elsewhere.
-                  </p>
+                  {editOrderDetail && canEditOrderTests(editOrderDetail.status) ? (
+                    <div className="field">
+                      <div
+                        id="om-edit-tests-label"
+                        style={{ fontWeight: 600, fontSize: '0.875rem', marginBottom: '0.35rem', color: 'var(--heading)' }}
+                      >
+                        Tests on this order
+                      </div>
+                      {tests.length > ORDER_TEST_PICKER_LIMIT && !editTestSearch.trim() ? (
+                        <p style={{ margin: '0 0 0.5rem', fontSize: '0.78rem', color: '#9a6700' }}>
+                          Many tests in the catalog. Open <strong>Test</strong> and use the search box — the list shows at
+                          most {ORDER_TEST_PICKER_LIMIT} matches at a time.
+                        </p>
+                      ) : null}
+                      <p style={{ margin: '0 0 0.45rem', fontSize: '0.82rem', color: 'var(--muted)' }}>
+                        Open <strong>Test</strong> for search and checkboxes (multi-select). Discounts follow the
+                        ordering user&apos;s role (
+                        {editOrderDetail.user_id
+                          ? resolveOrderingUserRole(editOrderDetail, userMap) ??
+                            userMap.get(editOrderDetail.user_id)?.role ??
+                            '—'
+                          : '—'}
+                        ).
+                      </p>
+                      <OrderTestCheckboxPicker
+                        disabled={editSubmitting || tests.length === 0}
+                        open={editTestPickerOpen}
+                        onOpenChange={setEditTestPickerOpen}
+                        rows={editPickerPanel.rows}
+                        totalMatches={editPickerPanel.totalMatches}
+                        selectedIds={editSelectedTestIds}
+                        onToggle={toggleEditTest}
+                        userRole={resolveOrderingUserRole(editOrderDetail, userMap)}
+                        testDiscounts={testDiscounts}
+                        triggerId="om-edit-test-multiselect"
+                        listId="om-edit-test-multiselect-list"
+                        filterValue={editTestSearch}
+                        onFilterChange={setEditTestSearch}
+                        filterInputId="om-edit-test-filter"
+                      />
+                      {editSelectedTestIds.length > 0 ? (
+                        <div className="table-wrap" style={{ marginTop: '0.65rem' }}>
+                          <table className="data-table">
+                            <thead>
+                              <tr>
+                                <th>Test</th>
+                                <th>Discount</th>
+                                <th>Final (MMK)</th>
+                                <th className="action-col"> </th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {editSelectedTestIds.map((id) => {
+                                const t = testMap.get(id)
+                                if (!t) return null
+                                const pct = activeDiscountPercentForOrder(
+                                  testDiscounts,
+                                  id,
+                                  resolveOrderingUserRole(editOrderDetail, userMap),
+                                )
+                                const unit = Math.round(t.base_price_mmk * 100) / 100
+                                const sub =
+                                  Math.round(unit * (1 - Math.max(0, Math.min(100, pct)) / 100) * 100) / 100
+                                return (
+                                  <tr key={id}>
+                                    <td>
+                                      {t.test_name} <span style={{ color: 'var(--muted)' }}>({t.test_code})</span>
+                                    </td>
+                                    <td>{pct}%</td>
+                                    <td>{sub.toLocaleString()}</td>
+                                    <td className="action-cell">
+                                      <button
+                                        type="button"
+                                        className="btn btn-ghost"
+                                        style={{ fontSize: '0.8rem' }}
+                                        onClick={() => removeEditTest(id)}
+                                        disabled={editSubmitting}
+                                      >
+                                        Delete
+                                      </button>
+                                    </td>
+                                  </tr>
+                                )
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      ) : (
+                        <p style={{ margin: '0.55rem 0 0', fontSize: '0.82rem', color: 'var(--muted)' }}>
+                          No tests added yet.
+                        </p>
+                      )}
+                      <div className="order-create-modal__grid-three" style={{ marginTop: '0.85rem' }}>
+                        <div className="field">
+                          <label>Original total (MMK)</label>
+                          <input
+                            readOnly
+                            disabled
+                            value={editSelection.originalSum.toLocaleString()}
+                            className="lab-test-modal__input-computed"
+                          />
+                        </div>
+                        <div className="field">
+                          <label>Blended discount %</label>
+                          <input
+                            readOnly
+                            disabled
+                            value={String(editSelection.blendedDisc)}
+                            className="lab-test-modal__input-computed"
+                          />
+                        </div>
+                        <div className="field">
+                          <label>Final total (MMK)</label>
+                          <input
+                            readOnly
+                            disabled
+                            value={editSelection.finalSum.toLocaleString()}
+                            className="lab-test-modal__input-computed"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ) : null}
                   <div className="grid-2">
                     <div className="field">
                       <label htmlFor="om-edit-name">Patient name</label>
@@ -2019,7 +2219,16 @@ export function OrderManagementPage() {
                     >
                       Cancel
                     </button>
-                    <button type="submit" className="btn btn-primary" disabled={editSubmitting}>
+                    <button
+                      type="submit"
+                      className="btn btn-primary"
+                      disabled={
+                        editSubmitting ||
+                        (editOrderDetail != null &&
+                          canEditOrderTests(editOrderDetail.status) &&
+                          editSelection.lines.length === 0)
+                      }
+                    >
                       {editSubmitting ? 'Saving…' : 'Save changes'}
                     </button>
                   </div>

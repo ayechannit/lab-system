@@ -415,6 +415,8 @@ button.brand.admin-brand-trigger:focus-visible {
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
+  overflow-anchor: none;
+  overscroll-behavior-y: contain;
   -webkit-overflow-scrolling: touch;
 }
 

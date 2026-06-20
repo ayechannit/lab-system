@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
+import '../models/app_notification.dart';
 import '../models/app_user.dart';
 import '../models/lab_order.dart';
 import '../models/lab_result.dart';
@@ -14,6 +15,7 @@ import 'lab_user_api.dart';
 import 'lab_report_pdf_service.dart';
 import 'auth_session_storage.dart';
 import 'notification_service.dart';
+import '../utils/notification_utils.dart';
 
 class SessionController extends ChangeNotifier {
   SessionController({required LabUserApi api}) : _api = api;
@@ -32,6 +34,9 @@ class SessionController extends ChangeNotifier {
   UserReportSummary? _userReport;
   bool _homeSummaryLoading = false;
   String? _homeSummaryError;
+  List<AppNotification> _notifications = const [];
+  bool _notificationsLoading = false;
+  String? _notificationsError;
   bool _busy = false;
   bool _sessionRestoreAttempted = false;
 
@@ -52,6 +57,10 @@ class SessionController extends ChangeNotifier {
   UserReportSummary? get userReport => _userReport;
   bool get homeSummaryLoading => _homeSummaryLoading;
   String? get homeSummaryError => _homeSummaryError;
+  List<AppNotification> get notifications => List.unmodifiable(_notifications);
+  bool get notificationsLoading => _notificationsLoading;
+  String? get notificationsError => _notificationsError;
+  int get unreadNotificationCount => _notifications.where((n) => !n.isRead).length;
   /// All end-user roles (patient, doctor, clinic) share the same home shell.
   String get homeRoute => _user == null ? '/login' : '/home';
 
@@ -149,6 +158,9 @@ class SessionController extends ChangeNotifier {
     _userReport = null;
     _homeSummaryLoading = false;
     _homeSummaryError = null;
+    _notifications = const [];
+    _notificationsLoading = false;
+    _notificationsError = null;
     notifyListeners();
   }
 
@@ -432,6 +444,81 @@ class SessionController extends ChangeNotifier {
     await submitOrderRating(orderId: id, stars: stars, remark: remark);
   }
 
+  Future<void> refreshNotifications({bool quiet = false}) async {
+    if (_user == null) return;
+    if (!quiet) {
+      _notificationsLoading = true;
+      _notificationsError = null;
+      notifyListeners();
+    }
+    try {
+      _notifications = await _api.fetchNotifications();
+      _notificationsError = null;
+    } catch (_) {
+      if (!quiet || _notifications.isEmpty) {
+        _notificationsError = 'Could not load notifications. Pull down to retry.';
+      }
+    } finally {
+      if (!quiet) {
+        _notificationsLoading = false;
+      }
+      notifyListeners();
+    }
+  }
+
+  Future<void> markNotificationRead(String id) async {
+    if (_user == null) return;
+    final index = _notifications.indexWhere((n) => n.id == id);
+    if (index < 0 || _notifications[index].isRead) return;
+
+    _notifications = [
+      for (var i = 0; i < _notifications.length; i++)
+        if (i == index) _notifications[i].markRead() else _notifications[i],
+    ];
+    notifyListeners();
+
+    try {
+      await _api.markNotificationAsRead(id);
+    } catch (_) {
+      await refreshNotifications(quiet: true);
+    }
+  }
+
+  Future<void> markAllNotificationsRead() async {
+    if (_user == null || unreadNotificationCount == 0) return;
+    _notifications = [for (final n in _notifications) n.markRead()];
+    notifyListeners();
+    try {
+      await _api.markAllNotificationsAsRead();
+    } catch (_) {
+      await refreshNotifications(quiet: true);
+    }
+  }
+
+  /// Marks read when needed and preloads related data. Returns route to open.
+  Future<String?> openNotification(AppNotification notification) async {
+    if (!notification.isRead) {
+      await markNotificationRead(notification.id);
+    }
+
+    final payload = parseNotificationPayload(notification.dataPayload);
+    final orderId = payload?['order_id']?.toString();
+    final route = notificationRoute(notification);
+
+    if (orderId != null && orderId.isNotEmpty) {
+      if (route == '/lab-results') {
+        await selectResult(orderId);
+      } else if (route == '/order-tracking' || route == '/orders') {
+        try {
+          await selectTrackingOrder(orderId);
+        } catch (_) {
+          // Fall back to list screens if the order is no longer trackable.
+        }
+      }
+    }
+    return route;
+  }
+
   Future<void> _hydrateUserData() async {
     final u = _user;
     if (u == null) return;
@@ -462,6 +549,7 @@ class SessionController extends ChangeNotifier {
     } else {
       _aiAnalysis = null;
     }
+    unawaited(refreshNotifications(quiet: true));
     notifyListeners();
   }
 

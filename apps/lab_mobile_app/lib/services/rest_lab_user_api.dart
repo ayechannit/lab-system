@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 
 import '../config/lab_api_config.dart';
+import '../models/app_notification.dart';
 import '../models/app_user.dart';
 import '../models/lab_order.dart';
 import '../models/lab_result.dart';
@@ -1410,6 +1411,39 @@ class RestLabUserApi implements LabUserApi {
       Uri.parse('$_base/api/users/fcm-token'),
       headers: _jsonHeaders(),
       body: jsonEncode({'fcm_token': token}),
+    );
+    if (r.statusCode >= 400) _throwFromResponse(r);
+  }
+
+  @override
+  Future<List<AppNotification>> fetchNotifications({int limit = 50}) async {
+    final r = await http.get(
+      Uri.parse('$_base/api/notifications').replace(queryParameters: {'limit': '$limit'}),
+      headers: _jsonHeaders(),
+    );
+    if (r.statusCode >= 400) _throwFromResponse(r);
+    final data = _decodeResponseJson(r);
+    if (data is! List) return const [];
+    return [
+      for (final row in data)
+        if (row is Map) AppNotification.fromJson(Map<String, dynamic>.from(row)),
+    ];
+  }
+
+  @override
+  Future<void> markNotificationAsRead(String id) async {
+    final r = await http.put(
+      Uri.parse('$_base/api/notifications/${Uri.encodeComponent(id)}/read'),
+      headers: _jsonHeaders(),
+    );
+    if (r.statusCode >= 400) _throwFromResponse(r);
+  }
+
+  @override
+  Future<void> markAllNotificationsAsRead() async {
+    final r = await http.put(
+      Uri.parse('$_base/api/notifications/read-all'),
+      headers: _jsonHeaders(),
     );
     if (r.statusCode >= 400) _throwFromResponse(r);
   }

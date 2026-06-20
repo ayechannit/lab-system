@@ -5,6 +5,7 @@ import '../../models/loyalty.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/theme_extensions.dart';
 import '../../widgets/common/app_branding_row.dart';
+import '../../widgets/common/notification_bell_button.dart';
 import '../../widgets/navigation/lab_main_bottom_nav.dart';
 
 class LoyaltyPointsScreen extends StatefulWidget {
@@ -54,6 +55,7 @@ class _LoyaltyPointsScreenState extends State<LoyaltyPointsScreen> {
             automaticallyImplyLeading: false,
             titleSpacing: 12,
             title: const AppBrandingRow(markSize: 32, iconSize: 16, borderRadius: 8),
+            actions: const [NotificationBellButton()],
           ),
           body: RefreshIndicator(
             onRefresh: _loadLoyalty,

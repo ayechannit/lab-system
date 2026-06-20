@@ -257,7 +257,6 @@ export function AdminLayout() {
           <div className="admin-header-right">
             {account ? (
               <>
-                <NotificationBell />
                 <button
                   type="button"
                   className="admin-profile"
@@ -286,6 +285,7 @@ export function AdminLayout() {
                     <span className="material-symbols-outlined">expand_more</span>
                   </span>
                 </button>
+                <NotificationBell />
                 <MyProfileModal
                   open={profileOpen}
                   account={account}

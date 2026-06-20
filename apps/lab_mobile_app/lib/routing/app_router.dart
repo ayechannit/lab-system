@@ -8,6 +8,7 @@ import '../screens/auth/splash_screen.dart';
 import '../screens/feedback/rating_feedback_screen.dart';
 import '../screens/home/home_dashboard_screen.dart';
 import '../screens/loyalty/loyalty_points_screen.dart';
+import '../screens/notifications/notifications_screen.dart';
 import '../screens/orders/orders_list_screen.dart';
 import '../screens/orders/order_lab_test_screen.dart';
 import '../screens/orders/order_success_confirmation_screen.dart';
@@ -54,6 +55,7 @@ GoRouter createAppRouter(SessionController session) {
       }),
       GoRoute(path: '/role-select', builder: (_, __) => const RoleSelectionScreen()),
       GoRoute(path: '/home', builder: (_, __) => const HomeDashboardScreen()),
+      GoRoute(path: '/notifications', builder: (_, __) => const NotificationsScreen()),
       GoRoute(path: '/orders', builder: (_, __) => const OrdersListScreen()),
       GoRoute(path: '/order-lab-test', builder: (_, __) => const OrderLabTestScreen()),
       GoRoute(path: '/order-success', builder: (_, __) => const OrderSuccessConfirmationScreen()),

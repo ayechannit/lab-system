@@ -1,3 +1,4 @@
+import '../models/app_notification.dart';
 import '../models/app_user.dart';
 import '../models/lab_order.dart';
 import '../models/lab_result.dart';
@@ -140,6 +141,13 @@ abstract class LabUserApi {
 
   /// Register the FCM device token with the server.
   Future<void> registerFcmToken(String token);
+
+  /// In-app notification inbox (`GET /api/notifications`).
+  Future<List<AppNotification>> fetchNotifications({int limit = 50});
+
+  Future<void> markNotificationAsRead(String id);
+
+  Future<void> markAllNotificationsAsRead();
 
   /// Clear credentials after logout (REST client clears bearer token).
   void clearAuth();

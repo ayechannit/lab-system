@@ -218,6 +218,20 @@ export type ApiOrderUpdateBody = {
   longitude?: number | null
 }
 
+export type ApiOrderPendingSyncItem = {
+  test_id: string
+  quantity: number
+  unit_price_mmk?: number
+  subtotal_mmk?: number
+}
+
+export type ApiOrderPendingSyncBody = ApiOrderUpdateBody & {
+  original_price_mmk: number
+  discount_percent: number
+  final_price_mmk: number
+  items: ApiOrderPendingSyncItem[]
+}
+
 export async function updateOrder(id: string, body: ApiOrderUpdateBody): Promise<unknown> {
   const res = await apiFetch(`/api/orders/${encodeURIComponent(id)}`, {
     method: 'PUT',
@@ -225,6 +239,16 @@ export async function updateOrder(id: string, body: ApiOrderUpdateBody): Promise
   })
   if (!res.ok) throw new Error(await readApiErrorBody(res))
   return res.json()
+}
+
+export async function syncPendingOrder(id: string, body: ApiOrderPendingSyncBody): Promise<ApiOrderDetail> {
+  const res = await apiFetch(`/api/orders/${encodeURIComponent(id)}/pending-sync`, {
+    method: 'PUT',
+    body: JSON.stringify(body),
+  })
+  if (!res.ok) throw new Error(await readApiErrorBody(res))
+  const raw = (await res.json()) as Record<string, unknown>
+  return normalizeOrderDetail(raw)
 }
 
 export async function updateOrderStatus(
@@ -273,6 +297,23 @@ export async function addOrderItems(
 ): Promise<unknown> {
   const res = await apiFetch(`/api/orders/${encodeURIComponent(orderId)}/items`, {
     method: 'POST',
+    body: JSON.stringify(body),
+  })
+  if (!res.ok) throw new Error(await readApiErrorBody(res))
+  return res.json()
+}
+
+export async function replaceOrderItems(
+  orderId: string,
+  body: {
+    items: ApiOrderCreateItem[]
+    original_price_mmk: number
+    discount_percent: number
+    final_price_mmk: number
+  },
+): Promise<unknown> {
+  const res = await apiFetch(`/api/orders/${encodeURIComponent(orderId)}/items`, {
+    method: 'PUT',
     body: JSON.stringify(body),
   })
   if (!res.ok) throw new Error(await readApiErrorBody(res))

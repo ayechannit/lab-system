@@ -20,24 +20,16 @@ const sendNotification = async (req, res) => {
       return res.status(400).json({ message: 'Provide either a token OR a topic, not both' });
     }
 
-    // Convert data values to strings as required by FCM data payload rules
-    const formattedData = {};
-    if (data && typeof data === 'object') {
-      for (const [key, value] of Object.entries(data)) {
-        formattedData[key] = String(value);
-      }
-    }
-
     let result;
     if (token) {
-      result = await NotificationService.sendToToken(token, title, body, formattedData);
+      result = await NotificationService.sendToToken(token, title, body, data ?? {});
     } else if (topic) {
-      result = await NotificationService.sendToTopic(topic, title, body, formattedData);
+      result = await NotificationService.sendToTopic(topic, title, body, data ?? {});
     }
 
-    res.status(200).json({ 
-      message: 'Notification sent successfully', 
-      firebase_response: result 
+    res.status(200).json({
+      message: 'Notification sent successfully',
+      delivery: result,
     });
   } catch (error) {
     console.error('Push Notification Error:', error);
@@ -55,7 +47,12 @@ const getNotifications = async (req, res) => {
     const limit = req.query.limit ? parseInt(req.query.limit, 10) : 50;
 
     const notifications = await Notification.getByUserId(userId, userType, limit);
-    res.json(notifications);
+    res.json(
+      notifications.map((row) => ({
+        ...row,
+        is_read: Boolean(row.is_read),
+      })),
+    );
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

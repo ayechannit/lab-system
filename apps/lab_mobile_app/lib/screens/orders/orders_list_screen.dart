@@ -9,6 +9,7 @@ import '../../services/session_controller.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/theme_extensions.dart';
 import '../../widgets/common/app_branding_row.dart';
+import '../../widgets/common/notification_bell_button.dart';
 import '../../widgets/common/order_list_sort_button.dart';
 import '../../widgets/common/order_rating_bar.dart';
 import '../../widgets/common/order_status_chip.dart';
@@ -92,6 +93,7 @@ class _OrdersListScreenState extends State<OrdersListScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                 ),
               ),
+              const NotificationBellButton(),
             ],
           ),
           body: RefreshIndicator(

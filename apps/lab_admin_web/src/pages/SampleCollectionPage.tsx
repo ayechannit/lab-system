@@ -368,7 +368,7 @@ export function SampleCollectionPage() {
   }, [labRouteStart, routeStartTime, routeCollectionDurationMinutes])
 
   const canPlanRoute =
-    hasApi && !loading && !routePlanning && selectedRoutableCount >= 2 && routeSetupReady
+    hasApi && !loading && !routePlanning && selectedRoutableCount >= 1 && routeSetupReady
 
   const canStartCollection = hasApi && !loading && !collectionSubmitting && selectedRoutableCount >= 1
 
@@ -407,8 +407,8 @@ export function SampleCollectionPage() {
 
   const runAiRoute = async () => {
     const picked = routable.filter((o) => selectedIds.has(o.id))
-    if (picked.length < 2) {
-      showError('Select at least two orders to build a multi-stop collection route.')
+    if (picked.length < 1) {
+      showError('Select at least one order to plan a collection route.')
       return
     }
 
@@ -617,7 +617,7 @@ export function SampleCollectionPage() {
         description={
           isScheduleMode
             ? 'Review scheduled pickups and mark orders as collecting when sample collection begins.'
-            : 'Choose orders that need a sample pickup, then plan an efficient multi-stop collection route.'
+            : 'Choose orders that need a sample pickup, then plan an efficient collection route.'
         }
       />
 
@@ -689,7 +689,7 @@ export function SampleCollectionPage() {
         <p style={{ margin: '0 0 0.75rem', color: 'var(--muted)', fontSize: '0.875rem' }}>
           {isScheduleMode
             ? 'Select one or more scheduled orders, then mark them as collecting when pickup starts.'
-            : 'Select at least two orders below, then set route start details and plan an optimized multi-stop route with AI.'}
+            : 'Select one or more orders below, then set route start details and plan a collection route with AI.'}
         </p>
         <div className="table-wrap">
           <table className="data-table">
@@ -760,12 +760,15 @@ export function SampleCollectionPage() {
           />
         ) : null}
         {!isScheduleMode && hasApi && !loading ? (
-          selectedRoutableCount >= 2 ? (
+          selectedRoutableCount >= 1 ? (
             <div className="route-setup">
               <h4 className="route-setup__title">Route setup</h4>
               <p className="route-setup__hint">
-                {selectedRoutableCount} orders selected — routes start from your lab location in System
-                settings. Set departure time and on-site minutes per stop, then click Plan route.
+                {selectedRoutableCount === 1
+                  ? '1 order selected'
+                  : `${selectedRoutableCount} orders selected`}{' '}
+                — routes start from your lab location in System settings. Set departure time and on-site minutes per
+                stop, then click Plan route.
               </p>
               <div className="route-setup__location" aria-live="polite">
                 <p className="route-setup__location-label">Route start (lab location)</p>
@@ -812,7 +815,7 @@ export function SampleCollectionPage() {
             </div>
           ) : (
             <p style={{ margin: '1rem 0 0', fontSize: '0.875rem', color: 'var(--muted)' }}>
-              Select at least two orders in the table above to set up a collection route.
+              Select at least one order in the table above to set up a collection route.
             </p>
           )
         ) : null}
@@ -837,7 +840,7 @@ export function SampleCollectionPage() {
                 Select one or more orders in the table above to mark them as collecting.
               </p>
             )
-          ) : selectedRoutableCount >= 2 ? (
+          ) : selectedRoutableCount >= 1 ? (
             <button
               type="button"
               className="btn btn-primary"

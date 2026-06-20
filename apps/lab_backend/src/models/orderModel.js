@@ -314,6 +314,249 @@ class Order {
     }
   }
 
+  static async _resolveOrderItemPrices(items, discountPercent, transaction) {
+    if (!Array.isArray(items) || items.length === 0) return [];
+
+    const resolved = [];
+    for (const item of items) {
+      const quantity = Number(item.quantity) > 0 ? Number(item.quantity) : 1;
+      if (item.unit_price_mmk != null && item.subtotal_mmk != null) {
+        resolved.push({
+          test_id: item.test_id,
+          quantity,
+          unit_price_mmk: Number(item.unit_price_mmk),
+          subtotal_mmk: Number(item.subtotal_mmk),
+        });
+        continue;
+      }
+
+      const testReq = new sql.Request(transaction);
+      const testResult = await testReq
+        .input('test_id', sql.UniqueIdentifier, item.test_id)
+        .query(`
+          SELECT base_price_mmk
+          FROM lab_test_catalog
+          WHERE id = @test_id AND is_deleted = 0
+        `);
+
+      if (testResult.recordset.length === 0) {
+        throw new Error(`Test not found: ${item.test_id}`);
+      }
+
+      const basePrice = Number(testResult.recordset[0].base_price_mmk) || 0;
+      const unitPrice = basePrice * (1 - (Number(discountPercent) || 0) / 100);
+      resolved.push({
+        test_id: item.test_id,
+        quantity,
+        unit_price_mmk: unitPrice,
+        subtotal_mmk: unitPrice * quantity,
+      });
+    }
+
+    return resolved;
+  }
+
+  static async syncPendingOrder(orderId, data, updatedBy = null, options = {}) {
+    const { isStaff = false, userId = null } = options;
+    const pool = await poolPromise;
+    const transaction = new sql.Transaction(pool);
+
+    try {
+      await transaction.begin();
+
+      const orderCheckReq = new sql.Request(transaction);
+      const orderCheck = await orderCheckReq
+        .input('id', sql.UniqueIdentifier, orderId)
+        .query(`
+          SELECT o.user_id, o.status,
+                 SUM(CASE WHEN oi.result_file_url IS NOT NULL THEN 1 ELSE 0 END) as uploaded_count
+          FROM lab_orders o
+          LEFT JOIN lab_order_items oi ON oi.order_id = o.id
+          WHERE o.id = @id AND o.is_deleted = 0
+          GROUP BY o.user_id, o.status
+        `);
+
+      if (orderCheck.recordset.length === 0) {
+        await transaction.rollback();
+        return { error: 'not_found' };
+      }
+
+      const { user_id: orderUserId, status, uploaded_count: uploadedCount } = orderCheck.recordset[0];
+      if (status !== 'pending') {
+        throw new Error('Only pending orders can be synchronized with pending-sync.');
+      }
+      if (!isStaff) {
+        const ownerId = orderUserId ? String(orderUserId).toLowerCase() : '';
+        const requesterId = userId ? String(userId).toLowerCase() : '';
+        if (!ownerId || ownerId !== requesterId) {
+          await transaction.rollback();
+          return { error: 'forbidden' };
+        }
+      }
+      if (uploadedCount > 0) {
+        throw new Error('Tests cannot be changed after results have been uploaded.');
+      }
+
+      const items = Array.isArray(data.items) ? data.items : [];
+      const discountPercent = Number(data.discount_percent) || 0;
+      const pricedItems = await this._resolveOrderItemPrices(items, discountPercent, transaction);
+
+      const updateOrderReq = new sql.Request(transaction);
+      await updateOrderReq
+        .input('id', sql.UniqueIdentifier, orderId)
+        .input('description', sql.Text, data.description ?? null)
+        .input('priority', sql.VarChar, data.priority)
+        .input('patient_name', sql.VarChar, data.patient_name)
+        .input('patient_age', sql.Int, data.patient_age)
+        .input('patient_phone', sql.VarChar, data.patient_phone)
+        .input('address', sql.Text, data.address)
+        .input('latitude', sql.Float, data.latitude)
+        .input('longitude', sql.Float, data.longitude)
+        .input('original_price_mmk', sql.Decimal(18, 2), data.original_price_mmk || 0)
+        .input('discount_percent', sql.Decimal(5, 2), discountPercent)
+        .input('final_price_mmk', sql.Decimal(18, 2), data.final_price_mmk || 0)
+        .input('is_tests_assigned', sql.Bit, pricedItems.length > 0 ? 1 : 0)
+        .input('updated_user', sql.UniqueIdentifier, updatedBy)
+        .query(`
+          UPDATE lab_orders
+          SET description = @description,
+              priority = @priority,
+              patient_name = @patient_name,
+              patient_age = @patient_age,
+              patient_phone = @patient_phone,
+              address = @address,
+              latitude = @latitude,
+              longitude = @longitude,
+              original_price_mmk = @original_price_mmk,
+              discount_percent = @discount_percent,
+              final_price_mmk = @final_price_mmk,
+              is_tests_assigned = @is_tests_assigned,
+              updated_user = @updated_user,
+              updated_at = GETDATE()
+          WHERE id = @id AND is_deleted = 0 AND status = 'pending'
+        `);
+
+      const deleteItemsReq = new sql.Request(transaction);
+      await deleteItemsReq
+        .input('order_id', sql.UniqueIdentifier, orderId)
+        .query('DELETE FROM lab_order_items WHERE order_id = @order_id');
+
+      if (pricedItems.length > 0) {
+        const expandedItems = await this._expandPackageItems(pricedItems, transaction);
+
+        for (const item of expandedItems) {
+          const itemRequest = new sql.Request(transaction);
+          await itemRequest
+            .input('order_id', sql.UniqueIdentifier, orderId)
+            .input('test_id', sql.UniqueIdentifier, item.test_id)
+            .input('quantity', sql.Int, item.quantity || 1)
+            .input('unit_price_mmk', sql.Decimal(18, 2), item.unit_price_mmk)
+            .input('subtotal_mmk', sql.Decimal(18, 2), item.subtotal_mmk)
+            .input('created_user', sql.UniqueIdentifier, updatedBy)
+            .query(`
+              INSERT INTO lab_order_items (id, order_id, test_id, quantity, unit_price_mmk, subtotal_mmk, created_user, updated_user)
+              VALUES (NEWID(), @order_id, @test_id, @quantity, @unit_price_mmk, @subtotal_mmk, @created_user, @created_user)
+            `);
+        }
+      }
+
+      await transaction.commit();
+      return this.getById(orderId);
+    } catch (err) {
+      await transaction.rollback();
+      throw err;
+    }
+  }
+
+  static async replaceItemsAndUpdateTotals(orderId, items, totals, updatedBy = null) {
+    const pool = await poolPromise;
+    const transaction = new sql.Transaction(pool);
+
+    try {
+      await transaction.begin();
+
+      const orderCheckReq = new sql.Request(transaction);
+      const orderCheck = await orderCheckReq
+        .input('id', sql.UniqueIdentifier, orderId)
+        .query(`
+          SELECT o.status,
+                 SUM(CASE WHEN oi.result_file_url IS NOT NULL THEN 1 ELSE 0 END) as uploaded_count
+          FROM lab_orders o
+          LEFT JOIN lab_order_items oi ON oi.order_id = o.id
+          WHERE o.id = @id AND o.is_deleted = 0
+          GROUP BY o.status
+        `);
+
+      if (orderCheck.recordset.length === 0) {
+        await transaction.rollback();
+        return null;
+      }
+
+      const { status, uploaded_count: uploadedCount } = orderCheck.recordset[0];
+      if (status !== 'pending') {
+        throw new Error('Tests can only be updated while the order is pending.');
+      }
+      if (uploadedCount > 0) {
+        throw new Error('Tests cannot be changed after results have been uploaded.');
+      }
+
+      const deleteItemsReq = new sql.Request(transaction);
+      await deleteItemsReq
+        .input('order_id', sql.UniqueIdentifier, orderId)
+        .query('DELETE FROM lab_order_items WHERE order_id = @order_id');
+
+      const updateOrderReq = new sql.Request(transaction);
+      await updateOrderReq
+        .input('id', sql.UniqueIdentifier, orderId)
+        .input('original_price_mmk', sql.Decimal(18, 2), totals.original_price_mmk)
+        .input('discount_percent', sql.Decimal(5, 2), totals.discount_percent || 0)
+        .input('final_price_mmk', sql.Decimal(18, 2), totals.final_price_mmk)
+        .input('is_tests_assigned', sql.Bit, items && items.length > 0 ? 1 : 0)
+        .input('updated_user', sql.UniqueIdentifier, updatedBy)
+        .query(`
+          UPDATE lab_orders
+          SET original_price_mmk = @original_price_mmk,
+              discount_percent = @discount_percent,
+              final_price_mmk = @final_price_mmk,
+              is_tests_assigned = @is_tests_assigned,
+              updated_user = @updated_user,
+              updated_at = GETDATE()
+          WHERE id = @id AND is_deleted = 0
+        `);
+
+      if (items && items.length > 0) {
+        const expandedItems = await this._expandPackageItems(items, transaction);
+
+        for (const item of expandedItems) {
+          const itemRequest = new sql.Request(transaction);
+          await itemRequest
+            .input('order_id', sql.UniqueIdentifier, orderId)
+            .input('test_id', sql.UniqueIdentifier, item.test_id)
+            .input('quantity', sql.Int, item.quantity || 1)
+            .input('unit_price_mmk', sql.Decimal(18, 2), item.unit_price_mmk)
+            .input('subtotal_mmk', sql.Decimal(18, 2), item.subtotal_mmk)
+            .input('created_user', sql.UniqueIdentifier, updatedBy)
+            .query(`
+              INSERT INTO lab_order_items (id, order_id, test_id, quantity, unit_price_mmk, subtotal_mmk, created_user, updated_user)
+              VALUES (NEWID(), @order_id, @test_id, @quantity, @unit_price_mmk, @subtotal_mmk, @created_user, @created_user)
+            `);
+        }
+      }
+
+      await transaction.commit();
+
+      const getOrderReq = new sql.Request(pool);
+      const orderResult = await getOrderReq
+        .input('id', sql.UniqueIdentifier, orderId)
+        .query('SELECT * FROM lab_orders WHERE id = @id');
+
+      return orderResult.recordset[0];
+    } catch (err) {
+      await transaction.rollback();
+      throw err;
+    }
+  }
+
   static async update(id, data, updatedBy = null) {
     const pool = await poolPromise;
     const result = await pool.request()
