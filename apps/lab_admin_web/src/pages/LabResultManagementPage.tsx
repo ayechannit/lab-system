@@ -574,24 +574,19 @@ export function LabResultManagementPage() {
 
   const bulkSelectedReviewMeta = useMemo(() => {
     if (!detail) {
-      return { count: 0, allHavePdf: false, samePdf: false, canRun: false }
+      return { count: 0, allHavePdf: false, canRun: false }
     }
     const items = bulkPdfSelectedIds
       .map((id) => detail.items.find((it) => it.test_id === id))
       .filter((it): it is ApiOrderDetailItem => Boolean(it))
     const allHavePdf = items.length > 0 && items.every((it) => Boolean(testResultFileUrl(it)))
-    const pdfKeys = new Set(
-      items.map((it) => testResultStorageKey(it) || testResultFileUrl(it)).filter(Boolean),
-    )
-    const samePdf = pdfKeys.size === 1
     const canRun =
       items.length > 0 &&
       allHavePdf &&
-      (items.length === 1 || samePdf) &&
       aiReviewConfigured &&
       !uploadBusy &&
       aiReviewLoadingTestIds.length === 0
-    return { count: items.length, allHavePdf, samePdf, canRun }
+    return { count: items.length, allHavePdf, canRun }
   }, [
     detail,
     bulkPdfSelectedIds,
@@ -934,15 +929,6 @@ export function LabResultManagementPage() {
     if (!items.every((it) => testResultFileUrl(it))) {
       showError('All selected tests need a PDF before AI review.')
       return
-    }
-    if (selected.length > 1) {
-      const pdfKeys = new Set(
-        items.map((it) => testResultStorageKey(it) || testResultFileUrl(it)).filter(Boolean),
-      )
-      if (pdfKeys.size > 1) {
-        showError('Select tests that share the same PDF for bulk AI review.')
-        return
-      }
     }
 
     setAiReviewLoadingTestIds(selected)
@@ -1453,7 +1439,7 @@ export function LabResultManagementPage() {
                           Bulk actions for selected tests
                         </p>
                         <p className="lab-result-bulk-pdf__hint">
-                          Select tests that share one report, upload once, or run AI review together.
+                          Select tests to upload one shared PDF, or run AI review on each selected test.
                         </p>
                       </div>
                       <div className="lab-result-bulk-pdf__actions">
@@ -1486,11 +1472,9 @@ export function LabResultManagementPage() {
                           className="btn btn-secondary btn-sm"
                           disabled={!bulkSelectedReviewMeta.canRun}
                           title={
-                            bulkSelectedReviewMeta.count > 1 && !bulkSelectedReviewMeta.samePdf
-                              ? 'Selected tests must share the same PDF'
-                              : bulkSelectedReviewMeta.count > 0 && !bulkSelectedReviewMeta.allHavePdf
-                                ? 'All selected tests need a PDF'
-                                : undefined
+                            bulkSelectedReviewMeta.count > 0 && !bulkSelectedReviewMeta.allHavePdf
+                              ? 'All selected tests need a PDF'
+                              : undefined
                           }
                           onClick={() => void runAiReviewForSelectedTests()}
                         >
