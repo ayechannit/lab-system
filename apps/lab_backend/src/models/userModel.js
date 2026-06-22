@@ -182,6 +182,16 @@ class User {
       `);
     return result.rowsAffected[0] > 0;
   }
+
+  static async updatePasswordByEmail(email, newPassword) {
+    const pool = await poolPromise;
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    const result = await pool.request()
+      .input('email', sql.VarChar, email)
+      .input('password_hash', sql.VarChar, hashedPassword)
+      .query('UPDATE users SET password_hash = @password_hash, updated_at = GETDATE() WHERE email = @email AND is_deleted = 0');
+    return result.rowsAffected[0] > 0;
+  }
 }
 
 module.exports = User;

@@ -95,3 +95,22 @@ BEGIN
     CREATE INDEX IX_PointTransactions_UserId ON dbo.point_transactions(user_id);
 END
 
+-- Create password_resets table to store short-lived password reset tokens
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[password_resets]') AND type in (N'U'))
+BEGIN
+    CREATE TABLE dbo.password_resets (
+        id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+        email NVARCHAR(255) NOT NULL,
+        token NVARCHAR(100) NOT NULL,
+        user_type NVARCHAR(50) NOT NULL, -- 'user' or 'staff'
+        expires_at DATETIME2 NOT NULL,
+        created_at DATETIME2 DEFAULT GETDATE()
+    );
+END
+
+-- Create index on password_resets(email, token) for faster verification
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = N'IX_PasswordResets_Email_Token' AND object_id = OBJECT_ID(N'[dbo].[password_resets]'))
+BEGIN
+    CREATE INDEX IX_PasswordResets_Email_Token ON dbo.password_resets(email, token);
+END
+
