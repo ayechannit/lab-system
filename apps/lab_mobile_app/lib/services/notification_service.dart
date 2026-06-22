@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:io';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'lab_user_api.dart';
@@ -8,6 +7,9 @@ import 'lab_user_api.dart';
 class MobileNotificationService {
   static final StreamController<RemoteMessage> _foregroundMessageController = StreamController<RemoteMessage>.broadcast();
   static Stream<RemoteMessage> get onForegroundMessage => _foregroundMessageController.stream;
+
+  static final StreamController<RemoteMessage> _openedMessageController = StreamController<RemoteMessage>.broadcast();
+  static Stream<RemoteMessage> get onOpenedMessage => _openedMessageController.stream;
 
   /// Request permissions and register the FCM token on the backend.
   static Future<void> initializeAndRegister(LabUserApi api) async {
@@ -37,6 +39,15 @@ class MobileNotificationService {
         debugPrint('User granted provisional notification permission.');
       } else {
         debugPrint('User declined or has not selected notification permission.');
+      }
+
+      // Enable foreground presentation options for iOS to show native banner alerts
+      if (Platform.isIOS) {
+        await messaging.setForegroundNotificationPresentationOptions(
+          alert: true,
+          badge: true,
+          sound: true,
+        );
       }
 
       // 2. iOS-specific: check for APNS token before fetching FCM token
@@ -72,6 +83,22 @@ class MobileNotificationService {
       FirebaseMessaging.onMessage.listen((RemoteMessage message) {
         debugPrint('Received foreground notification: ${message.notification?.title} - ${message.notification?.body}');
         _foregroundMessageController.add(message);
+      });
+
+      // 6. Handle notification clicked/tapped (from background)
+      FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+        debugPrint('Notification opened app: ${message.notification?.title} - ${message.notification?.body}');
+        _openedMessageController.add(message);
+      });
+
+      // 7. Handle notification clicked/tapped (from terminated state)
+      messaging.getInitialMessage().then((RemoteMessage? message) {
+        if (message != null) {
+          debugPrint('Notification opened app from terminated: ${message.notification?.title} - ${message.notification?.body}');
+          _openedMessageController.add(message);
+        }
+      }).catchError((e) {
+        debugPrint('Error getting initial FCM message: $e');
       });
 
     } catch (e) {

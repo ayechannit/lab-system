@@ -93,6 +93,7 @@ class ForegroundNotificationListener extends StatefulWidget {
 
 class _ForegroundNotificationListenerState extends State<ForegroundNotificationListener> {
   StreamSubscription<RemoteMessage>? _subscription;
+  StreamSubscription<RemoteMessage>? _openedSubscription;
 
   @override
   void initState() {
@@ -116,11 +117,44 @@ class _ForegroundNotificationListenerState extends State<ForegroundNotificationL
         );
       }
     });
+
+    _openedSubscription = MobileNotificationService.onOpenedMessage.listen((message) async {
+      final navContext = rootNavigatorKey.currentContext;
+      if (navContext == null || !navContext.mounted) return;
+
+      final session = SessionScope.of(navContext);
+      unawaited(session.refreshNotifications(quiet: true));
+
+      final route = message.data['route']?.toString();
+      final orderId = message.data['order_id']?.toString();
+
+      if (route != null && route.isNotEmpty) {
+        if (orderId != null && orderId.isNotEmpty) {
+          if (route == '/lab-results') {
+            await session.selectResult(orderId);
+          } else if (route == '/order-tracking' || route == '/orders') {
+            try {
+              await session.selectTrackingOrder(orderId);
+            } catch (_) {
+              // Gracefully handle if not trackable
+            }
+          }
+        }
+        if (navContext.mounted) {
+          navContext.go(route);
+        }
+      } else {
+        if (navContext.mounted) {
+          navContext.go('/notifications');
+        }
+      }
+    });
   }
 
   @override
   void dispose() {
     _subscription?.cancel();
+    _openedSubscription?.cancel();
     super.dispose();
   }
 

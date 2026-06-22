@@ -60,6 +60,24 @@ class NotificationService {
       const message = {
         notification: { title, body },
         data: formattedData,
+        android: {
+          priority: 'high',
+          notification: {
+            sound: 'default',
+            clickAction: 'FLUTTER_NOTIFICATION_CLICK',
+          },
+        },
+        apns: {
+          headers: {
+            'apns-priority': '10',
+          },
+          payload: {
+            aps: {
+              sound: 'default',
+              badge: 1,
+            },
+          },
+        },
         topic,
       };
       const fcmResult = await admin.messaging().send(message);
@@ -87,6 +105,24 @@ class NotificationService {
       const message = {
         notification: { title, body },
         data: formattedData,
+        android: {
+          priority: 'high',
+          notification: {
+            sound: 'default',
+            clickAction: 'FLUTTER_NOTIFICATION_CLICK',
+          },
+        },
+        apns: {
+          headers: {
+            'apns-priority': '10',
+          },
+          payload: {
+            aps: {
+              sound: 'default',
+              badge: 1,
+            },
+          },
+        },
         token,
       };
       const fcmResult = await admin.messaging().send(message);

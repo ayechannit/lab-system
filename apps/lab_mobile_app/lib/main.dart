@@ -7,8 +7,8 @@ import 'config/firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // FCM is Android/iOS only; skip Firebase on web (Chrome dev via script.sh).
-  if (!kIsWeb) {
+  // FCM is Android/iOS only; skip Firebase on web and desktop platforms.
+  if (!kIsWeb && (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS)) {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
