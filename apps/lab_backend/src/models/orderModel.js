@@ -1,3 +1,4 @@
+const path = require('path');
 const { sql, poolPromise } = require('../config/db');
 
 class Order {
@@ -164,9 +165,14 @@ class Order {
       if (order.items && order.items.length > 0) {
         for (let item of order.items) {
           if (item.result_file_url) {
-            const fullUrl = await StorageService.getFileUrl(item.result_file_url);
-            item.result_file_url = fullUrl;
-            item.download_url = fullUrl;
+            const storageKey = item.result_file_url;
+            const viewUrl = await StorageService.getFileUrl(storageKey);
+            const downloadUrl = await StorageService.getDownloadUrl(
+              storageKey,
+              path.basename(storageKey),
+            );
+            item.result_file_url = viewUrl;
+            item.download_url = downloadUrl;
           }
         }
       }

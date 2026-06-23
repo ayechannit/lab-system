@@ -16,7 +16,6 @@ import { getAiConfigId, getLabResultValidationPromptId, isLabResultReviewConfigu
 import { reviewLabResultBatchWithAi, reviewLabResultWithAi } from '../services/aiConversationService'
 import {
   fetchOrderById,
-  fetchOrderTestResultBlob,
   fetchOrders,
   updateOrderStatus,
   uploadOrderTestResult,
@@ -314,10 +313,16 @@ function formatMaybeIsoWhen(iso?: string | null): string {
 }
 
 function testResultFileUrl(item: ApiOrderDetailItem): string | null {
+  const u = item.result_file_url?.trim()
+  if (u) return u
+  const d = item.download_url?.trim()
+  return d || null
+}
+
+function testResultDownloadUrl(item: ApiOrderDetailItem): string | null {
   const d = item.download_url?.trim()
   if (d) return d
-  const u = item.result_file_url?.trim()
-  return u || null
+  return testResultFileUrl(item)
 }
 
 function testResultStorageKey(item: ApiOrderDetailItem): string | null {
@@ -848,33 +853,32 @@ export function LabResultManagementPage() {
     return map
   }, [detail?.items])
 
+  function resolveTestResultDownloadUrl(testId: string): string | null {
+    const item = detailItemsById.get(testId)
+    return item ? testResultDownloadUrl(item) : null
+  }
+
   function resolveTestResultPdfUrl(testId: string): string | null {
     const item = detailItemsById.get(testId)
     return item ? testResultFileUrl(item) : null
   }
 
-  async function loadTestResultPdfBlob(testId: string): Promise<Blob> {
-    if (!detail?.id) throw new Error('Select an order first.')
-    return fetchOrderTestResultBlob(detail.id, testId)
+  function openPdfUrl(url: string, target: '_blank' | '_self' = '_blank') {
+    const a = document.createElement('a')
+    a.href = url
+    a.target = target
+    a.rel = 'noopener noreferrer'
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
   }
 
   async function viewTestResultPdf(testId: string) {
     setPdfAction({ testId, mode: 'view' })
     try {
       const directUrl = resolveTestResultPdfUrl(testId)
-      if (directUrl) {
-        const opened = window.open(directUrl, '_blank', 'noopener,noreferrer')
-        if (opened) return
-      }
-      const blob = await loadTestResultPdfBlob(testId)
-      const url = URL.createObjectURL(blob)
-      const opened = window.open(url, '_blank', 'noopener,noreferrer')
-      if (!opened) {
-        URL.revokeObjectURL(url)
-        showError('Allow pop-ups in your browser to view the PDF.')
-        return
-      }
-      window.setTimeout(() => URL.revokeObjectURL(url), 120_000)
+      if (!directUrl) throw new Error('No PDF available for this test.')
+      openPdfUrl(directUrl, '_blank')
     } catch (err) {
       showError(messageFromError(err, 'Could not open PDF.'))
     } finally {
@@ -882,31 +886,12 @@ export function LabResultManagementPage() {
     }
   }
 
-  async function downloadTestResultPdf(testId: string, fileLabel: string) {
+  async function downloadTestResultPdf(testId: string, _fileLabel: string) {
     setPdfAction({ testId, mode: 'download' })
-    const safeName = `${fileLabel.replace(/[^\w.-]+/g, '_')}.pdf`
     try {
-      const directUrl = resolveTestResultPdfUrl(testId)
-      if (directUrl) {
-        const a = document.createElement('a')
-        a.href = directUrl
-        a.download = safeName
-        a.target = '_blank'
-        a.rel = 'noopener noreferrer'
-        document.body.appendChild(a)
-        a.click()
-        a.remove()
-        return
-      }
-      const blob = await loadTestResultPdfBlob(testId)
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = safeName
-      document.body.appendChild(a)
-      a.click()
-      a.remove()
-      URL.revokeObjectURL(url)
+      const directUrl = resolveTestResultDownloadUrl(testId)
+      if (!directUrl) throw new Error('No PDF available for this test.')
+      openPdfUrl(directUrl, '_self')
     } catch (err) {
       showError(messageFromError(err, 'Could not download PDF.'))
     } finally {

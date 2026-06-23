@@ -134,11 +134,19 @@ class _LabResultTestCardState extends State<LabResultTestCard> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        test.testName,
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w700,
-                            ),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 6,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          Text(
+                            test.testName,
+                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                ),
+                          ),
+                          _StatusBadge(hasPdf: hasPdf),
+                        ],
                       ),
                       const SizedBox(height: 4),
                       Text(
@@ -152,10 +160,12 @@ class _LabResultTestCardState extends State<LabResultTestCard> {
                       ),
                       if (test.releasedAt != null) ...[
                         const SizedBox(height: 6),
-                        Row(
+                        Wrap(
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          spacing: 4,
+                          runSpacing: 2,
                           children: [
                             Icon(Icons.event_outlined, size: 14, color: cs.onSurfaceVariant),
-                            const SizedBox(width: 4),
                             Text(
                               'Released ${_fmtDate(test.releasedAt!)}',
                               style: Theme.of(context).textTheme.labelSmall?.copyWith(
@@ -168,7 +178,6 @@ class _LabResultTestCardState extends State<LabResultTestCard> {
                     ],
                   ),
                 ),
-                _StatusBadge(hasPdf: hasPdf),
               ],
             ),
           ),
@@ -215,35 +224,52 @@ class _LabResultTestCardState extends State<LabResultTestCard> {
                     ),
                   )
                 else ...[
-                  OutlinedButton.icon(
-                    onPressed: _downloading ? null : _downloadPdf,
-                    icon: _downloading
-                        ? SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: cs.primary),
-                          )
-                        : const Icon(Icons.download_rounded, size: 20),
-                    label: Text(_downloading ? 'Downloading…' : 'Download PDF'),
-                  ),
-                  const SizedBox(height: 8),
-                  if (hasCachedAi)
-                    OutlinedButton.icon(
-                      onPressed: _viewExistingAi,
-                      icon: const Icon(Icons.auto_awesome_rounded, size: 20),
-                      label: const Text('View AI summary'),
-                    )
-                  else
-                    FilledButton.tonalIcon(
-                      onPressed: _aiRunning ? null : _runAiCheck,
-                      icon: _aiRunning
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: _downloading ? null : _downloadPdf,
+                      icon: _downloading
                           ? SizedBox(
                               width: 16,
                               height: 16,
                               child: CircularProgressIndicator(strokeWidth: 2, color: cs.primary),
                             )
-                          : const Icon(Icons.bolt_rounded, size: 20),
-                      label: Text(_aiRunning ? 'Running AI Check…' : 'Run AI Check'),
+                          : const Icon(Icons.download_rounded, size: 20),
+                      label: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(_downloading ? 'Downloading…' : 'Download PDF'),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  if (hasCachedAi)
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: _viewExistingAi,
+                        icon: const Icon(Icons.auto_awesome_rounded, size: 20),
+                        label: const Text('View AI summary'),
+                      ),
+                    )
+                  else
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.tonalIcon(
+                        onPressed: _aiRunning ? null : _runAiCheck,
+                        icon: _aiRunning
+                            ? SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: cs.primary),
+                              )
+                            : const Icon(Icons.bolt_rounded, size: 20),
+                        label: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Text(_aiRunning ? 'Running AI Check…' : 'Run AI Check'),
+                        ),
+                      ),
                     ),
                 ],
               ],
@@ -309,12 +335,17 @@ class _ResultLineRow extends StatelessWidget {
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
           ),
         ),
-        Text(
-          line.value,
-          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: isLow || isHigh ? accent : context.cs.onSurface,
-              ),
+        const SizedBox(width: 8),
+        Flexible(
+          child: Text(
+            line.value,
+            textAlign: TextAlign.end,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: isLow || isHigh ? accent : context.cs.onSurface,
+                ),
+          ),
         ),
         const SizedBox(width: 8),
         Container(

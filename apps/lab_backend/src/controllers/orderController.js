@@ -1,3 +1,4 @@
+const path = require('path');
 const Order = require('../models/orderModel');
 const Staff = require('../models/staffModel');
 const QRCode = require('qrcode');
@@ -338,7 +339,7 @@ const uploadTestResult = async (req, res) => {
       { order_id: id, event: 'result_uploaded' }
     ).catch(err => console.error('Error sending result upload notification:', err.message));
 
-    const downloadUrl = await StorageService.getFileUrl(fileUrl);
+    const downloadUrl = await StorageService.getDownloadUrl(fileUrl, path.basename(fileUrl));
 
     res.json({ 
       message: 'Result uploaded successfully',

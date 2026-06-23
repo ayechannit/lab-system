@@ -50,23 +50,47 @@ class StorageService {
   }
 
   /**
+   * Normalize a stored file reference (S3 key, local path, or presigned URL) to a storage key/path.
+   */
+  static normalizeFileKey(fileKey) {
+    if (!fileKey || typeof fileKey !== 'string') return null;
+    const trimmed = fileKey.trim();
+    if (!trimmed) return null;
+    if (trimmed.startsWith('/uploads/')) return trimmed;
+    if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) return trimmed;
+    try {
+      const url = new URL(trimmed);
+      return decodeURIComponent(url.pathname.replace(/^\/+/, ''));
+    } catch {
+      return null;
+    }
+  }
+
+  static safeAttachmentFilename(filename, fallback = 'download.pdf') {
+    const base = path.basename(String(filename || fallback));
+    const safe = base.replace(/[^\w.\-()+ ]/g, '_').trim();
+    return safe || fallback;
+  }
+
+  /**
    * Generates a signed URL for S3 or returns the local path.
    * @param {string} fileKey - The S3 key or local file path.
    * @returns {Promise<string>} - The URL to download the file.
    */
   static async getFileUrl(fileKey) {
-    if (!fileKey) return null;
-    if (fileKey.startsWith('http://') || fileKey.startsWith('https://')) {
-      return fileKey;
+    const key = StorageService.normalizeFileKey(fileKey);
+    if (!key) return null;
+    if (key.startsWith('http://') || key.startsWith('https://')) {
+      return key;
     }
 
     const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1';
-    if (isProduction && !fileKey.startsWith('/uploads/')) {
+    if (isProduction && !key.startsWith('/uploads/')) {
       // Generate Pre-signed S3 URL (valid for 1 hour)
       try {
         const command = new GetObjectCommand({
           Bucket: bucketName,
-          Key: fileKey,
+          Key: key,
         });
         const signedUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
         return signedUrl;
@@ -77,8 +101,40 @@ class StorageService {
     } else {
       // Local Development
       const host = process.env.HOST_URL || `http://localhost:${process.env.PORT || 3000}`;
-      return `${host}${fileKey}`;
+      return `${host}${key}`;
     }
+  }
+
+  /**
+   * Presigned URL (or local URL) that prompts the browser to save the file instead of opening inline.
+   */
+  static async getDownloadUrl(fileKey, filename) {
+    const key = StorageService.normalizeFileKey(fileKey);
+    if (!key) return null;
+    if (key.startsWith('http://') || key.startsWith('https://')) {
+      return key;
+    }
+
+    const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1';
+    const attachmentName = StorageService.safeAttachmentFilename(filename, path.basename(key));
+
+    if (isProduction && !key.startsWith('/uploads/')) {
+      try {
+        const command = new GetObjectCommand({
+          Bucket: bucketName,
+          Key: key,
+          ResponseContentDisposition: `attachment; filename="${attachmentName}"`,
+        });
+        const signedUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
+        return signedUrl;
+      } catch (error) {
+        console.error('S3 presigned download URL error:', error);
+        throw new Error('Failed to generate download link');
+      }
+    }
+
+    const host = process.env.HOST_URL || `http://localhost:${process.env.PORT || 3000}`;
+    return `${host}${key}`;
   }
 
   static localAbsolutePath(fileKey) {
@@ -94,21 +150,22 @@ class StorageService {
    * @returns {{ stream, contentType, filename }} or null if missing.
    */
   static async openFile(fileKey) {
-    if (!fileKey) return null;
+    const key = StorageService.normalizeFileKey(fileKey);
+    if (!key) return null;
 
     const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1';
-    if (isProduction && !fileKey.startsWith('/uploads/')) {
+    if (isProduction && !key.startsWith('/uploads/')) {
       try {
         const command = new GetObjectCommand({
           Bucket: bucketName,
-          Key: fileKey,
+          Key: key,
         });
         const response = await s3Client.send(command);
         if (!response.Body) return null;
         return {
           stream: response.Body,
           contentType: response.ContentType || 'application/pdf',
-          filename: path.basename(fileKey),
+          filename: path.basename(key),
         };
       } catch (error) {
         console.error('S3 open file error:', error);
@@ -116,7 +173,7 @@ class StorageService {
       }
     }
 
-    const abs = StorageService.localAbsolutePath(fileKey);
+    const abs = StorageService.localAbsolutePath(key);
     if (!abs || !fs.existsSync(abs)) return null;
     return {
       stream: fs.createReadStream(abs),
