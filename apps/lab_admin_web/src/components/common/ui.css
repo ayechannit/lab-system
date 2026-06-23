@@ -4278,6 +4278,42 @@ a.btn {
   font-size: 0.875rem;
 }
 
+.route-panel--assigned {
+  border-color: color-mix(in srgb, var(--accent-green) 35%, var(--border));
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--accent-green) 6%, var(--surface)) 0%,
+    var(--surface) 3.5rem
+  );
+}
+
+.route-panel__assigned-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  margin: 0 0 1rem;
+  padding: 0.75rem 0.9rem;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--accent-green) 12%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--accent-green) 28%, var(--border));
+  color: var(--heading);
+}
+
+.route-panel__assigned-banner .material-symbols-outlined {
+  font-size: 1.35rem;
+  color: var(--accent-green);
+  flex-shrink: 0;
+  margin-top: 0.05rem;
+}
+
+.route-panel__assigned-banner p {
+  margin: 0.2rem 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--muted);
+  font-weight: 400;
+}
+
 .route-setup {
   margin-top: 1rem;
   margin-bottom: 1rem;
@@ -4433,6 +4469,52 @@ a.btn {
   grid-template-columns: auto 1fr;
   gap: 0.85rem 1rem;
   padding: 0.65rem 0;
+}
+
+.route-stop-card[role='button'] {
+  cursor: pointer;
+}
+
+.route-stop-card--assigned .route-stop-card__body {
+  border: 1px solid color-mix(in srgb, var(--accent-green) 30%, var(--border));
+  background: color-mix(in srgb, var(--accent-green) 4%, var(--subtle-fill-2));
+}
+
+.route-stop-card--selected .route-stop-card__body {
+  border-color: color-mix(in srgb, var(--primary) 35%, var(--border));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--primary) 18%, transparent);
+}
+
+.route-stop-card__selected-note {
+  margin: 0.45rem 0 0;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.route-stop-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.65rem;
+}
+
+.route-stop-card__schedule-hint {
+  margin: 0.45rem 0 0;
+  font-size: 0.74rem;
+  color: var(--muted);
+}
+
+.route-stop-card__assigned--prominent {
+  margin: 0.65rem 0 0.35rem;
+  padding: 0.55rem 0.7rem;
+  background: color-mix(in srgb, var(--primary) 8%, var(--card-bg));
+  border-color: color-mix(in srgb, var(--primary) 22%, transparent);
+}
+
+.route-stop-card__assigned-time {
+  font-weight: 500;
+  color: var(--muted);
 }
 
 .route-stop-card__marker {
@@ -5298,6 +5380,14 @@ a.btn {
 
 .lab-result-test-card__body--info-only {
   grid-template-columns: minmax(0, 1fr);
+}
+
+.lab-result-test-card__body--readonly {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.lab-result-test-card__actions--readonly {
+  justify-content: flex-end;
 }
 
 .lab-result-test-card__pick {

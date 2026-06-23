@@ -10,7 +10,6 @@ import '../../theme/app_colors.dart';
 import '../../theme/theme_extensions.dart';
 import '../../widgets/common/app_branding_row.dart';
 import '../../widgets/common/notification_bell_button.dart';
-import '../../widgets/common/order_list_sort_button.dart';
 import '../../widgets/common/order_rating_bar.dart';
 import '../../widgets/common/order_status_chip.dart';
 import '../../widgets/navigation/lab_main_bottom_nav.dart';
@@ -36,6 +35,7 @@ class _OrdersListScreenState extends State<OrdersListScreen> {
   OrderListSort _sort = OrderListSort.activeDefault;
 
   Future<void> _reloadOrders(SessionController session) async {
+    if (!session.isLoggedIn) return;
     await session.refreshActiveOrders(
       sortBy: _sort.sortBy,
       sortOrder: _sort.sortOrder,
@@ -43,12 +43,23 @@ class _OrdersListScreenState extends State<OrdersListScreen> {
     await session.refreshOrderRatings();
   }
 
+  void _scheduleReload() {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      await _reloadOrders(SessionScope.of(context));
+    });
+  }
+
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await _reloadOrders(SessionScope.of(context));
-    });
+    _scheduleReload();
+  }
+
+  @override
+  void activate() {
+    super.activate();
+    _scheduleReload();
   }
 
   String _normalizeStatus(LabOrderSummary order) =>
@@ -133,38 +144,21 @@ class _OrdersListScreenState extends State<OrdersListScreen> {
                     ),
                   )
                 else ...[
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          'Active orders (${orders.length})',
-                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                fontWeight: FontWeight.w700,
-                                color: context.cs.onSurfaceVariant,
-                                letterSpacing: 0.2,
-                              ),
-                        ),
-                      ),
-                      OrderListSortButton(
-                        selected: _sort,
-                        options: OrderListSort.activeOptions,
-                        onSelected: (sort) async {
-                          setState(() => _sort = sort);
-                          await session.refreshActiveOrders(
-                            sortBy: sort.sortBy,
-                            sortOrder: sort.sortOrder,
-                          );
-                        },
-                      ),
-                    ],
-                  ),
                   const SizedBox(height: 10),
-                  _OrderStatusTabs(
-                    selected: _statusFilter,
+                  _OrderListFilters(
+                    totalCount: orders.length,
+                    statusFilter: _statusFilter,
                     statuses: _allStatuses,
                     countFor: (status) => _countForStatus(orders, status),
-                    onSelected: (status) => setState(() => _statusFilter = status),
+                    onStatusSelected: (status) => setState(() => _statusFilter = status),
+                    sort: _sort,
+                    onSortSelected: (sort) async {
+                      setState(() => _sort = sort);
+                      await session.refreshActiveOrders(
+                        sortBy: sort.sortBy,
+                        sortOrder: sort.sortOrder,
+                      );
+                    },
                   ),
                   const SizedBox(height: 12),
                   if (filtered.isEmpty)
@@ -211,50 +205,234 @@ class _OrdersListScreenState extends State<OrdersListScreen> {
   }
 }
 
-class _OrderStatusTabs extends StatelessWidget {
-  const _OrderStatusTabs({
-    required this.selected,
+class _OrderListFilters extends StatelessWidget {
+  const _OrderListFilters({
+    required this.totalCount,
+    required this.statusFilter,
     required this.statuses,
     required this.countFor,
-    required this.onSelected,
+    required this.onStatusSelected,
+    required this.sort,
+    required this.onSortSelected,
   });
 
-  final String selected;
+  final int totalCount;
+  final String statusFilter;
   final List<String> statuses;
   final int Function(String status) countFor;
-  final ValueChanged<String> onSelected;
+  final ValueChanged<String> onStatusSelected;
+  final OrderListSort sort;
+  final ValueChanged<OrderListSort> onSortSelected;
 
   @override
   Widget build(BuildContext context) {
-    final tabs = ['', ...statuses];
+    final cs = context.cs;
+    final statusLabel = statusFilter.isEmpty ? 'All orders' : orderStatusStyleFor(statusFilter).label;
+    final statusCount = countFor(statusFilter);
 
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: [
-          for (final status in tabs) ...[
-            _StatusTabChip(
-              label: status.isEmpty ? 'All' : orderStatusStyleFor(status).label,
-              count: countFor(status),
-              selected: selected == status,
-              onTap: () => onSelected(status),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          'Active orders ($totalCount)',
+          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: cs.onSurfaceVariant,
+                letterSpacing: 0.2,
+              ),
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Expanded(
+              child: _FilterControlTile(
+                icon: Icons.filter_list_rounded,
+                label: 'Status',
+                value: '$statusLabel · $statusCount',
+                onTap: () => _openStatusSheet(context),
+              ),
             ),
-            if (status != tabs.last) const SizedBox(width: 8),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _FilterControlTile(
+                icon: Icons.sort_rounded,
+                label: 'Sort',
+                value: sort.label,
+                onTap: () => _openSortSheet(context),
+              ),
+            ),
           ],
-        ],
+        ),
+      ],
+    );
+  }
+
+  Future<void> _openStatusSheet(BuildContext context) async {
+    final cs = context.cs;
+    final tabs = ['', ...statuses];
+    final picked = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (sheetContext) {
+        return SafeArea(
+          child: ListView(
+            shrinkWrap: true,
+            padding: const EdgeInsets.fromLTRB(8, 4, 8, 12),
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
+                child: Text(
+                  'Filter by status',
+                  style: Theme.of(sheetContext).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                ),
+              ),
+              for (final status in tabs)
+                _StatusFilterSheetTile(
+                  status: status,
+                  label: status.isEmpty ? 'All orders' : orderStatusStyleFor(status).label,
+                  count: countFor(status),
+                  selected: statusFilter == status,
+                  onTap: () => Navigator.pop(sheetContext, status),
+                ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+                child: Text(
+                  'Only active orders that are not yet delivered appear here.',
+                  style: Theme.of(sheetContext).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+    if (picked != null && picked != statusFilter) {
+      onStatusSelected(picked);
+    }
+  }
+
+  Future<void> _openSortSheet(BuildContext context) async {
+    final picked = await showModalBottomSheet<OrderListSort>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (sheetContext) {
+        final cs = sheetContext.cs;
+        return SafeArea(
+          child: ListView(
+            shrinkWrap: true,
+            padding: const EdgeInsets.only(bottom: 8),
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
+                child: Text(
+                  'Sort by',
+                  style: Theme.of(sheetContext).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                ),
+              ),
+              for (final option in OrderListSort.activeOptions)
+                ListTile(
+                  leading: Icon(
+                    sort == option ? Icons.check_circle_rounded : Icons.circle_outlined,
+                    color: sort == option ? cs.primary : cs.onSurfaceVariant,
+                  ),
+                  title: Text(option.label),
+                  onTap: () => Navigator.pop(sheetContext, option),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+    if (picked != null && picked != sort) {
+      onSortSelected(picked);
+    }
+  }
+}
+
+class _FilterControlTile extends StatelessWidget {
+  const _FilterControlTile({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = context.cs;
+    return Material(
+      color: context.cardFill,
+      borderRadius: BorderRadius.circular(14),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(12, 11, 10, 11),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: const Color(0x66E1E2EC)),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: cs.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, size: 18, color: cs.primary),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                            color: cs.onSurfaceVariant,
+                            fontWeight: FontWeight.w600,
+                          ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      value,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.keyboard_arrow_down_rounded, size: 22, color: cs.onSurfaceVariant),
+            ],
+          ),
+        ),
       ),
     );
   }
 }
 
-class _StatusTabChip extends StatelessWidget {
-  const _StatusTabChip({
+class _StatusFilterSheetTile extends StatelessWidget {
+  const _StatusFilterSheetTile({
+    required this.status,
     required this.label,
     required this.count,
     required this.selected,
     required this.onTap,
   });
 
+  final String status;
   final String label;
   final int count;
   final bool selected;
@@ -263,32 +441,82 @@ class _StatusTabChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = context.cs;
+    final style = status.isEmpty
+        ? OrderStatusStyle(
+            label: label,
+            foreground: cs.primary,
+            background: cs.primary.withValues(alpha: 0.1),
+          )
+        : orderStatusStyleFor(status);
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(999),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-          decoration: BoxDecoration(
-            color: selected ? cs.primary : cs.surfaceContainerHighest.withValues(alpha: 0.65),
-            borderRadius: BorderRadius.circular(999),
-            border: Border.all(
-              color: selected ? cs.primary : cs.outlineVariant.withValues(alpha: 0.55),
-            ),
-          ),
-          child: Text(
-            '$label ($count)',
-            style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  color: selected ? cs.onPrimary : cs.onSurfaceVariant,
-                  fontWeight: FontWeight.w600,
-                ),
-          ),
+    return ListTile(
+      onTap: onTap,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      selected: selected,
+      selectedTileColor: cs.primary.withValues(alpha: 0.08),
+      leading: Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          color: style.background,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: style.foreground.withValues(alpha: 0.2)),
+        ),
+        child: Icon(
+          _orderStatusIcon(status),
+          size: 18,
+          color: style.foreground,
         ),
       ),
+      title: Text(
+        label,
+        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+              fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+            ),
+      ),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+            decoration: BoxDecoration(
+              color: selected ? cs.primary : cs.surfaceContainerHighest.withValues(alpha: 0.8),
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Text(
+              '$count',
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: selected ? cs.onPrimary : cs.onSurfaceVariant,
+                    fontWeight: FontWeight.w700,
+                  ),
+            ),
+          ),
+          if (selected) ...[
+            const SizedBox(width: 8),
+            Icon(Icons.check_rounded, color: cs.primary, size: 22),
+          ],
+        ],
+      ),
     );
+  }
+}
+
+IconData _orderStatusIcon(String status) {
+  switch (status) {
+    case '':
+      return Icons.layers_outlined;
+    case 'pending':
+      return Icons.hourglass_top_rounded;
+    case 'scheduled':
+      return Icons.event_available_outlined;
+    case 'collecting':
+      return Icons.biotech_outlined;
+    case 'running':
+      return Icons.autorenew_rounded;
+    case 'completed':
+      return Icons.task_alt_rounded;
+    default:
+      return Icons.circle_outlined;
   }
 }
 

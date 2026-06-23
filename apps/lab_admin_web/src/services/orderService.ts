@@ -41,6 +41,8 @@ export type ApiOrderListRow = {
   prescription_url?: string | null
   is_tests_assigned?: boolean | number | null
   report_delivery_method?: string
+  /** Present in GET /api/orders list (parsed from order_schedules join). */
+  schedule?: ApiOrderSchedule | null
   items?: ApiOrderDetailItem[]
 }
 
@@ -318,6 +320,17 @@ export async function replaceOrderItems(
   })
   if (!res.ok) throw new Error(await readApiErrorBody(res))
   return res.json()
+}
+
+/** Authenticated download of an uploaded result PDF (streams via API, not raw storage URL). */
+export async function fetchOrderTestResultBlob(orderId: string, testId: string): Promise<Blob> {
+  const res = await apiFetch(
+    `/api/orders/${encodeURIComponent(orderId)}/tests/${encodeURIComponent(testId)}/result-file`,
+  )
+  if (!res.ok) throw new Error(await readApiErrorBody(res))
+  const blob = await res.blob()
+  if (!blob.size) throw new Error('The report file is empty.')
+  return blob
 }
 
 export async function uploadOrderTestResult(orderId: string, testId: string, file: File): Promise<unknown> {

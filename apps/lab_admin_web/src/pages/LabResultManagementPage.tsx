@@ -16,6 +16,7 @@ import { getAiConfigId, getLabResultValidationPromptId, isLabResultReviewConfigu
 import { reviewLabResultBatchWithAi, reviewLabResultWithAi } from '../services/aiConversationService'
 import {
   fetchOrderById,
+  fetchOrderTestResultBlob,
   fetchOrders,
   updateOrderStatus,
   uploadOrderTestResult,
@@ -160,6 +161,73 @@ function parseAiReviewReply(reply: string): ParsedAiReview {
   return { verdict: null, label: null, detail: trimmed, isCompact: false }
 }
 
+function testDisplayName(item: ApiOrderDetailItem): string {
+  return item.test_name?.trim() || item.test_code?.trim() || 'Test'
+}
+
+function testAiReviewVerdict(
+  item: ApiOrderDetailItem,
+  aiReviewByTestId: Record<string, AiReviewEntry>,
+): AiReviewVerdict | null {
+  const entry = aiReviewByTestId[item.test_id]
+  if (entry) return parseAiReviewReply(entry.reply).verdict
+  const stored = item.ai_verdict?.trim().toLowerCase()
+  if (stored === 'pass' || stored === 'fail' || stored === 'neutral') return stored
+  return null
+}
+
+type AiReviewReleaseBlockers = {
+  missingReview: string[]
+  failed: string[]
+  warnings: string[]
+  errors: string[]
+}
+
+function collectAiReviewReleaseBlockers(
+  items: ApiOrderDetailItem[],
+  aiReviewByTestId: Record<string, AiReviewEntry>,
+  aiReviewErrorByTestId: Record<string, string>,
+): AiReviewReleaseBlockers {
+  const missingReview: string[] = []
+  const failed: string[] = []
+  const warnings: string[] = []
+  const errors: string[] = []
+  for (const it of items) {
+    const name = testDisplayName(it)
+    if (aiReviewErrorByTestId[it.test_id]) {
+      errors.push(name)
+      continue
+    }
+    const verdict = testAiReviewVerdict(it, aiReviewByTestId)
+    if (verdict === null) missingReview.push(name)
+    else if (verdict === 'fail') failed.push(name)
+    else if (verdict !== 'pass') warnings.push(name)
+  }
+  return { missingReview, failed, warnings, errors }
+}
+
+function aiReviewReleaseBlockerMessage(
+  blockers: AiReviewReleaseBlockers,
+  aiReviewConfigured: boolean,
+): string | null {
+  if (!aiReviewConfigured) {
+    return 'Configure AI review before releasing results to patients.'
+  }
+  if (blockers.errors.length > 0) {
+    return `AI review failed for: ${blockers.errors.join(', ')}. Re-run review after fixing issues.`
+  }
+  if (blockers.missingReview.length > 0) {
+    return `Run AI review for all tests before releasing. Pending: ${blockers.missingReview.join(', ')}.`
+  }
+  if (blockers.failed.length > 0) {
+    return `One or more tests failed AI review (${blockers.failed.join(', ')}). Fix results and re-run review before releasing.`
+  }
+  if (blockers.warnings.length > 0) {
+    return `Resolve AI review warnings before releasing (${blockers.warnings.join(', ')}).`
+  }
+  return null
+}
+
 function parseAiReviewRepliesForTests(
   reply: string,
   testIds: string[],
@@ -238,6 +306,13 @@ function formatAiReviewedAt(iso: string): string {
   return new Date(iso).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })
 }
 
+function formatMaybeIsoWhen(iso?: string | null): string {
+  if (!iso) return '—'
+  const d = new Date(iso)
+  if (!Number.isFinite(d.getTime())) return '—'
+  return d.toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })
+}
+
 function testResultFileUrl(item: ApiOrderDetailItem): string | null {
   const d = item.download_url?.trim()
   if (d) return d
@@ -246,8 +321,13 @@ function testResultFileUrl(item: ApiOrderDetailItem): string | null {
 }
 
 function testResultStorageKey(item: ApiOrderDetailItem): string | null {
-  const u = item.result_file_url?.trim()
-  return u || null
+  const url = testResultFileUrl(item)
+  if (!url) return null
+  try {
+    return new URL(url).pathname
+  } catch {
+    return url
+  }
 }
 
 const PDF_UPLOAD_BATCH_STORAGE_PREFIX = 'lab-result-pdf-batch:'
@@ -519,6 +599,7 @@ export function LabResultManagementPage() {
   const [aiReviewErrorByTestId, setAiReviewErrorByTestId] = useState<Record<string, string>>({})
   const [statusSubmitting, setStatusSubmitting] = useState(false)
   const [releaseSubmitting, setReleaseSubmitting] = useState(false)
+  const [pdfAction, setPdfAction] = useState<{ testId: string; mode: 'view' | 'download' } | null>(null)
 
   useEffect(() => {
     const id = window.setTimeout(() => setPatientName(patientInput.trim()), 350)
@@ -693,19 +774,33 @@ export function LabResultManagementPage() {
     detail && detail.items.length > 0 && testsMissingPdf.length === 0,
   )
 
-  const hasIncorrectAiReview = useMemo(() => {
-    if (!detail) return false
-    return detail.items.some((it) => {
-      const entry = aiReviewByTestId[it.test_id]
-      if (!entry) return false
-      return parseAiReviewReply(entry.reply).verdict === 'fail'
-    })
-  }, [detail, aiReviewByTestId])
+  const aiReviewReleaseBlockers = useMemo(
+    () =>
+      collectAiReviewReleaseBlockers(
+        detail?.items ?? [],
+        aiReviewByTestId,
+        aiReviewErrorByTestId,
+      ),
+    [detail?.items, aiReviewByTestId, aiReviewErrorByTestId],
+  )
+
+  const hasIncorrectAiReview = aiReviewReleaseBlockers.failed.length > 0
+
+  const allTestsPassedAiReview = useMemo(
+    () =>
+      (detail?.items.length ?? 0) > 0 &&
+      aiReviewReleaseBlockers.missingReview.length === 0 &&
+      aiReviewReleaseBlockers.failed.length === 0 &&
+      aiReviewReleaseBlockers.warnings.length === 0 &&
+      aiReviewReleaseBlockers.errors.length === 0,
+    [detail?.items.length, aiReviewReleaseBlockers],
+  )
 
   const canReleaseToPatient = Boolean(
     detail?.status === 'completed' &&
       allTestsHavePdf &&
-      !hasIncorrectAiReview &&
+      aiReviewConfigured &&
+      allTestsPassedAiReview &&
       !releaseSubmitting &&
       !uploadBusy &&
       aiReviewLoadingTestIds.length === 0,
@@ -714,22 +809,28 @@ export function LabResultManagementPage() {
   const releaseDisabledReason = useMemo(() => {
     if (!detail || detail.status !== 'completed') return null
     if (testsMissingPdf.length > 0) {
-      const names = testsMissingPdf
-        .map((it) => it.test_name?.trim() || it.test_code?.trim() || 'Test')
-        .join(', ')
+      const names = testsMissingPdf.map((it) => testDisplayName(it)).join(', ')
       return `Upload a PDF for every test before releasing. Missing: ${names}.`
     }
-    if (hasIncorrectAiReview) {
-      return 'One or more tests failed AI review. Fix results and re-run review before releasing.'
-    }
+    const aiBlock = aiReviewReleaseBlockerMessage(aiReviewReleaseBlockers, aiReviewConfigured)
+    if (aiBlock) return aiBlock
     if (uploadBusy) return 'Wait for PDF upload to finish.'
     if (aiReviewLoadingTestIds.length > 0) return 'Wait for AI review to finish.'
     return null
-  }, [detail, testsMissingPdf, hasIncorrectAiReview, uploadBusy, aiReviewLoadingTestIds.length])
+  }, [
+    detail,
+    testsMissingPdf,
+    aiReviewReleaseBlockers,
+    aiReviewConfigured,
+    uploadBusy,
+    aiReviewLoadingTestIds.length,
+  ])
 
-  const canUploadPdfs = detail ? canUploadResultPdfs(detail.status) : false
+  const isReleased = detail?.status === 'delivered'
 
-  const showBulkPdfUpload = Boolean(canUploadPdfs && detail && detail.items.length > 1)
+  const canUploadPdfs = detail ? canUploadResultPdfs(detail.status) && !isReleased : false
+
+  const showBulkPdfUpload = Boolean(canUploadPdfs && detail && detail.items.length > 1 && !isReleased)
 
   const labResultTestRows = useMemo(
     () =>
@@ -746,6 +847,112 @@ export function LabResultManagementPage() {
     for (const it of detail?.items ?? []) map.set(it.test_id, it)
     return map
   }, [detail?.items])
+
+  function resolveTestResultPdfUrl(testId: string): string | null {
+    const item = detailItemsById.get(testId)
+    return item ? testResultFileUrl(item) : null
+  }
+
+  async function loadTestResultPdfBlob(testId: string): Promise<Blob> {
+    if (!detail?.id) throw new Error('Select an order first.')
+    return fetchOrderTestResultBlob(detail.id, testId)
+  }
+
+  async function viewTestResultPdf(testId: string) {
+    setPdfAction({ testId, mode: 'view' })
+    try {
+      const directUrl = resolveTestResultPdfUrl(testId)
+      if (directUrl) {
+        const opened = window.open(directUrl, '_blank', 'noopener,noreferrer')
+        if (opened) return
+      }
+      const blob = await loadTestResultPdfBlob(testId)
+      const url = URL.createObjectURL(blob)
+      const opened = window.open(url, '_blank', 'noopener,noreferrer')
+      if (!opened) {
+        URL.revokeObjectURL(url)
+        showError('Allow pop-ups in your browser to view the PDF.')
+        return
+      }
+      window.setTimeout(() => URL.revokeObjectURL(url), 120_000)
+    } catch (err) {
+      showError(messageFromError(err, 'Could not open PDF.'))
+    } finally {
+      setPdfAction(null)
+    }
+  }
+
+  async function downloadTestResultPdf(testId: string, fileLabel: string) {
+    setPdfAction({ testId, mode: 'download' })
+    const safeName = `${fileLabel.replace(/[^\w.-]+/g, '_')}.pdf`
+    try {
+      const directUrl = resolveTestResultPdfUrl(testId)
+      if (directUrl) {
+        const a = document.createElement('a')
+        a.href = directUrl
+        a.download = safeName
+        a.target = '_blank'
+        a.rel = 'noopener noreferrer'
+        document.body.appendChild(a)
+        a.click()
+        a.remove()
+        return
+      }
+      const blob = await loadTestResultPdfBlob(testId)
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = safeName
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      showError(messageFromError(err, 'Could not download PDF.'))
+    } finally {
+      setPdfAction(null)
+    }
+  }
+
+  function renderPdfActionButtons(testId: string, fileLabel: string) {
+    const busy = pdfAction?.testId === testId
+    const viewing = busy && pdfAction?.mode === 'view'
+    const downloading = busy && pdfAction?.mode === 'download'
+    return (
+      <>
+        <button
+          type="button"
+          className="btn btn-secondary btn-sm lab-result-test-card__action-btn"
+          disabled={busy || !hasApi}
+          onClick={() => void viewTestResultPdf(testId)}
+        >
+          <span className="material-symbols-outlined" aria-hidden>
+            visibility
+          </span>
+          {viewing ? 'Opening…' : 'View PDF'}
+        </button>
+        <button
+          type="button"
+          className="btn btn-primary btn-sm lab-result-test-card__action-btn"
+          disabled={busy || !hasApi}
+          onClick={() => void downloadTestResultPdf(testId, fileLabel)}
+        >
+          <span className="material-symbols-outlined" aria-hidden>
+            download
+          </span>
+          {downloading ? 'Downloading…' : 'Download PDF'}
+        </button>
+      </>
+    )
+  }
+
+  function renderPdfAccessButtons(testId: string, fileLabel: string) {
+    return (
+      <div className="lab-result-test-card__actions lab-result-test-card__actions--readonly">
+        {renderPdfActionButtons(testId, fileLabel)}
+      </div>
+    )
+  }
 
   useEffect(() => {
     setBulkPdfSelectedIds([])
@@ -1121,13 +1328,22 @@ export function LabResultManagementPage() {
       return
     }
     if (!allTestsHavePdf) {
-      const names = testsMissingPdf
-        .map((it) => it.test_name?.trim() || it.test_code?.trim() || 'Test')
-        .join(', ')
+      const names = testsMissingPdf.map((it) => testDisplayName(it)).join(', ')
       showError(
         names
           ? `Upload result PDFs for all tests before release. Missing: ${names}.`
           : 'Upload result PDFs for all tests before release.',
+      )
+      return
+    }
+    if (!aiReviewConfigured) {
+      showError('Configure AI review before releasing results to patients.')
+      return
+    }
+    if (!allTestsPassedAiReview) {
+      showError(
+        aiReviewReleaseBlockerMessage(aiReviewReleaseBlockers, aiReviewConfigured) ??
+          'Complete AI review for all tests before releasing.',
       )
       return
     }
@@ -1377,6 +1593,8 @@ export function LabResultManagementPage() {
                 <th scope="col">Patient</th>
                 <th scope="col">Status</th>
                 <th scope="col">Tests</th>
+                <th scope="col">Collector</th>
+                <th scope="col">Collect time</th>
                 <th scope="col">Final (MMK)</th>
                 <th scope="col">Created</th>
               </tr>
@@ -1384,13 +1602,13 @@ export function LabResultManagementPage() {
             <tbody>
               {listLoading ? (
                 <tr>
-                  <td colSpan={5} className="data-table__state data-table__state--loading">
+                  <td colSpan={7} className="data-table__state data-table__state--loading">
                     <LoadingSpinner label="Loading orders" />
                   </td>
                 </tr>
               ) : orders.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="data-table__state">
+                  <td colSpan={7} className="data-table__state">
                     {patientName || statusFilter
                       ? 'No orders match these filters.'
                       : 'No orders returned from the server.'}
@@ -1435,6 +1653,8 @@ export function LabResultManagementPage() {
                     <td title={(o.items ?? []).map((it) => it.test_name ?? it.test_id).join(', ')}>
                       {orderTestsSummary(o)}
                     </td>
+                    <td>{o.schedule?.collecting_person?.trim() || '—'}</td>
+                    <td>{formatMaybeIsoWhen(o.schedule?.collection_time)}</td>
                     <td className="col-num">{o.final_price_mmk.toLocaleString()}</td>
                     <td>
                       {new Date(o.created_at).toLocaleString(undefined, {
@@ -1551,7 +1771,11 @@ export function LabResultManagementPage() {
                   {hasIncorrectAiReview
                     ? ' One or more tests failed AI review — fix results before releasing.'
                     : allTestsHavePdf
-                      ? ' All tests have PDFs — you can release when review is done.'
+                      ? allTestsPassedAiReview
+                        ? ' All tests have PDFs and passed AI review — you can release to the patient.'
+                        : aiReviewReleaseBlockers.missingReview.length > 0
+                          ? ' All tests have PDFs — run AI review on every test before releasing.'
+                          : ' All tests have PDFs — resolve AI review issues before releasing.'
                       : ` ${testsMissingPdf.length} test${testsMissingPdf.length === 1 ? '' : 's'} still need a PDF before you can release.`}
                 </p>
               ) : detail.status === 'delivered' ? (
@@ -1659,7 +1883,7 @@ export function LabResultManagementPage() {
                     const bulkSelected = memberTestIds.every((id) => bulkPdfSelectedIds.includes(id))
                     const bulkPartial =
                       !bulkSelected && memberTestIds.some((id) => bulkPdfSelectedIds.includes(id))
-                    const showPdfControls = canUploadPdfs || hasFile
+                    const showPdfControls = !isReleased && (canUploadPdfs || hasFile)
                     const rowStatus = resolveSharedPdfRowStatus(
                       memberTestIds,
                       detailItemsById,
@@ -1813,6 +2037,7 @@ export function LabResultManagementPage() {
                               ) : null}
                             </div>
                           ) : null}
+                          {hasFile ? renderPdfAccessButtons(items[0].test_id, label) : null}
                         </div>
                         {showAiPanels ? (
                           <div className="lab-result-test-card__shared-ai">
@@ -1845,7 +2070,7 @@ export function LabResultManagementPage() {
                   ]
                     .filter(Boolean)
                     .join(' ')
-                  const showPdfControls = canUploadPdfs || hasFile
+                  const showPdfControls = !isReleased && (canUploadPdfs || hasFile)
                   const bulkSelected = bulkPdfSelectedIds.includes(it.test_id)
                   const rowStatus: SharedPdfRowStatus = !hasFile
                     ? 'awaiting'
@@ -1877,7 +2102,9 @@ export function LabResultManagementPage() {
                             ? showBulkPdfUpload
                               ? ' lab-result-test-card__body--selectable'
                               : ''
-                            : ' lab-result-test-card__body--info-only'
+                            : hasFile
+                              ? ' lab-result-test-card__body--readonly'
+                              : ' lab-result-test-card__body--info-only'
                         }`}
                       >
                         {showBulkPdfUpload && showPdfControls ? (
@@ -1949,7 +2176,10 @@ export function LabResultManagementPage() {
                                     : 'AI review'}
                               </button>
                             ) : null}
+                            {hasFile ? renderPdfActionButtons(it.test_id, testName) : null}
                           </div>
+                        ) : hasFile ? (
+                          renderPdfAccessButtons(it.test_id, testName)
                         ) : null}
                       </div>
                       {hasFile &&
@@ -1988,11 +2218,20 @@ export function LabResultManagementPage() {
                   ? 'Complete the lab run before uploading results or releasing.'
                   : uploadedItems.length === 0
                     ? 'Upload result PDFs for all tests to continue.'
-                    : hasIncorrectAiReview
-                      ? 'One or more tests failed AI review. Fix results and re-run review before releasing.'
-                      : allTestsHavePdf
-                        ? 'All tests have PDFs. Release to patient when review is complete.'
-                        : `${uploadedItems.length} of ${detail.items.length} PDFs uploaded — upload all tests before releasing.`}
+                    : !allTestsHavePdf
+                      ? `${uploadedItems.length} of ${detail.items.length} PDFs uploaded — upload all tests before releasing.`
+                      : !aiReviewConfigured
+                      ? 'Configure AI review, then run review on every test before releasing.'
+                      : hasIncorrectAiReview
+                        ? 'One or more tests failed AI review. Fix results and re-run review before releasing.'
+                        : aiReviewReleaseBlockers.missingReview.length > 0
+                          ? 'All tests have PDFs. Run AI review on every test before releasing to the patient.'
+                          : aiReviewReleaseBlockers.warnings.length > 0 ||
+                              aiReviewReleaseBlockers.errors.length > 0
+                            ? 'Resolve AI review warnings or errors before releasing to the patient.'
+                            : allTestsPassedAiReview
+                              ? 'All tests have PDFs and passed AI review. You can release to the patient.'
+                              : 'Complete AI review for all tests before releasing.'}
             </p>
             {detail.status === 'completed' ? (
               <button

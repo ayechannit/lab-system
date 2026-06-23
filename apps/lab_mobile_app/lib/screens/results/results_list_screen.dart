@@ -25,6 +25,7 @@ class _ResultsListScreenState extends State<ResultsListScreen> {
   OrderListSort _sort = OrderListSort.releasedDefault;
 
   Future<void> _reloadOrders(SessionController session) async {
+    if (!session.isLoggedIn) return;
     await session.refreshReleasedOrders(
       sortBy: _sort.sortBy,
       sortOrder: _sort.sortOrder,
@@ -32,12 +33,23 @@ class _ResultsListScreenState extends State<ResultsListScreen> {
     await session.refreshOrderRatings();
   }
 
+  void _scheduleReload() {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      await _reloadOrders(SessionScope.of(context));
+    });
+  }
+
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await _reloadOrders(SessionScope.of(context));
-    });
+    _scheduleReload();
+  }
+
+  @override
+  void activate() {
+    super.activate();
+    _scheduleReload();
   }
 
   @override
@@ -89,20 +101,9 @@ class _ResultsListScreenState extends State<ResultsListScreen> {
                     ),
                   )
                 else ...[
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          'Released reports (${orders.length})',
-                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                fontWeight: FontWeight.w700,
-                                color: context.cs.onSurfaceVariant,
-                                letterSpacing: 0.2,
-                              ),
-                        ),
-                      ),
-                      OrderListSortButton(
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final sortButton = OrderListSortButton(
                         selected: _sort,
                         options: OrderListSort.releasedOptions,
                         onSelected: (sort) async {
@@ -112,8 +113,44 @@ class _ResultsListScreenState extends State<ResultsListScreen> {
                             sortOrder: sort.sortOrder,
                           );
                         },
-                      ),
-                    ],
+                      );
+                      final heading = Text(
+                        'Released reports (${orders.length})',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: context.cs.onSurfaceVariant,
+                              letterSpacing: 0.2,
+                            ),
+                      );
+                      if (constraints.maxWidth < 340) {
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            heading,
+                            const SizedBox(height: 8),
+                            Align(alignment: Alignment.centerRight, child: sortButton),
+                          ],
+                        );
+                      }
+                      return Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Expanded(child: heading),
+                          Flexible(
+                            child: Align(
+                              alignment: Alignment.centerRight,
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.centerRight,
+                                child: sortButton,
+                              ),
+                            ),
+                          ),
+                        ],
+                      );
+                    },
                   ),
                   const SizedBox(height: 10),
                   ...orders.map(
@@ -171,6 +208,7 @@ class _ReleasedOrderTile extends StatelessWidget {
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(14, 14, 14, 10),
                   child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Container(
                         width: 40,
@@ -188,6 +226,8 @@ class _ReleasedOrderTile extends StatelessWidget {
                           children: [
                             Text(
                               order.patientName.isEmpty ? 'Patient' : order.patientName,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                               style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
                             ),
                             const SizedBox(height: 2),
@@ -200,15 +240,23 @@ class _ReleasedOrderTile extends StatelessWidget {
                             const SizedBox(height: 4),
                             Text(
                               'Released ${order.createdAtLabel}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                               style: Theme.of(context).textTheme.bodySmall?.copyWith(color: context.cs.onSurfaceVariant),
+                            ),
+                            const SizedBox(height: 8),
+                            const Align(
+                              alignment: Alignment.centerLeft,
+                              child: _ReleasedChip(),
                             ),
                           ],
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      const _ReleasedChip(),
                       const SizedBox(width: 4),
-                      Icon(Icons.chevron_right, color: context.cs.onSurfaceVariant),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Icon(Icons.chevron_right, color: context.cs.onSurfaceVariant),
+                      ),
                     ],
                   ),
                 ),

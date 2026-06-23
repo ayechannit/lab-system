@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -32,9 +34,11 @@ class LabMainBottomNav extends StatelessWidget {
         context.go(session.homeRoute);
         break;
       case LabMainTab.orders:
+        unawaited(session.refreshOrdersTab());
         context.go('/orders');
         break;
       case LabMainTab.results:
+        unawaited(session.refreshResultsTab());
         context.go('/lab-results');
         break;
       case LabMainTab.points:

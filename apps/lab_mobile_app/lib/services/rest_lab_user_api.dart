@@ -191,6 +191,8 @@ class RestLabUserApi implements LabUserApi {
         return UserRole.doctor;
       case 'clinic':
         return UserRole.clinic;
+      case 'phlebotomist':
+        return UserRole.phlebotomist;
       default:
         return UserRole.patient;
     }

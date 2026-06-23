@@ -383,51 +383,61 @@ export function NotificationBell() {
                         const route = notificationRoute(n)
                         return (
                           <li key={n.id} className="notification-row">
-                            <button
-                              type="button"
+                            <article
                               className={`notification-item${!n.is_read ? ' notification-item--unread' : ''}`}
-                              onClick={() => void handleNotificationClick(n)}
                             >
-                              <span
+                              <div
                                 className={`notification-item__icon notification-item__icon--${visual.tone}`}
                                 aria-hidden
                               >
                                 <span className="material-symbols-outlined">{visual.icon}</span>
-                              </span>
-                              <span className="notification-item__content">
-                                <span className="notification-item__top">
-                                  <span className="notification-item__title">{n.title}</span>
-                                  <span className="notification-item__time">{timeAgo(n.created_at)}</span>
-                                </span>
-                                <span className="notification-item__meta">
-                                  <span className={`notification-item__chip notification-item__chip--${visual.tone}`}>
-                                    {visual.label}
+                              </div>
+                              <div className="notification-item__content">
+                                <button
+                                  type="button"
+                                  className="notification-item__open"
+                                  onClick={() => void handleNotificationClick(n)}
+                                >
+                                  <span className="notification-item__top">
+                                    <span className="notification-item__title">{n.title}</span>
+                                    <span className="notification-item__time">{timeAgo(n.created_at)}</span>
                                   </span>
-                                  {!n.is_read ? <span className="notification-item__unread-pill">New</span> : null}
-                                </span>
-                                <span className="notification-item__body">{n.body}</span>
-                                {route ? (
-                                  <span className="notification-item__action">
-                                    View details
-                                    <span className="material-symbols-outlined" aria-hidden>
-                                      arrow_forward
+                                  <span className="notification-item__meta">
+                                    <span className={`notification-item__chip notification-item__chip--${visual.tone}`}>
+                                      {visual.label}
                                     </span>
+                                    {!n.is_read ? <span className="notification-item__unread-pill">New</span> : null}
                                   </span>
+                                  <span className="notification-item__body">{n.body}</span>
+                                </button>
+                                {(route || !n.is_read) ? (
+                                  <div className="notification-item__actions">
+                                    {route ? (
+                                      <button
+                                        type="button"
+                                        className="notification-item__action-btn notification-item__action-btn--primary"
+                                        onClick={() => void handleNotificationClick(n)}
+                                      >
+                                        View details
+                                        <span className="material-symbols-outlined" aria-hidden>
+                                          arrow_forward
+                                        </span>
+                                      </button>
+                                    ) : null}
+                                    {!n.is_read ? (
+                                      <button
+                                        type="button"
+                                        className="notification-item__action-btn notification-item__action-btn--ghost"
+                                        aria-label={`Mark "${n.title}" as read`}
+                                        onClick={(e) => void handleMarkAsReadButton(n.id, e)}
+                                      >
+                                        Mark read
+                                      </button>
+                                    ) : null}
+                                  </div>
                                 ) : null}
-                              </span>
-                            </button>
-                            {!n.is_read ? (
-                              <button
-                                type="button"
-                                className="notification-item__mark-read-btn"
-                                aria-label="Mark as read"
-                                onClick={(e) => void handleMarkAsReadButton(n.id, e)}
-                              >
-                                <span className="material-symbols-outlined" aria-hidden>
-                                  done
-                                </span>
-                              </button>
-                            ) : null}
+                              </div>
+                            </article>
                           </li>
                         )
                       })}

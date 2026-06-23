@@ -256,6 +256,22 @@ class SessionController extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> refreshResultsTab({
+    String sortBy = 'updated_at',
+    String sortOrder = 'DESC',
+  }) async {
+    await refreshReleasedOrders(sortBy: sortBy, sortOrder: sortOrder);
+    await refreshOrderRatings();
+  }
+
+  Future<void> refreshOrdersTab({
+    String sortBy = 'created_at',
+    String sortOrder = 'DESC',
+  }) async {
+    await refreshActiveOrders(sortBy: sortBy, sortOrder: sortOrder);
+    await refreshOrderRatings();
+  }
+
   Future<void> refreshOrderRatings() async {
     final u = _user;
     if (u == null) return;
@@ -504,6 +520,12 @@ class SessionController extends ChangeNotifier {
     final payload = parseNotificationPayload(notification.dataPayload);
     final orderId = payload?['order_id']?.toString();
     final route = notificationRoute(notification);
+
+    if (route == '/lab-results') {
+      await refreshResultsTab();
+    } else if (route == '/orders') {
+      await refreshOrdersTab();
+    }
 
     if (orderId != null && orderId.isNotEmpty) {
       if (route == '/lab-results') {

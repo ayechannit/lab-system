@@ -1716,6 +1716,12 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
                             },
                           },
                           {
+                            label: 'Update status',
+                            onSelect: () => {
+                              void openStatusUpdate(o)
+                            },
+                          },
+                          {
                             label: 'Add payment',
                             onSelect: () => {
                               openPaymentUpdate(o)

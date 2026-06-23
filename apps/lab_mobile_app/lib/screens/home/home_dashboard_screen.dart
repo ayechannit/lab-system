@@ -10,7 +10,7 @@ import '../../widgets/common/app_branding_row.dart';
 import '../../widgets/common/notification_bell_button.dart';
 import '../../widgets/navigation/lab_main_bottom_nav.dart';
 
-/// Single home dashboard for **patient, doctor, and clinic** (same layout and actions).
+/// Single home dashboard for all user roles (patient, doctor, clinic, phlebotomist).
 class HomeDashboardScreen extends StatefulWidget {
   const HomeDashboardScreen({super.key});
 

@@ -129,6 +129,12 @@ class _ForegroundNotificationListenerState extends State<ForegroundNotificationL
       final orderId = message.data['order_id']?.toString();
 
       if (route != null && route.isNotEmpty) {
+        if (route == '/lab-results') {
+          await session.refreshResultsTab();
+        } else if (route == '/orders') {
+          await session.refreshOrdersTab();
+        }
+
         if (orderId != null && orderId.isNotEmpty) {
           if (route == '/lab-results') {
             await session.selectResult(orderId);

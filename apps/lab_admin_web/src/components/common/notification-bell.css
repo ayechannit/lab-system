@@ -364,12 +364,20 @@
 }
 
 .notification-list-container::-webkit-scrollbar {
-  width: 8px;
+  width: 6px;
+}
+
+.notification-list-container::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 .notification-list-container::-webkit-scrollbar-thumb {
   border-radius: 999px;
-  background: color-mix(in srgb, var(--muted) 28%, transparent);
+  background: color-mix(in srgb, var(--muted) 22%, transparent);
+}
+
+.notification-list-container:hover::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--muted) 38%, transparent);
 }
 
 .notification-empty {
@@ -440,18 +448,16 @@
 
 .notification-list {
   margin: 0;
-  padding: 0;
+  padding: 0.35rem 0.5rem 0.5rem;
   list-style: none;
 }
 
 .notification-row {
-  display: flex;
-  align-items: stretch;
-  border-bottom: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  margin-bottom: 0.45rem;
 }
 
 .notification-row:last-child {
-  border-bottom: none;
+  margin-bottom: 0;
 }
 
 .notification-item {
@@ -459,44 +465,63 @@
   display: flex;
   align-items: flex-start;
   gap: 0.75rem;
-  flex: 1;
-  min-width: 0;
-  margin: 0;
-  padding: 0.85rem 0.35rem 0.85rem 1rem;
-  border: none;
-  background: transparent;
-  text-align: left;
-  cursor: pointer;
-  transition: background 0.15s ease;
+  padding: 0.85rem 0.85rem 0.75rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--border) 82%, transparent);
+  border-radius: 12px;
+  background: var(--card-bg);
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .notification-row:hover .notification-item,
 .notification-row:focus-within .notification-item {
+  border-color: color-mix(in srgb, var(--primary) 22%, var(--border));
   background: var(--panel-muted);
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--border) 55%, transparent);
 }
 
 .notification-item--unread {
-  background: color-mix(in srgb, var(--primary) 4%, var(--card-bg));
+  background: color-mix(in srgb, var(--primary) 5%, var(--card-bg));
+  border-color: color-mix(in srgb, var(--primary) 18%, var(--border));
+}
+
+.notification-row:hover .notification-item--unread,
+.notification-row:focus-within .notification-item--unread {
+  background: color-mix(in srgb, var(--primary) 8%, var(--card-bg));
+  border-color: color-mix(in srgb, var(--primary) 28%, var(--border));
 }
 
 .notification-item--unread::before {
   content: '';
   position: absolute;
-  top: 0.65rem;
-  bottom: 0.65rem;
+  top: 0.75rem;
+  bottom: 0.75rem;
   left: 0;
   width: 3px;
   border-radius: 0 3px 3px 0;
   background: var(--primary);
 }
 
-.notification-item--unread:hover {
-  background: color-mix(in srgb, var(--primary) 7%, var(--card-bg));
+.notification-item__open {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
 }
 
-.notification-row:hover .notification-item--unread,
-.notification-row:focus-within .notification-item--unread {
-  background: color-mix(in srgb, var(--primary) 7%, var(--card-bg));
+.notification-item__open:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--primary) 35%, transparent);
+  outline-offset: 2px;
+  border-radius: 8px;
 }
 
 .notification-item__icon {
@@ -654,56 +679,56 @@
   color: var(--text);
 }
 
-.notification-item__action {
+.notification-item__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 0.55rem;
+  padding-top: 0.55rem;
+  border-top: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
+}
+
+.notification-item__action-btn {
   display: inline-flex;
   align-items: center;
   gap: 0.2rem;
-  margin-top: 0.1rem;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
   font-size: 0.74rem;
   font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 0.15s ease;
+}
+
+.notification-item__action-btn--primary {
   color: var(--primary);
 }
 
-.notification-item__action .material-symbols-outlined {
+.notification-item__action-btn--primary:hover {
+  color: color-mix(in srgb, var(--primary) 78%, black);
+}
+
+.notification-item__action-btn--primary .material-symbols-outlined {
   font-size: 0.95rem;
 }
 
-.notification-item__mark-read-btn {
-  flex-shrink: 0;
-  align-self: center;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.75rem;
-  height: 1.75rem;
-  margin: 0 0.65rem 0 0;
-  padding: 0;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--card-bg);
+.notification-item__action-btn--ghost {
+  margin-left: auto;
   color: var(--muted);
-  cursor: pointer;
-  opacity: 0;
-  transition:
-    opacity 0.15s ease,
-    border-color 0.15s ease,
-    color 0.15s ease,
-    background 0.15s ease;
 }
 
-.notification-row:hover .notification-item__mark-read-btn,
-.notification-row:focus-within .notification-item__mark-read-btn {
-  opacity: 1;
+.notification-item__action-btn--ghost:hover {
+  color: var(--heading);
 }
 
-.notification-item__mark-read-btn:hover {
-  border-color: var(--primary);
-  background: color-mix(in srgb, var(--primary) 8%, var(--card-bg));
-  color: var(--primary);
-}
-
-.notification-item__mark-read-btn .material-symbols-outlined {
-  font-size: 1rem;
+.notification-item__action-btn:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--primary) 35%, transparent);
+  outline-offset: 2px;
+  border-radius: 4px;
 }
 
 @media (max-width: 480px) {

@@ -27,6 +27,7 @@ class _LoginScreenState extends State<LoginScreen> {
   late final TextEditingController _password;
   bool _remember = false;
   bool _obscurePassword = true;
+  bool _submitting = false;
 
   @override
   void initState() {
@@ -192,39 +193,53 @@ class _LoginScreenState extends State<LoginScreen> {
                           SizedBox(
                             height: 58,
                             child: FilledButton.icon(
-                              onPressed: () async {
-                                if (!_formKey.currentState!.validate()) return;
-                                try {
-                                  await session.login(
-                                    email: _email.text.trim(),
-                                    password: _password.text,
-                                    remember: _remember,
-                                  );
-                                  if (!context.mounted) return;
-                                  context.go(session.homeRoute);
-                                } catch (e) {
-                                  if (!context.mounted) return;
-                                  final msg = e is LabApiException ? e.message : '$e';
-                                  final pending = e is LabApiException && e.statusCode == 403;
-                                  if (pending) {
-                                    AppToast.warning(
-                                      context,
-                                      '$msg\n\nAsk lab staff to approve your account in the admin portal.',
-                                      title: 'Account pending approval',
-                                      duration: const Duration(seconds: 6),
-                                    );
-                                  } else {
-                                    AppToast.error(
-                                      context,
-                                      msg,
-                                      title: 'Couldn\'t sign in',
-                                    );
-                                  }
-                                }
-                              },
+                              onPressed: _submitting
+                                  ? null
+                                  : () async {
+                                      if (!_formKey.currentState!.validate()) return;
+                                      setState(() => _submitting = true);
+                                      try {
+                                        await session.login(
+                                          email: _email.text.trim(),
+                                          password: _password.text,
+                                          remember: _remember,
+                                        );
+                                        if (!context.mounted) return;
+                                        context.go(session.homeRoute);
+                                      } catch (e) {
+                                        if (!context.mounted) return;
+                                        final msg = e is LabApiException ? e.message : '$e';
+                                        final pending = e is LabApiException && e.statusCode == 403;
+                                        if (pending) {
+                                          AppToast.warning(
+                                            context,
+                                            '$msg\n\nAsk lab staff to approve your account in the admin portal.',
+                                            title: 'Account pending approval',
+                                            duration: const Duration(seconds: 6),
+                                          );
+                                        } else {
+                                          AppToast.error(
+                                            context,
+                                            msg,
+                                            title: 'Couldn\'t sign in',
+                                          );
+                                        }
+                                      } finally {
+                                        if (mounted) setState(() => _submitting = false);
+                                      }
+                                    },
                               iconAlignment: IconAlignment.end,
-                              icon: const Icon(Icons.arrow_forward, size: 20),
-                              label: const Text('Login'),
+                              icon: _submitting
+                                  ? SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: context.cs.onPrimary,
+                                      ),
+                                    )
+                                  : const Icon(Icons.arrow_forward, size: 20),
+                              label: Text(_submitting ? 'Signing in…' : 'Login'),
                             ),
                           ),
                           const SizedBox(height: 20),

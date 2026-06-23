@@ -34,7 +34,16 @@ import { collectorRoleStaffList } from '../utils/collectorStaff'
 import { StaffAvatar } from '../components/staff/StaffAvatar'
 import '../components/common/ui.css'
 
-const ROUTING_STATUSES: ApiOrderStatus[] = ['pending', 'scheduled', 'collecting']
+function ordersForCollectionTable(
+  orders: ApiOrderListRow[],
+  isScheduleMode: boolean,
+  assignedOrderIds: ReadonlySet<string>,
+): ApiOrderListRow[] {
+  if (isScheduleMode) {
+    return orders.filter((o) => o.status === 'scheduled' || o.status === 'collecting')
+  }
+  return orders.filter((o) => o.status === 'pending' && !assignedOrderIds.has(o.id))
+}
 
 function fmtWhen(iso: string | undefined): string {
   if (!iso) return '—'
@@ -81,6 +90,47 @@ function clockTimeOnTodayToIso(clock: string): string | null {
   return d.toISOString()
 }
 
+/** Combine a calendar date (YYYY-MM-DD) with clock time (HH:MM) for schedule storage. */
+function dateAndClockToIso(dateYmd: string, clock: string): string | null {
+  const dateMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateYmd.trim())
+  const clockNorm = parseRouteStartTimeInput(clock)
+  if (!dateMatch || !clockNorm) return null
+  const y = Number(dateMatch[1])
+  const m = Number(dateMatch[2])
+  const d = Number(dateMatch[3])
+  const [h, min] = clockNorm.split(':').map(Number)
+  const dt = new Date(y, m - 1, d, h, min, 0, 0)
+  if (dt.getFullYear() !== y || dt.getMonth() !== m - 1 || dt.getDate() !== d) return null
+  if (!Number.isFinite(dt.getTime())) return null
+  return dt.toISOString()
+}
+
+function isoToDateInputValue(iso: string | null | undefined): string {
+  if (!iso) return ''
+  const date = new Date(iso)
+  if (!Number.isFinite(date.getTime())) return ''
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+}
+
+function scheduleToEditableStopTimes(
+  iso: string | null | undefined,
+  windowMinutes = 10,
+): EditableRouteStopTimes {
+  if (!iso) {
+    const now = new Date()
+    const clock = formatRouteStartTime(now)
+    const end = formatRouteStartTime(new Date(now.getTime() + windowMinutes * 60_000))
+    return { arrivalTime: clock, collectionStart: clock, collectionEnd: end }
+  }
+  const date = new Date(iso)
+  if (!Number.isFinite(date.getTime())) {
+    return { arrivalTime: '', collectionStart: '', collectionEnd: '' }
+  }
+  const clock = formatRouteStartTime(date)
+  const end = formatRouteStartTime(new Date(date.getTime() + windowMinutes * 60_000))
+  return { arrivalTime: clock, collectionStart: clock, collectionEnd: end }
+}
+
 function stopCollectionIso(
   orderId: string,
   stopIndex: number,
@@ -110,6 +160,48 @@ const ORDER_STATUS_OPTIONS: { value: ApiOrderStatus; label: string }[] = [
   { value: 'pending', label: 'Pending' },
   { value: 'scheduled', label: 'Scheduled' },
 ]
+
+function sortOrdersByCollectionTime(orders: ApiOrderListRow[]): ApiOrderListRow[] {
+  return [...orders].sort((a, b) => {
+    const ta = a.schedule?.collection_time
+      ? new Date(a.schedule.collection_time).getTime()
+      : Number.MAX_SAFE_INTEGER
+    const tb = b.schedule?.collection_time
+      ? new Date(b.schedule.collection_time).getTime()
+      : Number.MAX_SAFE_INTEGER
+    return ta - tb
+  })
+}
+
+function scheduledCollectorSummary(orders: ApiOrderListRow[]): string {
+  const names = [
+    ...new Set(
+      orders
+        .map((o) => o.schedule?.collecting_person?.trim())
+        .filter((name): name is string => Boolean(name)),
+    ),
+  ]
+  if (names.length === 0) return 'Collector not assigned yet'
+  if (names.length === 1) return names[0]
+  return `${names.length} collectors`
+}
+
+function latestCollectionTimeLabel(orders: ApiOrderListRow[]): string {
+  let latest: Date | null = null
+  for (const order of orders) {
+    const raw = order.schedule?.collection_time
+    if (!raw) continue
+    const d = new Date(raw)
+    if (!Number.isFinite(d.getTime())) continue
+    if (!latest || d.getTime() > latest.getTime()) latest = d
+  }
+  if (!latest) return '—'
+  return latest.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
+}
+
+function orderIdKey(id: string): string {
+  return id.trim().toLowerCase()
+}
 
 function orderCoords(order: ApiOrderListRow): { lat: number; lng: number } | null {
   const lat = Number(order.latitude)
@@ -256,6 +348,18 @@ export function SampleCollectionPage() {
   >({})
   const [editableRouteStops, setEditableRouteStops] = useState<Record<string, EditableRouteStopTimes>>({})
 
+  const [scheduledEditOpen, setScheduledEditOpen] = useState(false)
+  const [scheduledEditOrderId, setScheduledEditOrderId] = useState<string | null>(null)
+  const [scheduledEditCollectorId, setScheduledEditCollectorId] = useState('')
+  const [scheduledEditDate, setScheduledEditDate] = useState('')
+  const [scheduledEditTimes, setScheduledEditTimes] = useState<EditableRouteStopTimes>({
+    arrivalTime: '',
+    collectionStart: '',
+    collectionEnd: '',
+  })
+  const [scheduledEditSubmitting, setScheduledEditSubmitting] = useState(false)
+  const [scheduledEditError, setScheduledEditError] = useState<string | null>(null)
+
   const isScheduleMode = statusFilter === 'scheduled'
   const routeCollectorOptions = useMemo(() => collectorRoleStaffList(staff), [staff])
   const selectedRouteCollector = useMemo(
@@ -348,17 +452,58 @@ export function SampleCollectionPage() {
     setRouteResult(null)
     setRoutePlanOrders([])
     setEditableRouteStops({})
+    setRouteAssignments({})
+    setScheduledEditOpen(false)
+    setScheduledEditOrderId(null)
   }, [ordersListQuery])
 
+  const assignedOrderIds = useMemo(
+    () => new Set(Object.keys(routeAssignments)),
+    [routeAssignments],
+  )
+
   const routable = useMemo(
-    () => orders.filter((o) => ROUTING_STATUSES.includes(o.status)),
-    [orders],
+    () => ordersForCollectionTable(orders, isScheduleMode, assignedOrderIds),
+    [orders, isScheduleMode, assignedOrderIds],
+  )
+
+  const scheduledEditOrder = useMemo(() => {
+    if (!scheduledEditOrderId) return null
+    const key = orderIdKey(scheduledEditOrderId)
+    return routable.find((o) => orderIdKey(o.id) === key) ?? null
+  }, [scheduledEditOrderId, routable])
+
+  const selectedScheduledEditCollector = useMemo(
+    () => routeCollectorOptions.find((s) => s.id === scheduledEditCollectorId) ?? null,
+    [routeCollectorOptions, scheduledEditCollectorId],
   )
 
   const selectedRoutableCount = useMemo(
     () => routable.filter((o) => selectedIds.has(o.id)).length,
     [routable, selectedIds],
   )
+
+  const selectedScheduledOrder = useMemo(() => {
+    if (!isScheduleMode || selectedRoutableCount !== 1) return null
+    const selectedId = [...selectedIds][0]
+    if (!selectedId) return null
+    const key = orderIdKey(selectedId)
+    return routable.find((o) => orderIdKey(o.id) === key) ?? null
+  }, [isScheduleMode, selectedRoutableCount, selectedIds, routable])
+
+  const displayRoutable = useMemo(() => {
+    if (isScheduleMode) return sortOrdersByCollectionTime(routable)
+    return routable
+  }, [isScheduleMode, routable])
+
+  const isOrderSelected = (id: string) => {
+    if (selectedIds.size === 0) return false
+    const key = orderIdKey(id)
+    for (const selectedId of selectedIds) {
+      if (orderIdKey(selectedId) === key) return true
+    }
+    return false
+  }
 
   const routeSetupReady = useMemo(() => {
     if (labRouteStart == null) return false
@@ -372,6 +517,37 @@ export function SampleCollectionPage() {
 
   const canStartCollection = hasApi && !loading && !collectionSubmitting && selectedRoutableCount >= 1
 
+  const scheduledRouteStops = useMemo(() => {
+    if (!isScheduleMode) return []
+    return sortOrdersByCollectionTime(routable.filter((o) => o.status === 'scheduled'))
+  }, [isScheduleMode, routable])
+
+  const scheduledRouteSummary = useMemo(() => {
+    if (scheduledRouteStops.length === 0) return ''
+    if (selectedScheduledOrder) {
+      const schedule = selectedScheduledOrder.schedule
+      const stopNo =
+        scheduledRouteStops.findIndex((o) => orderIdKey(o.id) === orderIdKey(selectedScheduledOrder.id)) + 1
+      const patient = selectedScheduledOrder.patient_name.trim() || 'Patient'
+      const collector = schedule?.collecting_person?.trim() || 'Collector not assigned'
+      const when = fmtWhen(schedule?.collection_time ?? undefined)
+      return `Stop ${stopNo > 0 ? stopNo : '—'} of ${scheduledRouteStops.length} · ${patient} · ${collector} · ${when}`
+    }
+    const collectors = scheduledCollectorSummary(scheduledRouteStops)
+    const finish = latestCollectionTimeLabel(scheduledRouteStops)
+    return `${scheduledRouteStops.length} stop${scheduledRouteStops.length === 1 ? '' : 's'} · ${collectors} · last pickup ${finish}`
+  }, [scheduledRouteStops, selectedScheduledOrder])
+
+  const visibleScheduledStops = useMemo(() => {
+    if (selectedScheduledOrder) {
+      const stopIndex = scheduledRouteStops.findIndex(
+        (o) => orderIdKey(o.id) === orderIdKey(selectedScheduledOrder.id),
+      )
+      return [{ order: selectedScheduledOrder, stopIndex: stopIndex >= 0 ? stopIndex : 0 }]
+    }
+    return scheduledRouteStops.map((order, stopIndex) => ({ order, stopIndex }))
+  }, [scheduledRouteStops, selectedScheduledOrder])
+
   const displayEstimatedFinish = useMemo(() => {
     const ends = Object.values(editableRouteStops)
       .map((stop) => stop.collectionEnd.trim())
@@ -380,6 +556,19 @@ export function SampleCollectionPage() {
     return latest ?? routeResult?.estimatedFinishTime ?? '—'
   }, [editableRouteStops, routeResult?.estimatedFinishTime])
 
+  const allRouteStopsAssigned = useMemo(
+    () => routePlanOrders.length > 0 && routePlanOrders.every((o) => Boolean(routeAssignments[o.id])),
+    [routePlanOrders, routeAssignments],
+  )
+
+  function clearRoutePlan() {
+    setRouteResult(null)
+    setRoutePlanOrders([])
+    setEditableRouteStops({})
+    setRouteAssignments({})
+    setSelectedIds(new Set())
+  }
+
   const toggle = (id: string) => {
     setSelectedIds((prev) => {
       const next = new Set(prev)
@@ -387,6 +576,10 @@ export function SampleCollectionPage() {
       else next.add(id)
       return next
     })
+  }
+
+  const selectSingle = (id: string) => {
+    setSelectedIds(new Set([id]))
   }
 
   function updateRouteStopTime(
@@ -403,6 +596,78 @@ export function SampleCollectionPage() {
         [field]: value,
       },
     }))
+  }
+
+  function updateScheduledEditStopTime(field: keyof EditableRouteStopTimes, value: string) {
+    setScheduledEditTimes((prev) => ({
+      ...prev,
+      [field]: value,
+    }))
+  }
+
+  function openScheduledEdit(order: ApiOrderListRow) {
+    const schedule = order.schedule
+    const existingName = schedule?.collecting_person?.trim() ?? ''
+    const matched = routeCollectorOptions.find(
+      (s) => s.name.trim().toLowerCase() === existingName.toLowerCase(),
+    )
+    setScheduledEditOrderId(order.id)
+    setScheduledEditCollectorId(matched?.id ?? routeCollectorOptions[0]?.id ?? '')
+    setScheduledEditDate(
+      isoToDateInputValue(schedule?.collection_time) || isoToDateInputValue(new Date().toISOString()),
+    )
+    setScheduledEditTimes(scheduleToEditableStopTimes(schedule?.collection_time))
+    setScheduledEditError(null)
+    setScheduledEditOpen(true)
+    selectSingle(order.id)
+  }
+
+  async function submitScheduledEdit(e: FormEvent) {
+    e.preventDefault()
+    if (!scheduledEditOrder) return
+    setScheduledEditError(null)
+
+    const collector = routeCollectorOptions.find((s) => s.id === scheduledEditCollectorId)
+    if (!collector) {
+      setScheduledEditError('Select a collector staff member.')
+      return
+    }
+    if (!scheduledEditDate.trim()) {
+      setScheduledEditError('Pick a pickup date.')
+      return
+    }
+
+    const clock =
+      scheduledEditTimes.collectionStart.trim() || scheduledEditTimes.arrivalTime.trim()
+    if (!clock) {
+      setScheduledEditError('Set a collection time for this stop.')
+      return
+    }
+
+    const collectionIso = dateAndClockToIso(scheduledEditDate, clock)
+    if (!collectionIso) {
+      setScheduledEditError('Pickup date or time is invalid.')
+      return
+    }
+
+    setScheduledEditSubmitting(true)
+    try {
+      await upsertSchedule({
+        order_id: scheduledEditOrder.id,
+        collecting_person: collector.name.trim(),
+        collection_time: collectionIso,
+        running_time: scheduledEditOrder.schedule?.running_time ?? null,
+        report_out_time: scheduledEditOrder.schedule?.report_out_time ?? null,
+      })
+      setScheduledEditOpen(false)
+      setScheduledEditOrderId(null)
+      setRefreshTick((t) => t + 1)
+      showSuccess('Collector and stop time updated.')
+    } catch (err) {
+      setScheduledEditError(err instanceof Error ? err.message : 'Schedule update failed')
+    } finally {
+      setScheduledEditSubmitting(false)
+    }
   }
 
   const runAiRoute = async () => {
@@ -567,8 +832,23 @@ export function SampleCollectionPage() {
       }
       setRouteAssignments(nextAssignments)
       setRouteAssignOpen(false)
+      const assignedIds = Object.keys(nextAssignments)
+      setOrders((prev) => prev.filter((o) => !assignedIds.includes(o.id)))
+      setSelectedIds((prev) => {
+        const next = new Set(prev)
+        for (const id of assignedIds) next.delete(id)
+        return next
+      })
       setRefreshTick((t) => t + 1)
-      showSuccess(`Assigned ${collector.name.trim()} to ${routePlanOrders.length} route stop(s).`)
+      showSuccess(
+        pendingToSchedule.length > 0
+          ? `Assigned ${collector.name.trim()} to ${routePlanOrders.length} stop(s). Orders moved to Scheduled.`
+          : `Assigned ${collector.name.trim()} to ${routePlanOrders.length} route stop(s).`,
+      )
+      if (pendingToSchedule.length > 0) {
+        setStatusFilter('scheduled')
+      }
+      clearRoutePlan()
     } catch (err) {
       setRouteAssignError(err instanceof Error ? err.message : 'Route assignment failed')
     } finally {
@@ -579,7 +859,11 @@ export function SampleCollectionPage() {
   async function startCollectionForSelected() {
     const picked = routable.filter((o) => selectedIds.has(o.id))
     if (picked.length === 0) {
-      showError('Select at least one order to start collection.')
+      showError(
+        isScheduleMode
+          ? 'Select one scheduled order to start collection.'
+          : 'Select at least one order to start collection.',
+      )
       return
     }
     const staffId = account?.id
@@ -616,7 +900,7 @@ export function SampleCollectionPage() {
         title="Collection & routing"
         description={
           isScheduleMode
-            ? 'Review scheduled pickups and mark orders as collecting when sample collection begins.'
+            ? 'Review scheduled pickups and mark one order at a time as collecting when sample collection begins.'
             : 'Choose orders that need a sample pickup, then plan an efficient collection route.'
         }
       />
@@ -687,8 +971,8 @@ export function SampleCollectionPage() {
           {isScheduleMode ? 'Scheduled collections' : 'Orders ready for pickup routing'}
         </h3>
         <p style={{ margin: '0 0 0.75rem', color: 'var(--muted)', fontSize: '0.875rem' }}>
-          {isScheduleMode
-            ? 'Select one or more scheduled orders, then mark them as collecting when pickup starts.'
+          {          isScheduleMode
+            ? 'Select one scheduled order, then mark it as collecting when pickup starts.'
             : 'Select one or more orders below, then set route start details and plan a collection route with AI.'}
         </p>
         <div className="table-wrap">
@@ -699,6 +983,12 @@ export function SampleCollectionPage() {
                 <th>Order</th>
                 <th>Patient</th>
                 <th>Address</th>
+                {isScheduleMode ? (
+                  <>
+                    <th>Collector</th>
+                    <th>Collection time</th>
+                  </>
+                ) : null}
                 <th>Status</th>
                 <th>Created</th>
               </tr>
@@ -706,31 +996,40 @@ export function SampleCollectionPage() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="data-table__state data-table__state--loading">
+                  <td colSpan={isScheduleMode ? 8 : 6} className="data-table__state data-table__state--loading">
                     <LoadingSpinner label="Loading samples" />
                   </td>
                 </tr>
               ) : routable.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="data-table__state">
+                  <td colSpan={isScheduleMode ? 8 : 6} className="data-table__state">
                     {orders.length === 0
                       ? patientName || statusFilter
                         ? 'No orders match these filters.'
                         : 'No orders returned from the server.'
                       : isScheduleMode
                         ? 'No scheduled orders in this list.'
-                        : 'No orders in pending / scheduled / collecting in this list.'}
+                        : 'No pending orders ready for pickup routing.'}
                   </td>
                 </tr>
               ) : (
-                routable.map((o) => (
-                  <tr key={o.id}>
-                    <td>
+                displayRoutable.map((o) => (
+                  <tr
+                    key={o.id}
+                    className={isScheduleMode && isOrderSelected(o.id) ? 'data-table__row--selected' : undefined}
+                    onClick={isScheduleMode ? () => selectSingle(o.id) : undefined}
+                  >
+                    <td onClick={(e) => e.stopPropagation()}>
                       <input
-                        type="checkbox"
-                        checked={selectedIds.has(o.id)}
-                        onChange={() => toggle(o.id)}
-                        aria-label={`Select ${o.patient_name}`}
+                        type={isScheduleMode ? 'radio' : 'checkbox'}
+                        name={isScheduleMode ? 'collection-scheduled-order' : undefined}
+                        checked={isOrderSelected(o.id)}
+                        onChange={() => (isScheduleMode ? selectSingle(o.id) : toggle(o.id))}
+                        aria-label={
+                          isScheduleMode
+                            ? `Select ${o.patient_name} to start collecting`
+                            : `Select ${o.patient_name}`
+                        }
                       />
                     </td>
                     <td>
@@ -738,6 +1037,12 @@ export function SampleCollectionPage() {
                     </td>
                     <td>{o.patient_name}</td>
                     <td>{o.address?.trim() || '—'}</td>
+                    {isScheduleMode ? (
+                      <>
+                        <td>{o.schedule?.collecting_person?.trim() || '—'}</td>
+                        <td>{fmtWhen(o.schedule?.collection_time ?? undefined)}</td>
+                      </>
+                    ) : null}
                     <td>{o.status}</td>
                     <td>{fmtWhen(o.created_at)}</td>
                   </tr>
@@ -821,23 +1126,14 @@ export function SampleCollectionPage() {
         ) : null}
         <div className="row-actions" style={{ marginTop: '1rem', alignItems: 'center' }}>
           {isScheduleMode ? (
-            canStartCollection ? (
-              <button
-                type="button"
-                className="btn btn-primary"
-                onClick={() => void startCollectionForSelected()}
-                disabled={collectionSubmitting}
-                aria-busy={collectionSubmitting}
-              >
-                {collectionSubmitting
-                  ? 'Updating…'
-                  : selectedRoutableCount === 1
-                    ? 'Start collecting'
-                    : `Start collecting (${selectedRoutableCount})`}
-              </button>
+            selectedScheduledOrder ? (
+              <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--muted)' }}>
+                <strong>{selectedScheduledOrder.patient_name.trim() || 'Patient'}</strong> selected — use Start
+                collecting below the route.
+              </p>
             ) : (
               <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--muted)' }}>
-                Select one or more orders in the table above to mark them as collecting.
+                Select one scheduled order in the table above, then start collecting when pickup begins.
               </p>
             )
           ) : selectedRoutableCount >= 1 ? (
@@ -859,7 +1155,7 @@ export function SampleCollectionPage() {
         </div>
       </div>
 
-      {!isScheduleMode && routeResult && routePlanOrders.length > 0 ? (
+      {!isScheduleMode && routeResult && routePlanOrders.length > 0 && !allRouteStopsAssigned ? (
         <div className="route-panel">
           <div className="route-panel__head">
             <div>
@@ -867,6 +1163,13 @@ export function SampleCollectionPage() {
               <p className="route-panel__summary">{routeResult.summary}</p>
             </div>
             <div className="route-panel__head-actions">
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={clearRoutePlan}
+              >
+                Cancel
+              </button>
               <button
                 type="button"
                 className="btn btn-primary btn-sm"
@@ -896,7 +1199,6 @@ export function SampleCollectionPage() {
             {routePlanOrders.map((order, stopIndex) => {
               const items: ApiOrderDetailItem[] = order.items ?? []
               const stop = stopIndex + 1
-              const assigned = routeAssignments[order.id]
               const stopTimes = editableRouteStops[order.id]
               return (
                 <li key={order.id} className="route-stop-card">
@@ -948,14 +1250,6 @@ export function SampleCollectionPage() {
                         </div>
                       </div>
                     ) : null}
-                    {assigned ? (
-                      <p className="route-stop-card__assigned">
-                        <span className="material-symbols-outlined route-stop-card__assigned-icon" aria-hidden>
-                          person
-                        </span>
-                        {assigned.collectorName} · {fmtWhen(assigned.collectionTime)}
-                      </p>
-                    ) : null}
                     {items.length === 0 ? (
                       <p className="route-stop-card__empty">No tests assigned on this order</p>
                     ) : (
@@ -973,6 +1267,98 @@ export function SampleCollectionPage() {
                         ))}
                       </ul>
                     )}
+                  </div>
+                </li>
+              )
+            })}
+          </ol>
+        </div>
+      ) : null}
+
+      {isScheduleMode && !loading && scheduledRouteStops.length > 0 ? (
+        <div className="route-panel route-panel--assigned">
+          <div className="route-panel__head">
+            <div>
+              <h3 className="route-panel__title">
+                {selectedScheduledOrder ? 'Selected pickup stop' : 'Assigned pickup route'}
+              </h3>
+              <p className="route-panel__summary">{scheduledRouteSummary}</p>
+            </div>
+            <div className="route-panel__head-actions">
+              {selectedScheduledOrder ? (
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => openScheduledEdit(selectedScheduledOrder)}
+                  disabled={scheduledEditSubmitting}
+                >
+                  Update schedule
+                </button>
+              ) : null}
+              {canStartCollection ? (
+                <button
+                  type="button"
+                  className="btn btn-primary btn-sm"
+                  onClick={() => void startCollectionForSelected()}
+                  disabled={collectionSubmitting}
+                  aria-busy={collectionSubmitting}
+                >
+                  {collectionSubmitting ? 'Updating…' : 'Start collecting'}
+                </button>
+              ) : null}
+            </div>
+          </div>
+          <p className="route-panel__hint">
+            {selectedScheduledOrder
+              ? 'This is the stop you selected in the table. Update collector or stop times, then start collecting when pickup begins'
+              : 'Stops are ordered by collection time. Select one order in the table above to focus a stop, then start collecting.'}
+          </p>
+          <ol className="route-stops" aria-label="Scheduled collection stops">
+            {visibleScheduledStops.map(({ order, stopIndex }) => {
+              const selected = isOrderSelected(order.id)
+              const schedule = order.schedule
+              return (
+                <li
+                  key={order.id}
+                  className={`route-stop-card route-stop-card--assigned${selected ? ' route-stop-card--selected' : ''}`}
+                  onClick={() => selectSingle(order.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      selectSingle(order.id)
+                    }
+                  }}
+                  role="button"
+                  tabIndex={0}
+                >
+                  <div className="route-stop-card__marker" aria-hidden>
+                    <span className="route-stop-card__badge">{stopIndex + 1}</span>
+                    {!selectedScheduledOrder && stopIndex < scheduledRouteStops.length - 1 ? (
+                      <span className="route-stop-card__line" />
+                    ) : null}
+                  </div>
+                  <div className="route-stop-card__body">
+                    <div className="route-stop-card__meta">
+                      <span className="route-stop-card__patient">{order.patient_name}</span>
+                      <span className="route-stop-card__address">
+                        {order.address?.trim() || 'No address on file'}
+                      </span>
+                    </div>
+                    <p className="route-stop-card__assigned route-stop-card__assigned--prominent">
+                      <span className="material-symbols-outlined route-stop-card__assigned-icon" aria-hidden>
+                        person
+                      </span>
+                      <span>
+                        <strong>{schedule?.collecting_person?.trim() || 'Collector not assigned'}</strong>
+                        <span className="route-stop-card__assigned-time">
+                          {' '}
+                          · {fmtWhen(schedule?.collection_time ?? undefined)}
+                        </span>
+                      </span>
+                    </p>
+                    {selected ? (
+                      <p className="route-stop-card__selected-note">Selected for collection start</p>
+                    ) : null}
                   </div>
                 </li>
               )
@@ -1080,6 +1466,164 @@ export function SampleCollectionPage() {
                         disabled={routeAssignSubmitting || routeCollectorOptions.length === 0}
                       >
                         {routeAssignSubmitting ? 'Assigning…' : 'Assign to route'}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
+
+      {scheduledEditOpen && scheduledEditOrder
+        ? createPortal(
+            <div
+              className="modal-backdrop"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="scheduled-edit-title"
+              onMouseDown={(e) =>
+                e.target === e.currentTarget && !scheduledEditSubmitting && setScheduledEditOpen(false)
+              }
+            >
+              <div className="modal-card modal-card--status-update" onMouseDown={(e) => e.stopPropagation()}>
+                <div className="modal-head">
+                  <h2 className="modal-title" id="scheduled-edit-title">
+                    Update schedule
+                  </h2>
+                  <button
+                    type="button"
+                    className="btn btn-ghost modal-close"
+                    onClick={() => !scheduledEditSubmitting && setScheduledEditOpen(false)}
+                    aria-label="Close"
+                    disabled={scheduledEditSubmitting}
+                  >
+                    ×
+                  </button>
+                </div>
+                <div className="modal-card--status-update__body">
+                  <form className="form-grid status-update-form" onSubmit={(e) => void submitScheduledEdit(e)}>
+                    <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--muted)' }}>
+                      Update collector and pickup times for{' '}
+                      <strong>{scheduledEditOrder.patient_name.trim() || 'this patient'}</strong>
+                      {scheduledEditOrder.address?.trim() ? (
+                        <>
+                          {' '}
+                          at <strong>{scheduledEditOrder.address.trim()}</strong>
+                        </>
+                      ) : null}
+                      .
+                    </p>
+                    {routeCollectorOptions.length === 0 ? (
+                      <div className="form-alert form-alert--error" role="alert">
+                        No collectors available. Go to <strong>Staff</strong> → add or edit a staff member and set role
+                        to <strong>Collector</strong>, then try again.
+                      </div>
+                    ) : (
+                      <div className="field">
+                        <label htmlFor="scheduled-edit-collector">Collector</label>
+                        <select
+                          id="scheduled-edit-collector"
+                          className="select-chevron-left"
+                          value={scheduledEditCollectorId}
+                          onChange={(e) => setScheduledEditCollectorId(e.target.value)}
+                          disabled={scheduledEditSubmitting}
+                        >
+                          <option value="">Select collector…</option>
+                          {routeCollectorOptions.map((s) => (
+                            <option key={s.id} value={s.id}>
+                              {s.name}
+                            </option>
+                          ))}
+                        </select>
+                        {selectedScheduledEditCollector ? (
+                          <div className="route-collector-preview" aria-live="polite">
+                            <StaffAvatar
+                              name={selectedScheduledEditCollector.name}
+                              profileImageUrl={selectedScheduledEditCollector.profile_image_url}
+                              className="route-collector-preview__avatar"
+                            />
+                            <div className="route-collector-preview__meta">
+                              <span className="route-collector-preview__name">
+                                {selectedScheduledEditCollector.name}
+                              </span>
+                              <span className="route-collector-preview__email">
+                                {selectedScheduledEditCollector.email}
+                              </span>
+                            </div>
+                          </div>
+                        ) : null}
+                      </div>
+                    )}
+                    <div className="field">
+                      <label htmlFor="scheduled-edit-date">Pickup date</label>
+                      <input
+                        id="scheduled-edit-date"
+                        type="date"
+                        value={scheduledEditDate}
+                        onChange={(e) => setScheduledEditDate(e.target.value)}
+                        disabled={scheduledEditSubmitting}
+                      />
+                    </div>
+                    <div className="route-stop-card__schedule-edit">
+                      <p className="route-stop-card__schedule-label">Stop times</p>
+                      <div className="route-stop-card__schedule-grid">
+                        <div className="field">
+                          <label htmlFor="scheduled-edit-arrive">Arrive</label>
+                          <TimeField
+                            id="scheduled-edit-arrive"
+                            value={scheduledEditTimes.arrivalTime}
+                            onChange={(value) => updateScheduledEditStopTime('arrivalTime', value)}
+                            disabled={scheduledEditSubmitting}
+                            placeholder="Arrive"
+                          />
+                        </div>
+                        <div className="field">
+                          <label htmlFor="scheduled-edit-collect-start">Collect from</label>
+                          <TimeField
+                            id="scheduled-edit-collect-start"
+                            value={scheduledEditTimes.collectionStart}
+                            onChange={(value) => updateScheduledEditStopTime('collectionStart', value)}
+                            disabled={scheduledEditSubmitting}
+                            placeholder="Start"
+                          />
+                        </div>
+                        <div className="field">
+                          <label htmlFor="scheduled-edit-collect-end">Collect until</label>
+                          <TimeField
+                            id="scheduled-edit-collect-end"
+                            value={scheduledEditTimes.collectionEnd}
+                            onChange={(value) => updateScheduledEditStopTime('collectionEnd', value)}
+                            disabled={scheduledEditSubmitting}
+                            placeholder="End"
+                          />
+                        </div>
+                      </div>
+                      <p className="route-stop-card__schedule-hint">
+                        Saved pickup time uses <strong>Collect from</strong>, or <strong>Arrive</strong> if empty
+                      </p>
+                    </div>
+                    {scheduledEditError ? (
+                      <div className="form-alert form-alert--error" role="alert">
+                        {scheduledEditError}
+                      </div>
+                    ) : null}
+                    <div className="row-actions" style={{ justifyContent: 'flex-end' }}>
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        onClick={() => setScheduledEditOpen(false)}
+                        disabled={scheduledEditSubmitting}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        className="btn btn-primary"
+                        disabled={scheduledEditSubmitting || routeCollectorOptions.length === 0}
+                      >
+                        {scheduledEditSubmitting ? 'Updating…' : 'Update schedule'}
                       </button>
                     </div>
                   </form>
