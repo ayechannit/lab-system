@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEventHandler } from 'react'
 import { ListFilterSearchField } from '../components/common/ListFilterSearchField'
+import { ConfirmDialog } from '../components/common/ConfirmDialog'
 import { PageHeader } from '../components/common/PageHeader'
 import { useAuth } from '../hooks/AuthContext'
 import { useToast } from '../hooks/ToastContext'
@@ -604,6 +605,7 @@ export function LabResultManagementPage() {
   const [aiReviewErrorByTestId, setAiReviewErrorByTestId] = useState<Record<string, string>>({})
   const [statusSubmitting, setStatusSubmitting] = useState(false)
   const [releaseSubmitting, setReleaseSubmitting] = useState(false)
+  const [releaseConfirmOpen, setReleaseConfirmOpen] = useState(false)
   const [pdfAction, setPdfAction] = useState<{ testId: string; mode: 'view' | 'download' } | null>(null)
 
   useEffect(() => {
@@ -1336,6 +1338,14 @@ export function LabResultManagementPage() {
       showError('Cannot release: one or more tests were marked incorrect by AI review. Fix results and re-run review.')
       return
     }
+    setReleaseConfirmOpen(true)
+  }
+
+  async function confirmReleaseToPatient() {
+    if (!detail || releaseSubmitting) return
+    const staffId = account?.id
+    if (!staffId) return
+    setReleaseConfirmOpen(false)
     setReleaseSubmitting(true)
     try {
       await updateOrderStatus(detail.id, {
@@ -2235,6 +2245,24 @@ export function LabResultManagementPage() {
           </footer>
         </div>
       ) : null}
+
+      <ConfirmDialog
+        open={releaseConfirmOpen}
+        title="Release results to patient?"
+        message={
+          detail
+            ? `Are you sure you want to release lab results for ${detail.patient_name.trim() || 'this patient'}? ${
+                detail.items.length === 1
+                  ? 'The patient will be able to view and download the test PDF in the app.'
+                  : `All ${detail.items.length} test PDFs will become available for the patient to view and download in the app.`
+              } This cannot be undone from this screen.`
+            : 'Are you sure you want to release these results to the patient?'
+        }
+        confirmLabel={releaseSubmitting ? 'Releasing…' : 'Release to patient'}
+        cancelLabel="Cancel"
+        onConfirm={() => void confirmReleaseToPatient()}
+        onCancel={() => !releaseSubmitting && setReleaseConfirmOpen(false)}
+      />
     </div>
   )
 }
