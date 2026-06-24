@@ -34,7 +34,7 @@ function AppThemeSync() {
   useAppThemeSync(signedIn && !initializing)
   return null
 }
-//make deployment 1
+//make deployment
 export default function App() {
   const Router = window.location.protocol === 'file:' ? HashRouter : BrowserRouter
 
