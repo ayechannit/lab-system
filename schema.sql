@@ -101,6 +101,8 @@ CREATE TABLE lab_order_items (
     unit_price_mmk DECIMAL(18, 2) NOT NULL,
     subtotal_mmk DECIMAL(18, 2) NOT NULL,
     result_file_url VARCHAR(500) NULL,
+    result_pdf_group_id UNIQUEIDENTIFIER NULL,
+    result_pdf_display_solo BIT NOT NULL DEFAULT 0,
     created_user UNIQUEIDENTIFIER,
     updated_user UNIQUEIDENTIFIER,
     created_at DATETIME2 DEFAULT GETDATE(),

@@ -20,6 +20,8 @@ import {
   fetchOrders,
   updateOrderStatus,
   uploadOrderTestResult,
+  uploadOrderTestResultsBulk,
+  separateOrderTestResultPdfs,
   saveOrderTestAiReview,
   type ApiOrderDetailItem,
   type ApiOrderDetail,
@@ -260,15 +262,15 @@ function parseAiReviewRepliesForTests(
   return result
 }
 
-function groupItemsBySharedPdf(
-  items: ApiOrderDetailItem[],
-  batchByTestId: Record<string, string>,
-): ApiOrderDetailItem[][] {
+function itemPdfDisplaySolo(item: ApiOrderDetailItem): boolean {
+  const raw = item.result_pdf_display_solo
+  return raw === true || raw === 1
+}
+
+function groupItemsBySharedPdf(items: ApiOrderDetailItem[]): ApiOrderDetailItem[][] {
   const buckets = new Map<string, ApiOrderDetailItem[]>()
   for (const it of items) {
-    const batch = batchByTestId[it.test_id]
-    const url = testResultFileUrl(it)
-    const key = batch ? `batch:${batch}` : url ? `url:${url}` : `solo:${it.test_id}`
+    const key = pdfGroupBucketKey(it) ?? `solo:${it.test_id}`
     const list = buckets.get(key) ?? []
     list.push(it)
     buckets.set(key, list)
@@ -336,85 +338,13 @@ function testResultStorageKey(item: ApiOrderDetailItem): string | null {
   }
 }
 
-const PDF_UPLOAD_BATCH_STORAGE_PREFIX = 'lab-result-pdf-batch:'
-const PDF_SEPARATE_STORAGE_PREFIX = 'lab-result-pdf-separate:'
-
-function loadPdfUploadBatches(orderId: string): Record<string, string> {
-  try {
-    const raw = sessionStorage.getItem(`${PDF_UPLOAD_BATCH_STORAGE_PREFIX}${orderId}`)
-    if (!raw) return {}
-    const parsed = JSON.parse(raw) as unknown
-    if (!parsed || typeof parsed !== 'object') return {}
-    return parsed as Record<string, string>
-  } catch {
-    return {}
-  }
-}
-
-function savePdfUploadBatches(orderId: string, batchByTestId: Record<string, string>) {
-  try {
-    sessionStorage.setItem(
-      `${PDF_UPLOAD_BATCH_STORAGE_PREFIX}${orderId}`,
-      JSON.stringify(batchByTestId),
-    )
-  } catch {
-    /* ignore quota / private mode */
-  }
-}
-
-function prunePdfUploadBatches(
-  batchByTestId: Record<string, string>,
-  items: ApiOrderDetailItem[],
-): Record<string, string> {
-  const valid = new Set(items.map((it) => it.test_id))
-  const next: Record<string, string> = {}
-  for (const [testId, batchKey] of Object.entries(batchByTestId)) {
-    if (valid.has(testId)) next[testId] = batchKey
-  }
-  return next
-}
-
-function loadForceSeparatePdfTestIds(orderId: string): string[] {
-  try {
-    const raw = sessionStorage.getItem(`${PDF_SEPARATE_STORAGE_PREFIX}${orderId}`)
-    if (!raw) return []
-    const parsed = JSON.parse(raw) as unknown
-    if (!Array.isArray(parsed)) return []
-    return parsed.filter((id): id is string => typeof id === 'string')
-  } catch {
-    return []
-  }
-}
-
-function saveForceSeparatePdfTestIds(orderId: string, testIds: Set<string>) {
-  try {
-    sessionStorage.setItem(
-      `${PDF_SEPARATE_STORAGE_PREFIX}${orderId}`,
-      JSON.stringify([...testIds]),
-    )
-  } catch {
-    /* ignore quota / private mode */
-  }
-}
-
-function pruneForceSeparatePdfTestIds(
-  testIds: Set<string>,
-  items: ApiOrderDetailItem[],
-): Set<string> {
-  const valid = new Set(items.map((it) => it.test_id))
-  return new Set([...testIds].filter((id) => valid.has(id)))
-}
-
-function pdfGroupBucketKey(
-  item: ApiOrderDetailItem,
-  batchByTestId: Record<string, string>,
-  forceSeparateTestIds: Set<string>,
-): string | null {
-  const batchKey = batchByTestId[item.test_id]
+function pdfGroupBucketKey(item: ApiOrderDetailItem): string | null {
+  if (itemPdfDisplaySolo(item)) return `solo:${item.test_id}`
+  const groupId = item.result_pdf_group_id?.trim()
+  if (groupId) return `group:${groupId}`
   const storageKey = testResultStorageKey(item)
-  if (!batchKey && !storageKey) return null
-  if (forceSeparateTestIds.has(item.test_id)) return `solo:${item.test_id}`
-  return batchKey ? `batch:${batchKey}` : storageKey
+  if (!storageKey) return null
+  return storageKey
 }
 
 function labResultStatusBadgeClass(status: ApiOrderStatus): string {
@@ -465,14 +395,10 @@ type LabResultTestRow =
 
 type SharedPdfRowStatus = 'awaiting' | 'uploaded' | 'reviewing' | 'reviewed' | 'error'
 
-function buildLabResultTestRows(
-  items: ApiOrderDetailItem[],
-  batchByTestId: Record<string, string> = {},
-  forceSeparateTestIds: Set<string> = new Set(),
-): LabResultTestRow[] {
+function buildLabResultTestRows(items: ApiOrderDetailItem[]): LabResultTestRow[] {
   const buckets = new Map<string, ApiOrderDetailItem[]>()
   for (const it of items) {
-    const key = pdfGroupBucketKey(it, batchByTestId, forceSeparateTestIds)
+    const key = pdfGroupBucketKey(it)
     if (!key) continue
     const list = buckets.get(key) ?? []
     list.push(it)
@@ -484,7 +410,7 @@ function buildLabResultTestRows(
   let groupIndex = 0
 
   for (const it of items) {
-    const bucketKey = pdfGroupBucketKey(it, batchByTestId, forceSeparateTestIds)
+    const bucketKey = pdfGroupBucketKey(it)
     if (!bucketKey) {
       rows.push({ kind: 'single', item: it })
       continue
@@ -587,8 +513,6 @@ export function LabResultManagementPage() {
   const [uploadTargetTestIds, setUploadTargetTestIds] = useState<string[]>([])
   const [uploadingTestIds, setUploadingTestIds] = useState<string[]>([])
   const [bulkPdfSelectedIds, setBulkPdfSelectedIds] = useState<string[]>([])
-  const [pdfUploadBatchByTestId, setPdfUploadBatchByTestId] = useState<Record<string, string>>({})
-  const [forceSeparatePdfTestIds, setForceSeparatePdfTestIds] = useState<Set<string>>(new Set())
   const pdfInputRef = useRef<HTMLInputElement>(null)
   const resultEntryRef = useRef<HTMLDivElement>(null)
   const [patientInput, setPatientInput] = useState('')
@@ -840,13 +764,8 @@ export function LabResultManagementPage() {
   const showBulkPdfUpload = Boolean(canUploadPdfs && detail && detail.items.length > 1 && !isReleased)
 
   const labResultTestRows = useMemo(
-    () =>
-      buildLabResultTestRows(
-        detail?.items ?? [],
-        pdfUploadBatchByTestId,
-        forceSeparatePdfTestIds,
-      ),
-    [detail?.items, pdfUploadBatchByTestId, forceSeparatePdfTestIds],
+    () => buildLabResultTestRows(detail?.items ?? []),
+    [detail?.items],
   )
 
   const detailItemsById = useMemo(() => {
@@ -943,31 +862,7 @@ export function LabResultManagementPage() {
 
   useEffect(() => {
     setBulkPdfSelectedIds([])
-    if (!detail?.id) {
-      setPdfUploadBatchByTestId({})
-      setForceSeparatePdfTestIds(new Set())
-      return
-    }
-    setPdfUploadBatchByTestId(
-      prunePdfUploadBatches(loadPdfUploadBatches(detail.id), detail.items ?? []),
-    )
-    setForceSeparatePdfTestIds(
-      pruneForceSeparatePdfTestIds(
-        new Set(loadForceSeparatePdfTestIds(detail.id)),
-        detail.items ?? [],
-      ),
-    )
   }, [detail?.id])
-
-  useEffect(() => {
-    if (!detail?.id) return
-    savePdfUploadBatches(detail.id, pdfUploadBatchByTestId)
-  }, [detail?.id, pdfUploadBatchByTestId])
-
-  useEffect(() => {
-    if (!detail?.id) return
-    saveForceSeparatePdfTestIds(detail.id, forceSeparatePdfTestIds)
-  }, [detail?.id, forceSeparatePdfTestIds])
 
   async function refreshOrderDetail(id: string) {
     const next = await fetchOrderById(id)
@@ -1038,22 +933,18 @@ export function LabResultManagementPage() {
     setBulkPdfSelectedIds([])
   }
 
-  function separateSharedPdfGroup(testIds: string[]) {
-    if (testIds.length < 2) return
-    setForceSeparatePdfTestIds((prev) => {
-      const next = new Set(prev)
-      for (const testId of testIds) next.add(testId)
-      return next
-    })
-    setPdfUploadBatchByTestId((prev) => {
-      const next = { ...prev }
-      for (const testId of testIds) delete next[testId]
-      return next
-    })
-    setBulkPdfSelectedIds((prev) => prev.filter((id) => !testIds.includes(id)))
-    showSuccess(
-      'Tests split into separate rows. Use Replace PDF on each test to assign different reports.',
-    )
+  async function separateSharedPdfGroup(testIds: string[]) {
+    if (!detail || testIds.length < 2) return
+    try {
+      await separateOrderTestResultPdfs(detail.id, testIds)
+      await refreshOrderDetail(detail.id)
+      setBulkPdfSelectedIds((prev) => prev.filter((id) => !testIds.includes(id)))
+      showSuccess(
+        'Tests split into separate rows. Use Replace PDF on each test to assign different reports.',
+      )
+    } catch (err) {
+      showError(messageFromError(err, 'Failed to separate PDF rows'))
+    }
   }
 
   const onPdfSelected: ChangeEventHandler<HTMLInputElement> = async (e) => {
@@ -1069,31 +960,13 @@ export function LabResultManagementPage() {
     setUploadBusy(true)
     setUploadingTestIds(targets)
     try {
-      const uploaded: string[] = []
-      for (const testId of targets) {
-        await uploadOrderTestResult(detail.id, testId, file)
-        uploaded.push(testId)
+      if (targets.length > 1) {
+        await uploadOrderTestResultsBulk(detail.id, targets, file)
+      } else {
+        await uploadOrderTestResult(detail.id, targets[0], file)
       }
       const next = await refreshOrderDetail(detail.id)
-      if (targets.length > 1) {
-        const batchKey = `batch-${detail.id}-${Date.now()}`
-        setPdfUploadBatchByTestId((prev) => {
-          const nextMap = { ...prev }
-          for (const testId of uploaded) nextMap[testId] = batchKey
-          return nextMap
-        })
-        setForceSeparatePdfTestIds((prev) => {
-          const next = new Set(prev)
-          for (const testId of uploaded) next.delete(testId)
-          return next
-        })
-      } else if (uploaded.length === 1) {
-        setPdfUploadBatchByTestId((prev) => {
-          const nextMap = { ...prev }
-          delete nextMap[uploaded[0]]
-          return nextMap
-        })
-      }
+      const uploaded = targets
       setAiReviewByTestId((prev) => {
         const nextMap = { ...prev }
         for (const testId of uploaded) delete nextMap[testId]
@@ -1277,7 +1150,7 @@ export function LabResultManagementPage() {
     setAiReviewLoadingTestIds(selected)
     let okCount = 0
     try {
-      const groups = groupItemsBySharedPdf(items, pdfUploadBatchByTestId)
+      const groups = groupItemsBySharedPdf(items)
       for (const group of groups) {
         if (group.length > 1) {
           if (await reviewTestsBatch(group)) okCount += group.length

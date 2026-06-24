@@ -114,3 +114,14 @@ BEGIN
     CREATE INDEX IX_PasswordResets_Email_Token ON dbo.password_resets(email, token);
 END
 
+-- Lab order item result PDF grouping (shared vs separate display)
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[lab_order_items]') AND name = N'result_pdf_group_id')
+BEGIN
+    ALTER TABLE dbo.lab_order_items ADD result_pdf_group_id UNIQUEIDENTIFIER NULL;
+END
+
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[lab_order_items]') AND name = N'result_pdf_display_solo')
+BEGIN
+    ALTER TABLE dbo.lab_order_items ADD result_pdf_display_solo BIT NOT NULL DEFAULT 0;
+END
+

@@ -5,6 +5,7 @@ import '../../app/session_scope.dart';
 import '../../models/lab_result.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/theme_extensions.dart';
+import '../../widgets/results/lab_result_combined_card.dart';
 import '../../widgets/results/lab_result_test_card.dart';
 
 class LabResultDetailScreen extends StatelessWidget {
@@ -27,7 +28,9 @@ class LabResultDetailScreen extends StatelessWidget {
         final report = session.latestResult;
         final borderColor = context.cs.outlineVariant.withValues(alpha: 0.55);
         final tests = report?.tests ?? const <LabResultTestItem>[];
+        final displayRows = report?.displayRows ?? const <LabResultDisplayRow>[];
         final releasedCount = report?.releasedTestCount ?? 0;
+        final hasCombinedReports = displayRows.any((row) => row is LabResultCombinedRow);
 
         return Scaffold(
           appBar: AppBar(
@@ -75,7 +78,9 @@ class LabResultDetailScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Download the official PDF or run AI Check for each test separately.',
+                    hasCombinedReports
+                        ? 'Some tests are grouped into combined reports. Download the shared PDF or run AI Check from each group.'
+                        : 'Download the official PDF or run AI Check for each test separately.',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: context.cs.onSurfaceVariant,
                           height: 1.4,
@@ -93,12 +98,20 @@ class LabResultDetailScreen extends StatelessWidget {
                           'The lab has released this order, but PDFs are not uploaded yet. Check back soon or contact the lab.',
                       borderColor: borderColor,
                     ),
-                  ...List.generate(tests.length, (i) {
-                    return LabResultTestCard(
-                      test: tests[i],
-                      report: report,
-                      index: i,
-                    );
+                  ...List.generate(displayRows.length, (i) {
+                    final row = displayRows[i];
+                    return switch (row) {
+                      LabResultSingleRow(:final test) => LabResultTestCard(
+                          test: test,
+                          report: report!,
+                          index: i,
+                        ),
+                      LabResultCombinedRow() => LabResultCombinedCard(
+                          group: row,
+                          report: report!,
+                          index: i,
+                        ),
+                    };
                   }),
                   if (report.lines.isNotEmpty) ...[
                     const SizedBox(height: 8),
@@ -165,7 +178,7 @@ class _OrderHeroCard extends StatelessWidget {
       ),
       padding: const EdgeInsets.all(18),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
             children: [
@@ -185,25 +198,33 @@ class _OrderHeroCard extends StatelessWidget {
               ),
               const Spacer(),
               if (releasedCount > 0)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.18),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.picture_as_pdf_outlined, size: 14, color: Colors.white),
-                      const SizedBox(width: 4),
-                      Text(
-                        '$releasedCount/$testCount PDF${testCount == 1 ? '' : 's'}',
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600,
-                            ),
+                Flexible(
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.18),
+                        borderRadius: BorderRadius.circular(999),
                       ),
-                    ],
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.picture_as_pdf_outlined, size: 14, color: Colors.white),
+                          const SizedBox(width: 4),
+                          Flexible(
+                            child: Text(
+                              '$releasedCount/$testCount PDF${testCount == 1 ? '' : 's'}',
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
             ],
@@ -211,6 +232,8 @@ class _OrderHeroCard extends StatelessWidget {
           const SizedBox(height: 14),
           Text(
             report.sampleId,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                   color: Colors.white,
                   fontWeight: FontWeight.w700,

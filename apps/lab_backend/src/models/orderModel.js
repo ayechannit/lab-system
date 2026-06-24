@@ -717,10 +717,77 @@ class Order {
       .input('updated_user', sql.UniqueIdentifier, updatedBy)
       .query(`
         UPDATE lab_order_items 
-        SET result_file_url = @result_file_url, updated_user = @updated_user, updated_at = GETDATE()
+        SET result_file_url = @result_file_url,
+            result_pdf_group_id = NULL,
+            result_pdf_display_solo = 0,
+            updated_user = @updated_user,
+            updated_at = GETDATE()
         WHERE order_id = @order_id AND test_id = @test_id
       `);
     return result.rowsAffected[0] > 0;
+  }
+
+  static async uploadResultBulk(orderId, testIds, fileUrl, groupId, updatedBy = null) {
+    if (!Array.isArray(testIds) || testIds.length === 0) return 0;
+    const pool = await poolPromise;
+    const transaction = new sql.Transaction(pool);
+    try {
+      await transaction.begin();
+      let updated = 0;
+      for (const testId of testIds) {
+        const result = await new sql.Request(transaction)
+          .input('order_id', sql.UniqueIdentifier, orderId)
+          .input('test_id', sql.UniqueIdentifier, testId)
+          .input('result_file_url', sql.VarChar, fileUrl)
+          .input('result_pdf_group_id', sql.UniqueIdentifier, groupId)
+          .input('updated_user', sql.UniqueIdentifier, updatedBy)
+          .query(`
+            UPDATE lab_order_items
+            SET result_file_url = @result_file_url,
+                result_pdf_group_id = @result_pdf_group_id,
+                result_pdf_display_solo = 0,
+                updated_user = @updated_user,
+                updated_at = GETDATE()
+            WHERE order_id = @order_id AND test_id = @test_id
+          `);
+        updated += result.rowsAffected[0] || 0;
+      }
+      await transaction.commit();
+      return updated;
+    } catch (err) {
+      await transaction.rollback();
+      throw err;
+    }
+  }
+
+  static async separateResultPdfs(orderId, testIds, updatedBy = null) {
+    if (!Array.isArray(testIds) || testIds.length === 0) return 0;
+    const pool = await poolPromise;
+    const transaction = new sql.Transaction(pool);
+    try {
+      await transaction.begin();
+      let updated = 0;
+      for (const testId of testIds) {
+        const result = await new sql.Request(transaction)
+          .input('order_id', sql.UniqueIdentifier, orderId)
+          .input('test_id', sql.UniqueIdentifier, testId)
+          .input('updated_user', sql.UniqueIdentifier, updatedBy)
+          .query(`
+            UPDATE lab_order_items
+            SET result_pdf_group_id = NULL,
+                result_pdf_display_solo = 1,
+                updated_user = @updated_user,
+                updated_at = GETDATE()
+            WHERE order_id = @order_id AND test_id = @test_id
+          `);
+        updated += result.rowsAffected[0] || 0;
+      }
+      await transaction.commit();
+      return updated;
+    } catch (err) {
+      await transaction.rollback();
+      throw err;
+    }
   }
 
   static async saveAiReview(orderId, testId, verdict, rawResponse, updatedBy = null) {

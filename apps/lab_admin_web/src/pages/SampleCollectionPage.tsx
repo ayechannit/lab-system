@@ -1275,26 +1275,22 @@ export function SampleCollectionPage() {
         </div>
       ) : null}
 
-      {isScheduleMode && !loading && scheduledRouteStops.length > 0 ? (
+      {isScheduleMode && !loading && selectedScheduledOrder ? (
         <div className="route-panel route-panel--assigned">
           <div className="route-panel__head">
             <div>
-              <h3 className="route-panel__title">
-                {selectedScheduledOrder ? 'Selected pickup stop' : 'Assigned pickup route'}
-              </h3>
+              <h3 className="route-panel__title">Selected pickup stop</h3>
               <p className="route-panel__summary">{scheduledRouteSummary}</p>
             </div>
             <div className="route-panel__head-actions">
-              {selectedScheduledOrder ? (
-                <button
-                  type="button"
-                  className="btn btn-secondary btn-sm"
-                  onClick={() => openScheduledEdit(selectedScheduledOrder)}
-                  disabled={scheduledEditSubmitting}
-                >
-                  Update schedule
-                </button>
-              ) : null}
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={() => openScheduledEdit(selectedScheduledOrder)}
+                disabled={scheduledEditSubmitting}
+              >
+                Update schedule
+              </button>
               {canStartCollection ? (
                 <button
                   type="button"
@@ -1309,9 +1305,8 @@ export function SampleCollectionPage() {
             </div>
           </div>
           <p className="route-panel__hint">
-            {selectedScheduledOrder
-              ? 'This is the stop you selected in the table. Update collector or stop times, then start collecting when pickup begins'
-              : 'Stops are ordered by collection time. Select one order in the table above to focus a stop, then start collecting.'}
+            This is the stop you selected in the table. Update collector or stop times, then start collecting when
+            pickup begins.
           </p>
           <ol className="route-stops" aria-label="Scheduled collection stops">
             {visibleScheduledStops.map(({ order, stopIndex }) => {
@@ -1333,9 +1328,6 @@ export function SampleCollectionPage() {
                 >
                   <div className="route-stop-card__marker" aria-hidden>
                     <span className="route-stop-card__badge">{stopIndex + 1}</span>
-                    {!selectedScheduledOrder && stopIndex < scheduledRouteStops.length - 1 ? (
-                      <span className="route-stop-card__line" />
-                    ) : null}
                   </div>
                   <div className="route-stop-card__body">
                     <div className="route-stop-card__meta">

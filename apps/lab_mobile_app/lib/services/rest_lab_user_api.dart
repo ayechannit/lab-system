@@ -810,6 +810,12 @@ class RestLabUserApi implements LabUserApi {
 
         final url = _gv(m, 'download_url') ?? _gv(m, 'downloadUrl');
         final fileKey = _gv(m, 'result_file_url') ?? _gv(m, 'resultFileUrl');
+        final pdfGroupId =
+            '${_gv(m, 'result_pdf_group_id') ?? _gv(m, 'resultPdfGroupId') ?? ''}'.trim();
+        final pdfDisplaySoloRaw = _gv(m, 'result_pdf_display_solo') ?? _gv(m, 'resultPdfDisplaySolo');
+        final pdfDisplaySolo = pdfDisplaySoloRaw == true ||
+            pdfDisplaySoloRaw == 1 ||
+            '$pdfDisplaySoloRaw'.toLowerCase() == 'true';
         final released = _asDt(_gv(m, 'updated_at') ?? _gv(m, 'updatedAt'));
         if (released != null) {
           if (latestReleased == null || released.isAfter(latestReleased)) {
@@ -827,6 +833,8 @@ class RestLabUserApi implements LabUserApi {
             pdfUrl: (url != null && '$url'.isNotEmpty)
                 ? '$url'
                 : (fileKey != null && '$fileKey'.isNotEmpty ? fileKey.toString() : null),
+            pdfGroupId: pdfGroupId.isEmpty ? null : pdfGroupId,
+            pdfDisplaySolo: pdfDisplaySolo,
             releasedAt: released,
           ),
         );

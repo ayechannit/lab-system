@@ -1,4 +1,5 @@
 const path = require('path');
+const crypto = require('crypto');
 const Order = require('../models/orderModel');
 const Staff = require('../models/staffModel');
 const QRCode = require('qrcode');
@@ -310,15 +311,30 @@ const generateQrCode = async (req, res) => {
   }
 };
 
+function parseTestIds(raw) {
+  if (raw == null) return [];
+  if (Array.isArray(raw)) return raw.map((id) => String(id).trim()).filter(Boolean);
+  if (typeof raw === 'string') {
+    const trimmed = raw.trim();
+    if (!trimmed) return [];
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) return parsed.map((id) => String(id).trim()).filter(Boolean);
+    } catch {
+      return trimmed.split(',').map((id) => id.trim()).filter(Boolean);
+    }
+  }
+  return [];
+}
+
 const uploadTestResult = async (req, res) => {
   try {
     const { id, testId } = req.params;
-    
+
     if (!req.file) {
       return res.status(400).json({ message: 'No file uploaded or invalid file format' });
     }
 
-    // Verify order exists before saving
     const order = await Order.getById(id);
     if (!order) {
       return res.status(404).json({ message: 'Order not found' });
@@ -341,10 +357,96 @@ const uploadTestResult = async (req, res) => {
 
     const downloadUrl = await StorageService.getDownloadUrl(fileUrl, path.basename(fileUrl));
 
-    res.json({ 
+    res.json({
       message: 'Result uploaded successfully',
-      fileUrl: fileUrl,
-      downloadUrl: downloadUrl
+      fileUrl,
+      downloadUrl,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+const bulkUploadTestResult = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const testIds = parseTestIds(req.body?.test_ids);
+
+    if (!req.file) {
+      return res.status(400).json({ message: 'No file uploaded or invalid file format' });
+    }
+    if (testIds.length < 2) {
+      return res.status(400).json({ message: 'Select at least two tests for a shared PDF upload.' });
+    }
+
+    const order = await Order.getById(id);
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    const orderTestIds = new Set((order.items || []).map((row) => String(row.test_id).toLowerCase()));
+    const missing = testIds.filter((testId) => !orderTestIds.has(testId.toLowerCase()));
+    if (missing.length > 0) {
+      return res.status(400).json({ message: 'One or more tests were not found on this order.' });
+    }
+
+    const fileUrl = await StorageService.uploadFile(req.file);
+    const groupId = crypto.randomUUID();
+    const updated = await Order.uploadResultBulk(id, testIds, fileUrl, groupId, req.user?.id);
+    if (updated === 0) {
+      return res.status(404).json({ message: 'No tests were updated on this order.' });
+    }
+
+    NotificationService.sendToUser(
+      order.user_id,
+      'user',
+      'Test Result Uploaded',
+      `A new test result has been uploaded for patient "${order.patient_name}".`,
+      { order_id: id, event: 'result_uploaded' }
+    ).catch(err => console.error('Error sending result upload notification:', err.message));
+
+    const downloadUrl = await StorageService.getDownloadUrl(fileUrl, path.basename(fileUrl));
+
+    res.json({
+      message: 'Shared result uploaded successfully',
+      fileUrl,
+      downloadUrl,
+      result_pdf_group_id: groupId,
+      test_ids: testIds,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+const separateResultPdfs = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const testIds = parseTestIds(req.body?.test_ids);
+
+    if (testIds.length < 2) {
+      return res.status(400).json({ message: 'Select at least two tests to separate.' });
+    }
+
+    const order = await Order.getById(id);
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    const orderTestIds = new Set((order.items || []).map((row) => String(row.test_id).toLowerCase()));
+    const missing = testIds.filter((testId) => !orderTestIds.has(testId.toLowerCase()));
+    if (missing.length > 0) {
+      return res.status(400).json({ message: 'One or more tests were not found on this order.' });
+    }
+
+    const updated = await Order.separateResultPdfs(id, testIds, req.user?.id);
+    if (updated === 0) {
+      return res.status(404).json({ message: 'No tests were updated on this order.' });
+    }
+
+    res.json({
+      message: 'Tests separated into individual PDF rows.',
+      test_ids: testIds,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -471,6 +573,8 @@ module.exports = {
   deleteOrder,
   generateQrCode,
   uploadTestResult,
+  bulkUploadTestResult,
+  separateResultPdfs,
   downloadTestResult,
   saveAiReview,
 };

@@ -21,6 +21,8 @@ export type ApiOrderDetailItem = {
   test_code?: string | null
   result_file_url?: string | null
   download_url?: string | null
+  result_pdf_group_id?: string | null
+  result_pdf_display_solo?: boolean | number | null
   ai_verdict?: string | null
   ai_raw_response?: string | null
 }
@@ -69,6 +71,8 @@ function normalizeOrderItems(raw: unknown): ApiOrderDetailItem[] {
       test_code: it.test_code ?? null,
       result_file_url: it.result_file_url ?? null,
       download_url: it.download_url ?? null,
+      result_pdf_group_id: it.result_pdf_group_id ?? null,
+      result_pdf_display_solo: it.result_pdf_display_solo ?? null,
       ai_verdict: it.ai_verdict ?? null,
       ai_raw_response: it.ai_raw_response ?? null,
     }
@@ -339,6 +343,34 @@ export async function uploadOrderTestResult(orderId: string, testId: string, fil
   const res = await apiFetch(
     `/api/orders/${encodeURIComponent(orderId)}/tests/${encodeURIComponent(testId)}/upload-result`,
     { method: 'POST', body: fd },
+  )
+  if (!res.ok) throw new Error(await readApiErrorBody(res))
+  return res.json()
+}
+
+export async function uploadOrderTestResultsBulk(
+  orderId: string,
+  testIds: string[],
+  file: File,
+): Promise<unknown> {
+  const fd = new FormData()
+  fd.append('file', file)
+  fd.append('test_ids', JSON.stringify(testIds))
+  const res = await apiFetch(
+    `/api/orders/${encodeURIComponent(orderId)}/tests/bulk-upload-result`,
+    { method: 'POST', body: fd },
+  )
+  if (!res.ok) throw new Error(await readApiErrorBody(res))
+  return res.json()
+}
+
+export async function separateOrderTestResultPdfs(orderId: string, testIds: string[]): Promise<unknown> {
+  const res = await apiFetch(
+    `/api/orders/${encodeURIComponent(orderId)}/tests/separate-result-pdfs`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ test_ids: testIds }),
+    },
   )
   if (!res.ok) throw new Error(await readApiErrorBody(res))
   return res.json()

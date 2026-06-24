@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
-import { DatetimeLocalField } from '../components/common/DatetimeLocalField'
 import { LoadingSpinner } from '../components/common/LoadingSpinner'
 import { ConfirmDialog } from '../components/common/ConfirmDialog'
 import { ListFilterSearchField } from '../components/common/ListFilterSearchField'
@@ -9,7 +8,7 @@ import { messageFromError, useErrorToast } from '../hooks/usePageNotify'
 import { TableActionMenu } from '../components/common/TableActionMenu'
 import { DEFAULT_TABLE_PAGE_SIZE, TablePagination } from '../components/common/TablePagination'
 import { formatCoordPair, LocationMapPicker } from '../components/users/LocationMapPicker'
-import type { EndUserRole, LabTestCatalogRow, StaffListRow, StaffRole, UserListRow } from '../model/types'
+import type { EndUserRole, LabTestCatalogRow, UserListRow } from '../model/types'
 import { getApiBaseUrl, isApiMode } from '../services/apiBase'
 import { fetchAllDiscounts, type TestDiscountListRow } from '../services/discountService'
 import { fetchLabTestsList } from '../services/labTestCatalogService'
@@ -33,11 +32,7 @@ import {
   type FetchOrdersParams,
   syncPendingOrder,
   updateOrder,
-  updateOrderStatus,
 } from '../services/orderService'
-import { upsertSchedule, type ApiOrderSchedule } from '../services/scheduleService'
-import { fetchStaffList } from '../services/staffService'
-import { datetimeLocalToIso, toDatetimeLocalValue } from '../utils/datetimeLocal'
 import { useAddressGeocode } from '../hooks/useAddressGeocode'
 import { fetchUserList } from '../services/userService'
 import '../components/common/ui.css'
@@ -234,25 +229,6 @@ function paymentSummaryForOrder(
   }
   return undefined
 }
-
-function staffRoleShort(role: StaffRole): string {
-  const map: Record<StaffRole, string> = {
-    admin: 'Admin',
-    lab_technician: 'Lab tech',
-    reception: 'Reception',
-    manager: 'Manager',
-    collector: 'Collector',
-  }
-  return map[role] ?? role
-}
-
-/** Active staff for pickers; if none active, fall back to non-deleted. */
-function collectorStaffDropdownList(st: StaffListRow[]): StaffListRow[] {
-  const active = st.filter((s) => !s.is_deleted && s.is_active)
-  return active.length > 0 ? active : st.filter((s) => !s.is_deleted)
-}
-
-const COLLECTOR_OTHER_VALUE = '__other__'
 
 function fmtDateTime(raw: string | undefined): string {
   if (!raw) return '—'
@@ -624,7 +600,6 @@ export function OrderManagementPage() {
   const { showSuccess, showError } = useToast()
   const [rows, setRows] = useState<ApiOrderListRow[]>([])
   const [users, setUsers] = useState<UserListRow[]>([])
-  const [staff, setStaff] = useState<StaffListRow[]>([])
   const [tests, setTests] = useState<LabTestCatalogRow[]>([])
   const [testDiscounts, setTestDiscounts] = useState<TestDiscountListRow[]>([])
   const [loading, setLoading] = useState(hasApi)
@@ -703,20 +678,6 @@ export function OrderManagementPage() {
     onCoords: onEditGeocodeCoords,
   })
 
-  const [statusOpen, setStatusOpen] = useState(false)
-  const [statusTarget, setStatusTarget] = useState<ApiOrderListRow | null>(null)
-  const [statusValue, setStatusValue] = useState<ApiOrderStatus>('pending')
-  const [statusStaffId, setStatusStaffId] = useState('')
-  const [statusNote, setStatusNote] = useState('')
-  const [statusSubmitting, setStatusSubmitting] = useState(false)
-  const [statusError, setStatusError] = useState<string | null>(null)
-  const [schCollectingPerson, setSchCollectingPerson] = useState('')
-  const [schCollectorSelect, setSchCollectorSelect] = useState('')
-  const [schCollectionTime, setSchCollectionTime] = useState('')
-  const [schRunningTime, setSchRunningTime] = useState('')
-  const [schReportOutTime, setSchReportOutTime] = useState('')
-  const [schAcceptedByUser, setSchAcceptedByUser] = useState(false)
-
   const [assignOpen, setAssignOpen] = useState(false)
   /** Order loaded for the assign-tests modal (from detail or from row “Add test”). */
   const [assignOrderDetail, setAssignOrderDetail] = useState<ApiOrderDetail | null>(null)
@@ -770,7 +731,6 @@ export function OrderManagementPage() {
     if (!hasApi) {
       setRows([])
       setUsers([])
-      setStaff([])
       setTests([])
       setTestDiscounts([])
       setLoading(false)
@@ -781,10 +741,9 @@ export function OrderManagementPage() {
     setLoadError(null)
     void (async () => {
       try {
-        const [ordersRes, usersRes, staffRes, testsRes, discountsRes] = await Promise.all([
+        const [ordersRes, usersRes, testsRes, discountsRes] = await Promise.all([
           fetchOrders(ordersListQuery),
           fetchUserList(),
-          fetchStaffList(),
           fetchLabTestsList(),
           fetchAllDiscounts(),
         ])
@@ -794,7 +753,6 @@ export function OrderManagementPage() {
           setOrdersPage((p) => Math.max(1, p - 1))
         }
         setUsers(usersRes.filter((u) => !u.is_deleted))
-        setStaff(staffRes.filter((s) => !s.is_deleted))
         setTests(testsRes.filter((t) => t.is_active && !t.is_deleted))
         setTestDiscounts(discountsRes)
       } catch (e) {
@@ -865,14 +823,7 @@ export function OrderManagementPage() {
   }, [assignOpen])
 
   const userMap = useMemo(() => new Map(users.map((u) => [u.id, u])), [users])
-  const collectorStaffOptions = useMemo(() => collectorStaffDropdownList(staff), [staff])
   const testMap = useMemo(() => new Map(tests.map((t) => [t.id, t])), [tests])
-
-  /** While updating an order that is still `pending`, only allow `pending` or `scheduled` in the UI. */
-  const statusUpdateSelectOptions = useMemo((): ApiOrderStatus[] => {
-    if (statusTarget?.status === 'pending') return ['pending', 'scheduled']
-    return ORDER_STATUS_OPTIONS
-  }, [statusTarget?.status])
 
   const createPickerPanel = useMemo(
     () => filterTestsForOrderDropdown(tests, createTestSearch, new Set(), ORDER_TEST_PICKER_LIMIT),
@@ -1237,46 +1188,6 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
     }
   }
 
-  async function openStatusUpdate(row: ApiOrderListRow, schedulePrefill?: ApiOrderSchedule | null) {
-    setStatusTarget(row)
-    setStatusValue(row.status)
-    setStatusStaffId(staff[0]?.id ?? '')
-    setStatusNote('')
-    setStatusError(null)
-    let pre: ApiOrderSchedule | null = schedulePrefill ?? null
-    if (schedulePrefill === undefined && row.status === 'scheduled') {
-      try {
-        const d = await fetchOrderById(row.id)
-        pre = d?.schedule ?? null
-      } catch {
-        pre = null
-      }
-    }
-    const opts = collectorStaffDropdownList(staff)
-    const raw = (pre?.collecting_person ?? '').trim()
-    if (opts.length === 0) {
-      setSchCollectorSelect(COLLECTOR_OTHER_VALUE)
-      setSchCollectingPerson(raw)
-    } else {
-      const match = opts.find((s) => s.name.trim().toLowerCase() === raw.toLowerCase())
-      if (match) {
-        setSchCollectorSelect(match.id)
-        setSchCollectingPerson('')
-      } else if (raw) {
-        setSchCollectorSelect(COLLECTOR_OTHER_VALUE)
-        setSchCollectingPerson(raw)
-      } else {
-        setSchCollectorSelect(opts[0]?.id ?? '')
-        setSchCollectingPerson('')
-      }
-    }
-    setSchCollectionTime(toDatetimeLocalValue(pre?.collection_time ?? null))
-    setSchRunningTime(toDatetimeLocalValue(pre?.running_time ?? null))
-    setSchReportOutTime(toDatetimeLocalValue(pre?.report_out_time ?? null))
-    setSchAcceptedByUser(Boolean(pre?.accepted_by_user))
-    setStatusOpen(true)
-  }
-
   async function submitAssignTests(e: FormEvent) {
     e.preventDefault()
     setAssignError(null)
@@ -1334,61 +1245,6 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
 
   function removeAssignTest(testId: string) {
     setAssignSelectedIds((prev) => prev.filter((id) => id !== testId))
-  }
-
-  async function submitStatusUpdate(e: FormEvent) {
-    e.preventDefault()
-    if (!statusTarget) return
-    setStatusError(null)
-    if (!statusStaffId) return setStatusError('Select staff.')
-
-    let scheduleCollectingPerson = ''
-    if (statusValue === 'scheduled') {
-      const opts = collectorStaffDropdownList(staff)
-      if (opts.length === 0 || schCollectorSelect === COLLECTOR_OTHER_VALUE) {
-        scheduleCollectingPerson = schCollectingPerson.trim()
-      } else if (schCollectorSelect) {
-        scheduleCollectingPerson = opts.find((s) => s.id === schCollectorSelect)?.name.trim() ?? ''
-      }
-      if (!scheduleCollectingPerson) {
-        return setStatusError(
-          opts.length === 0
-            ? 'Enter who will perform collection (no staff accounts yet).'
-            : schCollectorSelect === COLLECTOR_OTHER_VALUE
-              ? 'Enter a name or team for collection.'
-              : 'Select who will perform collection.',
-        )
-      }
-      if (!schCollectionTime.trim()) return setStatusError('Enter collection date and time.')
-      const cIso = datetimeLocalToIso(schCollectionTime)
-      if (!cIso) return setStatusError('Collection date and time is invalid.')
-    }
-
-    setStatusSubmitting(true)
-    try {
-      if (statusValue === 'scheduled') {
-        await upsertSchedule({
-          order_id: statusTarget.id,
-          collecting_person: scheduleCollectingPerson,
-          collection_time: datetimeLocalToIso(schCollectionTime)!,
-          running_time: schRunningTime.trim() ? datetimeLocalToIso(schRunningTime) : null,
-          report_out_time: schReportOutTime.trim() ? datetimeLocalToIso(schReportOutTime) : null,
-          accepted_by_user: schAcceptedByUser,
-        })
-      }
-      await updateOrderStatus(statusTarget.id, {
-        status: statusValue,
-        staff_id: statusStaffId,
-        note: statusNote.trim() || null,
-      })
-      setStatusOpen(false)
-      bumpOrderViews()
-      if (detailOrder && detailOrder.id === statusTarget.id) void refreshDetailOrder(statusTarget.id)
-    } catch (e) {
-      setStatusError(e instanceof Error ? e.message : 'Status update failed')
-    } finally {
-      setStatusSubmitting(false)
-    }
   }
 
   async function confirmDelete() {
@@ -2401,182 +2257,6 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
                 </>
               )
             })()}
-          </div>
-        </div>
-      ) : null}
-
-      {statusOpen && statusTarget ? (
-        <div className="modal-backdrop" role="dialog" aria-modal="true" onMouseDown={(e) => e.target === e.currentTarget && !statusSubmitting && setStatusOpen(false)}>
-          <div className="modal-card modal-card--status-update" onMouseDown={(e) => e.stopPropagation()}>
-            <div className="modal-head">
-              <h2 className="modal-title">Update status</h2>
-              <button type="button" className="btn btn-ghost modal-close" onClick={() => !statusSubmitting && setStatusOpen(false)} aria-label="Close" disabled={statusSubmitting}>×</button>
-            </div>
-            <div className="modal-card--status-update__body">
-            <form className="form-grid status-update-form" onSubmit={(e) => void submitStatusUpdate(e)}>
-              <div className="field">
-                <label htmlFor="os-status">Status</label>
-                <select id="os-status" className="select-chevron-left" value={statusValue} onChange={(e) => setStatusValue(e.target.value as ApiOrderStatus)} disabled={statusSubmitting}>
-                  {statusUpdateSelectOptions.map((s) => (
-                    <option key={s} value={s}>
-                      {s}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              {statusValue === 'scheduled' ? (
-                <div className="status-update-schedule">
-                  <div className="status-update-schedule__heading">
-                    <h3 className="status-update-schedule__title">Schedule details</h3>
-                    <p className="status-update-schedule__intro">
-                      Saved to <code>order_schedules</code> (collector, collection time, optional lab / report times) before
-                      the order moves to <strong>scheduled</strong>.
-                    </p>
-                  </div>
-                  <div className="field">
-                    <label htmlFor="os-collector">Collecting person / team</label>
-                    {collectorStaffOptions.length === 0 ? (
-                      <>
-                        <p className="status-update-hint status-update-hint--above-field">
-                          No staff profiles yet — type who will collect (you can add staff under Staff).
-                        </p>
-                        <input
-                          id="os-collector"
-                          value={schCollectingPerson}
-                          onChange={(e) => setSchCollectingPerson(e.target.value)}
-                          disabled={statusSubmitting}
-                          placeholder="e.g. Partner lab — driver"
-                          autoComplete="off"
-                        />
-                      </>
-                    ) : (
-                      <>
-                        <select
-                          id="os-collector"
-                          className="select-chevron-left"
-                          value={schCollectorSelect}
-                          onChange={(e) => {
-                            const v = e.target.value
-                            setSchCollectorSelect(v)
-                            if (v !== COLLECTOR_OTHER_VALUE) setSchCollectingPerson('')
-                          }}
-                          disabled={statusSubmitting}
-                          aria-describedby="os-collector-hint"
-                        >
-                          <option value="">Select team member…</option>
-                          {collectorStaffOptions.map((s) => (
-                            <option key={s.id} value={s.id}>
-                              {s.name} ({staffRoleShort(s.role)})
-                            </option>
-                          ))}
-                          <option value={COLLECTOR_OTHER_VALUE}>Other name or team…</option>
-                        </select>
-                        <p id="os-collector-hint" className="status-update-hint">
-                          Stored on the schedule as display text. Choose <strong>Other</strong> for drivers or partners not
-                          in the staff list.
-                        </p>
-                        {schCollectorSelect === COLLECTOR_OTHER_VALUE ? (
-                          <input
-                            id="os-collector-custom"
-                            type="text"
-                            className="status-update-custom-collector"
-                            value={schCollectingPerson}
-                            onChange={(e) => setSchCollectingPerson(e.target.value)}
-                            disabled={statusSubmitting}
-                            placeholder="e.g. City courier — Aung"
-                            autoComplete="off"
-                            aria-label="Custom collecting person or team"
-                          />
-                        ) : null}
-                      </>
-                    )}
-                  </div>
-                  <div className="status-update-datetime-row">
-                    <div className="field">
-                      <label htmlFor="os-collect-at">Collection time</label>
-                      <DatetimeLocalField
-                        id="os-collect-at"
-                        value={schCollectionTime}
-                        onChange={setSchCollectionTime}
-                        disabled={statusSubmitting}
-                        allowClear={false}
-                        schedule
-                      />
-                    </div>
-                    <div className="field">
-                      <label htmlFor="os-running">Running / processing time (optional)</label>
-                      <DatetimeLocalField
-                        id="os-running"
-                        value={schRunningTime}
-                        onChange={setSchRunningTime}
-                        disabled={statusSubmitting}
-                        schedule
-                      />
-                    </div>
-                  </div>
-                  <div className="field">
-                    <label htmlFor="os-report">Report out time (optional)</label>
-                    <DatetimeLocalField
-                      id="os-report"
-                      value={schReportOutTime}
-                      onChange={setSchReportOutTime}
-                      disabled={statusSubmitting}
-                      schedule
-                    />
-                  </div>
-                  <div className="auth-checkbox-row auth-checkbox-row--center status-update-accepted">
-                    <input
-                      id="os-accepted"
-                      className="auth-checkbox"
-                      type="checkbox"
-                      checked={schAcceptedByUser}
-                      onChange={() => setSchAcceptedByUser((v) => !v)}
-                      disabled={statusSubmitting}
-                    />
-                    <label className="auth-checkbox-label" htmlFor="os-accepted">
-                      Accepted by patient / requester
-                    </label>
-                  </div>
-                </div>
-              ) : null}
-              {statusValue === 'scheduled' &&
-              statusTarget &&
-              !orderPrescriptionAttachmentUrl(statusTarget) &&
-              !testsAssignedFlag(statusTarget.is_tests_assigned) ? (
-                <p className="status-update-triage-hint">
-                  This order has no prescription on file and no tests assigned yet. You can still schedule, but triage is incomplete.
-                </p>
-              ) : null}
-              <div className="field">
-                <label htmlFor="os-staff">Changed by staff</label>
-                <select id="os-staff" className="select-chevron-left" value={statusStaffId} onChange={(e) => setStatusStaffId(e.target.value)} disabled={statusSubmitting}>
-                  <option value="">Select staff</option>
-                  {staff.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name} ({s.role})
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="field">
-                <label htmlFor="os-note">Note (optional)</label>
-                <textarea id="os-note" value={statusNote} onChange={(e) => setStatusNote(e.target.value)} disabled={statusSubmitting} />
-              </div>
-              {statusError ? (
-                <div className="form-alert form-alert--error" role="alert">
-                  {statusError}
-                </div>
-              ) : null}
-              <div className="row-actions" style={{ justifyContent: 'flex-end' }}>
-                <button type="button" className="btn btn-secondary" onClick={() => setStatusOpen(false)} disabled={statusSubmitting}>
-                  Cancel
-                </button>
-                <button type="submit" className="btn btn-primary" disabled={statusSubmitting}>
-                  {statusSubmitting ? 'Saving…' : 'Update'}
-                </button>
-              </div>
-            </form>
-            </div>
           </div>
         </div>
       ) : null}
