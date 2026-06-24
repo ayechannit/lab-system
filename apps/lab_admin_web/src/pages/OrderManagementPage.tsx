@@ -945,7 +945,7 @@ export function OrderManagementPage() {
     const firstTest = tests[0]
     setCreateUserId(firstUser?.id ?? '')
     setCreatePriority('elective')
-    setCreatePatientName(firstUser?.name ?? '')
+    setCreatePatientName('')
     setCreatePatientAge('')
     setCreatePatientPhone(firstUser?.phone ?? '')
     setCreateAddress(firstUser?.address ?? '')
@@ -971,7 +971,6 @@ export function OrderManagementPage() {
     setCreateUserId(userId)
     const u = userMap.get(userId)
     if (!u) return
-    setCreatePatientName(u.name)
     setCreatePatientPhone(u.phone)
     setCreateAddress(u.address)
     setCreateLatitude(u.latitude)

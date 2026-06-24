@@ -159,6 +159,12 @@ class _OrderHeroCard extends StatelessWidget {
     final orderRef = report.orderId.length >= 8
         ? report.orderId.substring(0, 8).toUpperCase()
         : report.orderId.toUpperCase();
+    final patientLabel =
+        report.patientName.trim().isEmpty ? 'Patient' : report.patientName.trim();
+    final patientMeta = <String>[
+      if (report.patientAge != null) 'Age ${report.patientAge}',
+      if (report.patientPhone.trim().isNotEmpty) report.patientPhone.trim(),
+    ].join(' · ');
 
     return Container(
       decoration: BoxDecoration(
@@ -231,7 +237,7 @@ class _OrderHeroCard extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           Text(
-            report.sampleId,
+            patientLabel,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
@@ -239,6 +245,17 @@ class _OrderHeroCard extends StatelessWidget {
                   fontWeight: FontWeight.w700,
                 ),
           ),
+          if (patientMeta.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text(
+              patientMeta,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Colors.white.withValues(alpha: 0.88),
+                  ),
+            ),
+          ],
           const SizedBox(height: 6),
           Text(
             'Order $orderRef · ${_fmtDate(report.releasedAt)}',

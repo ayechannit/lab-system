@@ -782,7 +782,11 @@ class RestLabUserApi implements LabUserApi {
     final items = o['items'];
     final tests = <LabResultTestItem>[];
     DateTime? latestReleased;
-    var sampleRef = '';
+    final patientName = '${_gv(o, 'patient_name') ?? _gv(o, 'patientName') ?? ''}'.trim();
+    final patientPhone = '${_gv(o, 'patient_phone') ?? _gv(o, 'patientPhone') ?? ''}'.trim();
+    final patientAgeRaw = _gv(o, 'patient_age') ?? _gv(o, 'patientAge');
+    final patientAge = patientAgeRaw == null ? null : int.tryParse('$patientAgeRaw');
+    var sampleRef = patientName;
 
     if (items is List) {
       for (final it in items) {
@@ -822,7 +826,6 @@ class RestLabUserApi implements LabUserApi {
             latestReleased = released;
           }
         }
-        if (sampleRef.isEmpty && name.isNotEmpty) sampleRef = name;
 
         tests.add(
           LabResultTestItem(
@@ -844,9 +847,6 @@ class RestLabUserApi implements LabUserApi {
     if (sampleRef.isEmpty) {
       sampleRef = '${_gv(o, 'description')}'.trim();
     }
-    if (sampleRef.isEmpty) {
-      sampleRef = '${_gv(o, 'patient_name') ?? _gv(o, 'patientName') ?? ''}'.trim();
-    }
     if (sampleRef.isEmpty && orderId.length >= 8) {
       sampleRef = orderId.substring(0, 8);
     }
@@ -858,6 +858,9 @@ class RestLabUserApi implements LabUserApi {
       orderId: orderId,
       sampleId: sampleRef.isEmpty ? orderId : sampleRef,
       releasedAt: latestReleased ?? DateTime.now(),
+      patientName: patientName,
+      patientAge: patientAge,
+      patientPhone: patientPhone,
       tests: tests,
       lines: const [],
       resultPdfUrl: firstPdf?.pdfUrl,

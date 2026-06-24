@@ -382,7 +382,7 @@ class SessionController extends ChangeNotifier {
     required LabResultReport report,
   }) async {
     final filename = LabReportPdfService.buildFilename(
-      sampleId: report.sampleId,
+      sampleId: report.patientName.trim().isNotEmpty ? report.patientName : report.sampleId,
       orderId: report.orderId,
       testCode: test.testCode.isNotEmpty ? test.testCode : test.testName,
     );
@@ -409,7 +409,7 @@ class SessionController extends ChangeNotifier {
       return downloadTestResultPdf(test: test, report: report);
     }
     final filename = LabReportPdfService.buildFilename(
-      sampleId: report.sampleId,
+      sampleId: report.patientName.trim().isNotEmpty ? report.patientName : report.sampleId,
       orderId: report.orderId,
     );
     final testId = report.resultTestId;

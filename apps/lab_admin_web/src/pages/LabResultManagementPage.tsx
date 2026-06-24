@@ -820,16 +820,17 @@ export function LabResultManagementPage() {
     }
   }
 
-  function renderPdfActionButtons(testId: string, fileLabel: string) {
+  function renderPdfActionButtons(testId: string, fileLabel: string, reviewBusy = false) {
     const busy = pdfAction?.testId === testId
     const viewing = busy && pdfAction?.mode === 'view'
     const downloading = busy && pdfAction?.mode === 'download'
+    const disabled = busy || !hasApi || reviewBusy
     return (
       <>
         <button
           type="button"
           className="btn btn-secondary btn-sm lab-result-test-card__action-btn"
-          disabled={busy || !hasApi}
+          disabled={disabled}
           onClick={() => void viewTestResultPdf(testId)}
         >
           <span className="material-symbols-outlined" aria-hidden>
@@ -840,7 +841,7 @@ export function LabResultManagementPage() {
         <button
           type="button"
           className="btn btn-primary btn-sm lab-result-test-card__action-btn"
-          disabled={busy || !hasApi}
+          disabled={disabled}
           onClick={() => void downloadTestResultPdf(testId, fileLabel)}
         >
           <span className="material-symbols-outlined" aria-hidden>
@@ -852,10 +853,10 @@ export function LabResultManagementPage() {
     )
   }
 
-  function renderPdfAccessButtons(testId: string, fileLabel: string) {
+  function renderPdfAccessButtons(testId: string, fileLabel: string, reviewBusy = false) {
     return (
       <div className="lab-result-test-card__actions lab-result-test-card__actions--readonly">
-        {renderPdfActionButtons(testId, fileLabel)}
+        {renderPdfActionButtons(testId, fileLabel, reviewBusy)}
       </div>
     )
   }
@@ -1704,7 +1705,11 @@ export function LabResultManagementPage() {
                         <button
                           type="button"
                           className="btn btn-primary btn-sm"
-                          disabled={uploadBusy || bulkPdfSelectedIds.length === 0}
+                          disabled={
+                            uploadBusy ||
+                            bulkPdfSelectedIds.length === 0 ||
+                            aiReviewLoadingTestIds.length > 0
+                          }
                           onClick={() => openPdfPicker(bulkPdfSelectedIds)}
                         >
                           {uploadBusy && uploadingTestIds.length > 1
@@ -1810,7 +1815,7 @@ export function LabResultManagementPage() {
                                   ref={(el) => {
                                     if (el) el.indeterminate = bulkPartial
                                   }}
-                                  disabled={uploadBusy}
+                                  disabled={uploadBusy || aiReviewLoadingTestIds.length > 0}
                                   aria-label={`Include ${memberNames.join(', ')} in bulk actions`}
                                   onChange={() => toggleBulkPdfGroupSelect(memberTestIds)}
                                 />
@@ -1871,7 +1876,7 @@ export function LabResultManagementPage() {
                                   <button
                                     type="button"
                                     className="btn btn-secondary btn-sm lab-result-test-card__action-btn"
-                                    disabled={uploadBusy || !canUploadPdfs}
+                                    disabled={uploadBusy || !canUploadPdfs || isReviewing}
                                     onClick={() => openPdfPicker(memberTestIds)}
                                   >
                                     <span className="material-symbols-outlined" aria-hidden>
@@ -1905,7 +1910,7 @@ export function LabResultManagementPage() {
                               ) : null}
                             </div>
                           ) : null}
-                          {hasFile ? renderPdfAccessButtons(items[0].test_id, label) : null}
+                          {hasFile ? renderPdfAccessButtons(items[0].test_id, label, isReviewing) : null}
                         </div>
                         {showAiPanels ? (
                           <div className="lab-result-test-card__shared-ai">
@@ -1981,7 +1986,7 @@ export function LabResultManagementPage() {
                               type="checkbox"
                               className="lab-result-test-card__pick-input"
                               checked={bulkSelected}
-                              disabled={uploadBusy}
+                              disabled={uploadBusy || aiReviewLoadingTestIds.length > 0}
                               aria-label={`Include ${testName} in bulk actions`}
                               onChange={() => toggleBulkPdfSelect(it.test_id)}
                             />
@@ -2008,7 +2013,7 @@ export function LabResultManagementPage() {
                             <button
                               type="button"
                               className="btn btn-secondary btn-sm lab-result-test-card__action-btn"
-                              disabled={uploadBusy || !canUploadPdfs}
+                              disabled={uploadBusy || !canUploadPdfs || isReviewing}
                               onClick={() => openPdfPicker(it.test_id)}
                             >
                               <span className="material-symbols-outlined" aria-hidden>
@@ -2044,10 +2049,10 @@ export function LabResultManagementPage() {
                                     : 'AI review'}
                               </button>
                             ) : null}
-                            {hasFile ? renderPdfActionButtons(it.test_id, testName) : null}
+                            {hasFile ? renderPdfActionButtons(it.test_id, testName, isReviewing) : null}
                           </div>
                         ) : hasFile ? (
-                          renderPdfAccessButtons(it.test_id, testName)
+                          renderPdfAccessButtons(it.test_id, testName, isReviewing)
                         ) : null}
                       </div>
                       {hasFile &&

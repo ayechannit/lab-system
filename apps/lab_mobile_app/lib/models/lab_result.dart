@@ -58,6 +58,9 @@ class LabResultReport {
     required this.sampleId,
     required this.releasedAt,
     required this.tests,
+    this.patientName = '',
+    this.patientAge,
+    this.patientPhone = '',
     this.lines = const [],
     this.resultPdfUrl,
     this.resultTestId,
@@ -66,6 +69,9 @@ class LabResultReport {
   final String orderId;
   final String sampleId;
   final DateTime releasedAt;
+  final String patientName;
+  final int? patientAge;
+  final String patientPhone;
 
   /// Per-test results for multi-test orders.
   final List<LabResultTestItem> tests;
