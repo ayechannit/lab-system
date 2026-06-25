@@ -62,7 +62,7 @@ app.use('/api/lab-results', labResultRoutes);
 // Base route
 app.get('/', (req, res) => {
   res.send('Lab System API is running...');
-  //make deployment
+  //make deployment (2026-06-25)
 });
 
 // Error Handling Middleware (must be last)
