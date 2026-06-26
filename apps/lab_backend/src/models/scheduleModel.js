@@ -12,8 +12,23 @@ class Schedule {
     const pool = await poolPromise;
     const result = await pool.request()
       .input('order_id', sql.UniqueIdentifier, orderId)
-      .query('SELECT *, created_user, updated_user FROM order_schedules WHERE order_id = @order_id');
-    return result.recordset[0];
+      .query(`
+        SELECT s.*,
+               COALESCE(
+                 (SELECT TOP 1 profile_image_url FROM lab_staff WHERE id = o.collector_id AND is_deleted = 0),
+                 (SELECT TOP 1 profile_image_url FROM lab_staff WHERE name = s.collecting_person AND is_deleted = 0)
+               ) AS profile_image_url
+        FROM order_schedules s
+        LEFT JOIN lab_orders o ON s.order_id = o.id
+        WHERE s.order_id = @order_id
+      `);
+    
+    const schedule = result.recordset[0] || null;
+    if (schedule && schedule.profile_image_url) {
+      const StorageService = require('../utils/storageService');
+      schedule.profile_image_url = await StorageService.getFileUrl(schedule.profile_image_url);
+    }
+    return schedule;
   }
 
   static async upsert(data, updatedBy = null) {

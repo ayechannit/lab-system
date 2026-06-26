@@ -51,6 +51,10 @@ router.use(authMiddleware);
  *         user_id:
  *           type: string
  *           format: uuid
+ *         collector_id:
+ *           type: string
+ *           format: uuid
+ *           description: Optional preferred sample collector staff ID
  *         description:
  *           type: string
  *         priority:
@@ -222,6 +226,10 @@ router.use(authMiddleware);
  *               user_id:
  *                 type: string
  *                 format: uuid
+ *               collector_id:
+ *                 type: string
+ *                 format: uuid
+ *                 description: Optional preferred sample collector staff ID
  *               priority:
  *                 type: string
  *                 enum: [urgent, elective]
@@ -524,6 +532,10 @@ router.use(authMiddleware);
  *               - address
  *               - items
  *             properties:
+ *               collector_id:
+ *                 type: string
+ *                 format: uuid
+ *                 description: Optional preferred sample collector staff ID
  *               description:
  *                 type: string
  *               priority:
@@ -579,8 +591,85 @@ router.use(authMiddleware);
  *         description: Order not found
  */
 
+/**
+ * @swagger
+ * /api/orders/{id}/tracking:
+ *   get:
+ *     summary: Retrieve real-time tracking timeline history for an order
+ *     description: Returns the patient details, schedule details, and chronological status transition history log for the order.
+ *     tags: [Orders]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: The order ID
+ *     responses:
+ *       200:
+ *         description: Chronological order tracking history log
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 order_id:
+ *                   type: string
+ *                   format: uuid
+ *                 patient_name:
+ *                   type: string
+ *                 current_status:
+ *                   type: string
+ *                 created_at:
+ *                   type: string
+ *                   format: date-time
+ *                 updated_at:
+ *                   type: string
+ *                   format: date-time
+ *                 schedule:
+ *                   type: object
+ *                   nullable: true
+ *                   properties:
+ *                     collecting_person:
+ *                       type: string
+ *                     profile_image_url:
+ *                       type: string
+ *                     collection_time:
+ *                       type: string
+ *                       format: date-time
+ *                     running_time:
+ *                       type: string
+ *                       format: date-time
+ *                     report_out_time:
+ *                       type: string
+ *                       format: date-time
+ *                 timeline:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                         format: uuid
+ *                       old_status:
+ *                         type: string
+ *                       new_status:
+ *                         type: string
+ *                       note:
+ *                         type: string
+ *                       created_at:
+ *                         type: string
+ *                         format: date-time
+ *                       changed_by_name:
+ *                         type: string
+ *       404:
+ *         description: Order not found
+ */
+
 router.put('/bulk-status', orderController.bulkUpdateOrderStatus);
 router.get('/', orderController.getAllOrders);
+router.get('/:id/tracking', orderController.getOrderTracking);
 router.get('/:id', orderController.getOrderById);
 router.post('/', upload.single('prescription'), orderController.createOrder);
 router.post('/:id/items', orderController.addOrderItems);

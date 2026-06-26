@@ -21,19 +21,31 @@ const upsertSchedule = async (req, res) => {
     if (schedule) {
       const order = await Order.getById(order_id);
       if (order && order.user_id) {
+        let title = 'Lab Schedule Updated';
         let body = 'Your lab schedule has been updated.';
+        let event = 'schedule_updated';
+
         if (collecting_person && collection_time) {
           const formattedTime = new Date(collection_time).toLocaleString();
           body = `Your sample collection schedule is set. ${collecting_person} will collect samples on ${formattedTime}.`;
+          title = 'Sample Collection Scheduled';
+        }
+
+        // If report_out_time is scheduled and user requested hard_copy or both
+        if (report_out_time && (order.report_delivery_method === 'hard_copy' || order.report_delivery_method === 'both')) {
+          const formattedDeliveryTime = new Date(report_out_time).toLocaleString();
+          title = 'Result Delivery Scheduled';
+          body = `Your hardcopy lab results are scheduled for physical delivery to your address on ${formattedDeliveryTime}.`;
+          event = 'delivery_scheduled';
         }
         
         NotificationService.sendToUser(
           order.user_id,
           'user',
-          'Sample Collection Scheduled',
+          title,
           body,
-          { order_id, event: 'schedule_updated', collecting_person }
-        ).catch(err => console.error('Error sending schedule notification:', err.message));
+          { order_id, event, collecting_person, delivery_time: report_out_time }
+        ).catch(err => console.error('Error sending schedule/delivery notification:', err.message));
       }
     }
 

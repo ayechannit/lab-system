@@ -45,7 +45,8 @@ CREATE TABLE lab_staff (
     updated_user UNIQUEIDENTIFIER,
     is_deleted BIT DEFAULT 0, -- Soft Delete
     created_at DATETIME2 DEFAULT GETDATE(),
-    updated_at DATETIME2 DEFAULT GETDATE()
+    updated_at DATETIME2 DEFAULT GETDATE(),
+    profile_image_url NVARCHAR(500) NULL
 );
 
 -- LAB TEST CATALOG
@@ -70,6 +71,7 @@ CREATE TABLE lab_test_catalog (
 CREATE TABLE lab_orders (
     id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
     user_id UNIQUEIDENTIFIER NOT NULL FOREIGN KEY REFERENCES users(id),
+    collector_id UNIQUEIDENTIFIER NULL FOREIGN KEY REFERENCES lab_staff(id),
     description NVARCHAR(MAX),
     priority NVARCHAR(20) NOT NULL CHECK (priority IN ('urgent', 'elective')),
     patient_name NVARCHAR(255) NOT NULL,
@@ -161,12 +163,46 @@ CREATE TABLE test_specific_discounts (
     role NVARCHAR(20) NOT NULL CHECK (role IN ('clinic', 'doctor', 'patient', 'phlebotomist')),
     discount_percent DECIMAL(5, 2) NOT NULL,
     is_active BIT DEFAULT 1,
+    start_date DATETIME2 NULL,
+    end_date DATETIME2 NULL,
     created_user UNIQUEIDENTIFIER,
     updated_user UNIQUEIDENTIFIER,
     is_deleted BIT DEFAULT 0, -- Soft Delete
     created_at DATETIME2 DEFAULT GETDATE(),
     updated_at DATETIME2 DEFAULT GETDATE(),
     CONSTRAINT UQ_Test_Role UNIQUE (test_id, role)
+);
+
+-- TEST SPECIFIC REFERRAL FEES
+CREATE TABLE test_referral_fees (
+    id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+    test_id UNIQUEIDENTIFIER NOT NULL FOREIGN KEY REFERENCES lab_test_catalog(id),
+    role NVARCHAR(20) NOT NULL CHECK (role IN ('clinic', 'doctor', 'patient', 'phlebotomist')),
+    referral_percent DECIMAL(5, 2) NOT NULL DEFAULT 0,
+    is_active BIT DEFAULT 1,
+    created_user UNIQUEIDENTIFIER,
+    updated_user UNIQUEIDENTIFIER,
+    is_deleted BIT DEFAULT 0, -- Soft Delete
+    created_at DATETIME2 DEFAULT GETDATE(),
+    updated_at DATETIME2 DEFAULT GETDATE(),
+    CONSTRAINT UQ_Referral_Test_Role UNIQUE (test_id, role)
+);
+
+-- ADVERTISEMENTS
+CREATE TABLE advertisements (
+    id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+    title NVARCHAR(255) NOT NULL,
+    description NVARCHAR(MAX),
+    image_url NVARCHAR(2048),
+    action_url NVARCHAR(2048),
+    start_date DATETIME2,
+    end_date DATETIME2,
+    is_active BIT DEFAULT 1,
+    created_user UNIQUEIDENTIFIER,
+    updated_user UNIQUEIDENTIFIER,
+    is_deleted BIT DEFAULT 0, -- Soft Delete
+    created_at DATETIME2 DEFAULT GETDATE(),
+    updated_at DATETIME2 DEFAULT GETDATE()
 );
 
 -- LAB RESULTS

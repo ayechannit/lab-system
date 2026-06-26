@@ -112,19 +112,22 @@ function parseAiReviewFromObject(jsonObj: Record<string, unknown>): ParsedAiRevi
 
   let verdict: AiReviewVerdict = 'pass'
   const statusP = profile?.Status?.toUpperCase() || ''
-  const statusT = testResult?.Status?.toUpperCase() || ''
 
-  if (
+  // Enable release to patient when ProfileAlert status is CORRECT.
+  // TestResultAlert is ignored for deciding the release verdict.
+  if (statusP === 'CORRECT') {
+    verdict = 'pass'
+  } else if (
     statusP.includes('ERROR') ||
     statusP.includes('FAIL') ||
-    statusP.includes('INCORRECT') ||
-    statusT.includes('ERROR') ||
-    statusT.includes('FAIL') ||
-    statusT.includes('INCORRECT')
+    statusP.includes('INCORRECT')
   ) {
     verdict = 'fail'
-  } else if (statusP.includes('WARN') || statusT.includes('WARN')) {
+  } else if (statusP.includes('WARN')) {
     verdict = 'neutral'
+  } else if (statusP) {
+    // Any other non-CORRECT profile status is treated as fail
+    verdict = 'fail'
   }
 
   return {
@@ -1279,7 +1282,7 @@ export function LabResultManagementPage() {
     if (parsed.profileAlert || parsed.testResultAlert) {
       const getStatusBadge = (status?: string) => {
         const s = status?.toUpperCase() || ''
-        if (s.includes('ERROR') || s.includes('FAIL') || s.includes('INCORRECT')) {
+        if (s.includes('ERROR') || s.includes('FAIL') || s.includes('INCORRECT') || s.includes('ABNORMAL')) {
           return <span className="badge badge--danger" style={{ backgroundColor: '#fee2e2', color: '#dc2626', borderColor: '#fca5a5', borderWidth: '1px', borderStyle: 'solid', padding: '0.15rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600 }}>{status}</span>
         }
         if (s.includes('WARN')) {
@@ -1290,14 +1293,14 @@ export function LabResultManagementPage() {
 
       const getCardBorderColor = (status?: string) => {
         const s = status?.toUpperCase() || ''
-        if (s.includes('ERROR') || s.includes('FAIL') || s.includes('INCORRECT')) return '#fecaca'
+        if (s.includes('ERROR') || s.includes('FAIL') || s.includes('INCORRECT') || s.includes('ABNORMAL')) return '#fecaca'
         if (s.includes('WARN')) return '#fde68a'
         return '#bbf7d0'
       }
 
       const getCardBgColor = (status?: string) => {
         const s = status?.toUpperCase() || ''
-        if (s.includes('ERROR') || s.includes('FAIL') || s.includes('INCORRECT')) return '#fff5f5'
+        if (s.includes('ERROR') || s.includes('FAIL') || s.includes('INCORRECT') || s.includes('ABNORMAL')) return '#fff5f5'
         if (s.includes('WARN')) return '#fffbeb'
         return '#f9fdfa'
       }
@@ -2121,6 +2124,35 @@ export function LabResultManagementPage() {
               <span className="badge badge--success">Released</span>
             ) : null}
           </footer>
+
+          {detail.status === 'delivered' && (detail.report_delivery_method === 'hard_copy' || detail.report_delivery_method === 'both') ? (
+            <div style={{
+              marginTop: '1.5rem',
+              padding: '1rem',
+              borderRadius: '8px',
+              border: '1px solid #c3e6cb',
+              backgroundColor: '#f4fbf5',
+              color: '#155724',
+              fontSize: '0.875rem'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>
+                <span className="material-symbols-outlined" style={{ color: '#28a745' }}>local_shipping</span>
+                <span>Physical Delivery Tracking</span>
+              </div>
+              <p style={{ margin: '0 0 0.5rem 0' }}>
+                Delivery Method: <strong>{detail.report_delivery_method === 'both' ? 'Both (Digital & Hardcopy)' : 'Hardcopy Only'}</strong>
+              </p>
+              {detail.schedule?.report_out_time ? (
+                <p style={{ margin: 0 }}>
+                  Scheduled Delivery Time: <strong>{new Date(detail.schedule.report_out_time).toLocaleString()}</strong>
+                </p>
+              ) : (
+                <p style={{ margin: 0, color: '#856404' }}>
+                  ⚠️ No delivery time has been scheduled yet. You can set it on the Order Schedule board.
+                </p>
+              )}
+            </div>
+          ) : null}
         </div>
       ) : null}
 

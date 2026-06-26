@@ -125,3 +125,58 @@ BEGIN
     ALTER TABLE dbo.lab_order_items ADD result_pdf_display_solo BIT NOT NULL DEFAULT 0;
 END
 
+-- Add start_date and end_date columns to test_specific_discounts if they do not exist
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[test_specific_discounts]') AND name = N'start_date')
+BEGIN
+    ALTER TABLE dbo.test_specific_discounts ADD start_date DATETIME2 NULL;
+END
+
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[test_specific_discounts]') AND name = N'end_date')
+BEGIN
+    ALTER TABLE dbo.test_specific_discounts ADD end_date DATETIME2 NULL;
+END
+
+-- Create test_referral_fees table if it does not exist
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[test_referral_fees]') AND type in (N'U'))
+BEGIN
+    CREATE TABLE dbo.test_referral_fees (
+        id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+        test_id UNIQUEIDENTIFIER NOT NULL FOREIGN KEY REFERENCES lab_test_catalog(id),
+        role NVARCHAR(20) NOT NULL CHECK (role IN ('clinic', 'doctor', 'patient', 'phlebotomist')),
+        referral_percent DECIMAL(5, 2) NOT NULL DEFAULT 0,
+        is_active BIT DEFAULT 1,
+        created_user UNIQUEIDENTIFIER,
+        updated_user UNIQUEIDENTIFIER,
+        is_deleted BIT DEFAULT 0, -- Soft Delete
+        created_at DATETIME2 DEFAULT GETDATE(),
+        updated_at DATETIME2 DEFAULT GETDATE(),
+        CONSTRAINT UQ_Referral_Test_Role UNIQUE (test_id, role)
+    );
+END
+
+-- Add collector_id column to lab_orders table if it does not exist
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[lab_orders]') AND name = N'collector_id')
+BEGIN
+    ALTER TABLE dbo.lab_orders ADD collector_id UNIQUEIDENTIFIER NULL FOREIGN KEY REFERENCES lab_staff(id);
+END
+
+-- Create advertisements table if it does not exist
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[advertisements]') AND type in (N'U'))
+BEGIN
+    CREATE TABLE dbo.advertisements (
+        id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+        title NVARCHAR(255) NOT NULL,
+        description NVARCHAR(MAX),
+        image_url NVARCHAR(2048),
+        action_url NVARCHAR(2048),
+        start_date DATETIME2,
+        end_date DATETIME2,
+        is_active BIT DEFAULT 1,
+        created_user UNIQUEIDENTIFIER,
+        updated_user UNIQUEIDENTIFIER,
+        is_deleted BIT DEFAULT 0, -- Soft Delete
+        created_at DATETIME2 DEFAULT GETDATE(),
+        updated_at DATETIME2 DEFAULT GETDATE()
+    );
+END
+

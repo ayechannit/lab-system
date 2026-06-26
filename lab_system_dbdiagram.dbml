@@ -74,6 +74,7 @@ Table lab_test_catalog {
 Table lab_orders {
   id uuid [pk]
   user_id uuid [not null, ref: > users.id]
+  collector_id uuid [ref: > lab_staff.id]
   description text
   priority order_priority [not null, note: 'urgent | elective']
   patient_name varchar [not null]
@@ -277,6 +278,23 @@ Table test_specific_discounts {
   role user_role [not null]
   discount_percent decimal [not null]
   is_active boolean [default: true]
+  start_date timestamp
+  end_date timestamp
+  is_deleted boolean [default: false]
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+
+  indexes {
+    (test_id, role) [unique]
+  }
+}
+
+Table test_referral_fees {
+  id uuid [pk]
+  test_id uuid [not null, ref: > lab_test_catalog.id]
+  role user_role [not null]
+  referral_percent decimal [not null]
+  is_active boolean [default: true]
   is_deleted boolean [default: false]
   created_at timestamp [default: `now()`]
   updated_at timestamp [default: `now()`]
@@ -343,6 +361,20 @@ Table notifications {
   title varchar [not null]
   body text
   is_read boolean [default: false]
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+}
+
+Table advertisements {
+  id uuid [pk]
+  title varchar [not null]
+  description text
+  image_url varchar
+  action_url varchar
+  start_date timestamp
+  end_date timestamp
+  is_active boolean [default: true]
+  is_deleted boolean [default: false]
   created_at timestamp [default: `now()`]
   updated_at timestamp [default: `now()`]
 }

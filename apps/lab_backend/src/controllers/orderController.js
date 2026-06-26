@@ -20,7 +20,7 @@ const getOrderById = async (req, res) => {
 const createOrder = async (req, res) => {
   try {
     const { 
-      user_id, description, priority, patient_name, patient_age, patient_phone, 
+      user_id, collector_id, description, priority, patient_name, patient_age, patient_phone, 
       address, latitude, longitude, status, report_delivery_method, 
       original_price_mmk, discount_percent, final_price_mmk, items 
     } = req.body;
@@ -30,7 +30,7 @@ const createOrder = async (req, res) => {
     }
 
     const orderData = { 
-      user_id, description, priority, patient_name, patient_age, patient_phone, 
+      user_id, collector_id, description, priority, patient_name, patient_age, patient_phone, 
       address, latitude, longitude, status, report_delivery_method, 
       original_price_mmk, discount_percent, final_price_mmk, items 
     };
@@ -149,6 +149,7 @@ const syncPendingOrder = async (req, res) => {
   try {
     const { id } = req.params;
     const {
+      collector_id,
       description,
       priority,
       patient_name,
@@ -176,6 +177,7 @@ const syncPendingOrder = async (req, res) => {
     const updatedOrder = await Order.syncPendingOrder(
       id,
       {
+        collector_id,
         description,
         priority,
         patient_name,
@@ -262,16 +264,37 @@ const updateOrder = async (req, res) => {
 
 const updateOrderStatus = async (req, res) => {
   const { status, staff_id, note } = req.body;
-  const order = await Order.updateStatus(req.params.id, status, staff_id || req.user?.id, note, req.user?.id);
+  const { id } = req.params;
+  const order = await Order.updateStatus(id, status, staff_id || req.user?.id, note, req.user?.id);
   if (!order) return res.status(404).json({ message: 'Order not found' });
 
   if (status === 'delivered') {
+    let title = 'Lab Results Ready';
+    let body = `All lab test results for patient "${order.patient_name}" are ready and available for download.`;
+    let event = 'results_ready';
+
+    // If report delivery was hard_copy or both, handle physical delivery scheduled notification
+    if (order.report_delivery_method === 'hard_copy' || order.report_delivery_method === 'both') {
+      const fullOrder = await Order.getById(id);
+      const schedule = fullOrder?.schedule;
+      if (schedule && schedule.report_out_time) {
+        const formattedDeliveryTime = new Date(schedule.report_out_time).toLocaleString();
+        title = 'Result Delivery Scheduled';
+        body = `Your physical lab report copy for patient "${order.patient_name}" has been released and is scheduled for physical delivery to your address on ${formattedDeliveryTime}.`;
+        event = 'delivery_scheduled';
+      } else {
+        title = 'Results Released - Delivery Pending';
+        body = `Your lab results for patient "${order.patient_name}" have been released and are ready. A physical copy will be delivered to your address shortly.`;
+        event = 'delivery_pending';
+      }
+    }
+
     NotificationService.sendToUser(
       order.user_id,
       'user',
-      'Lab Results Ready',
-      `All lab test results for patient "${order.patient_name}" are ready and available for download.`,
-      { order_id: order.id, event: 'results_ready' }
+      title,
+      body,
+      { order_id: order.id, event }
     ).catch(err => console.error('Error sending lab results notification:', err.message));
   } else {
     NotificationService.sendToUser(
@@ -290,6 +313,16 @@ const deleteOrder = async (req, res) => {
   const success = await Order.delete(req.params.id, req.user?.id);
   if (!success) return res.status(404).json({ message: 'Order not found' });
   res.json({ message: 'Order deleted successfully' });
+};
+
+const getOrderTracking = async (req, res) => {
+  try {
+    const tracking = await Order.getTracking(req.params.id);
+    if (!tracking) return res.status(404).json({ message: 'Order not found' });
+    res.json(tracking);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 };
 
 const generateQrCode = async (req, res) => {
@@ -571,6 +604,7 @@ module.exports = {
   updateOrderStatus,
   bulkUpdateOrderStatus,
   deleteOrder,
+  getOrderTracking,
   generateQrCode,
   uploadTestResult,
   bulkUploadTestResult,

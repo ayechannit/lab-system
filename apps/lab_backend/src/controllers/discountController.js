@@ -31,11 +31,11 @@ const getDiscountByTestIdAndRole = async (req, res) => {
 
 const upsertDiscount = async (req, res) => {
   try {
-    const { test_id, role, discount_percent, is_active } = req.body;
+    const { test_id, role, discount_percent, is_active, start_date, end_date } = req.body;
     if (!test_id || !role || discount_percent === undefined) {
       return res.status(400).json({ message: 'test_id, role, and discount_percent are required' });
     }
-    const discountData = { test_id, role, discount_percent, is_active };
+    const discountData = { test_id, role, discount_percent, is_active, start_date, end_date };
     const result = await Discount.upsert(discountData, req.user?.id);
 
     // Send notifications for newly active discounts in background

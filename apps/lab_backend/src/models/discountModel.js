@@ -16,21 +16,24 @@ class Discount {
         .input('role', sql.VarChar, role)
         .input('discount_percent', sql.Decimal(5, 2), data.discount_percent)
         .input('is_active', sql.Bit, data.is_active !== undefined ? data.is_active : 1)
+        .input('start_date', sql.DateTime, data.start_date || null)
+        .input('end_date', sql.DateTime, data.end_date || null)
         .input('updated_user', sql.UniqueIdentifier, updatedBy)
         .query(`
           IF EXISTS (SELECT 1 FROM test_specific_discounts WHERE test_id = @test_id AND role = @role)
           BEGIN
               UPDATE test_specific_discounts 
               SET discount_percent = @discount_percent, is_active = @is_active, is_deleted = 0, 
+                  start_date = @start_date, end_date = @end_date,
                   updated_user = @updated_user, updated_at = GETDATE()
               OUTPUT INSERTED.*
               WHERE test_id = @test_id AND role = @role
           END
           ELSE
           BEGIN
-              INSERT INTO test_specific_discounts (id, test_id, role, discount_percent, is_active, is_deleted, created_user, updated_user)
+              INSERT INTO test_specific_discounts (id, test_id, role, discount_percent, is_active, is_deleted, start_date, end_date, created_user, updated_user)
               OUTPUT INSERTED.*
-              VALUES (NEWID(), @test_id, @role, @discount_percent, @is_active, 0, @updated_user, @updated_user)
+              VALUES (NEWID(), @test_id, @role, @discount_percent, @is_active, 0, @start_date, @end_date, @updated_user, @updated_user)
           END
         `);
       results.push(result.recordset[0]);

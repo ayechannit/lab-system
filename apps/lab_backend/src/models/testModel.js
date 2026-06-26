@@ -175,9 +175,11 @@ class LabTest {
     let query = `
       SELECT t.*,
              (
-                SELECT sd.id, sd.role, sd.discount_percent
+                SELECT sd.id, sd.role, sd.discount_percent, sd.start_date, sd.end_date
                 FROM test_specific_discounts sd
                 WHERE sd.test_id = t.id AND sd.is_active = 1 AND sd.is_deleted = 0
+                  AND (sd.start_date IS NULL OR sd.start_date <= GETDATE())
+                  AND (sd.end_date IS NULL OR sd.end_date >= GETDATE())
                 FOR JSON PATH
              ) as discounts_json
       FROM lab_test_catalog t

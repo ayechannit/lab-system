@@ -54,7 +54,16 @@ class Order {
     const request = pool.request();
     let query = `
       SELECT *, created_user, updated_user,
-             (SELECT * FROM order_schedules WHERE order_id = lab_orders.id FOR JSON PATH) as schedule
+             (
+               SELECT s.*,
+                      COALESCE(
+                        (SELECT TOP 1 profile_image_url FROM lab_staff WHERE id = lab_orders.collector_id AND is_deleted = 0),
+                        (SELECT TOP 1 profile_image_url FROM lab_staff WHERE name = s.collecting_person AND is_deleted = 0)
+                      ) AS profile_image_url
+               FROM order_schedules s
+               WHERE s.order_id = lab_orders.id
+               FOR JSON PATH
+             ) as schedule
       FROM lab_orders
       WHERE is_deleted = 0
     `;
@@ -106,6 +115,9 @@ class Order {
         try {
           const parsed = JSON.parse(order.schedule);
           order.schedule = parsed && parsed.length > 0 ? parsed[0] : null;
+          if (order.schedule && order.schedule.profile_image_url) {
+            order.schedule.profile_image_url = await StorageService.getFileUrl(order.schedule.profile_image_url);
+          }
         } catch (e) {
           order.schedule = null;
         }
@@ -137,7 +149,16 @@ class Order {
                  WHERE oi.order_id = o.id 
                  FOR JSON PATH
                ) as items,
-               (SELECT * FROM order_schedules WHERE order_id = o.id FOR JSON PATH) as schedule,
+               (
+                 SELECT s.*,
+                        COALESCE(
+                          (SELECT TOP 1 profile_image_url FROM lab_staff WHERE id = o.collector_id AND is_deleted = 0),
+                          (SELECT TOP 1 profile_image_url FROM lab_staff WHERE name = s.collecting_person AND is_deleted = 0)
+                        ) AS profile_image_url
+                 FROM order_schedules s
+                 WHERE s.order_id = o.id
+                 FOR JSON PATH
+               ) as schedule,
                (SELECT * FROM payments WHERE order_id = o.id ORDER BY created_at ASC FOR JSON PATH) as payments,
                (SELECT 
                   ISNULL(SUM(amount_mmk), 0) 
@@ -156,6 +177,9 @@ class Order {
       order.balance_mmk = order.final_price_mmk - order.total_paid_mmk;
 
       const StorageService = require('../utils/storageService');
+      if (order.schedule && order.schedule.profile_image_url) {
+        order.schedule.profile_image_url = await StorageService.getFileUrl(order.schedule.profile_image_url);
+      }
       if (order.prescription_url) {
         const fullUrl = await StorageService.getFileUrl(order.prescription_url);
         order.prescription_url = fullUrl;
@@ -197,6 +221,7 @@ class Order {
       const orderRequest = new sql.Request(transaction);
       const orderResult = await orderRequest
         .input('user_id', sql.UniqueIdentifier, data.user_id)
+        .input('collector_id', sql.UniqueIdentifier, data.collector_id || null)
         .input('description', sql.Text, data.description)
         .input('priority', sql.VarChar, data.priority)
         .input('patient_name', sql.VarChar, data.patient_name)
@@ -214,11 +239,11 @@ class Order {
         .input('is_tests_assigned', sql.Bit, isTestsAssigned)
         .input('created_user', sql.UniqueIdentifier, createdBy)
         .query(`
-          INSERT INTO lab_orders (id, user_id, description, priority, patient_name, patient_age, patient_phone, 
+          INSERT INTO lab_orders (id, user_id, collector_id, description, priority, patient_name, patient_age, patient_phone, 
                                  address, latitude, longitude, status, report_delivery_method, original_price_mmk, 
                                  discount_percent, final_price_mmk, prescription_url, is_tests_assigned, created_user, updated_user, is_deleted)
           OUTPUT INSERTED.*
-          VALUES (NEWID(), @user_id, @description, @priority, @patient_name, @patient_age, @patient_phone, 
+          VALUES (NEWID(), @user_id, @collector_id, @description, @priority, @patient_name, @patient_age, @patient_phone, 
                   @address, @latitude, @longitude, @status, @report_delivery_method, @original_price_mmk, 
                   @discount_percent, @final_price_mmk, @prescription_url, @is_tests_assigned, @created_user, @created_user, 0)
         `);
@@ -410,6 +435,7 @@ class Order {
       const updateOrderReq = new sql.Request(transaction);
       await updateOrderReq
         .input('id', sql.UniqueIdentifier, orderId)
+        .input('collector_id', sql.UniqueIdentifier, data.collector_id || null)
         .input('description', sql.Text, data.description ?? null)
         .input('priority', sql.VarChar, data.priority)
         .input('patient_name', sql.VarChar, data.patient_name)
@@ -425,7 +451,8 @@ class Order {
         .input('updated_user', sql.UniqueIdentifier, updatedBy)
         .query(`
           UPDATE lab_orders
-          SET description = @description,
+          SET collector_id = @collector_id,
+              description = @description,
               priority = @priority,
               patient_name = @patient_name,
               patient_age = @patient_age,
@@ -567,6 +594,7 @@ class Order {
     const pool = await poolPromise;
     const result = await pool.request()
       .input('id', sql.UniqueIdentifier, id)
+      .input('collector_id', sql.UniqueIdentifier, data.collector_id || null)
       .input('description', sql.Text, data.description ?? null)
       .input('priority', sql.VarChar, data.priority)
       .input('patient_name', sql.VarChar, data.patient_name)
@@ -578,6 +606,7 @@ class Order {
       .input('updated_user', sql.UniqueIdentifier, updatedBy)
       .query(`
         UPDATE lab_orders SET
+          collector_id = @collector_id,
           description = @description,
           priority = @priority,
           patient_name = @patient_name,
@@ -697,6 +726,63 @@ class Order {
       await transaction.rollback();
       throw err;
     }
+  }
+
+  static async getTracking(orderId) {
+    const pool = await poolPromise;
+    
+    // Get order details
+    const orderResult = await pool.request()
+      .input('id', sql.UniqueIdentifier, orderId)
+      .query(`
+        SELECT o.id, o.patient_name, o.status as current_status, o.created_at, o.updated_at
+        FROM lab_orders o
+        WHERE o.id = @id AND o.is_deleted = 0
+      `);
+    
+    const order = orderResult.recordset[0];
+    if (!order) return null;
+
+    // Get order status logs with staff names
+    const logsResult = await pool.request()
+      .input('order_id', sql.UniqueIdentifier, orderId)
+      .query(`
+        SELECT l.id, l.old_status, l.new_status, l.note, l.created_at, s.name as changed_by_name
+        FROM order_status_logs l
+        LEFT JOIN lab_staff s ON l.changed_by = s.id
+        WHERE l.order_id = @order_id
+        ORDER BY l.created_at ASC
+      `);
+
+    // Get schedule if any
+    const scheduleResult = await pool.request()
+      .input('order_id', sql.UniqueIdentifier, orderId)
+      .query(`
+        SELECT s.collecting_person, s.collection_time, s.running_time, s.report_out_time,
+               COALESCE(
+                 (SELECT TOP 1 profile_image_url FROM lab_staff WHERE id = o.collector_id AND is_deleted = 0),
+                 (SELECT TOP 1 profile_image_url FROM lab_staff WHERE name = s.collecting_person AND is_deleted = 0)
+               ) AS profile_image_url
+        FROM order_schedules s
+        LEFT JOIN lab_orders o ON s.order_id = o.id
+        WHERE s.order_id = @order_id
+      `);
+
+    const schedule = scheduleResult.recordset[0] || null;
+    if (schedule && schedule.profile_image_url) {
+      const StorageService = require('../utils/storageService');
+      schedule.profile_image_url = await StorageService.getFileUrl(schedule.profile_image_url);
+    }
+
+    return {
+      order_id: order.id,
+      patient_name: order.patient_name,
+      current_status: order.current_status,
+      created_at: order.created_at,
+      updated_at: order.updated_at,
+      schedule,
+      timeline: logsResult.recordset
+    };
   }
 
   static async delete(id, updatedBy = null) {

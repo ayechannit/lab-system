@@ -7,6 +7,7 @@ const staffRoutes = require('./routes/staffRoutes');
 const userRoutes = require('./routes/userRoutes');
 const testRoutes = require('./routes/testRoutes');
 const discountRoutes = require('./routes/discountRoutes');
+const referralFeeRoutes = require('./routes/referralFeeRoutes');
 const orderRoutes = require('./routes/orderRoutes');
 const scheduleRoutes = require('./routes/scheduleRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
@@ -20,6 +21,7 @@ const notificationRoutes = require('./routes/notificationRoutes');
 const systemSettingRoutes = require('./routes/systemSettingRoutes');
 const reportRoutes = require('./routes/reportRoutes');
 const labResultRoutes = require('./routes/labResultRoutes');
+const advertisementRoutes = require('./routes/advertisementRoutes');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpecs = require('./config/swagger');
 const errorHandler = require('./middlewares/errorHandler');
@@ -45,6 +47,7 @@ app.use('/api/staff', staffRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/tests', testRoutes);
 app.use('/api/discounts', discountRoutes);
+app.use('/api/referral-fees', referralFeeRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/schedules', scheduleRoutes);
 app.use('/api/payments', paymentRoutes);
@@ -58,6 +61,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/system-settings', systemSettingRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/lab-results', labResultRoutes);
+app.use('/api/advertisements', advertisementRoutes);
 
 // Base route
 app.get('/', (req, res) => {

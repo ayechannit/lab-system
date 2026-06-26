@@ -16,6 +16,305 @@
     }
   ],
   "paths": {
+    "/api/advertisements": {
+      "get": {
+        "summary": "Retrieve all active and scheduled advertisements",
+        "tags": [
+          "Advertisements"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "is_active",
+            "schema": {
+              "type": "boolean"
+            },
+            "description": "Filter by active status"
+          },
+          {
+            "in": "query",
+            "name": "title",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Search by partial title"
+          },
+          {
+            "in": "query",
+            "name": "current_date",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "description": "Date to filter advertisements running on (start_date <= current_date <= end_date)"
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "description": "Page number for pagination"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "description": "Number of items per page for pagination"
+          },
+          {
+            "in": "query",
+            "name": "sortBy",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "title",
+                "start_date",
+                "end_date",
+                "created_at",
+                "is_active"
+              ]
+            },
+            "description": "Sort field"
+          },
+          {
+            "in": "query",
+            "name": "sortOrder",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            },
+            "description": "Sort order"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of advertisements",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Advertisement"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a new advertisement (Admin/Staff only)",
+        "tags": [
+          "Advertisements"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "title"
+                ],
+                "properties": {
+                  "title": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "image_url": {
+                    "type": "string"
+                  },
+                  "action_url": {
+                    "type": "string"
+                  },
+                  "start_date": {
+                    "type": "string",
+                    "format": "date-time",
+                    "nullable": true
+                  },
+                  "end_date": {
+                    "type": "string",
+                    "format": "date-time",
+                    "nullable": true
+                  },
+                  "is_active": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Advertisement created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Advertisement"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/advertisements/{id}": {
+      "get": {
+        "summary": "Get details of a specific advertisement",
+        "tags": [
+          "Advertisements"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Advertisement details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Advertisement"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Advertisement not found"
+          }
+        }
+      },
+      "put": {
+        "summary": "Update an advertisement (Admin/Staff only)",
+        "tags": [
+          "Advertisements"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "title"
+                ],
+                "properties": {
+                  "title": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "image_url": {
+                    "type": "string"
+                  },
+                  "action_url": {
+                    "type": "string"
+                  },
+                  "start_date": {
+                    "type": "string",
+                    "format": "date-time",
+                    "nullable": true
+                  },
+                  "end_date": {
+                    "type": "string",
+                    "format": "date-time",
+                    "nullable": true
+                  },
+                  "is_active": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Advertisement updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Advertisement"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Advertisement not found"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Soft delete an advertisement (Admin/Staff only)",
+        "tags": [
+          "Advertisements"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Advertisement deleted"
+          },
+          "404": {
+            "description": "Advertisement not found"
+          }
+        }
+      }
+    },
     "/api/ai-configs": {
       "get": {
         "summary": "Get all AI configurations",
@@ -296,6 +595,93 @@
           },
           "401": {
             "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/auth/forgot-password": {
+      "post": {
+        "summary": "Request verification code to reset password",
+        "description": "Validates user/staff email, generates a 15-minute 6-digit PIN code, and sends it via email.",
+        "tags": [
+          "Auth"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "description": "Registered email address"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Code sent successfully"
+          },
+          "400": {
+            "description": "Missing email address"
+          },
+          "404": {
+            "description": "Account not found"
+          }
+        }
+      }
+    },
+    "/api/auth/reset-password": {
+      "post": {
+        "summary": "Reset password with 6-digit PIN",
+        "description": "Verifies the code against the registered email and updates the password.",
+        "tags": [
+          "Auth"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email",
+                  "code",
+                  "new_password"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string"
+                  },
+                  "code": {
+                    "type": "string",
+                    "description": "The 6-digit PIN code received in email"
+                  },
+                  "new_password": {
+                    "type": "string",
+                    "description": "The new secure password to set"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Password reset successful"
+          },
+          "400": {
+            "description": "Invalid or expired code"
+          },
+          "404": {
+            "description": "Account not found"
           }
         }
       }
@@ -615,6 +1001,16 @@
                   },
                   "is_active": {
                     "type": "boolean"
+                  },
+                  "start_date": {
+                    "type": "string",
+                    "format": "date-time",
+                    "nullable": true
+                  },
+                  "end_date": {
+                    "type": "string",
+                    "format": "date-time",
+                    "nullable": true
                   }
                 }
               }
@@ -766,6 +1162,16 @@
                         },
                         "is_active": {
                           "type": "boolean"
+                        },
+                        "start_date": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": true
+                        },
+                        "end_date": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": true
                         }
                       }
                     }
@@ -1370,6 +1776,11 @@
                     "type": "string",
                     "format": "uuid"
                   },
+                  "collector_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "Optional preferred sample collector staff ID"
+                  },
                   "priority": {
                     "type": "string",
                     "enum": [
@@ -1821,6 +2232,239 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/api/orders/{id}/pending-sync": {
+      "put": {
+        "summary": "Synchronize/fully update details, tests, and payments of a pending order",
+        "description": "Fully updates the metadata, test items, and payments for an order. Allowed only if the order status is currently 'pending'. Staff members can update any pending order; regular users can only update orders they created.",
+        "tags": [
+          "Orders"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "priority",
+                  "patient_name",
+                  "patient_age",
+                  "patient_phone",
+                  "address",
+                  "items"
+                ],
+                "properties": {
+                  "collector_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "Optional preferred sample collector staff ID"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "priority": {
+                    "type": "string",
+                    "enum": [
+                      "urgent",
+                      "elective"
+                    ]
+                  },
+                  "patient_name": {
+                    "type": "string"
+                  },
+                  "patient_age": {
+                    "type": "integer"
+                  },
+                  "patient_phone": {
+                    "type": "string"
+                  },
+                  "address": {
+                    "type": "string"
+                  },
+                  "latitude": {
+                    "type": "number"
+                  },
+                  "longitude": {
+                    "type": "number"
+                  },
+                  "original_price_mmk": {
+                    "type": "number"
+                  },
+                  "discount_percent": {
+                    "type": "number"
+                  },
+                  "final_price_mmk": {
+                    "type": "number"
+                  },
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "test_id",
+                        "quantity"
+                      ],
+                      "properties": {
+                        "test_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "quantity": {
+                          "type": "integer"
+                        },
+                        "unit_price_mmk": {
+                          "type": "number"
+                        },
+                        "subtotal_mmk": {
+                          "type": "number"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Pending order synchronized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Order"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request or order is not pending"
+          },
+          "403": {
+            "description": "User cannot update this order"
+          },
+          "404": {
+            "description": "Order not found"
+          }
+        }
+      }
+    },
+    "/api/orders/{id}/tracking": {
+      "get": {
+        "summary": "Retrieve real-time tracking timeline history for an order",
+        "description": "Returns the patient details, schedule details, and chronological status transition history log for the order.",
+        "tags": [
+          "Orders"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "The order ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Chronological order tracking history log",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "order_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "patient_name": {
+                      "type": "string"
+                    },
+                    "current_status": {
+                      "type": "string"
+                    },
+                    "created_at": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "updated_at": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "schedule": {
+                      "type": "object",
+                      "nullable": true,
+                      "properties": {
+                        "collecting_person": {
+                          "type": "string"
+                        },
+                        "collection_time": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "running_time": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "report_out_time": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      }
+                    },
+                    "timeline": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "old_status": {
+                            "type": "string"
+                          },
+                          "new_status": {
+                            "type": "string"
+                          },
+                          "note": {
+                            "type": "string"
+                          },
+                          "created_at": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "changed_by_name": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Order not found"
           }
         }
       }
@@ -2625,6 +3269,345 @@
           },
           "404": {
             "description": "No rating found for this order"
+          }
+        }
+      }
+    },
+    "/api/referral-fees": {
+      "get": {
+        "summary": "Get all test-specific referral fees",
+        "tags": [
+          "Referral Fees"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "role",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "clinic",
+                "doctor",
+                "patient",
+                "phlebotomist"
+              ]
+            },
+            "description": "Filter referral fees by role"
+          },
+          {
+            "in": "query",
+            "name": "is_active",
+            "schema": {
+              "type": "boolean"
+            },
+            "description": "Filter by active status"
+          },
+          {
+            "in": "query",
+            "name": "test_name",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Search by partial test name"
+          },
+          {
+            "in": "query",
+            "name": "test_code",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Search by partial test code"
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "description": "Page number for pagination"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "description": "Number of items per page for pagination"
+          },
+          {
+            "in": "query",
+            "name": "sortBy",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Field to sort by (test_name, test_code, referral_percent, created_at)"
+          },
+          {
+            "in": "query",
+            "name": "sortOrder",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            },
+            "description": "Sort order"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of test-specific referral fees",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ReferralFee"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create or update a referral fee",
+        "tags": [
+          "Referral Fees"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "test_id",
+                  "role",
+                  "referral_percent"
+                ],
+                "properties": {
+                  "test_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "clinic",
+                      "doctor",
+                      "patient",
+                      "phlebotomist",
+                      "all"
+                    ]
+                  },
+                  "referral_percent": {
+                    "type": "number"
+                  },
+                  "is_active": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The created/updated referral fee config(s)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ReferralFee"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/referral-fees/{test_id}": {
+      "get": {
+        "summary": "Get all referral fee configurations for a specific test",
+        "tags": [
+          "Referral Fees"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "test_id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Referral fee configurations for the test",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ReferralFee"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/referral-fees/{test_id}/{role}": {
+      "get": {
+        "summary": "Get a specific referral fee config for a test and role",
+        "tags": [
+          "Referral Fees"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "test_id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "in": "path",
+            "name": "role",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "clinic",
+                "doctor",
+                "patient",
+                "phlebotomist"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Referral fee configuration details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReferralFee"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Referral fee config not found"
+          }
+        }
+      }
+    },
+    "/api/referral-fees/bulk": {
+      "post": {
+        "summary": "Bulk create or update multiple referral fee configurations",
+        "tags": [
+          "Referral Fees"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "referral_fees"
+                ],
+                "properties": {
+                  "referral_fees": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "test_id",
+                        "role",
+                        "referral_percent"
+                      ],
+                      "properties": {
+                        "test_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "role": {
+                          "type": "string",
+                          "enum": [
+                            "clinic",
+                            "doctor",
+                            "patient",
+                            "phlebotomist",
+                            "all"
+                          ]
+                        },
+                        "referral_percent": {
+                          "type": "number"
+                        },
+                        "is_active": {
+                          "type": "boolean"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The created/updated referral fee configs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ReferralFee"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/referral-fees/{id}": {
+      "delete": {
+        "summary": "Soft delete a specific referral fee entry",
+        "tags": [
+          "Referral Fees"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Referral fee deleted"
+          },
+          "404": {
+            "description": "Referral fee entry not found"
           }
         }
       }
@@ -3757,8 +4740,8 @@
     },
     "/api/staff/{id}/profile-image": {
       "post": {
-        "summary": "Upload profile image for a collector staff member",
-        "description": "Allows uploading/updating a profile image (avatar) for a staff member of role `'collector'`.\n- Admins or Managers can upload for any collector staff member.\n- Collectors can upload for their own account.\n",
+        "summary": "Upload profile image for a staff member",
+        "description": "Allows uploading/updating a profile image (avatar) for any lab staff account.\n- Admins or Managers can upload for any staff member.\n- Staff can upload for their own account.\n",
         "tags": [
           "Staff"
         ],
@@ -4793,6 +5776,54 @@
   },
   "components": {
     "schemas": {
+      "Advertisement": {
+        "type": "object",
+        "required": [
+          "title"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "image_url": {
+            "type": "string"
+          },
+          "action_url": {
+            "type": "string"
+          },
+          "start_date": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "end_date": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "is_deleted": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
       "AiConfig": {
         "type": "object",
         "properties": {
@@ -4857,6 +5888,16 @@
           },
           "is_active": {
             "type": "boolean"
+          },
+          "start_date": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "end_date": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
           },
           "is_deleted": {
             "type": "boolean"
@@ -4936,6 +5977,11 @@
           "user_id": {
             "type": "string",
             "format": "uuid"
+          },
+          "collector_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Optional preferred sample collector staff ID"
           },
           "description": {
             "type": "string"
@@ -5333,6 +6379,62 @@
           }
         ]
       },
+      "ReferralFee": {
+        "type": "object",
+        "required": [
+          "test_id",
+          "role",
+          "referral_percent"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "test_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "clinic",
+              "doctor",
+              "patient",
+              "phlebotomist"
+            ]
+          },
+          "referral_percent": {
+            "type": "number"
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "is_deleted": {
+            "type": "boolean"
+          },
+          "test_name": {
+            "type": "string"
+          },
+          "test_code": {
+            "type": "string"
+          },
+          "original_price": {
+            "type": "number"
+          },
+          "referral_fee_amount": {
+            "type": "number"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
       "Schedule": {
         "type": "object",
         "properties": {
@@ -5558,6 +6660,10 @@
   },
   "tags": [
     {
+      "name": "Advertisements",
+      "description": "Promotional advertisements and mobile app banner management"
+    },
+    {
       "name": "AiConfigs",
       "description": "Management of AI models and API keys"
     },
@@ -5608,6 +6714,10 @@
     {
       "name": "Ratings",
       "description": "Lab order rating management"
+    },
+    {
+      "name": "Referral Fees",
+      "description": "Test-specific role-based referral fee management"
     },
     {
       "name": "Reports",

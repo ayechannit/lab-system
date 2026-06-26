@@ -29,6 +29,14 @@ router.use(authMiddleware);
  *           type: number
  *         is_active:
  *           type: boolean
+ *         start_date:
+ *           type: string
+ *           format: date-time
+ *           nullable: true
+ *         end_date:
+ *           type: string
+ *           format: date-time
+ *           nullable: true
  *         is_deleted:
  *           type: boolean
  *         test_name:
@@ -206,6 +214,14 @@ router.use(authMiddleware);
  *                       type: number
  *                     is_active:
  *                       type: boolean
+ *                     start_date:
+ *                       type: string
+ *                       format: date-time
+ *                       nullable: true
+ *                     end_date:
+ *                       type: string
+ *                       format: date-time
+ *                       nullable: true
  *     responses:
  *       200:
  *         description: The created/updated discounts
@@ -245,6 +261,14 @@ router.use(authMiddleware);
  *                 type: number
  *               is_active:
  *                 type: boolean
+ *               start_date:
+ *                 type: string
+ *                 format: date-time
+ *                 nullable: true
+ *               end_date:
+ *                 type: string
+ *                 format: date-time
+ *                 nullable: true
  *     responses:
  *       200:
  *         description: The created/updated discount(s)
