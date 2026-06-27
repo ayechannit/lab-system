@@ -1,5 +1,7 @@
 const TOKEN_KEY = 'lab_admin_access_token'
 const ACCOUNT_KEY = 'lab_admin_account'
+const REMEMBER_PREF_KEY = 'lab_admin_remember_me'
+const SAVED_EMAIL_KEY = 'lab_admin_saved_email'
 
 export type StoredAccount = {
   type: 'staff' | 'user'
@@ -37,6 +39,35 @@ export function getStoredAccount(): StoredAccount | null {
   }
 }
 
+/** Last “keep me signed in” choice on the login form (defaults to true). */
+export function getRememberPreference(): boolean {
+  if (typeof window === 'undefined') return true
+  const v = window.localStorage.getItem(REMEMBER_PREF_KEY)
+  if (v === '0') return false
+  if (v === '1') return true
+  return true
+}
+
+export function setRememberPreference(remember: boolean): void {
+  if (typeof window === 'undefined') return
+  window.localStorage.setItem(REMEMBER_PREF_KEY, remember ? '1' : '0')
+}
+
+export function getSavedLoginEmail(): string {
+  if (typeof window === 'undefined') return ''
+  return window.localStorage.getItem(SAVED_EMAIL_KEY) ?? ''
+}
+
+export function setSavedLoginEmail(email: string | null): void {
+  if (typeof window === 'undefined') return
+  const trimmed = (email ?? '').trim()
+  if (!trimmed) {
+    window.localStorage.removeItem(SAVED_EMAIL_KEY)
+    return
+  }
+  window.localStorage.setItem(SAVED_EMAIL_KEY, trimmed)
+}
+
 export function setSession(accessToken: string, account: StoredAccount, remember: boolean): void {
   if (typeof window === 'undefined') return
   window.sessionStorage.removeItem(TOKEN_KEY)
@@ -46,6 +77,12 @@ export function setSession(accessToken: string, account: StoredAccount, remember
   const s = storage(remember)
   s.setItem(TOKEN_KEY, accessToken)
   s.setItem(ACCOUNT_KEY, JSON.stringify(account))
+  setRememberPreference(remember)
+  if (remember) {
+    setSavedLoginEmail(account.email)
+  } else {
+    setSavedLoginEmail(null)
+  }
 }
 
 export function clearSession(): void {

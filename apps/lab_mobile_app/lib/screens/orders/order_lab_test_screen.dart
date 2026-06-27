@@ -473,7 +473,7 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
           onPressed: () => _goBack(context),
         ),
         titleSpacing: 12,
-        title: const AppBrandingRow(markSize: 32, iconSize: 16, borderRadius: 8),
+        title: const AppBrandingRow(),
       ),
       body: Form(
         key: _formKey,
@@ -1039,7 +1039,7 @@ class _SectionCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: context.cardFill,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0x66E1E2EC)),
+        border: Border.all(color: context.subtleBorder),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1050,7 +1050,7 @@ class _SectionCard extends StatelessWidget {
                 width: 36,
                 height: 36,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFEAF1FF),
+                  color: context.appExtras.iconTileBackground,
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(icon, color: context.cs.primary),

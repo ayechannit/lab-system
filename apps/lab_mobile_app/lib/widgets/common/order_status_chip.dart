@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../theme/app_colors.dart';
+import '../../theme/theme_extensions.dart';
 
 /// Visual treatment for lab order pipeline statuses (aligned with admin badge semantics).
 class OrderStatusStyle {
@@ -15,20 +15,20 @@ class OrderStatusStyle {
   final Color background;
 }
 
-OrderStatusStyle orderStatusStyleFor(String? rawStatus) {
+OrderStatusStyle orderStatusStyleFor(String? rawStatus, ColorScheme cs) {
   final status = (rawStatus ?? 'pending').trim().toLowerCase();
   switch (status) {
     case 'pending':
-      return const OrderStatusStyle(
+      return OrderStatusStyle(
         label: 'Pending',
-        foreground: AppColors.warningLow,
-        background: Color(0x1FB45309),
+        foreground: const Color(0xFFB45309),
+        background: const Color(0xFFB45309).withValues(alpha: 0.12),
       );
     case 'scheduled':
-      return const OrderStatusStyle(
+      return OrderStatusStyle(
         label: 'Scheduled',
-        foreground: AppColors.primaryLight,
-        background: Color(0x1A0052CC),
+        foreground: cs.primary,
+        background: cs.primary.withValues(alpha: 0.1),
       );
     case 'collecting':
       return const OrderStatusStyle(
@@ -43,23 +43,18 @@ OrderStatusStyle orderStatusStyleFor(String? rawStatus) {
         background: Color(0x1A5B5BD6),
       );
     case 'completed':
-      return const OrderStatusStyle(
-        label: 'Completed',
-        foreground: AppColors.accentGreen,
-        background: Color(0x1F0D8A5B),
-      );
     case 'delivered':
-      return const OrderStatusStyle(
-        label: 'Delivered',
-        foreground: AppColors.accentGreen,
-        background: Color(0x1F0D8A5B),
+      return OrderStatusStyle(
+        label: status == 'completed' ? 'Completed' : 'Delivered',
+        foreground: cs.secondary,
+        background: cs.secondary.withValues(alpha: 0.12),
       );
     default:
       final label = status.isEmpty ? 'Unknown' : status[0].toUpperCase() + status.substring(1);
       return OrderStatusStyle(
         label: label.replaceAll('_', ' '),
-        foreground: AppColors.onSurfaceVariant,
-        background: const Color(0x1A434654),
+        foreground: cs.onSurfaceVariant,
+        background: cs.onSurfaceVariant.withValues(alpha: 0.1),
       );
   }
 }
@@ -76,7 +71,7 @@ class OrderStatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final style = orderStatusStyleFor(status);
+    final style = orderStatusStyleFor(status, context.cs);
     return Container(
       padding: EdgeInsets.symmetric(horizontal: compact ? 8 : 10, vertical: compact ? 4 : 5),
       decoration: BoxDecoration(

@@ -6,6 +6,7 @@ import 'package:http_parser/http_parser.dart';
 import '../config/lab_api_config.dart';
 import '../models/app_notification.dart';
 import '../models/app_user.dart';
+import '../models/lab_advertisement.dart';
 import '../models/lab_order.dart';
 import '../models/lab_result.dart';
 import '../models/lab_test_pick.dart';
@@ -248,6 +249,7 @@ class RestLabUserApi implements LabUserApi {
       body: jsonEncode({
         'email': request.email.trim().toLowerCase(),
         'password': request.password,
+        'remember': request.remember,
       }),
     );
     if (r.statusCode >= 400) _throwFromResponse(r);
@@ -257,6 +259,44 @@ class RestLabUserApi implements LabUserApi {
       throw LabApiException('Login response missing token');
     }
     return getCurrentUser();
+  }
+
+  String _messageFromJsonMap(Map<String, dynamic> map, String fallback) {
+    final m = map['message'] ?? map['error'];
+    if (m != null && '$m'.trim().isNotEmpty) return '$m'.trim();
+    return fallback;
+  }
+
+  @override
+  Future<String> requestPasswordReset(String email) async {
+    final r = await http.post(
+      Uri.parse('$_base/api/auth/forgot-password'),
+      headers: _jsonHeaders(withAuth: false),
+      body: jsonEncode({'email': email.trim().toLowerCase()}),
+    );
+    if (r.statusCode >= 400) _throwFromResponse(r);
+    final map = _asObj(jsonDecode(r.body));
+    return _messageFromJsonMap(map, 'A verification code has been sent to your email.');
+  }
+
+  @override
+  Future<String> resetPasswordWithCode({
+    required String email,
+    required String code,
+    required String newPassword,
+  }) async {
+    final r = await http.post(
+      Uri.parse('$_base/api/auth/reset-password'),
+      headers: _jsonHeaders(withAuth: false),
+      body: jsonEncode({
+        'email': email.trim().toLowerCase(),
+        'code': code.trim(),
+        'new_password': newPassword,
+      }),
+    );
+    if (r.statusCode >= 400) _throwFromResponse(r);
+    final map = _asObj(jsonDecode(r.body));
+    return _messageFromJsonMap(map, 'Password has been reset successfully.');
   }
 
   @override
@@ -1276,6 +1316,61 @@ class RestLabUserApi implements LabUserApi {
       return _parseUserReportSummary(_asObj(raw['data']));
     }
     return _parseUserReportSummary(_asObj(raw));
+  }
+
+  LabAdvertisement _parseAdvertisement(Map<String, dynamic> json) {
+    final displayRaw = '${_gv(json, 'image_display_url') ?? ''}'.trim();
+    final imageRaw = '${_gv(json, 'image_url') ?? ''}'.trim();
+    String? bannerUrl;
+    if (displayRaw.isNotEmpty) {
+      bannerUrl = _absoluteUrl(displayRaw);
+    } else if (imageRaw.isNotEmpty) {
+      if (imageRaw.startsWith('http://') ||
+          imageRaw.startsWith('https://') ||
+          imageRaw.startsWith('/')) {
+        bannerUrl = _absoluteUrl(imageRaw);
+      } else {
+        final segments = imageRaw
+            .replaceFirst(RegExp(r'^/+'), '')
+            .split('/')
+            .map(Uri.encodeComponent)
+            .join('/');
+        bannerUrl = '$_base/api/media/$segments';
+      }
+    }
+
+    final actionRaw = '${_gv(json, 'action_url') ?? ''}'.trim();
+    final descRaw = '${_gv(json, 'description') ?? ''}'.trim();
+
+    return LabAdvertisement(
+      id: '${json['id'] ?? ''}',
+      title: '${json['title'] ?? ''}'.trim(),
+      description: descRaw.isEmpty ? null : descRaw,
+      bannerImageUrl: bannerUrl,
+      actionUrl: actionRaw.isEmpty ? null : actionRaw,
+    );
+  }
+
+  @override
+  Future<List<LabAdvertisement>> fetchActiveAdvertisements() async {
+    final now = DateTime.now().toUtc().toIso8601String();
+    final uri = Uri.parse('$_base/api/advertisements').replace(
+      queryParameters: {
+        'is_active': 'true',
+        'current_date': now,
+        'sortBy': 'created_at',
+        'sortOrder': 'DESC',
+        'limit': '10',
+      },
+    );
+    final res = await http.get(uri, headers: _jsonHeaders(withAuth: false, noCache: true));
+    if (res.statusCode >= 400) _throwFromResponse(res);
+    final data = _decodeResponseJson(res);
+    if (data is! List) return const [];
+    return [
+      for (final row in data)
+        if (row is Map) _parseAdvertisement(Map<String, dynamic>.from(row)),
+    ].where((ad) => ad.hasBanner || ad.title.isNotEmpty).toList();
   }
 
   UserReportSummary _parseUserReportSummary(Map<String, dynamic> data) {

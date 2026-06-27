@@ -22,6 +22,7 @@ const systemSettingRoutes = require('./routes/systemSettingRoutes');
 const reportRoutes = require('./routes/reportRoutes');
 const labResultRoutes = require('./routes/labResultRoutes');
 const advertisementRoutes = require('./routes/advertisementRoutes');
+const mediaRoutes = require('./routes/mediaRoutes');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpecs = require('./config/swagger');
 const errorHandler = require('./middlewares/errorHandler');
@@ -62,6 +63,7 @@ app.use('/api/system-settings', systemSettingRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/lab-results', labResultRoutes);
 app.use('/api/advertisements', advertisementRoutes);
+app.use('/api/media', mediaRoutes);
 
 // Base route
 app.get('/', (req, res) => {

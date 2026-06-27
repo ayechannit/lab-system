@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../models/user_role.dart';
+import '../../widgets/common/themed_input_shell.dart';
 import '../../theme/theme_extensions.dart';
 
 /// Role dropdown for signup — matches register form field styling.
@@ -25,7 +26,7 @@ class SignupRoleSelector extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _RegisterInputShell(
+        ThemedInputShell(
           child: DropdownButtonFormField<UserRole>(
             value: selected,
             isExpanded: true,
@@ -100,24 +101,6 @@ class SignupRoleSelector extends StatelessWidget {
           ),
         ],
       ],
-    );
-  }
-}
-
-class _RegisterInputShell extends StatelessWidget {
-  const _RegisterInputShell({required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8F8FD),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFD4D7E2)),
-      ),
-      child: child,
     );
   }
 }

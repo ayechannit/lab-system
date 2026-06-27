@@ -47,7 +47,7 @@ class OrderRatingBar extends StatelessWidget {
                     final filled = i < stars;
                     return Icon(
                       Icons.star_rounded,
-                      color: filled ? Theme.of(sheetContext).colorScheme.primary : const Color(0xFFC8CCE0),
+                      color: filled ? sheetContext.cs.primary : sheetContext.appExtras.ratingInactive,
                       size: 28,
                     );
                   }),
@@ -114,7 +114,7 @@ class OrderRatingBar extends StatelessWidget {
                   final filled = i < rated.stars;
                   return Icon(
                     Icons.star_rounded,
-                    color: filled ? cs.primary : const Color(0xFFC8CCE0),
+                    color: filled ? cs.primary : context.appExtras.ratingInactive,
                     size: 28,
                   );
                 }),
@@ -199,7 +199,7 @@ class OrderRatingBar extends StatelessWidget {
                             child: Icon(
                               filled ? Icons.star_rounded : Icons.star_outline_rounded,
                               size: starSize,
-                              color: filled ? cs.primary : const Color(0xFFC8CCE0),
+                              color: filled ? cs.primary : context.appExtras.ratingInactive,
                             ),
                           ),
                         );

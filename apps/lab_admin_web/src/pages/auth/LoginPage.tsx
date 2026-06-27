@@ -1,21 +1,23 @@
 import { useState } from 'react'
-import { Navigate, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/AuthContext'
 import { useToast } from '../../hooks/ToastContext'
 import { messageFromError } from '../../hooks/usePageNotify'
+import { getRememberPreference, getSavedLoginEmail, setRememberPreference } from '../../services/authSession'
 import { authImages } from './authAssets'
 import { AuthFooter } from './AuthFooter'
 import { AuthMarketingPanel } from './AuthMarketingPanel'
+import { AuthScreenHeader } from './AuthScreenHeader'
 import './auth-screens.css'
 
 export function LoginPage() {
   const { signInWithStaffCredentials, signedIn, initializing } = useAuth()
   const { showError } = useToast()
   const navigate = useNavigate()
-  const [email, setEmail] = useState('')
+  const [email, setEmail] = useState(() => getSavedLoginEmail())
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
-  const [remember, setRemember] = useState(true)
+  const [remember, setRemember] = useState(() => getRememberPreference())
   const [submitting, setSubmitting] = useState(false)
 
   if (!initializing && signedIn) return <Navigate to="/" replace />
@@ -28,15 +30,7 @@ export function LoginPage() {
         lead="Join thousands of clinical professionals managing laboratory workflows with state-of-the-art security and compliance."
       />
       <div className="auth-side">
-        <header className="auth-mobile-header">
-          <div className="auth-mobile-brand">
-            <span className="material-symbols-outlined">biotech</span>
-            <span>MedLab Smart </span>
-          </div>
-          <a className="auth-help-link" href="#">
-            Help
-          </a>
-        </header>
+        <AuthScreenHeader />
         <div className="auth-main">
           <div className="auth-form-wrap auth-form-wrap--login">
             <div className="auth-icon-tile">
@@ -89,9 +83,9 @@ export function LoginPage() {
                   <label className="auth-label" htmlFor="password">
                     Password
                   </label>
-                  <a className="auth-link" href="#">
+                  <Link className="auth-link" to="/forgot-password">
                     Forgot Password?
-                  </a>
+                  </Link>
                 </div>
                 <div className="auth-input-wrap">
                   <span className="material-symbols-outlined auth-input-icon">lock</span>
@@ -126,16 +120,22 @@ export function LoginPage() {
                   className="auth-checkbox"
                   type="checkbox"
                   checked={remember}
-                  onChange={() => setRemember((v) => !v)}
+                  onChange={() => {
+                    setRemember((v) => {
+                      const next = !v
+                      setRememberPreference(next)
+                      return next
+                    })
+                  }}
                   disabled={submitting}
                 />
                 <label className="auth-checkbox-label" htmlFor="remember">
-                  Keep me logged in on this device
+                  Keep me signed in
                 </label>
               </div>
 
               <button type="submit" className="auth-primary-btn" disabled={submitting}>
-                {submitting ? 'Signing in…' : 'Sign In to MedLab Smart '}
+                {submitting ? 'Signing in…' : 'Sign in'}
               </button>
             </form>
           </div>

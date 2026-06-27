@@ -115,7 +115,7 @@ class _LabResultCombinedCardState extends State<LabResultCombinedCard> {
               children: [
                 CircleAvatar(
                   radius: 18,
-                  backgroundColor: const Color(0xFFEAF1FF),
+                  backgroundColor: context.appExtras.iconTileBackground,
                   child: Icon(Icons.picture_as_pdf_rounded, size: 20, color: cs.primary),
                 ),
                 const SizedBox(width: 12),

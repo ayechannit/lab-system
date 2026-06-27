@@ -1,57 +1,26 @@
 import 'package:flutter/material.dart';
 
-import '../../app/app_settings_scope.dart';
-import '../../theme/theme_extensions.dart';
+import '../../constants/brand_assets.dart';
 import 'app_brand_mark.dart';
 
-/// Lab logo + name from server settings (admin System settings page).
+/// IDHC lockup for in-app app bars (always bundled — not the server logo).
 class AppBrandingRow extends StatelessWidget {
   const AppBrandingRow({
     super.key,
-    this.markSize = 32,
-    this.iconSize = 16,
-    this.borderRadius = 8,
-    this.showShadow = true,
-    this.titleStyle,
-    this.spacing = 10,
+    this.size = 32,
   });
 
-  final double markSize;
-  final double iconSize;
-  final double borderRadius;
-  final bool showShadow;
-  final TextStyle? titleStyle;
-  final double spacing;
+  final double size;
 
   @override
   Widget build(BuildContext context) {
-    final settings = AppSettingsScope.maybeOf(context);
-    final labName = settings?.labName ?? 'MedLab Smart';
-    final logoUrl = settings?.logoUrl;
-
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        AppBrandMark(
-          size: markSize,
-          iconSize: iconSize,
-          borderRadius: borderRadius,
-          showShadow: showShadow,
-          logoUrl: logoUrl,
-        ),
-        SizedBox(width: spacing),
-        Flexible(
-          child: Text(
-            labName,
-            overflow: TextOverflow.ellipsis,
-            style: titleStyle ??
-                Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      color: context.cs.primary,
-                      fontWeight: FontWeight.w800,
-                    ),
-          ),
-        ),
-      ],
+    return Transform.translate(
+      offset: const Offset(-6, 0),
+      child: AppBrandMark(
+        style: AppBrandMarkStyle.lockup,
+        height: size,
+        maxWidth: size * 4.2,
+      ),
     );
   }
 }

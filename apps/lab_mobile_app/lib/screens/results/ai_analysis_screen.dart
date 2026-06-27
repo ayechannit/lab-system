@@ -45,12 +45,7 @@ class AiAnalysisScreen extends StatelessWidget {
               onPressed: () => _goBack(context),
             ),
             titleSpacing: 4,
-            title: const AppBrandingRow(
-              markSize: 24,
-              iconSize: 12,
-              borderRadius: 6,
-              spacing: 8,
-            ),
+            title: const AppBrandingRow(size: 28),
           ),
           body: ListView(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
@@ -141,7 +136,7 @@ class AiAnalysisScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: context.cardFill,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0x66E1E2EC)),
+        border: Border.all(color: context.subtleBorder),
       ),
       child: AppMarkdownText(text),
     );

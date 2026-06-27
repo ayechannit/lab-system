@@ -16,12 +16,31 @@ import { isApiMode } from '../services/apiBase'
 import {
   deleteDiscountById,
   fetchAllDiscounts,
+  formatDiscountDateCell,
+  isDiscountLiveNow,
   type TestDiscountListRow,
 } from '../services/discountService'
 import { fetchLabTestsList } from '../services/labTestCatalogService'
 import '../components/common/ui.css'
 
-const colSpan = 8
+const colSpan = 10
+
+function discountStatusBadge(row: TestDiscountListRow) {
+  if (!row.is_active) {
+    return <span className="badge badge--neutral">Inactive</span>
+  }
+  if (isDiscountLiveNow(row)) {
+    return <span className="badge badge--success">Live</span>
+  }
+  const now = new Date()
+  if (row.start_date && now < new Date(row.start_date)) {
+    return <span className="badge badge--neutral">Scheduled</span>
+  }
+  if (row.end_date && now > new Date(row.end_date)) {
+    return <span className="badge badge--neutral">Expired</span>
+  }
+  return <span className="badge badge--neutral">Off schedule</span>
+}
 
 const DISCOUNT_ROLE_FILTER_OPTIONS: { value: '' | 'clinic' | 'doctor' | 'patient' | 'all'; label: string }[] = [
   { value: '', label: 'All roles' },
@@ -252,20 +271,24 @@ export function DiscountManagementPage() {
           </div>
         </div>
         <p className="catalog-mode-hint">
-          Rules apply to active catalog tests only. Editing here updates how discounted prices appear for each role.
+          Rules apply to active catalog tests only. Optional start/end dates limit when a discount applies; leave empty for always-on.
         </p>
-        <div className="table-wrap">
+        <div className="table-wrap table-wrap--sticky-actions">
           <table className="data-table data-table--discounts">
             <thead>
               <tr>
-                <th>Test</th>
-                <th>Code</th>
-                <th>Role</th>
-                <th className="col-num">Base (MMK)</th>
-                <th className="col-num">Discount (%)</th>
-                <th className="col-num">After discount</th>
-                <th>Active</th>
-                <th className="action-col">Actions</th>
+                <th scope="col">Test</th>
+                <th scope="col">Code</th>
+                <th scope="col">Role</th>
+                <th scope="col" className="col-num">Base (MMK)</th>
+                <th scope="col" className="col-num">Discount (%)</th>
+                <th scope="col" className="col-num">After discount</th>
+                <th scope="col">Start date</th>
+                <th scope="col">End date</th>
+                <th scope="col">Status</th>
+                <th scope="col" className="action-col">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -315,13 +338,9 @@ export function DiscountManagementPage() {
                         ? r.after_discount_price.toLocaleString()
                         : '—'}
                     </td>
-                    <td>
-                      {r.is_active ? (
-                        <span className="badge badge--success">Yes</span>
-                      ) : (
-                        <span className="badge badge--neutral">No</span>
-                      )}
-                    </td>
+                    <td className="data-table__date-cell">{formatDiscountDateCell(r.start_date)}</td>
+                    <td className="data-table__date-cell">{formatDiscountDateCell(r.end_date)}</td>
+                    <td>{discountStatusBadge(r)}</td>
                     <td className="action-cell">
                       <TableActionMenu
                         open={openMenuId === r.id}

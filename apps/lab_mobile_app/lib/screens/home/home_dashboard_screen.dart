@@ -4,10 +4,10 @@ import 'package:go_router/go_router.dart';
 import '../../app/session_scope.dart';
 import '../../models/lab_order.dart';
 import '../../models/user_report.dart';
-import '../../theme/app_colors.dart';
 import '../../theme/theme_extensions.dart';
 import '../../widgets/common/app_branding_row.dart';
 import '../../widgets/common/notification_bell_button.dart';
+import '../../widgets/home/home_advertisement_section.dart';
 import '../../widgets/navigation/lab_main_bottom_nav.dart';
 
 /// Single home dashboard for all user roles (patient, doctor, clinic, phlebotomist).
@@ -54,10 +54,10 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
         return Scaffold(
           appBar: AppBar(
             automaticallyImplyLeading: false,
-            titleSpacing: 16,
+            titleSpacing: 4,
             title: GestureDetector(
               onTap: () => context.push('/profile'),
-              child: const AppBrandingRow(markSize: 36, iconSize: 18, borderRadius: 9),
+              child: const AppBrandingRow(size: 36),
             ),
             actions: const [NotificationBellButton()],
           ),
@@ -81,6 +81,13 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
                       _ErrorBanner(message: session.homeSummaryError!),
                     ],
                     const SizedBox(height: 18),
+                    HomeAdvertisementSection(
+                      advertisements: session.advertisements,
+                      loading: session.homeSummaryLoading && session.advertisements.isEmpty,
+                    ),
+                    if (session.advertisements.isNotEmpty ||
+                        (session.homeSummaryLoading && session.advertisements.isEmpty))
+                      const SizedBox(height: 18),
                     _SectionTitle(
                       label: 'YOUR OVERVIEW',
                       title: 'Account summary',
@@ -168,23 +175,24 @@ class _ErrorBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final extras = context.appExtras;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFF1F0),
+        color: extras.errorPanelBg,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFFECACA)),
+        border: Border.all(color: extras.errorPanelBorder),
       ),
       child: Row(
         children: [
-          const Icon(Icons.error_outline, size: 20, color: Color(0xFFB91C1C)),
+          Icon(Icons.error_outline, size: 20, color: extras.errorPanelText),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
               message,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: const Color(0xFF991B1B),
+                    color: extras.errorPanelText,
                     height: 1.35,
                   ),
             ),
@@ -206,6 +214,8 @@ class _KpiGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = context.cs;
+    final iconTile = context.appExtras.iconTileBackground;
     return LayoutBuilder(
       builder: (context, constraints) {
         final wide = constraints.maxWidth >= 520;
@@ -213,16 +223,16 @@ class _KpiGrid extends StatelessWidget {
         final tiles = [
           _KpiTile(
             icon: Icons.receipt_long_outlined,
-            iconColor: AppColors.primary,
-            iconBg: const Color(0xFFEAF1FF),
+            iconColor: cs.primary,
+            iconBg: iconTile,
             label: 'Total orders',
             value: '${kpis.totalOrders}',
             hint: '${kpis.completedOrders} completed',
           ),
           _KpiTile(
             icon: Icons.payments_outlined,
-            iconColor: const Color(0xFF0D8A5B),
-            iconBg: const Color(0xFFEAF9F1),
+            iconColor: cs.secondary,
+            iconBg: cs.secondary.withValues(alpha: 0.12),
             label: 'Total spent',
             value: '$spentLabel MMK',
             hint: 'Delivered orders',
@@ -418,7 +428,7 @@ class _ActiveOrderBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = context.cs;
     return Material(
-      color: const Color(0xFFEAF1FF),
+      color: context.appExtras.iconTileBackground,
       borderRadius: BorderRadius.circular(14),
       child: InkWell(
         onTap: onTap,
@@ -532,7 +542,7 @@ class _SpendTrendCard extends StatelessWidget {
                               child: Container(
                                 height: maxSpent > 0 ? (p.spent / maxSpent) * 72 + 6 : 6,
                                 decoration: BoxDecoration(
-                                  color: AppColors.primary.withValues(alpha: 0.85),
+                                  color: cs.primary.withValues(alpha: 0.85),
                                   borderRadius: BorderRadius.circular(6),
                                 ),
                               ),
@@ -614,11 +624,11 @@ class _TopTestsCard extends StatelessWidget {
                 contentPadding: EdgeInsets.zero,
                 leading: CircleAvatar(
                   radius: 18,
-                  backgroundColor: const Color(0xFFEAF1FF),
+                  backgroundColor: context.appExtras.iconTileBackground,
                   child: Text(
                     '${i + 1}',
                     style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          color: AppColors.primary,
+                          color: cs.primary,
                           fontWeight: FontWeight.w700,
                         ),
                   ),

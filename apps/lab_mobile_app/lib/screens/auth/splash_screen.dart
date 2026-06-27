@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../app/app_settings_scope.dart';
 import '../../app/session_scope.dart';
 import '../../theme/theme_extensions.dart';
 import '../../widgets/common/app_brand_mark.dart';
@@ -27,8 +26,6 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
       if (!mounted) return;
       final session = SessionScope.of(context);
       await session.tryRestoreSession();
-      if (!mounted) return;
-      context.go(session.isLoggedIn ? session.homeRoute : '/login');
     });
   }
 
@@ -43,6 +40,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     final cs = context.cs;
     final extras = context.appExtras;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final logoWidth = MediaQuery.sizeOf(context).width - 56;
 
     return Scaffold(
       backgroundColor: cs.surface,
@@ -65,22 +63,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                 children: [
                   const Spacer(flex: 3),
                   Center(
-                    child: AppBrandMark(
-                      size: 112,
-                      iconSize: 52,
-                      borderRadius: 28,
-                      showShadow: true,
-                      logoUrl: AppSettingsScope.of(context).logoUrl,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  Text(
-                    AppSettingsScope.of(context).labName,
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          color: cs.primary,
-                          fontWeight: FontWeight.w800,
-                        ),
+                    child: AppBrandMark(maxWidth: logoWidth),
                   ),
                   const Spacer(flex: 4),
                   Align(

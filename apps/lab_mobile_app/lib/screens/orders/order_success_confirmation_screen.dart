@@ -22,7 +22,7 @@ class OrderSuccessConfirmationScreen extends StatelessWidget {
         titleSpacing: 12,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
-        title: const AppBrandingRow(markSize: 32, iconSize: 16, borderRadius: 8),
+        title: const AppBrandingRow(),
       ),
       body: SafeArea(
         child: LayoutBuilder(
@@ -75,7 +75,7 @@ class OrderSuccessConfirmationScreen extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: context.cardFill,
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: const Color(0x66E1E2EC)),
+                      border: Border.all(color: context.subtleBorder),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withValues(alpha: 0.05),

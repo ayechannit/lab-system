@@ -1,4 +1,7 @@
-/** Image URLs from Stitch (MedLab Smart ) mockups — same assets as `modern_login_screen`. */
+/** Auth imagery — hero from Stitch mockups; IDHC full logo on login/sign-up. */
+import { idhcLogo } from '../../assets/brandAssets'
+
+export const brandLogo = idhcLogo
 
 export const authImages = {
   loginHero:

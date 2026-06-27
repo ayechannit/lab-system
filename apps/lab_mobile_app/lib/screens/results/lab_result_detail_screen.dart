@@ -103,12 +103,12 @@ class LabResultDetailScreen extends StatelessWidget {
                     return switch (row) {
                       LabResultSingleRow(:final test) => LabResultTestCard(
                           test: test,
-                          report: report!,
+                          report: report,
                           index: i,
                         ),
                       LabResultCombinedRow() => LabResultCombinedCard(
                           group: row,
-                          report: report!,
+                          report: report,
                           index: i,
                         ),
                     };
@@ -168,8 +168,8 @@ class _OrderHeroCard extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF082457), Color(0xFF0B4BB3)],
+        gradient: LinearGradient(
+          colors: [cs.primary.withValues(alpha: 0.92), context.appExtras.heroGradientEnd],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),

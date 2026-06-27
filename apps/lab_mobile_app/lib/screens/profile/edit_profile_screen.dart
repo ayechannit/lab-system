@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../app/app_settings_scope.dart';
 import '../../app/session_scope.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/theme_extensions.dart';
+import '../../constants/brand_assets.dart';
 import '../../widgets/common/app_brand_mark.dart';
 import '../../widgets/location/address_location_fields.dart';
 import '../../widgets/navigation/lab_main_bottom_nav.dart';
@@ -70,7 +70,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: Color(0x66E1E2EC)),
+        borderSide: BorderSide(color: context.subtleBorder),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
@@ -150,10 +150,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         title: Row(
           children: [
             AppBrandMark(
-              size: 28,
-              iconSize: 14,
-              borderRadius: 7,
-              logoUrl: AppSettingsScope.of(context).logoUrl,
+              style: AppBrandMarkStyle.lockup,
+              height: 28,
+              maxWidth: 118,
             ),
             const SizedBox(width: 10),
             Expanded(
@@ -249,7 +248,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 decoration: BoxDecoration(
                   color: context.cardFill,
                   borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: const Color(0x66E1E2EC)),
+                  border: Border.all(color: context.subtleBorder),
                   boxShadow: const [
                     BoxShadow(color: Color(0x08000000), blurRadius: 16, offset: Offset(0, 4)),
                   ],
@@ -342,7 +341,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         style: OutlinedButton.styleFrom(
                           foregroundColor: context.cs.primary,
                           padding: const EdgeInsets.symmetric(vertical: 14),
-                          side: const BorderSide(color: Color(0x66E1E2EC)),
+                          side: BorderSide(color: context.subtleBorder),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                         ),
                         child: const Text('Cancel'),

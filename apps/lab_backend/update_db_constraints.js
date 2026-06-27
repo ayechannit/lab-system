@@ -49,6 +49,30 @@ async function run() {
     ALTER TABLE test_specific_discounts ADD CONSTRAINT CK_Test_Specific_Discounts_Role CHECK (role IN ('clinic', 'doctor', 'patient', 'phlebotomist'))
   `);
 
+  // 5. theme_settings.mode — allow IDHC brand preset
+  const findThemeModeCk = await pool.request().query(`
+    SELECT cc.name
+    FROM sys.check_constraints cc
+    JOIN sys.columns c ON cc.parent_column_id = c.column_id AND cc.parent_object_id = c.object_id
+    WHERE OBJECT_NAME(cc.parent_object_id) = 'theme_settings' AND c.name = 'mode'
+  `);
+
+  for (const row of findThemeModeCk.recordset) {
+    console.log(`Dropping constraint ${row.name} from theme_settings.mode`);
+    try {
+      await pool.request().query(`ALTER TABLE theme_settings DROP CONSTRAINT [${row.name}]`);
+    } catch (err) {
+      console.warn(`Could not drop ${row.name}:`, err.message);
+    }
+  }
+
+  console.log('Adding CK_theme_settings_mode');
+  await pool.request().query(`
+    ALTER TABLE theme_settings
+    ADD CONSTRAINT CK_theme_settings_mode
+    CHECK (mode IN ('light', 'dark', 'custom', 'idhc'))
+  `);
+
   console.log('Database constraints updated successfully!');
 }
 

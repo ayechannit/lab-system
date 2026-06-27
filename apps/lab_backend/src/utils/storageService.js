@@ -72,6 +72,82 @@ class StorageService {
     return safe || fallback;
   }
 
+  static getApiHost() {
+    return (process.env.HOST_URL || `http://localhost:${process.env.PORT || 3000}`).replace(/\/$/, '');
+  }
+
+  static getContentTypeFromKey(key) {
+    const ext = path.extname(String(key || '')).toLowerCase();
+    const map = {
+      '.jpg': 'image/jpeg',
+      '.jpeg': 'image/jpeg',
+      '.png': 'image/png',
+      '.gif': 'image/gif',
+      '.webp': 'image/webp',
+      '.svg': 'image/svg+xml',
+      '.pdf': 'application/pdf',
+    };
+    return map[ext] || 'application/octet-stream';
+  }
+
+  /** Storage keys that may be streamed without auth (public banners, logos, etc.). */
+  static isPublicMediaKey(fileKey) {
+    const key = String(fileKey || '').replace(/^\/+/, '');
+    if (!key) return false;
+    const allowedPrefixes = ['advertisements/'];
+    return allowedPrefixes.some((prefix) => key.startsWith(prefix));
+  }
+
+  static buildPublicMediaPath(key) {
+    return String(key)
+      .replace(/^\/+/, '')
+      .split('/')
+      .map(encodeURIComponent)
+      .join('/');
+  }
+
+  /**
+   * Same-origin URL for embedding images in browsers (avoids S3 CORS on Flutter web / admin).
+   */
+  static getPublicStreamUrl(fileKey) {
+    const key = StorageService.normalizeFileKey(fileKey);
+    if (!key) return null;
+
+    if (key.startsWith('http://') || key.startsWith('https://')) {
+      try {
+        const url = new URL(key);
+        const extracted = decodeURIComponent(url.pathname.replace(/^\/+/, ''));
+        if (StorageService.isPublicMediaKey(extracted)) {
+          return `${StorageService.getApiHost()}/api/media/${StorageService.buildPublicMediaPath(extracted)}`;
+        }
+      } catch {
+        // fall through
+      }
+      return key;
+    }
+
+    if (key.startsWith('/uploads/')) {
+      return `${StorageService.getApiHost()}${key}`;
+    }
+
+    if (!StorageService.isPublicMediaKey(key)) {
+      return null;
+    }
+
+    return `${StorageService.getApiHost()}/api/media/${StorageService.buildPublicMediaPath(key)}`;
+  }
+
+  static resolveLocalAbsolutePath(key) {
+    if (key.startsWith('/uploads/')) {
+      return StorageService.localAbsolutePath(key);
+    }
+    const basename = path.basename(key);
+    const uploadPath = `/uploads/${basename}`;
+    const abs = StorageService.localAbsolutePath(uploadPath);
+    if (abs && fs.existsSync(abs)) return abs;
+    return StorageService.localAbsolutePath(key);
+  }
+
   /**
    * Generates a signed URL for S3 or returns the local path.
    * @param {string} fileKey - The S3 key or local file path.
@@ -101,7 +177,17 @@ class StorageService {
     } else {
       // Local Development
       const host = process.env.HOST_URL || `http://localhost:${process.env.PORT || 3000}`;
-      return `${host}${key}`;
+      if (key.startsWith('/uploads/')) {
+        return `${host}${key}`;
+      }
+      // S3-style key (e.g. advertisements/ad-banner-123.jpeg) while running locally
+      const basename = path.basename(key);
+      const localUploadPath = `/uploads/${basename}`;
+      const abs = StorageService.localAbsolutePath(localUploadPath);
+      if (abs && fs.existsSync(abs)) {
+        return `${host}${localUploadPath}`;
+      }
+      return `${host}/${key.replace(/^\/+/, '')}`;
     }
   }
 
@@ -153,6 +239,7 @@ class StorageService {
     const key = StorageService.normalizeFileKey(fileKey);
     if (!key) return null;
 
+    const contentTypeFallback = StorageService.getContentTypeFromKey(key);
     const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1';
     if (isProduction && !key.startsWith('/uploads/')) {
       try {
@@ -164,7 +251,7 @@ class StorageService {
         if (!response.Body) return null;
         return {
           stream: response.Body,
-          contentType: response.ContentType || 'application/pdf',
+          contentType: response.ContentType || contentTypeFallback,
           filename: path.basename(key),
         };
       } catch (error) {
@@ -173,11 +260,11 @@ class StorageService {
       }
     }
 
-    const abs = StorageService.localAbsolutePath(key);
+    const abs = StorageService.resolveLocalAbsolutePath(key);
     if (!abs || !fs.existsSync(abs)) return null;
     return {
       stream: fs.createReadStream(abs),
-      contentType: 'application/pdf',
+      contentType: contentTypeFallback,
       filename: path.basename(abs),
     };
   }

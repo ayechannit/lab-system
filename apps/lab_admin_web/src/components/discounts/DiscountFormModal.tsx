@@ -8,6 +8,8 @@ import {
   type TestDiscountListRow,
   upsertTestDiscount,
 } from '../../services/discountService'
+import { datetimeLocalToIso, toDatetimeLocalValue } from '../../utils/datetimeLocal'
+import { DatetimeLocalField } from '../common/DatetimeLocalField'
 import '../common/ui.css'
 
 function roleLabelReadonly(role: string | undefined): string {
@@ -61,6 +63,8 @@ export function DiscountFormModal({
   const [selectedRoles, setSelectedRoles] = useState<DiscountUpsertBody['role'][]>([])
   const [testSearch, setTestSearch] = useState('')
   const [discountPercent, setDiscountPercent] = useState<number | ''>(0)
+  const [startLocal, setStartLocal] = useState('')
+  const [endLocal, setEndLocal] = useState('')
   const [isActive, setIsActive] = useState(true)
   const [formError, setFormError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -76,6 +80,8 @@ export function DiscountFormModal({
       setRolesPickerOpen(false)
       setSelectedRoles([initial.role as DiscountUpsertBody['role']])
       setDiscountPercent(initial.discount_percent)
+      setStartLocal(toDatetimeLocalValue(initial.start_date))
+      setEndLocal(toDatetimeLocalValue(initial.end_date))
       setIsActive(initial.is_active)
     } else {
       setTestId('')
@@ -84,6 +90,8 @@ export function DiscountFormModal({
       setRolesPickerOpen(false)
       setSelectedRoles([])
       setDiscountPercent(0)
+      setStartLocal('')
+      setEndLocal('')
       setIsActive(true)
     }
   }, [open, mode, initial, tests])
@@ -113,11 +121,14 @@ export function DiscountFormModal({
 
   useEffect(() => {
     if (!rolesPickerOpen) return
-    const onDocMouseDown = (e: MouseEvent) => {
-      if (!rolePickerWrapRef.current?.contains(e.target as Node)) setRolesPickerOpen(false)
+    function onDocPointerDown(e: PointerEvent) {
+      const target = e.target
+      if (!(target instanceof Node)) return
+      if (!rolePickerWrapRef.current?.contains(target)) setRolesPickerOpen(false)
     }
-    document.addEventListener('mousedown', onDocMouseDown)
-    return () => document.removeEventListener('mousedown', onDocMouseDown)
+    // Capture phase — modal card stops bubble, so bubble-phase listeners never run.
+    document.addEventListener('pointerdown', onDocPointerDown, true)
+    return () => document.removeEventListener('pointerdown', onDocPointerDown, true)
   }, [rolesPickerOpen])
 
   useEffect(() => {
@@ -222,6 +233,12 @@ export function DiscountFormModal({
       return
     }
     const discN = Math.round(discRaw * 100) / 100
+    const startIso = datetimeLocalToIso(startLocal)
+    const endIso = datetimeLocalToIso(endLocal)
+    if (startIso && endIso && new Date(endIso) < new Date(startIso)) {
+      setFormError('End date must be on or after the start date.')
+      return
+    }
 
     setSubmitting(true)
     try {
@@ -231,6 +248,8 @@ export function DiscountFormModal({
           role: initial.role as DiscountUpsertBody['role'],
           discount_percent: discN,
           is_active: isActive,
+          start_date: startIso,
+          end_date: endIso,
         }
         await upsertTestDiscount(body)
         onSuccess()
@@ -250,6 +269,8 @@ export function DiscountFormModal({
             role,
             discount_percent: discN,
             is_active: isActive,
+            start_date: startIso,
+            end_date: endIso,
           })
         }
       }
@@ -590,6 +611,32 @@ export function DiscountFormModal({
                   ) : null}
                 </>
               )}
+
+              <div className="discount-form-modal__pair">
+                <div className="field">
+                  <label htmlFor="df-start">Start (optional)</label>
+                  <DatetimeLocalField
+                    id="df-start"
+                    value={startLocal}
+                    onChange={setStartLocal}
+                    disabled={submitting}
+                    placeholder="Start date & time"
+                  />
+                </div>
+                <div className="field">
+                  <label htmlFor="df-end">End (optional)</label>
+                  <DatetimeLocalField
+                    id="df-end"
+                    value={endLocal}
+                    onChange={setEndLocal}
+                    disabled={submitting}
+                    placeholder="End date & time"
+                  />
+                </div>
+              </div>
+              <p className="discount-form-modal__hint" style={{ marginTop: 0 }}>
+                Leave both dates empty for an always-on discount. Outside the range the rule is kept but does not apply.
+              </p>
 
               <label htmlFor={discountActiveId} className="form-switch">
                 <span className="form-switch__control">

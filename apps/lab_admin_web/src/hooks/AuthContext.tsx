@@ -97,7 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signInWithStaffCredentials = useCallback(
     async (email: string, password: string, remember: boolean) => {
-      const { token, staff } = await loginStaff(email.trim(), password)
+      const { token, staff } = await loginStaff(email.trim(), password, remember)
       const acc: StoredAccount = {
         type: 'staff',
         id: staff.id,

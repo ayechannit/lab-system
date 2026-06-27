@@ -120,7 +120,7 @@ class _LabResultTestCardState extends State<LabResultTestCard> {
               children: [
                 CircleAvatar(
                   radius: 18,
-                  backgroundColor: const Color(0xFFEAF1FF),
+                  backgroundColor: context.appExtras.iconTileBackground,
                   child: Text(
                     '${widget.index + 1}',
                     style: Theme.of(context).textTheme.labelLarge?.copyWith(

@@ -1,9 +1,11 @@
+import '../theme/app_theme_presets.dart';
+
 /// Lab-wide settings from `GET /api/system-settings` (configured in admin web).
 class LabSystemSettings {
   const LabSystemSettings({
     this.id,
     required this.labName,
-    required this.isDarkTheme,
+    required this.themePreset,
     this.logoUrl,
     this.primaryColorHex,
     this.secondaryColorHex,
@@ -16,7 +18,7 @@ class LabSystemSettings {
 
   final String? id;
   final String labName;
-  final bool isDarkTheme;
+  final AppThemePresetId themePreset;
   final String? logoUrl;
   final String? primaryColorHex;
   final String? secondaryColorHex;
@@ -26,15 +28,17 @@ class LabSystemSettings {
   final double? latitude;
   final double? longitude;
 
+  bool get isDarkTheme => themePreset == AppThemePresetId.dark;
+
   factory LabSystemSettings.fromJson(Map<String, dynamic>? json) {
     if (json == null) return LabSystemSettings.defaults();
-    final mode = (json['mode'] ?? 'light').toString().toLowerCase();
+    final mode = (json['mode'] ?? 'light').toString();
     return LabSystemSettings(
       id: json['id']?.toString(),
-      labName: (json['lab_name'] ?? 'MedLab Smart').toString().trim().isEmpty
-          ? 'MedLab Smart'
+      labName: (json['lab_name'] ?? 'International Diagnostic & Healthcare Center').toString().trim().isEmpty
+          ? 'International Diagnostic & Healthcare Center'
           : json['lab_name'].toString().trim(),
-      isDarkTheme: mode == 'dark',
+      themePreset: normalizeThemePresetId(mode),
       logoUrl: _nullableString(json['logo_url']),
       primaryColorHex: _nullableString(json['primary_color']),
       secondaryColorHex: _nullableString(json['secondary_color']),
@@ -47,14 +51,14 @@ class LabSystemSettings {
   }
 
   factory LabSystemSettings.defaults() => const LabSystemSettings(
-        labName: 'MedLab Smart',
-        isDarkTheme: false,
+        labName: 'International Diagnostic & Healthcare Center',
+        themePreset: AppThemePresetId.light,
       );
 
   LabSystemSettings copyWith({
     String? id,
     String? labName,
-    bool? isDarkTheme,
+    AppThemePresetId? themePreset,
     String? logoUrl,
     String? primaryColorHex,
     String? secondaryColorHex,
@@ -67,7 +71,7 @@ class LabSystemSettings {
     return LabSystemSettings(
       id: id ?? this.id,
       labName: labName ?? this.labName,
-      isDarkTheme: isDarkTheme ?? this.isDarkTheme,
+      themePreset: themePreset ?? this.themePreset,
       logoUrl: logoUrl ?? this.logoUrl,
       primaryColorHex: primaryColorHex ?? this.primaryColorHex,
       secondaryColorHex: secondaryColorHex ?? this.secondaryColorHex,

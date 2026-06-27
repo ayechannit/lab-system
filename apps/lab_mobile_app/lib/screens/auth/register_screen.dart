@@ -5,10 +5,9 @@ import '../../app/session_scope.dart';
 import '../../config/map_defaults.dart';
 import '../../models/post_register_login_hint.dart';
 import '../../models/user_role.dart';
-import '../../theme/app_colors.dart';
 import '../../theme/theme_extensions.dart';
-import '../../app/app_settings_scope.dart';
 import '../../widgets/auth/signup_role_selector.dart';
+import '../../widgets/common/themed_input_shell.dart';
 import '../../widgets/common/app_brand_mark.dart';
 import '../../widgets/common/app_toast.dart';
 import '../../widgets/location/address_location_fields.dart';
@@ -34,7 +33,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _confirmPassword = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   bool _obscurePassword = true;
-  bool _agreeTerms = false;
   bool _submitting = false;
   late UserRole _selectedRole;
   double _addressLat = 0;
@@ -59,6 +57,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     final session = SessionScope.of(context);
+    final logoWidth = MediaQuery.sizeOf(context).width - 40;
     return Scaffold(
       body: SafeArea(
         child: Form(
@@ -67,20 +66,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
             padding: const EdgeInsets.fromLTRB(20, 26, 20, 16),
             child: Column(
               children: [
-                AppBrandMark(
-                  size: 64,
-                  iconSize: 30,
-                  borderRadius: 16,
-                  showShadow: true,
-                  logoUrl: AppSettingsScope.of(context).logoUrl,
-                ),
-                const SizedBox(height: 14),
-                Text(
-                  AppSettingsScope.of(context).labName,
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(color: context.cs.primary),
-                ),
-                const SizedBox(height: 18),
+                AppBrandMark(maxWidth: logoWidth),
+                const SizedBox(height: 16),
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(16),
@@ -123,7 +110,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                       const SizedBox(height: 18),
                       _RegisterLabel(text: 'Full Name'),
-                      _RegisterInputShell(
+                      ThemedInputShell(
                         child: TextFormField(
                           controller: _name,
                           decoration: const InputDecoration(
@@ -139,7 +126,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                       const SizedBox(height: 12),
                       _RegisterLabel(text: 'Email'),
-                      _RegisterInputShell(
+                      ThemedInputShell(
                         child: TextFormField(
                           controller: _email,
                           decoration: const InputDecoration(
@@ -161,7 +148,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                       const SizedBox(height: 12),
                       _RegisterLabel(text: 'Phone'),
-                      _RegisterInputShell(
+                      ThemedInputShell(
                         child: TextFormField(
                           controller: _phone,
                           decoration: const InputDecoration(
@@ -191,7 +178,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                       const SizedBox(height: 12),
                       _RegisterLabel(text: 'Password'),
-                      _RegisterInputShell(
+                      ThemedInputShell(
                         child: TextFormField(
                           controller: _password,
                           obscureText: _obscurePassword,
@@ -226,7 +213,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                       const SizedBox(height: 12),
                       _RegisterLabel(text: 'Confirm password'),
-                      _RegisterInputShell(
+                      ThemedInputShell(
                         child: TextFormField(
                           controller: _confirmPassword,
                           obscureText: true,
@@ -245,45 +232,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           textInputAction: TextInputAction.done,
                         ),
                       ),
-                      const SizedBox(height: 8),
-                      Material(
-                        color: Colors.transparent,
-                        child: CheckboxListTile(
-                          value: _agreeTerms,
-                          onChanged: (value) => setState(() => _agreeTerms = value ?? false),
-                          contentPadding: EdgeInsets.zero,
-                          controlAffinity: ListTileControlAffinity.leading,
-                          title: Text.rich(
-                            TextSpan(
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    color: context.cs.onSurfaceVariant,
-                                    height: 1.2,
-                                  ),
-                              children: [
-                                const TextSpan(text: 'I agree to the '),
-                                TextSpan(
-                                  text: 'Terms of Service',
-                                  style: TextStyle(
-                                    color: context.cs.primary,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                                const TextSpan(text: ' and '),
-                                TextSpan(
-                                  text: 'Privacy Policy.',
-                                  style: TextStyle(
-                                    color: context.cs.primary,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          checkboxShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                          side: const BorderSide(color: AppColors.outline),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 16),
                       SizedBox(
                         height: 58,
                         child: FilledButton.icon(
@@ -291,13 +240,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               ? null
                               : () async {
                                   if (!_formKey.currentState!.validate()) return;
-                                  if (!_agreeTerms) {
-                                    AppToast.warning(
-                                      context,
-                                      'Please agree to Terms of Service and Privacy Policy.',
-                                    );
-                                    return;
-                                  }
                                   if (!hasMeaningfulCoordinates(_addressLat, _addressLng) ||
                                       _addressLine.trim().isEmpty) {
                                     AppToast.warning(
@@ -399,24 +341,6 @@ class _RegisterLabel extends StatelessWidget {
               fontWeight: FontWeight.w700,
             ),
       ),
-    );
-  }
-}
-
-class _RegisterInputShell extends StatelessWidget {
-  const _RegisterInputShell({required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8F8FD),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFD4D7E2)),
-      ),
-      child: child,
     );
   }
 }

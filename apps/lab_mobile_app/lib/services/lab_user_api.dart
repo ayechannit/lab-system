@@ -1,5 +1,6 @@
 import '../models/app_notification.dart';
 import '../models/app_user.dart';
+import '../models/lab_advertisement.dart';
 import '../models/lab_order.dart';
 import '../models/lab_result.dart';
 import '../models/lab_test_pick.dart';
@@ -36,10 +37,12 @@ class LoginRequest {
   const LoginRequest({
     required this.email,
     required this.password,
+    this.remember = true,
   });
 
   final String email;
   final String password;
+  final bool remember;
 }
 
 /// Contract-first API for user app features.
@@ -55,6 +58,17 @@ abstract class LabUserApi {
   /// Creates the account via `POST /api/users` only — does not sign the user in.
   Future<void> register(RegisterRequest request);
   Future<AppUser> login(LoginRequest request);
+
+  /// `POST /api/auth/forgot-password` — sends a 6-digit code to email.
+  Future<String> requestPasswordReset(String email);
+
+  /// `POST /api/auth/reset-password` — verifies code and sets a new password.
+  Future<String> resetPasswordWithCode({
+    required String email,
+    required String code,
+    required String newPassword,
+  });
+
   Future<AppUser> updateProfile({
     required String userId,
     String? name,
@@ -132,6 +146,9 @@ abstract class LabUserApi {
     DateTime? startDate,
     DateTime? endDate,
   });
+
+  /// Live promotional banners for the home screen (`GET /api/advertisements`).
+  Future<List<LabAdvertisement>> fetchActiveAdvertisements();
 
   /// Confirm the lab-proposed collection schedule (quotation: scheduling from lab).
   Future<void> acceptSchedule({

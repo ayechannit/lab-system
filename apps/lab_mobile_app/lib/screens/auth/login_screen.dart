@@ -3,9 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../app/session_scope.dart';
 import '../../models/post_register_login_hint.dart';
-import '../../theme/app_colors.dart';
 import '../../theme/theme_extensions.dart';
-import '../../app/app_settings_scope.dart';
 import '../../services/auth_session_storage.dart';
 import '../../services/rest_lab_user_api.dart';
 import '../../widgets/common/app_brand_mark.dart';
@@ -25,7 +23,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _email;
   late final TextEditingController _password;
-  bool _remember = false;
+  bool _remember = true;
   bool _obscurePassword = true;
   bool _submitting = false;
 
@@ -71,25 +69,16 @@ class _LoginScreenState extends State<LoginScreen> {
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) => SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(20, 40, 20, 16),
+            padding: const EdgeInsets.fromLTRB(20, 64, 20, 16),
             child: ConstrainedBox(
-              constraints: BoxConstraints(minHeight: constraints.maxHeight - 32),
+              constraints: BoxConstraints(minHeight: constraints.maxHeight - 72),
               child: Column(
                 children: [
+                  const SizedBox(height: 16),
                   AppBrandMark(
-                    size: 64,
-                    iconSize: 30,
-                    borderRadius: 16,
-                    showShadow: true,
-                    logoUrl: AppSettingsScope.of(context).logoUrl,
+                    maxWidth: constraints.maxWidth - 40,
                   ),
-                  const SizedBox(height: 14),
-                  Text(
-                    AppSettingsScope.of(context).labName,
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(color: context.cs.primary),
-                  ),
-                  const SizedBox(height: 22),
+                  const SizedBox(height: 28),
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(16),
@@ -134,9 +123,20 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           const SizedBox(height: 14),
                           Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
                               const Expanded(child: _FieldLabel(label: 'Password')),
-                              TextButton(onPressed: () {}, child: const Text('Forgot?')),
+                              TextButton(
+                                style: TextButton.styleFrom(
+                                  padding: EdgeInsets.zero,
+                                  minimumSize: Size.zero,
+                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                ),
+                                onPressed: () {
+                                  context.push('/forgot-password', extra: _email.text.trim());
+                                },
+                                child: const Text('Forgot password'),
+                              ),
                             ],
                           ),
                           _InputShell(
@@ -175,18 +175,20 @@ class _LoginScreenState extends State<LoginScreen> {
                             color: Colors.transparent,
                             child: CheckboxListTile(
                               value: _remember,
-                              onChanged: (value) => setState(() => _remember = value ?? false),
+                              onChanged: (value) {
+                                setState(() => _remember = value ?? true);
+                              },
                               contentPadding: EdgeInsets.zero,
                               controlAffinity: ListTileControlAffinity.leading,
                               title: Text(
-                                'Remember this device',
+                                'Keep me signed in',
                                 style: Theme.of(context)
                                     .textTheme
                                     .bodyLarge
                                     ?.copyWith(color: context.cs.onSurfaceVariant),
                               ),
                               checkboxShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                              side: const BorderSide(color: AppColors.outline),
+                              side: BorderSide(color: context.subtleBorder),
                             ),
                           ),
                           const SizedBox(height: 10),

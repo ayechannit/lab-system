@@ -8,12 +8,11 @@ export function AuthFooter() {
           lock_clock
         </span>
         <p>
-          Authorized clinical users only. This system is monitored for security and compliance
-          (HIPAA/ISO). All access logs are recorded.
+          Authorized clinical users only. This system is monitored for security and compliance (HIPAA/ISO). All access logs are recorded.
         </p>
       </div>
       <div className="auth-footer-meta">
-        <span>© {year} MedLab Smart  System</span>
+        <span>© {year} International Diagnostic &amp; Healthcare Center</span>
         <a href="#">Privacy</a>
         <a href="#">Terms</a>
         <a href="#">Security</a>

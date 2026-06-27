@@ -6,7 +6,6 @@ import '../../models/lab_order.dart';
 import '../../models/order_list_sort.dart';
 import '../../models/rating.dart';
 import '../../services/session_controller.dart';
-import '../../theme/app_colors.dart';
 import '../../theme/theme_extensions.dart';
 import '../../widgets/common/app_branding_row.dart';
 import '../../widgets/common/notification_bell_button.dart';
@@ -62,8 +61,8 @@ class _ResultsListScreenState extends State<ResultsListScreen> {
         return Scaffold(
           appBar: AppBar(
             automaticallyImplyLeading: false,
-            titleSpacing: 12,
-            title: const AppBrandingRow(markSize: 32, iconSize: 16, borderRadius: 8),
+            titleSpacing: 4,
+            title: const AppBrandingRow(),
             actions: const [NotificationBellButton()],
           ),
           body: RefreshIndicator(
@@ -190,6 +189,7 @@ class _ReleasedOrderTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final accent = context.cs.secondary;
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Material(
@@ -198,7 +198,7 @@ class _ReleasedOrderTile extends StatelessWidget {
         child: Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: const Color(0x66E1E2EC)),
+            border: Border.all(color: context.subtleBorder),
           ),
           child: Column(
             children: [
@@ -214,10 +214,10 @@ class _ReleasedOrderTile extends StatelessWidget {
                         width: 40,
                         height: 40,
                         decoration: BoxDecoration(
-                          color: AppColors.accentGreen.withValues(alpha: 0.12),
+                          color: accent.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: const Icon(Icons.assignment_outlined, color: AppColors.accentGreen),
+                        child: Icon(Icons.assignment_outlined, color: accent),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -245,9 +245,9 @@ class _ReleasedOrderTile extends StatelessWidget {
                               style: Theme.of(context).textTheme.bodySmall?.copyWith(color: context.cs.onSurfaceVariant),
                             ),
                             const SizedBox(height: 8),
-                            const Align(
+                            Align(
                               alignment: Alignment.centerLeft,
-                              child: _ReleasedChip(),
+                              child: _ReleasedChip(accent: accent),
                             ),
                           ],
                         ),
@@ -274,21 +274,23 @@ class _ReleasedOrderTile extends StatelessWidget {
 }
 
 class _ReleasedChip extends StatelessWidget {
-  const _ReleasedChip();
+  const _ReleasedChip({required this.accent});
+
+  final Color accent;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: const Color(0x1F0D8A5B),
+        color: accent.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: AppColors.accentGreen.withValues(alpha: 0.22)),
+        border: Border.all(color: accent.withValues(alpha: 0.22)),
       ),
       child: Text(
         'Released',
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: AppColors.accentGreen,
+              color: accent,
               fontWeight: FontWeight.w700,
             ),
       ),

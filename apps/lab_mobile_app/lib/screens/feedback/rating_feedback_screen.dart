@@ -30,12 +30,7 @@ class _RatingFeedbackScreenState extends State<RatingFeedbackScreen> {
       appBar: AppBar(
         automaticallyImplyLeading: false,
         titleSpacing: 4,
-        title: const AppBrandingRow(
-          markSize: 24,
-          iconSize: 12,
-          borderRadius: 6,
-          spacing: 8,
-        ),
+        title: const AppBrandingRow(size: 28),
       ),
       body: ListView(
         padding: const EdgeInsets.all(20),
@@ -68,7 +63,7 @@ class _RatingFeedbackScreenState extends State<RatingFeedbackScreen> {
             decoration: BoxDecoration(
               color: context.cardFill,
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: const Color(0x66E1E2EC)),
+              border: Border.all(color: context.subtleBorder),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,

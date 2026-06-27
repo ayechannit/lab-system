@@ -19,6 +19,8 @@ export type TestDiscountListRow = {
   discount_percent: number
   is_active: boolean
   is_deleted: boolean
+  start_date: string | null
+  end_date: string | null
   test_name?: string
   test_code?: string
   original_price?: number
@@ -32,6 +34,8 @@ export type DiscountUpsertBody = {
   role: EndUserRole | 'all'
   discount_percent: number
   is_active: boolean
+  start_date: string | null
+  end_date: string | null
 }
 
 export type DiscountBulkUpsertBody = {
@@ -60,6 +64,8 @@ function normalizeDiscountRow(raw: Record<string, unknown>): TestDiscountListRow
     discount_percent: Number(raw.discount_percent ?? 0),
     is_active: Boolean(raw.is_active),
     is_deleted: Boolean(raw.is_deleted),
+    start_date: raw.start_date != null && String(raw.start_date).trim() ? String(raw.start_date) : null,
+    end_date: raw.end_date != null && String(raw.end_date).trim() ? String(raw.end_date) : null,
     test_name: raw.test_name != null ? String(raw.test_name) : undefined,
     test_code: raw.test_code != null ? String(raw.test_code) : undefined,
     original_price: raw.original_price != null ? Number(raw.original_price) : undefined,
@@ -67,6 +73,35 @@ function normalizeDiscountRow(raw: Record<string, unknown>): TestDiscountListRow
     created_at: raw.created_at != null ? String(raw.created_at) : undefined,
     updated_at: raw.updated_at != null ? String(raw.updated_at) : undefined,
   }
+}
+
+export function formatDiscountDateCell(iso: string | null): string {
+  if (!iso) return '—'
+  const d = new Date(iso)
+  if (!Number.isFinite(d.getTime())) return '—'
+  return d.toLocaleString(undefined, {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  })
+}
+
+export function formatDiscountSchedulePeriod(start: string | null, end: string | null): string {
+  if (!start && !end) return 'Always'
+  const fmt = (iso: string) =>
+    new Date(iso).toLocaleString(undefined, {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    })
+  if (start && end) return `${fmt(start)} → ${fmt(end)}`
+  if (start) return `From ${fmt(start)}`
+  return `Until ${fmt(end!)}`
+}
+
+export function isDiscountLiveNow(row: TestDiscountListRow, now = new Date()): boolean {
+  if (!row.is_active) return false
+  if (row.start_date && now < new Date(row.start_date)) return false
+  if (row.end_date && now > new Date(row.end_date)) return false
+  return true
 }
 
 export async function fetchAllDiscounts(params?: FetchDiscountsParams): Promise<TestDiscountListRow[]> {

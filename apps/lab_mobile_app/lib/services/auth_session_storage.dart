@@ -1,6 +1,6 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Persists JWT for "Remember this device" — frontend only, no backend API.
+/// Persists JWT on device so sessions survive app restarts and page refresh.
 abstract final class AuthSessionStorage {
   static const _tokenKey = 'lab_patient_access_token';
   static const _rememberKey = 'lab_patient_remember_me';
@@ -13,21 +13,17 @@ abstract final class AuthSessionStorage {
   }) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_rememberKey, remember);
-    if (remember) {
-      await prefs.setString(_tokenKey, token);
-      final trimmed = email?.trim().toLowerCase();
-      if (trimmed != null && trimmed.isNotEmpty) {
-        await prefs.setString(_emailKey, trimmed);
-      }
+    await prefs.setString(_tokenKey, token.trim());
+    final trimmed = email?.trim().toLowerCase();
+    if (remember && trimmed != null && trimmed.isNotEmpty) {
+      await prefs.setString(_emailKey, trimmed);
     } else {
-      await prefs.remove(_tokenKey);
       await prefs.remove(_emailKey);
     }
   }
 
   static Future<String?> readAccessToken() async {
     final prefs = await SharedPreferences.getInstance();
-    if (!(prefs.getBool(_rememberKey) ?? false)) return null;
     final token = prefs.getString(_tokenKey);
     if (token == null || token.trim().isEmpty) return null;
     return token.trim();
@@ -35,7 +31,7 @@ abstract final class AuthSessionStorage {
 
   static Future<bool> readRememberPreference() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getBool(_rememberKey) ?? false;
+    return prefs.getBool(_rememberKey) ?? true;
   }
 
   static Future<String?> readRememberedEmail() async {

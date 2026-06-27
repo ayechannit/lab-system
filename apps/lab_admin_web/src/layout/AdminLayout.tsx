@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { BrandMark } from '../components/common/BrandMark'
+import { IdhcBrandLockup } from '../components/common/IdhcBrandLockup'
+import { HeaderThemeMenu } from '../components/common/HeaderThemeMenu'
 import { NotificationBell } from '../components/common/NotificationBell'
 import { MyProfileModal } from '../components/profile/MyProfileModal'
 import { StaffAvatar } from '../components/staff/StaffAvatar'
 import { useAuth } from '../hooks/AuthContext'
-import { useSystemBranding } from '../hooks/SystemBrandingContext'
 import { useToast } from '../hooks/ToastContext'
 import { fetchStaffById } from '../services/staffService'
 import type { SessionRole } from '../model/types'
@@ -53,6 +53,8 @@ const nav: NavItem[] = [
   { to: '/results', label: 'Lab results', icon: 'assignment' },
   { to: '/ratings', label: 'Ratings & feedback', icon: 'reviews' },
   { to: '/discounts', label: 'Discounts', icon: 'sell' },
+  { to: '/referral-fees', label: 'Referral fees', icon: 'payments' },
+  { to: '/advertisements', label: 'Advertisements', icon: 'campaign' },
   { to: '/loyalty', label: 'Loyalty points', icon: 'card_giftcard' },
   { to: '/system-settings', label: 'System settings', icon: 'settings' },
   { to: '/reports', label: 'Reports', icon: 'bar_chart' },
@@ -74,7 +76,6 @@ function readSidebarCollapsed(): boolean {
 export function AdminLayout() {
   const { showSuccess } = useToast()
   const { signOut, account, role, refreshAccount } = useAuth()
-  const { labName, logoDisplayUrl } = useSystemBranding()
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const headerTitle = headerTitleForPath(pathname)
@@ -187,16 +188,11 @@ export function AdminLayout() {
           onClick={handleSidebarBrandClick}
           aria-expanded={isMobile ? mobileDrawerOpen : !sidebarCollapsed}
           aria-controls="admin-sidebar"
-          title={!isMobile ? 'Click logo to widen or narrow the sidebar' : undefined}
           aria-label={
             isMobile ? 'Close navigation menu' : sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar to icons'
           }
         >
-          <BrandMark logoUrl={logoDisplayUrl} />
-          <div className="brand-copy">
-            <div className="brand-title">{labName}</div>
-            <div className="brand-sub">Lab management</div>
-          </div>
+          <IdhcBrandLockup compact={!isMobile && sidebarCollapsed} />
         </button>
         <nav className="admin-nav" aria-label="Main navigation">
           {nav.map((item) => (
@@ -249,7 +245,7 @@ export function AdminLayout() {
                 aria-expanded={false}
                 onClick={() => setMobileDrawerOpen(true)}
               >
-                <BrandMark logoUrl={logoDisplayUrl} />
+                <IdhcBrandLockup compact />
               </button>
             ) : null}
             <h1 className="page-title">{headerTitle}</h1>
@@ -285,6 +281,7 @@ export function AdminLayout() {
                     <span className="material-symbols-outlined">expand_more</span>
                   </span>
                 </button>
+                <HeaderThemeMenu />
                 <NotificationBell />
                 <MyProfileModal
                   open={profileOpen}

@@ -1,5 +1,7 @@
 const { sql, poolPromise } = require('../config/db');
 
+const FIXED_LAB_NAME = 'International Diagnostic & Healthcare Center';
+
 const THEME_PRESETS = {
   light: {
     mode: 'light',
@@ -13,23 +15,39 @@ const THEME_PRESETS = {
     secondary_color: '#34d399',
     custom_colors: null,
   },
+  idhc: {
+    mode: 'idhc',
+    primary_color: '#e03a2c',
+    secondary_color: '#f4b12a',
+    custom_colors: null,
+  },
 };
 
 class SystemSetting {
   static normalizeThemeMode(mode) {
-    return mode === 'dark' ? 'dark' : 'light';
+    if (mode === 'dark') return 'dark';
+    if (mode === 'idhc') return 'idhc';
+    return 'light';
+  }
+
+  static lockBranding(data) {
+    return {
+      ...data,
+      lab_name: FIXED_LAB_NAME,
+      logo_url: null,
+    };
   }
 
   static applyThemePreset(data) {
     const themeId = this.normalizeThemeMode(data?.mode);
     const preset = THEME_PRESETS[themeId];
-    return {
+    return this.lockBranding({
       ...data,
       mode: preset.mode,
       primary_color: preset.primary_color,
       secondary_color: preset.secondary_color,
       custom_colors: null,
-    };
+    });
   }
 
   static toUpdatePayload(row) {
@@ -49,10 +67,8 @@ class SystemSetting {
   }
 
   static defaultUpdatePayload(overrides = {}) {
-    return {
-      lab_name: 'MedLab Smart',
+    return this.lockBranding({
       mode: 'light',
-      logo_url: null,
       primary_color: '#003d9b',
       secondary_color: '#0d8a5b',
       custom_colors: null,
@@ -62,7 +78,7 @@ class SystemSetting {
       contact_phone: null,
       contact_email: null,
       ...overrides,
-    };
+    });
   }
 
   static async getSettings() {

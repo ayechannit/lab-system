@@ -2,11 +2,12 @@ import { apiFetch } from './apiClient'
 import { getApiBaseUrl } from './apiBase'
 import { readApiErrorBody } from './readApiError'
 import { LOGO_URL_MAX_LENGTH } from '../utils/logoImage'
+import { themeFieldsForApi } from '../theme/appThemes'
 
 export { LOGO_URL_MAX_LENGTH }
 
-/** Stored in `theme_settings.mode`; only preset themes are supported in the admin UI. */
-export type ThemeMode = 'light' | 'dark'
+/** Stored in `theme_settings.mode`; preset themes supported in the admin UI. */
+export type ThemeMode = 'light' | 'dark' | 'idhc'
 
 export type SystemSettingsRow = {
   id?: string
@@ -39,10 +40,19 @@ export type SystemSettingsUpdateBody = {
 }
 
 /** Canonical defaults for theme_settings (kept in sync with lab_backend systemSettingModel). */
+export const FIXED_LAB_NAME = 'International Diagnostic & Healthcare Center'
+
+/** Brand name and logo are fixed in the app — not editable in System settings. */
+export function fixedBrandingFields(): Pick<SystemSettingsUpdateBody, 'lab_name' | 'logo_url'> {
+  return {
+    lab_name: FIXED_LAB_NAME,
+    logo_url: null,
+  }
+}
+
 export const DEFAULT_SYSTEM_SETTINGS: SystemSettingsUpdateBody = {
-  lab_name: 'MedLab Smart',
+  ...fixedBrandingFields(),
   mode: 'light',
-  logo_url: null,
   primary_color: '#003d9b',
   secondary_color: '#0d8a5b',
   custom_colors: null,
@@ -74,7 +84,10 @@ function asNum(v: unknown): number | null {
 }
 
 function normalizeMode(v: unknown): ThemeMode {
-  return String(v) === 'dark' ? 'dark' : 'light'
+  const m = String(v)
+  if (m === 'dark') return 'dark'
+  if (m === 'idhc') return 'idhc'
+  return 'light'
 }
 
 /** HTML color inputs require `#rrggbb`. */
@@ -91,7 +104,7 @@ export function normalizeSystemSettings(raw: Record<string, unknown> | null | un
   }
   return {
     id: raw.id != null ? String(raw.id) : undefined,
-    lab_name: asStr(raw.lab_name, 'MedLab Smart'),
+    lab_name: asStr(raw.lab_name, FIXED_LAB_NAME),
     mode: normalizeMode(raw.mode),
     logo_url: asNullableStr(raw.logo_url),
     primary_color: normalizeHexColor(asNullableStr(raw.primary_color), '#003d9b'),
@@ -120,6 +133,30 @@ export async function updateSystemSettings(body: SystemSettingsUpdateBody): Prom
   })
   if (!res.ok) throw new Error(await readApiErrorBody(res))
   return normalizeSystemSettings((await res.json()) as Record<string, unknown>)
+}
+
+function rowToUpdateBody(row: SystemSettingsRow): SystemSettingsUpdateBody {
+  return {
+    ...fixedBrandingFields(),
+    mode: row.mode,
+    primary_color: row.primary_color,
+    secondary_color: row.secondary_color,
+    custom_colors: row.custom_colors,
+    latitude: row.latitude,
+    longitude: row.longitude,
+    address: row.address,
+    contact_phone: row.contact_phone,
+    contact_email: row.contact_email,
+  }
+}
+
+/** Apply a preset theme and persist it to system settings. */
+export async function saveThemeMode(mode: ThemeMode): Promise<SystemSettingsRow> {
+  const row = await fetchSystemSettings()
+  return updateSystemSettings({
+    ...rowToUpdateBody(row),
+    ...themeFieldsForApi(mode),
+  })
 }
 
 /** Resolve stored logo_url for <img src> (API-hosted /uploads paths need the API origin). */

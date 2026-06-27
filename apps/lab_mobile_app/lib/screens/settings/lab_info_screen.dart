@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/app_settings_scope.dart';
-import '../../theme/app_colors.dart';
+import '../../theme/app_theme_presets.dart';
 import '../../theme/theme_extensions.dart';
 import '../../widgets/common/app_brand_mark.dart';
 import '../../widgets/common/section_card.dart';
@@ -35,7 +35,7 @@ class LabInfoScreen extends StatelessWidget {
                 padding: const EdgeInsets.only(bottom: 12),
                 child: Text(
                   'Could not refresh settings. Showing last known values.',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.error),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: context.cs.error),
                 ),
               ),
             SectionCard(
@@ -45,7 +45,7 @@ class LabInfoScreen extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      AppBrandMark(size: 48, iconSize: 22, logoUrl: s.logoUrl, showShadow: false),
+                      AppBrandMark(height: 48, maxWidth: 220, logoUrl: s.logoUrl, showShadow: false),
                       const SizedBox(width: 14),
                       Expanded(
                         child: Column(
@@ -57,7 +57,7 @@ class LabInfoScreen extends StatelessWidget {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              s.isDarkTheme ? 'Dark theme' : 'Light theme',
+                              themePresetLabel(s.themePreset),
                               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                     color: context.cs.onSurfaceVariant,
                                   ),

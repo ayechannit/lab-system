@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/lab_system_settings.dart';
 import 'app_colors.dart';
+import 'app_theme_presets.dart';
 import 'theme_extensions.dart';
 
 Color? colorFromHex(String? hex, {Color? fallback}) {
@@ -15,23 +16,31 @@ Color? colorFromHex(String? hex, {Color? fallback}) {
   return Color(value);
 }
 
-/// Light/dark themes aligned with admin web `theme_settings` presets.
+/// Themes aligned with admin web `theme_settings` presets (light / dark / IDHC).
 ThemeData buildAppThemeForSettings(LabSystemSettings settings, {required Brightness brightness}) {
   final isDark = brightness == Brightness.dark;
-  final primary = colorFromHex(settings.primaryColorHex, fallback: isDark ? const Color(0xFF6B9FFF) : AppColors.primary)!;
-  final primaryLight = isDark ? const Color(0xFF8BB4FF) : AppColors.primaryLight;
-  final accentGreen = colorFromHex(settings.secondaryColorHex, fallback: isDark ? const Color(0xFF34D399) : AppColors.accentGreen)!;
+  final effectivePreset =
+      isDark ? AppThemePresetId.dark : settings.themePreset;
+  final palette = surfacePaletteFor(effectivePreset);
 
-  final surface = isDark ? const Color(0xFF0F1419) : AppColors.surface;
-  final onSurface = isDark ? const Color(0xFFD1D9E6) : AppColors.onSurface;
-  final onSurfaceVariant = isDark ? const Color(0xFF94A3B8) : AppColors.onSurfaceVariant;
-  final outline = isDark ? const Color(0xFF2A3341) : AppColors.outline;
-  final surfaceContainer = isDark ? const Color(0xFF151B26) : AppColors.surfaceContainer;
-  final cardColor = isDark ? const Color(0xFF1A2332) : Colors.white;
+  final primary = colorFromHex(settings.primaryColorHex, fallback: palette.defaultPrimary)!;
+  final primaryLight = colorFromHex(settings.primaryColorHex, fallback: palette.primaryLight)!;
+  final accentGreen = colorFromHex(settings.secondaryColorHex, fallback: palette.defaultSecondary)!;
+
+  final surface = palette.surface;
+  final onSurface = palette.onSurface;
+  final onSurfaceVariant = palette.onSurfaceVariant;
+  final outline = palette.outline;
+  final surfaceContainer = palette.surfaceContainer;
+  final cardColor = palette.cardColor;
   final iconTileBackground =
-      isDark ? primary.withValues(alpha: 0.18) : const Color(0xFFEAF1FF);
+      isDark ? primary.withValues(alpha: 0.18) : palette.iconTileBackground;
   final navActiveBackground =
-      isDark ? primary.withValues(alpha: 0.22) : const Color(0xFFEAF1FF);
+      isDark ? primary.withValues(alpha: 0.22) : palette.navActiveBackground;
+  final errorPanelBg = palette.errorPanelBg;
+  final errorPanelBorder = palette.errorPanelBorder;
+  final errorPanelText = palette.errorPanelText;
+  final ratingInactive = palette.ratingInactive;
 
   return ThemeData(
     useMaterial3: true,
@@ -58,27 +67,27 @@ ThemeData buildAppThemeForSettings(LabSystemSettings settings, {required Brightn
         fontSize: 30,
         height: 38 / 30,
         fontWeight: FontWeight.w700,
-        color: isDark ? const Color(0xFFF1F5F9) : AppColors.onSurface,
+        color: onSurface,
       ),
       headlineMedium: TextStyle(
         fontFamily: 'Manrope',
         fontSize: 24,
         height: 32 / 24,
         fontWeight: FontWeight.w700,
-        color: isDark ? const Color(0xFFF1F5F9) : AppColors.onSurface,
+        color: onSurface,
       ),
       headlineSmall: TextStyle(
         fontFamily: 'Manrope',
         fontSize: 20,
         height: 28 / 20,
         fontWeight: FontWeight.w600,
-        color: isDark ? const Color(0xFFF1F5F9) : AppColors.onSurface,
+        color: onSurface,
       ),
       titleMedium: TextStyle(
         fontFamily: 'Manrope',
         fontSize: 16,
         fontWeight: FontWeight.w700,
-        color: isDark ? const Color(0xFFF1F5F9) : AppColors.onSurface,
+        color: onSurface,
       ),
       bodyLarge: TextStyle(fontSize: 16, height: 24 / 16, fontWeight: FontWeight.w400, color: onSurface),
       bodyMedium: TextStyle(fontSize: 14, height: 20 / 14, fontWeight: FontWeight.w400, color: onSurface),
@@ -182,6 +191,11 @@ ThemeData buildAppThemeForSettings(LabSystemSettings settings, {required Brightn
         surfaceContainer: surfaceContainer,
         iconTileBackground: iconTileBackground,
         navActiveBackground: navActiveBackground,
+        errorPanelBg: errorPanelBg,
+        errorPanelBorder: errorPanelBorder,
+        errorPanelText: errorPanelText,
+        ratingInactive: ratingInactive,
+        heroGradientEnd: primaryLight,
       ),
     ],
   );

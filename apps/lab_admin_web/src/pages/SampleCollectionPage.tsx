@@ -32,6 +32,7 @@ import { suggestCollectionRoute } from '../services/aiDemo'
 import { friendlyAiReviewErrorMessage } from '../hooks/usePageNotify'
 import { collectorRoleStaffList } from '../utils/collectorStaff'
 import { StaffAvatar } from '../components/staff/StaffAvatar'
+import { formatReportDeliveryMethod, priorityBadgeClass } from '../utils/orderDisplay'
 import '../components/common/ui.css'
 
 function ordersForCollectionTable(
@@ -983,6 +984,8 @@ export function SampleCollectionPage() {
                 <th>Order</th>
                 <th>Patient</th>
                 <th>Address</th>
+                <th>Priority</th>
+                <th>Report delivery</th>
                 {isScheduleMode ? (
                   <>
                     <th>Collector</th>
@@ -996,13 +999,13 @@ export function SampleCollectionPage() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={isScheduleMode ? 8 : 6} className="data-table__state data-table__state--loading">
+                  <td colSpan={isScheduleMode ? 10 : 8} className="data-table__state data-table__state--loading">
                     <LoadingSpinner label="Loading samples" />
                   </td>
                 </tr>
               ) : routable.length === 0 ? (
                 <tr>
-                  <td colSpan={isScheduleMode ? 8 : 6} className="data-table__state">
+                  <td colSpan={isScheduleMode ? 10 : 8} className="data-table__state">
                     {orders.length === 0
                       ? patientName || statusFilter
                         ? 'No orders match these filters.'
@@ -1037,6 +1040,10 @@ export function SampleCollectionPage() {
                     </td>
                     <td>{o.patient_name}</td>
                     <td>{o.address?.trim() || '—'}</td>
+                    <td>
+                      <span className={priorityBadgeClass(o.priority)}>{o.priority}</span>
+                    </td>
+                    <td>{formatReportDeliveryMethod(o.report_delivery_method)}</td>
                     {isScheduleMode ? (
                       <>
                         <td>{o.schedule?.collecting_person?.trim() || '—'}</td>

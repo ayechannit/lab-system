@@ -75,9 +75,9 @@ class _OrdersListScreenState extends State<OrdersListScreen> {
     return orders.where((o) => _normalizeStatus(o) == _statusFilter).toList();
   }
 
-  String _filterLabel(String status) {
+  String _filterLabel(String status, ColorScheme cs) {
     if (status.isEmpty) return 'All';
-    return orderStatusStyleFor(status).label;
+    return orderStatusStyleFor(status, cs).label;
   }
 
   @override
@@ -93,8 +93,8 @@ class _OrdersListScreenState extends State<OrdersListScreen> {
         return Scaffold(
           appBar: AppBar(
             automaticallyImplyLeading: false,
-            titleSpacing: 12,
-            title: const AppBrandingRow(markSize: 32, iconSize: 16, borderRadius: 8),
+            titleSpacing: 4,
+            title: const AppBrandingRow(),
             actions: [
               TextButton.icon(
                 onPressed: openNewOrder,
@@ -169,7 +169,7 @@ class _OrdersListScreenState extends State<OrdersListScreen> {
                           Icon(Icons.filter_list_off_outlined, size: 40, color: context.cs.onSurfaceVariant),
                           const SizedBox(height: 10),
                           Text(
-                            'No ${_filterLabel(_statusFilter).toLowerCase()} orders',
+                            'No ${_filterLabel(_statusFilter, context.cs).toLowerCase()} orders',
                             textAlign: TextAlign.center,
                             style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
                           ),
@@ -227,7 +227,7 @@ class _OrderListFilters extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = context.cs;
-    final statusLabel = statusFilter.isEmpty ? 'All orders' : orderStatusStyleFor(statusFilter).label;
+    final statusLabel = statusFilter.isEmpty ? 'All orders' : orderStatusStyleFor(statusFilter, cs).label;
     final statusCount = countFor(statusFilter);
 
     return Column(
@@ -290,7 +290,7 @@ class _OrderListFilters extends StatelessWidget {
               for (final status in tabs)
                 _StatusFilterSheetTile(
                   status: status,
-                  label: status.isEmpty ? 'All orders' : orderStatusStyleFor(status).label,
+                  label: status.isEmpty ? 'All orders' : orderStatusStyleFor(status, sheetContext.cs).label,
                   count: countFor(status),
                   selected: statusFilter == status,
                   onTap: () => Navigator.pop(sheetContext, status),
@@ -377,7 +377,7 @@ class _FilterControlTile extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(12, 11, 10, 11),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: const Color(0x66E1E2EC)),
+            border: Border.all(color: context.subtleBorder),
           ),
           child: Row(
             children: [
@@ -447,7 +447,7 @@ class _StatusFilterSheetTile extends StatelessWidget {
             foreground: cs.primary,
             background: cs.primary.withValues(alpha: 0.1),
           )
-        : orderStatusStyleFor(status);
+        : orderStatusStyleFor(status, cs);
 
     return ListTile(
       onTap: onTap,
@@ -622,7 +622,7 @@ class _OrderListTile extends StatelessWidget {
         child: Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: const Color(0x66E1E2EC)),
+            border: Border.all(color: context.subtleBorder),
           ),
           child: Column(
             children: [

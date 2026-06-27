@@ -1,3 +1,5 @@
+import { brandLogo } from './authAssets'
+
 type AuthMarketingPanelProps = {
   heroImage: string
   headline: string
@@ -11,8 +13,11 @@ export function AuthMarketingPanel({ heroImage, headline, lead }: AuthMarketingP
       <div className="auth-hero__gradient" />
       <div className="auth-hero__inner">
         <div className="auth-brand">
-          <span className="material-symbols-outlined">biotech</span>
-          <span className="auth-brand__name">MedLab Smart</span>
+          <img
+            className="auth-hero__logo"
+            src={brandLogo}
+            alt="International Diagnostic & Healthcare Center"
+          />
         </div>
         <div className="auth-hero__copy">
           <h2 className="auth-hero__headline">{headline}</h2>

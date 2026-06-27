@@ -408,4 +408,5 @@ Enum theme_mode {
   light
   dark
   custom
+  idhc
 }

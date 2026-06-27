@@ -53,8 +53,8 @@ class _LoyaltyPointsScreenState extends State<LoyaltyPointsScreen> {
         return Scaffold(
           appBar: AppBar(
             automaticallyImplyLeading: false,
-            titleSpacing: 12,
-            title: const AppBrandingRow(markSize: 32, iconSize: 16, borderRadius: 8),
+            titleSpacing: 4,
+            title: const AppBrandingRow(),
             actions: const [NotificationBellButton()],
           ),
           body: RefreshIndicator(

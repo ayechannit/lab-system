@@ -4,7 +4,10 @@ import { useAuth } from './hooks/AuthContext'
 import { useAppThemeSync } from './hooks/useAppTheme'
 import { AdminLayout } from './layout/AdminLayout'
 import { LoginPage } from './pages/auth/LoginPage'
+import { ForgotPasswordPage } from './pages/auth/ForgotPasswordPage'
+import { AdvertisementsManagementPage } from './pages/AdvertisementsManagementPage'
 import { DiscountManagementPage } from './pages/DiscountManagementPage'
+import { ReferralFeesManagementPage } from './pages/ReferralFeesManagementPage'
 import { LabTestCatalogPage } from './pages/LabTestCatalogPage'
 import { LabResultManagementPage } from './pages/LabResultManagementPage'
 import { LoyaltyPointsManagementPage } from './pages/LoyaltyPointsManagementPage'
@@ -30,8 +33,7 @@ function RequireAuth() {
 }
 
 function AppThemeSync() {
-  const { signedIn, initializing } = useAuth()
-  useAppThemeSync(signedIn && !initializing)
+  useAppThemeSync(true)
   return null
 }
 //make deployment (2026-06-25)
@@ -43,6 +45,7 @@ export default function App() {
       <AppThemeSync />
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route element={<RequireAuth />}>
           <Route path="/" element={<AdminLayout />}>
             <Route index element={<Navigate to="orders" replace />} />
@@ -54,6 +57,8 @@ export default function App() {
             <Route path="results" element={<LabResultManagementPage />} />
             <Route path="ratings" element={<RatingsFeedbackPage />} />
             <Route path="discounts" element={<DiscountManagementPage />} />
+            <Route path="referral-fees" element={<ReferralFeesManagementPage />} />
+            <Route path="advertisements" element={<AdvertisementsManagementPage />} />
             <Route path="loyalty" element={<LoyaltyPointsManagementPage />} />
             <Route path="system-settings" element={<SystemSettingsPage />} />
             <Route path="reports" element={<ReportsAnalyticsPage />} />

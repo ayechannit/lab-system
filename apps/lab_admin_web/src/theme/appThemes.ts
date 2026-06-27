@@ -1,7 +1,7 @@
 import type { CSSProperties } from 'react'
 import type { SystemSettingsUpdateBody } from '../services/systemSettingService'
 
-export type AppThemeId = 'light' | 'dark'
+export type AppThemeId = 'light' | 'dark' | 'idhc'
 
 export type ThemeOption = {
   id: AppThemeId
@@ -12,6 +12,11 @@ export type ThemeOption = {
 export const THEME_OPTIONS: ThemeOption[] = [
   { id: 'light', label: 'Light', description: 'Default bright workspace' },
   { id: 'dark', label: 'Dark', description: 'Reduced glare for low-light rooms' },
+  {
+    id: 'idhc',
+    label: 'IDHC',
+    description: 'International Diagnostic & Healthcare Center — red & gold brand',
+  },
 ]
 
 type ThemePreset = {
@@ -58,6 +63,49 @@ const LIGHT_SEMANTIC: Record<string, string> = {
   '--shadow-sm': '0 1px 2px rgba(25, 27, 35, 0.06)',
   '--info-panel-bg': '#f8fbff',
   '--info-panel-border': '#dbeafe',
+  '--error-panel-bg': '#fef2f2',
+  '--error-panel-border': '#fecaca',
+  '--error-panel-text': '#991b1b',
+  '--error-panel-text-muted': '#7f1d1d',
+  '--success-panel-border': '#bbf7d0',
+}
+
+const IDHC_SEMANTIC: Record<string, string> = {
+  '--elevated-bg': '#ffffff',
+  '--input-bg': '#ffffff',
+  '--table-bg': '#ffffff',
+  '--table-header-bg': '#faf3eb',
+  '--table-row-hover': 'rgba(224, 58, 44, 0.04)',
+  '--segment-track': '#f5ebe0',
+  '--segment-active': '#ffffff',
+  '--segment-hover': 'rgba(255, 255, 255, 0.65)',
+  '--subtle-fill': '#fbf6f0',
+  '--subtle-fill-2': '#fdf8f3',
+  '--code-bg': '#f5ebe0',
+  '--btn-secondary-bg': '#ffffff',
+  '--btn-export-bg': '#ffffff',
+  '--btn-export-hover': '#fdf1ec',
+  '--btn-ghost-hover': 'rgba(224, 58, 44, 0.06)',
+  '--nav-active-bg': 'rgba(224, 58, 44, 0.08)',
+  '--action-trigger-color': '#6b5a50',
+  '--action-trigger-hover-bg': '#fdf1ec',
+  '--action-trigger-open-bg': '#fce6bc',
+  '--menu-bg': '#ffffff',
+  '--menu-border': '#e7d8cc',
+  '--menu-shadow': '0 10px 24px rgba(36, 23, 18, 0.12)',
+  '--menu-item-hover': 'rgba(224, 58, 44, 0.07)',
+  '--input-text': '#241712',
+  '--sticky-col-shadow': '-10px 0 14px -8px rgba(36, 23, 18, 0.12)',
+  '--stat-border': '#e7d8cc',
+  '--warning-bg': '#fffbeb',
+  '--warning-border': '#fde68a',
+  '--warning-text': '#92400e',
+  '--popover-shadow': '0 4px 12px rgba(36, 23, 18, 0.08), 0 18px 44px rgba(36, 23, 18, 0.1)',
+  '--focus-ring': 'rgba(224, 58, 44, 0.14)',
+  '--banner-fade': '#ffffff',
+  '--shadow-sm': '0 1px 2px rgba(36, 23, 18, 0.06)',
+  '--info-panel-bg': '#fdf8f3',
+  '--info-panel-border': '#f5d4bc',
   '--error-panel-bg': '#fef2f2',
   '--error-panel-border': '#fecaca',
   '--error-panel-text': '#991b1b',
@@ -147,10 +195,32 @@ export const THEME_PRESETS: Record<AppThemeId, ThemePreset> = {
       ...DARK_SEMANTIC,
     },
   },
+  idhc: {
+    mode: 'idhc',
+    primary_color: '#e03a2c',
+    secondary_color: '#f4b12a',
+    custom_colors: null,
+    css: {
+      '--primary': '#e03a2c',
+      '--primary-light': '#c72a1e',
+      '--accent-green': '#0d8a5b',
+      '--surface': '#fbf6f0',
+      '--border': '#e7d8cc',
+      '--text': '#434654',
+      '--heading': '#241712',
+      '--muted': '#9a8576',
+      '--card-bg': '#ffffff',
+      '--panel-muted': '#faf3eb',
+      ...IDHC_SEMANTIC,
+    },
+  },
 }
 
 export function normalizeAppThemeId(mode: unknown): AppThemeId {
-  return String(mode) === 'dark' ? 'dark' : 'light'
+  const m = String(mode)
+  if (m === 'dark') return 'dark'
+  if (m === 'idhc') return 'idhc'
+  return 'light'
 }
 
 /** Preview a theme on a container (settings page only) without changing the whole app. */
@@ -171,8 +241,17 @@ export function applyAppTheme(themeId: AppThemeId): void {
 /** Last theme applied to the document (survives route changes). */
 export function getAppliedAppTheme(): AppThemeId {
   const fromDom = document.documentElement.dataset.theme
-  if (fromDom === 'dark' || fromDom === 'light') return fromDom
+  if (fromDom === 'dark' || fromDom === 'light' || fromDom === 'idhc') return fromDom
   return 'light'
+}
+
+/** Chart stroke/fill colors for the active (or given) theme preset. */
+export function themeChartColors(themeId?: AppThemeId): { primary: string; primaryLight: string } {
+  const preset = THEME_PRESETS[themeId ?? getAppliedAppTheme()] ?? THEME_PRESETS.light
+  return {
+    primary: preset.css['--primary'],
+    primaryLight: preset.css['--primary-light'],
+  }
 }
 
 export function themeFieldsForApi(

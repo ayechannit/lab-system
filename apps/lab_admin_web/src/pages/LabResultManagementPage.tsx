@@ -29,6 +29,7 @@ import {
   type ApiOrderStatus,
   type FetchOrdersParams,
 } from '../services/orderService'
+import { formatReportDeliveryMethod, priorityBadgeClass } from '../utils/orderDisplay'
 import '../components/common/ui.css'
 
 const ADMIN_CONTENT_BOTTOM_PADDING = 40
@@ -898,16 +899,6 @@ export function LabResultManagementPage() {
     setOrderId(id)
   }
 
-  function orderTestsSummary(o: ApiOrderListRow): string {
-    const n = o.items?.length ?? 0
-    if (n === 0) return '—'
-    const names = (o.items ?? [])
-      .map((it) => it.test_name?.trim() || it.test_code?.trim() || it.test_id)
-      .slice(0, 2)
-    const more = n > 2 ? ` +${n - 2}` : ''
-    return `${n} test${n === 1 ? '' : 's'}${names.length ? ` (${names.join(', ')}${more})` : ''}`
-  }
-
   function openPdfPicker(testIds: string | string[]) {
     const ids = Array.isArray(testIds) ? testIds : [testIds]
     if (ids.length === 0) {
@@ -1464,7 +1455,8 @@ export function LabResultManagementPage() {
               <tr>
                 <th scope="col">Patient</th>
                 <th scope="col">Status</th>
-                <th scope="col">Tests</th>
+                <th scope="col">Priority</th>
+                <th scope="col">Report delivery</th>
                 <th scope="col">Collector</th>
                 <th scope="col">Collect time</th>
                 <th scope="col">Final (MMK)</th>
@@ -1474,13 +1466,13 @@ export function LabResultManagementPage() {
             <tbody>
               {listLoading ? (
                 <tr>
-                  <td colSpan={7} className="data-table__state data-table__state--loading">
+                  <td colSpan={8} className="data-table__state data-table__state--loading">
                     <LoadingSpinner label="Loading orders" />
                   </td>
                 </tr>
               ) : orders.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="data-table__state">
+                  <td colSpan={8} className="data-table__state">
                     {patientName || statusFilter
                       ? 'No orders match these filters.'
                       : 'No orders returned from the server.'}
@@ -1522,9 +1514,10 @@ export function LabResultManagementPage() {
                       </label>
                     </td>
                     <td>{o.status}</td>
-                    <td title={(o.items ?? []).map((it) => it.test_name ?? it.test_id).join(', ')}>
-                      {orderTestsSummary(o)}
+                    <td>
+                      <span className={priorityBadgeClass(o.priority)}>{o.priority}</span>
                     </td>
+                    <td>{formatReportDeliveryMethod(o.report_delivery_method)}</td>
                     <td>{o.schedule?.collecting_person?.trim() || '—'}</td>
                     <td>{formatMaybeIsoWhen(o.schedule?.collection_time)}</td>
                     <td className="col-num">{o.final_price_mmk.toLocaleString()}</td>
@@ -1605,6 +1598,16 @@ export function LabResultManagementPage() {
               <div>
                 <dt>Tests</dt>
                 <dd>{detail.items.length}</dd>
+              </div>
+              <div>
+                <dt>Priority</dt>
+                <dd>
+                  <span className={priorityBadgeClass(detail.priority)}>{detail.priority}</span>
+                </dd>
+              </div>
+              <div>
+                <dt>Report delivery</dt>
+                <dd>{formatReportDeliveryMethod(detail.report_delivery_method)}</dd>
               </div>
             </dl>
             <div className="lab-result-entry__workflow" aria-label="Lab processing steps">

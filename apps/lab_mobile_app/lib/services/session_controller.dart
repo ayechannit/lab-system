@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 
 import '../models/app_notification.dart';
 import '../models/app_user.dart';
+import '../models/lab_advertisement.dart';
 import '../models/lab_order.dart';
 import '../models/lab_result.dart';
 import '../models/lab_test_pick.dart';
@@ -18,7 +19,9 @@ import 'notification_service.dart';
 import '../utils/notification_utils.dart';
 
 class SessionController extends ChangeNotifier {
-  SessionController({required LabUserApi api}) : _api = api;
+  SessionController({required LabUserApi api}) : _api = api {
+    unawaited(tryRestoreSession());
+  }
 
   final LabUserApi _api;
   AppUser? _user;
@@ -32,6 +35,7 @@ class SessionController extends ChangeNotifier {
   String? _aiAnalysisTestId;
   LoyaltySnapshot _loyalty = const LoyaltySnapshot(balance: 0, entries: <LoyaltyEntry>[], earnRules: <PointEarnRule>[]);
   UserReportSummary? _userReport;
+  List<LabAdvertisement> _advertisements = const [];
   bool _homeSummaryLoading = false;
   String? _homeSummaryError;
   List<AppNotification> _notifications = const [];
@@ -39,10 +43,12 @@ class SessionController extends ChangeNotifier {
   String? _notificationsError;
   bool _busy = false;
   bool _sessionRestoreAttempted = false;
+  bool _sessionInitializing = true;
 
   AppUser? get user => _user;
   bool get isLoggedIn => _user != null;
   bool get sessionRestoreAttempted => _sessionRestoreAttempted;
+  bool get isInitializingSession => _sessionInitializing;
   bool get busy => _busy;
   List<LabOrderRequest> get orders => List.unmodifiable(_orders);
   List<LabOrderSummary> get activeOrders => List.unmodifiable(_activeOrders);
@@ -55,6 +61,7 @@ class SessionController extends ChangeNotifier {
   String? get aiAnalysisTestId => _aiAnalysisTestId;
   LoyaltySnapshot get loyalty => _loyalty;
   UserReportSummary? get userReport => _userReport;
+  List<LabAdvertisement> get advertisements => List.unmodifiable(_advertisements);
   bool get homeSummaryLoading => _homeSummaryLoading;
   String? get homeSummaryError => _homeSummaryError;
   List<AppNotification> get notifications => List.unmodifiable(_notifications);
@@ -71,7 +78,13 @@ class SessionController extends ChangeNotifier {
   }) async {
     _setBusy(true);
     try {
-      _user = await _api.login(LoginRequest(email: email, password: password));
+      _user = await _api.login(
+        LoginRequest(
+          email: email,
+          password: password,
+          remember: remember,
+        ),
+      );
       final token = _api.accessToken;
       if (token != null) {
         await AuthSessionStorage.saveSession(
@@ -86,32 +99,43 @@ class SessionController extends ChangeNotifier {
     }
   }
 
-  /// Restores a remembered session from device storage (`GET /api/auth/me`).
+  /// Restores a saved session from device storage (`GET /api/auth/me`).
   Future<void> tryRestoreSession() async {
     if (_sessionRestoreAttempted) return;
     _sessionRestoreAttempted = true;
-    if (_user != null) return;
 
-    final token = await AuthSessionStorage.readAccessToken();
-    if (token == null) {
-      notifyListeners();
-      return;
-    }
-
-    _api.setAccessToken(token);
     try {
-      _user = await _api.getCurrentUser();
-      await _hydrateUserData();
-    } catch (_) {
-      _api.clearAuth();
-      _user = null;
-      await AuthSessionStorage.clearAccessToken();
+      if (_user != null) return;
+
+      final token = await AuthSessionStorage.readAccessToken();
+      if (token == null) return;
+
+      _api.setAccessToken(token);
+      try {
+        _user = await _api.getCurrentUser();
+        await _hydrateUserData();
+      } catch (_) {
+        _api.clearAuth();
+        _user = null;
+        await AuthSessionStorage.clearAccessToken();
+      }
+    } finally {
+      _sessionInitializing = false;
       notifyListeners();
     }
   }
 
   /// Creates the account on the server only. Caller should navigate to `/login`;
   /// the user is not signed in after this returns.
+  Future<String> requestPasswordReset(String email) => _api.requestPasswordReset(email);
+
+  Future<String> resetPasswordWithCode({
+    required String email,
+    required String code,
+    required String newPassword,
+  }) =>
+      _api.resetPasswordWithCode(email: email, code: code, newPassword: newPassword);
+
   Future<void> register({
     required String name,
     required String phone,
@@ -156,6 +180,7 @@ class SessionController extends ChangeNotifier {
     _aiAnalysisTestId = null;
     _loyalty = const LoyaltySnapshot(balance: 0, entries: <LoyaltyEntry>[], earnRules: <PointEarnRule>[]);
     _userReport = null;
+    _advertisements = const [];
     _homeSummaryLoading = false;
     _homeSummaryError = null;
     _notifications = const [];
@@ -350,9 +375,22 @@ class SessionController extends ChangeNotifier {
     _homeSummaryError = null;
     notifyListeners();
     try {
-      _userReport = await _api.fetchUserReportSummary();
+      final reportFuture = _api.fetchUserReportSummary();
+      final adsFuture = _api.fetchActiveAdvertisements();
+      _userReport = await reportFuture;
+      _homeSummaryError = null;
+      try {
+        _advertisements = await adsFuture;
+      } catch (_) {
+        _advertisements = const [];
+      }
     } catch (e) {
       _homeSummaryError = 'Could not load your summary. Pull down to retry.';
+      try {
+        _advertisements = await _api.fetchActiveAdvertisements();
+      } catch (_) {
+        _advertisements = const [];
+      }
     } finally {
       _homeSummaryLoading = false;
       notifyListeners();
@@ -562,6 +600,11 @@ class SessionController extends ChangeNotifier {
     } catch (_) {
       _userReport = null;
       _homeSummaryError = 'Could not load your summary. Pull down to retry.';
+    }
+    try {
+      _advertisements = await _api.fetchActiveAdvertisements();
+    } catch (_) {
+      _advertisements = const [];
     }
     if (_latestResult != null) {
       _aiAnalysis = await _api.getAiAnalysis(

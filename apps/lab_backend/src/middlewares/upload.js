@@ -105,6 +105,23 @@ const uploadProfile = multer({
   fileFilter: logoFileFilter,
 });
 
+const adBannerStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, uploadDir);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+    cb(null, 'ad-banner-' + uniqueSuffix + path.extname(file.originalname));
+  },
+});
+
+const uploadAdBanner = multer({
+  storage: adBannerStorage,
+  limits: { fileSize: (process.env.MAX_AD_BANNER_SIZE_MB || 3) * 1024 * 1024 },
+  fileFilter: logoFileFilter,
+});
+
 module.exports = upload;
 module.exports.uploadLogo = uploadLogo;
 module.exports.uploadProfile = uploadProfile;
+module.exports.uploadAdBanner = uploadAdBanner;

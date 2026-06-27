@@ -5,8 +5,14 @@ const Staff = require('../models/staffModel');
 const PasswordReset = require('../models/passwordResetModel');
 const EmailService = require('../services/emailService');
 
+function jwtExpiresIn(remember) {
+  const persist =
+    remember === true || remember === 'true' || remember === 1 || remember === '1';
+  return persist ? '30d' : '12h';
+}
+
 const loginUser = async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password, remember } = req.body;
   try {
     const user = await User.getByEmail(email);
     if (!user || !(await bcrypt.compare(password, user.password_hash))) {
@@ -20,7 +26,7 @@ const loginUser = async (req, res) => {
     const token = jwt.sign(
       { id: user.id, email: user.email, role: user.role, type: 'user' },
       process.env.JWT_SECRET || 'your_default_secret',
-      { expiresIn: '24h' }
+      { expiresIn: jwtExpiresIn(remember) }
     );
 
     res.json({
@@ -39,7 +45,7 @@ const loginUser = async (req, res) => {
 };
 
 const loginStaff = async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password, remember } = req.body;
   try {
     const staff = await Staff.getByEmail(email);
     if (!staff || !staff.is_active || !(await bcrypt.compare(password, staff.password_hash))) {
@@ -49,7 +55,7 @@ const loginStaff = async (req, res) => {
     const token = jwt.sign(
       { id: staff.id, email: staff.email, role: staff.role, type: 'staff' },
       process.env.JWT_SECRET || 'your_default_secret',
-      { expiresIn: '24h' }
+      { expiresIn: jwtExpiresIn(remember) }
     );
 
     res.json({

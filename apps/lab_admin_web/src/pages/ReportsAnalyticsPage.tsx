@@ -40,6 +40,7 @@ import {
   type TestCategoryRow,
   type UserReportResponse,
 } from '../services/reportService'
+import { themeChartColors } from '../theme/appThemes'
 import '../components/common/ui.css'
 
 type ReportRangeDays = 7 | 14 | 30
@@ -148,6 +149,7 @@ function ReportTableWrap({
 
 export function ReportsAnalyticsPage() {
   const hasApi = isApiMode()
+  const chartColors = themeChartColors()
   const [rangeDays, setRangeDays] = useState<ReportRangeDays>(14)
   const [kpis, setKpis] = useState<DashboardKpis | null>(null)
   const [revenueTrend, setRevenueTrend] = useState<RevenueTrendRow[]>([])
@@ -352,15 +354,15 @@ export function ReportsAnalyticsPage() {
                 <AreaChart data={dailyOrdersSeries}>
                   <defs>
                     <linearGradient id="gOrders" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#003d9b" stopOpacity={0.35} />
-                      <stop offset="100%" stopColor="#003d9b" stopOpacity={0} />
+                      <stop offset="0%" stopColor={chartColors.primary} stopOpacity={0.35} />
+                      <stop offset="100%" stopColor={chartColors.primary} stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                   <XAxis dataKey="date" tick={{ fontSize: 11 }} />
                   <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
                   <Tooltip />
-                  <Area type="monotone" dataKey="orders" stroke="#003d9b" fill="url(#gOrders)" />
+                  <Area type="monotone" dataKey="orders" stroke={chartColors.primary} fill="url(#gOrders)" />
                 </AreaChart>
               </ResponsiveContainer>
             )}
@@ -403,7 +405,7 @@ export function ReportsAnalyticsPage() {
                   <XAxis type="number" tickFormatter={(v) => `${(v / 1_000_000).toFixed(1)}M`} />
                   <YAxis dataKey="roleLabel" type="category" width={88} tick={{ fontSize: 11 }} />
                   <Tooltip formatter={(v: number) => [`${v.toLocaleString()} MMK`, 'Revenue']} />
-                  <Bar dataKey="revenue" fill="#003d9b" radius={[0, 6, 6, 0]} />
+                  <Bar dataKey="revenue" fill={chartColors.primary} radius={[0, 6, 6, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             )}
@@ -422,7 +424,7 @@ export function ReportsAnalyticsPage() {
                   <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
                   <Tooltip />
                   <Legend />
-                  <Bar dataKey="test_count" name="Tests" fill="#0052cc" radius={[6, 6, 0, 0]} />
+                  <Bar dataKey="test_count" name="Tests" fill={chartColors.primaryLight} radius={[6, 6, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             )}
@@ -586,7 +588,7 @@ export function ReportsAnalyticsPage() {
                   <XAxis dataKey="label" tick={{ fontSize: 11 }} />
                   <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
                   <Tooltip />
-                  <Line type="monotone" dataKey="count" stroke="#0052cc" strokeWidth={2} dot />
+                  <Line type="monotone" dataKey="count" stroke={chartColors.primaryLight} strokeWidth={2} dot />
                 </LineChart>
               </ResponsiveContainer>
             </div>

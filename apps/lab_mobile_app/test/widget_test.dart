@@ -10,7 +10,7 @@ void main() {
     SharedPreferences.setMockInitialValues({});
   });
 
-  testWidgets('MedLab app shows login after splash', (WidgetTester tester) async {
+  testWidgets('app shows login after splash', (WidgetTester tester) async {
     await tester.pumpWidget(const LabPatientApp());
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
@@ -18,7 +18,6 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
       if (find.text('Login').evaluate().isNotEmpty) break;
     }
-    expect(find.textContaining('MedLab'), findsWidgets);
     expect(find.text('Login'), findsOneWidget);
   });
 }
