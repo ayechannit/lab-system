@@ -311,7 +311,7 @@ CREATE TABLE ai_prompts (
 CREATE TABLE theme_settings (
     id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
     lab_name NVARCHAR(255) NOT NULL DEFAULT 'MedLab Smart',
-    mode NVARCHAR(20) NOT NULL DEFAULT 'light' CHECK (mode IN ('light', 'dark', 'custom')),
+    mode NVARCHAR(20) NOT NULL DEFAULT 'light' CHECK (mode IN ('light', 'dark', 'custom', 'idhc')),
     primary_color NVARCHAR(50) DEFAULT '#0055ff',
     secondary_color NVARCHAR(50) DEFAULT '#00cc66',
     logo_url NVARCHAR(2048),
