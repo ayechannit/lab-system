@@ -1,6 +1,22 @@
 const Schedule = require('../models/scheduleModel');
 const Order = require('../models/orderModel');
+const Staff = require('../models/staffModel');
 const NotificationService = require('../services/notificationService');
+
+async function resolvePreferredCollectorId(collector_id) {
+  if (collector_id == null || collector_id === '') return null;
+  const staff = await Staff.getById(collector_id);
+  if (!staff || staff.is_deleted) {
+    throw new Error('Selected collector was not found.');
+  }
+  if (!staff.is_active) {
+    throw new Error('Selected collector is not active.');
+  }
+  if (staff.role !== 'collector') {
+    throw new Error('Selected staff member must have the collector role.');
+  }
+  return collector_id;
+}
 
 const getScheduleByOrderId = async (req, res) => {
   const schedule = await Schedule.getByOrderId(req.params.order_id);
@@ -10,12 +26,21 @@ const getScheduleByOrderId = async (req, res) => {
 
 const upsertSchedule = async (req, res) => {
   try {
-    const { order_id, collecting_person, collection_time, running_time, report_out_time, accepted_by_user } = req.body;
+    const { order_id, collecting_person, collection_time, running_time, report_out_time, accepted_by_user, collector_id } = req.body;
     if (!order_id) {
        return res.status(400).json({ message: 'order_id is required' });
     }
     const scheduleData = { order_id, collecting_person, collection_time, running_time, report_out_time, accepted_by_user };
     const schedule = await Schedule.upsert(scheduleData, req.user?.id);
+
+    if (collector_id) {
+      try {
+        await resolvePreferredCollectorId(collector_id);
+        await Order.updateCollectorId(order_id, collector_id, req.user?.id);
+      } catch (collectorError) {
+        return res.status(400).json({ message: collectorError.message });
+      }
+    }
 
     // Notify user of the schedule update
     if (schedule) {

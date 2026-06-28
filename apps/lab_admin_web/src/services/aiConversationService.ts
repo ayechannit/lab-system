@@ -35,8 +35,17 @@ export type PlanCollectionRouteParams = {
   startLocation: { lat: number; lng: number }
   startTime: string
   collectionDurationMinutes: number
+  collectorCount?: number
   ai_config_id?: string
   prompt_id?: string
+}
+
+export type CollectionRoutePlanResult = {
+  collectorCount: number
+  routes: Array<{
+    collectorIndex: number
+    result: CollectionRouteResult
+  }>
 }
 
 export type AiReviewParams = {
@@ -66,10 +75,12 @@ export type AiReviewBatchParams = {
 }
 
 function buildRoutePlanMessage(params: PlanCollectionRouteParams): string {
+  const collectorCount = Math.max(1, params.collectorCount ?? 1)
   const payload = {
     start_location: params.startLocation,
     start_time: params.startTime,
     collection_duration_minutes: params.collectionDurationMinutes,
+    collector_count: collectorCount,
     orders: params.stops.map((stop) => ({
       order_id: stop.orderId,
       customer_name: stop.patientName,
@@ -442,7 +453,50 @@ function normalizeCollectionRouteResult(
   }
 }
 
-export async function planCollectionRouteWithAi(params: PlanCollectionRouteParams): Promise<CollectionRouteResult> {
+function normalizeCollectionRoutePlan(
+  raw: unknown,
+  params: PlanCollectionRouteParams,
+): CollectionRoutePlanResult {
+  const collectorCount = Math.max(1, params.collectorCount ?? 1)
+  const allStops = params.stops
+
+  if (!raw || typeof raw !== 'object') {
+    throw new Error('AI route response was empty or invalid.')
+  }
+
+  const body = unwrapRouteBody(raw)
+
+  if (Array.isArray(body.routes) && body.routes.length > 0) {
+    const routes = body.routes.map((entry, idx) => {
+      const routeBody =
+        entry && typeof entry === 'object' ? (entry as Record<string, unknown>) : {}
+      const collectorIndexRaw = Number(routeBody.collector_index ?? routeBody.collectorIndex ?? idx + 1)
+      const collectorIndex = Number.isFinite(collectorIndexRaw) ? collectorIndexRaw : idx + 1
+      const orderIds = orderIdsFromRouteBody(routeBody)
+      const sliceStops =
+        orderIds.length > 0
+          ? allStops.filter((stop) =>
+              orderIds.some((id) => id.toLowerCase() === stop.orderId.toLowerCase()),
+            )
+          : allStops
+      const mergedBody = { ...body, ...routeBody }
+      const result = normalizeCollectionRouteResult(
+        mergedBody,
+        sliceStops.length > 0 ? sliceStops : allStops,
+        params.startTime,
+      )
+      return { collectorIndex, result }
+    })
+    return { collectorCount, routes }
+  }
+
+  const result = normalizeCollectionRouteResult(raw, allStops, params.startTime)
+  return { collectorCount, routes: [{ collectorIndex: 1, result }] }
+}
+
+export async function planCollectionRouteWithAi(
+  params: PlanCollectionRouteParams,
+): Promise<CollectionRoutePlanResult> {
   const message = buildRoutePlanMessage(params)
 
   const res = await apiFetch('/api/conversations', {
@@ -460,11 +514,7 @@ export async function planCollectionRouteWithAi(params: PlanCollectionRouteParam
   const reply = String(data.reply ?? '').trim()
   if (!reply) throw new Error('No text returned from AI.')
 
-  return normalizeCollectionRouteResult(
-    extractJsonObject(reply),
-    params.stops,
-    params.startTime,
-  )
+  return normalizeCollectionRoutePlan(extractJsonObject(reply), params)
 }
 
 export async function reviewLabResultWithAi(params: AiReviewParams): Promise<string> {

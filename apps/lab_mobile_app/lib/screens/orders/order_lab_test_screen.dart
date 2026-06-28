@@ -20,6 +20,7 @@ import '../../widgets/common/app_dropdown_form_field.dart';
 import '../../widgets/common/app_field_decoration.dart';
 import '../../widgets/location/address_location_fields.dart';
 import '../../widgets/navigation/lab_main_bottom_nav.dart';
+import '../../widgets/orders/collector_pick_field.dart';
 
 enum _OrderMode { catalogTests, prescriptionOnly }
 
@@ -51,7 +52,10 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
   bool _collectionCoordsInit = false;
 
   Future<List<LabTestPick>>? _testsFuture;
+  Future<List<LabCollectorPick>>? _collectorsFuture;
   List<LabTestPick> _tests = const [];
+  List<LabCollectorPick> _collectors = const [];
+  String? _selectedCollectorId;
   bool _catalogInit = false;
   bool _prefilledProfileAddress = false;
 
@@ -85,6 +89,10 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
     _catalogInit = true;
     _testsFuture = SessionScope.of(context).fetchActiveLabTests().then((list) {
       if (mounted) setState(() => _tests = list);
+      return list;
+    });
+    _collectorsFuture = SessionScope.of(context).fetchActiveCollectors().then((list) {
+      if (mounted) setState(() => _collectors = list);
       return list;
     });
   }
@@ -647,6 +655,30 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
                       ],
                     ),
                   ),
+                  const SizedBox(height: 16),
+                  _stackedFieldLabel(context, 'Preferred collector (optional)'),
+                  FutureBuilder<List<LabCollectorPick>>(
+                    future: _collectorsFuture,
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting && _collectors.isEmpty) {
+                        return const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 8),
+                          child: LinearProgressIndicator(),
+                        );
+                      }
+                      if (_collectors.isEmpty) {
+                        return Text(
+                          'Collectors will be assigned by the lab.',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        );
+                      }
+                      return CollectorPickField(
+                        collectors: _collectors,
+                        selectedId: _selectedCollectorId,
+                        onChanged: (id) => setState(() => _selectedCollectorId = id),
+                      );
+                    },
+                  ),
                 ],
               ),
             ),
@@ -943,6 +975,7 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
                           catalogLines: builtLines,
                           prescriptionBytes: _mode == _OrderMode.prescriptionOnly ? _prescriptionBytes : null,
                           prescriptionFilename: _mode == _OrderMode.prescriptionOnly ? _prescriptionName : null,
+                          collectorId: _selectedCollectorId,
                         );
                         try {
                           await session.submitLabOrder(order);

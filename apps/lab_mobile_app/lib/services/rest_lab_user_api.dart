@@ -59,6 +59,51 @@ class RestLabUserApi implements LabUserApi {
     _token = (t == null || t.isEmpty) ? null : t;
   }
   Map<String, String>? _collectorProfileImageByName;
+  Map<String, LabCollectorPick>? _collectorById;
+
+  @override
+  Future<List<LabCollectorPick>> listActiveCollectors() async {
+    await _ensureCollectorDirectory();
+    return _collectorById?.values.toList(growable: false) ?? const [];
+  }
+
+  Future<void> _ensureCollectorDirectory() async {
+    if (_collectorById != null) return;
+    _collectorById = {};
+    _collectorProfileImageByName = {};
+    try {
+      final r = await http.get(
+        Uri.parse('$_base/api/staff?role=collector&is_active=true'),
+        headers: _jsonHeaders(),
+      );
+      if (r.statusCode >= 400) return;
+      final data = jsonDecode(r.body);
+      if (data is! List) return;
+      for (final entry in data) {
+        final m = _asObj(entry);
+        final id = '${_gv(m, 'id')}'.trim();
+        final name = '${_gv(m, 'name')}'.trim();
+        final urlRaw = '${_gv(m, 'profile_image_url') ?? ''}'.trim();
+        if (id.isEmpty || name.isEmpty) continue;
+        final imageUrl = urlRaw.isEmpty ? null : _absoluteUrl(urlRaw);
+        final pick = LabCollectorPick(id: id, name: name, profileImageUrl: imageUrl);
+        _collectorById![id.toLowerCase()] = pick;
+        _collectorProfileImageByName![name.toLowerCase()] = imageUrl ?? '';
+      }
+    } catch (_) {}
+  }
+
+  String? _profileUrlFromSchedule(Map<String, dynamic> sched) {
+    for (final key in [
+      'collector_profile_image_url',
+      'collecting_person_profile_image_url',
+      'profile_image_url',
+    ]) {
+      final raw = '${_gv(sched, key) ?? ''}'.trim();
+      if (raw.isNotEmpty) return _absoluteUrl(raw);
+    }
+    return null;
+  }
 
   static String _normalizeBase(String b) {
     var s = b.trim();
@@ -376,6 +421,8 @@ class RestLabUserApi implements LabUserApi {
       'report_delivery_method': request.reportDeliveryMethod,
       'description': _composeDescription(request),
       'status': 'pending',
+      if (request.collectorId != null && request.collectorId!.trim().isNotEmpty)
+        'collector_id': request.collectorId!.trim(),
       'original_price_mmk': original,
       'final_price_mmk': finalSum,
       'discount_percent': blended,
@@ -490,12 +537,14 @@ class RestLabUserApi implements LabUserApi {
   }
 
   Future<LabOrderSummary> _hydrateOrderSummary(String orderId) async {
+    await _ensureCollectorDirectory();
     final r = await http.get(Uri.parse('$_base/api/orders/$orderId'), headers: _jsonHeaders());
     if (r.statusCode >= 400) _throwFromResponse(r);
     final o = _asObj(jsonDecode(r.body));
     final sched = o['schedule'] != null ? _asObj(o['schedule']) : await _fetchSchedule(orderId);
     final summary = _mapOrderToSummary(o, sched);
-    final collectorImageUrl = await _resolveCollectorProfileImageUrl(summary.collectorName, sched);
+    final collectorImageUrl = summary.collectorProfileImageUrl ??
+        await _resolveCollectorProfileImageUrl(summary.collectorName, sched);
     if (collectorImageUrl == null) return summary;
     return LabOrderSummary(
       id: summary.id,
@@ -520,25 +569,7 @@ class RestLabUserApi implements LabUserApi {
   }
 
   Future<void> _ensureCollectorProfileCache() async {
-    if (_collectorProfileImageByName != null) return;
-    _collectorProfileImageByName = {};
-    try {
-      final r = await http.get(
-        Uri.parse('$_base/api/staff?role=collector&is_active=true'),
-        headers: _jsonHeaders(),
-      );
-      if (r.statusCode >= 400) return;
-      final data = jsonDecode(r.body);
-      if (data is! List) return;
-      for (final entry in data) {
-        final m = _asObj(entry);
-        final name = '${_gv(m, 'name')}'.trim().toLowerCase();
-        final url = '${_gv(m, 'profile_image_url') ?? ''}'.trim();
-        if (name.isNotEmpty && url.isNotEmpty) {
-          _collectorProfileImageByName![name] = _absoluteUrl(url);
-        }
-      }
-    } catch (_) {}
+    await _ensureCollectorDirectory();
   }
 
   Future<String?> _resolveCollectorProfileImageUrl(
@@ -590,7 +621,19 @@ class RestLabUserApi implements LabUserApi {
     final rawCollector = sched == null
         ? ''
         : '${_gv(sched, 'collecting_person') ?? _gv(sched, 'collectingPerson') ?? ''}'.trim();
-    final collectorName = rawCollector.isEmpty ? null : rawCollector;
+    var collectorName = rawCollector.isEmpty ? null : rawCollector;
+    var collectorImageUrl = sched == null
+        ? null
+        : _profileUrlFromSchedule(sched);
+
+    final preferredCollectorId = '${_gv(o, 'collector_id') ?? ''}'.trim();
+    if (collectorName == null && preferredCollectorId.isNotEmpty) {
+      final preferred = _collectorById?[preferredCollectorId.toLowerCase()];
+      if (preferred != null) {
+        collectorName = preferred.name;
+        collectorImageUrl = preferred.profileImageUrl;
+      }
+    }
 
     final accepted = sched == null ? true : _asBool(_gv(sched, 'accepted_by_user') ?? _gv(sched, 'acceptedByUser'), false);
 
@@ -610,6 +653,7 @@ class RestLabUserApi implements LabUserApi {
       createdAtLabel: createdLabel,
       collectionAcceptedAt: collectionTime,
       collectorName: collectorName,
+      collectorProfileImageUrl: collectorImageUrl,
       runningAt: runningTime,
       reportOutAt: reportOutTime,
       scheduleAcceptedByUser: accepted,

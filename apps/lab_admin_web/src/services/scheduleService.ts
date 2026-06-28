@@ -13,6 +13,7 @@ export type ApiOrderSchedule = {
 
 export type UpsertScheduleBody = {
   order_id: string
+  collector_id?: string | null
   collecting_person?: string | null
   collection_time?: string | null
   running_time?: string | null

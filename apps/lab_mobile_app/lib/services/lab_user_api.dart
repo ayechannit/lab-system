@@ -79,6 +79,7 @@ abstract class LabUserApi {
     double? longitude,
   });
   Future<List<LabTestPick>> listActiveLabTests();
+  Future<List<LabCollectorPick>> listActiveCollectors();
   Future<LabOrderSummary> createOrder({
     required String userId,
     required LabOrderRequest request,

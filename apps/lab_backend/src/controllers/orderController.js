@@ -6,6 +6,21 @@ const QRCode = require('qrcode');
 const StorageService = require('../utils/storageService');
 const NotificationService = require('../services/notificationService');
 
+async function resolvePreferredCollectorId(collector_id) {
+  if (collector_id == null || collector_id === '') return null;
+  const staff = await Staff.getById(collector_id);
+  if (!staff || staff.is_deleted) {
+    throw new Error('Selected collector was not found.');
+  }
+  if (!staff.is_active) {
+    throw new Error('Selected collector is not active.');
+  }
+  if (staff.role !== 'collector') {
+    throw new Error('Selected staff member must have the collector role.');
+  }
+  return collector_id;
+}
+
 const getAllOrders = async (req, res) => {
   const orders = await Order.getAll(req.query);
   res.json(orders);
@@ -43,6 +58,8 @@ const createOrder = async (req, res) => {
         return res.status(400).json({ message: 'Invalid items format' });
       }
     }
+
+    orderData.collector_id = await resolvePreferredCollectorId(collector_id);
 
     if (req.file) {
       const fileUrl = await StorageService.uploadFile(req.file);
@@ -174,10 +191,12 @@ const syncPendingOrder = async (req, res) => {
       return res.status(400).json({ message: 'items array is required' });
     }
 
+    const resolvedCollectorId = await resolvePreferredCollectorId(collector_id);
+
     const updatedOrder = await Order.syncPendingOrder(
       id,
       {
-        collector_id,
+        collector_id: resolvedCollectorId,
         description,
         priority,
         patient_name,

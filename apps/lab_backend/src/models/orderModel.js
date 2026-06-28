@@ -624,6 +624,22 @@ class Order {
     return result.recordset[0] ?? null;
   }
 
+  static async updateCollectorId(id, collectorId, updatedBy = null) {
+    const pool = await poolPromise;
+    const result = await pool.request()
+      .input('id', sql.UniqueIdentifier, id)
+      .input('collector_id', sql.UniqueIdentifier, collectorId || null)
+      .input('updated_user', sql.UniqueIdentifier, updatedBy)
+      .query(`
+        UPDATE lab_orders SET
+          collector_id = @collector_id,
+          updated_user = @updated_user,
+          updated_at = GETDATE()
+        WHERE id = @id AND is_deleted = 0
+      `);
+    return result.rowsAffected[0] > 0;
+  }
+
   static async updateStatus(id, newStatus, staffId, note, updatedBy = null) {
     const pool = await poolPromise;
     const transaction = new sql.Transaction(pool);

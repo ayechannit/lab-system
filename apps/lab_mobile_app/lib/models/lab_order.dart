@@ -69,6 +69,18 @@ class CatalogOrderLine {
       };
 }
 
+class LabCollectorPick {
+  const LabCollectorPick({
+    required this.id,
+    required this.name,
+    this.profileImageUrl,
+  });
+
+  final String id;
+  final String name;
+  final String? profileImageUrl;
+}
+
 class LabOrderRequest {
   const LabOrderRequest({
     required this.testName,
@@ -88,6 +100,7 @@ class LabOrderRequest {
     this.catalogLines = const [],
     this.prescriptionBytes,
     this.prescriptionFilename,
+    this.collectorId,
   });
 
   /// Local summary for UI only (not a separate API column).
@@ -112,6 +125,9 @@ class LabOrderRequest {
 
   /// Selected catalog tests with per-line pricing (empty when prescription-only).
   final List<CatalogOrderLine> catalogLines;
+
+  /// Optional preferred sample collector (`lab_orders.collector_id`).
+  final String? collectorId;
 
   /// Optional prescription image/PDF (`multipart` field `prescription`).
   final Uint8List? prescriptionBytes;

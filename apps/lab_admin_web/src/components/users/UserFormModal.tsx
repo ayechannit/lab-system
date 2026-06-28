@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import type { EndUserRole, UserListRow } from '../../model/types'
 import { useAddressGeocode } from '../../hooks/useAddressGeocode'
 import { createUser, updateUser, type UserCreateBody, type UserUpdateBody } from '../../services/userService'
-import { formatCoordPair, LocationMapPicker } from './LocationMapPicker'
+import { formatCoordPair, hasUsableCoords, LocationMapPicker } from './LocationMapPicker'
 import '../common/ui.css'
 /** Minimum length for initial password on create (plain value sent as `password_hash` in this admin build). */
 const MIN_INITIAL_PASSWORD_LENGTH = 8
@@ -37,8 +37,8 @@ export function UserFormModal({
   const [phone, setPhone] = useState('')
   const [role, setRole] = useState<EndUserRole>('patient')
   const [address, setAddress] = useState('')
-  const [latitude, setLatitude] = useState<number | ''>(0)
-  const [longitude, setLongitude] = useState<number | ''>(0)
+  const [latitude, setLatitude] = useState<number | ''>('')
+  const [longitude, setLongitude] = useState<number | ''>('')
   const [totalPoints, setTotalPoints] = useState<number | ''>(0)
   const [formError, setFormError] = useState<string | null>(null)
   const [password, setPassword] = useState('')
@@ -56,11 +56,11 @@ export function UserFormModal({
       setPhone(initial.phone)
       setRole(initial.role)
       setAddress(initial.address)
-      setLatitude(initial.latitude)
-      setLongitude(initial.longitude)
+      const hasCoords = hasUsableCoords(initial.latitude, initial.longitude)
+      setLatitude(hasCoords ? initial.latitude : '')
+      setLongitude(hasCoords ? initial.longitude : '')
       setTotalPoints(initial.total_points)
       const addr = initial.address.trim()
-      const hasCoords = !(initial.latitude === 0 && initial.longitude === 0)
       setAddressBaseline(addr && hasCoords ? addr : null)
     } else {
       setAddressBaseline(null)
@@ -69,8 +69,8 @@ export function UserFormModal({
       setPhone('')
       setRole('patient')
       setAddress('')
-      setLatitude(0)
-      setLongitude(0)
+      setLatitude('')
+      setLongitude('')
       setTotalPoints(0)
     }
   }, [open, mode, initial])
@@ -152,8 +152,9 @@ export function UserFormModal({
     const lat = typeof latitude === 'number' ? latitude : Number.parseFloat(String(latitude))
     const lng = typeof longitude === 'number' ? longitude : Number.parseFloat(String(longitude))
     const pts = typeof totalPoints === 'number' ? totalPoints : Number.parseInt(String(totalPoints), 10)
-    const latN = Number.isFinite(lat) ? lat : 0
-    const lngN = Number.isFinite(lng) ? lng : 0
+    const hasCoords = hasUsableCoords(latitude, longitude)
+    const latN = hasCoords && Number.isFinite(lat) ? lat : 0
+    const lngN = hasCoords && Number.isFinite(lng) ? lng : 0
     const ptsN = Number.isFinite(pts) ? Math.max(0, Math.trunc(pts)) : 0
 
     setSubmitting(true)

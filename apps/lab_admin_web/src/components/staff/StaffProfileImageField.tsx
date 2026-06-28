@@ -64,29 +64,38 @@ export function StaffProfileImageField({
       </p>
 
       {displayPreview ? (
-        <div className="logo-url-field__preview-wrap">
-          <img src={displayPreview} alt="" className="logo-url-field__preview staff-profile-image-field__preview" />
+        <div className="staff-profile-image-field__preview-wrap">
+          <img src={displayPreview} alt="" className="staff-profile-image-field__preview" />
         </div>
       ) : null}
 
-      <div className="file-upload-row">
-        <input
-          id={fileInputId}
-          className="file-upload-input"
-          type="file"
-          accept="image/png,image/jpeg,image/gif,image/webp"
-          onChange={onFileChange}
-          disabled={disabled}
-        />
-        <label htmlFor={fileInputId} className="file-upload-btn">
-          Choose image
-        </label>
-        <span className="file-upload-name">{statusLabel}</span>
-        {showClear ? (
-          <button type="button" className="btn btn-ghost btn-sm" onClick={clearImage} disabled={disabled}>
-            Clear
-          </button>
-        ) : null}
+      <div className="staff-profile-image-field__toolbar">
+        <div className="file-upload-row staff-profile-image-field__file-row">
+          <input
+            id={fileInputId}
+            className="file-upload-input"
+            type="file"
+            accept="image/png,image/jpeg,image/gif,image/webp"
+            onChange={onFileChange}
+            disabled={disabled}
+          />
+          <label htmlFor={fileInputId} className="file-upload-btn">
+            Choose image
+          </label>
+          {showClear ? (
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm staff-profile-image-field__clear"
+              onClick={clearImage}
+              disabled={disabled}
+            >
+              Clear
+            </button>
+          ) : null}
+        </div>
+        <p className="staff-profile-image-field__status" aria-live="polite">
+          {statusLabel}
+        </p>
       </div>
 
       {localError ? (

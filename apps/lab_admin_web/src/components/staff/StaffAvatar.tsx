@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { resolveStaffProfileImageUrl } from '../../utils/profileImage'
 
 type StaffAvatarProps = {
@@ -13,13 +14,26 @@ function initialsFromName(name: string): string {
   return one.slice(0, 2).toUpperCase()
 }
 
-export function StaffAvatar({ name, profileImageUrl, className = 'staff-avatar' }: StaffAvatarProps) {
+export function StaffAvatar({
+  name,
+  profileImageUrl,
+  className = '',
+}: StaffAvatarProps) {
+  const [imageFailed, setImageFailed] = useState(false)
   const src = resolveStaffProfileImageUrl(profileImageUrl)
-  if (src) {
-    return <img src={src} alt="" className={`${className} staff-avatar--image`} />
+  const classes = ['staff-avatar', className].filter(Boolean).join(' ')
+  if (src && !imageFailed) {
+    return (
+      <img
+        src={src}
+        alt=""
+        className={`${classes} staff-avatar--image`}
+        onError={() => setImageFailed(true)}
+      />
+    )
   }
   return (
-    <span className={className} aria-hidden="true">
+    <span className={classes} aria-hidden="true">
       {initialsFromName(name)}
     </span>
   )

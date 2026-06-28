@@ -7,7 +7,7 @@ import { useToast } from '../hooks/ToastContext'
 import { messageFromError, useErrorToast } from '../hooks/usePageNotify'
 import { TableActionMenu } from '../components/common/TableActionMenu'
 import { DEFAULT_TABLE_PAGE_SIZE, TablePagination } from '../components/common/TablePagination'
-import { formatCoordPair, LocationMapPicker } from '../components/users/LocationMapPicker'
+import { formatCoordPair, hasUsableCoords, LocationMapPicker } from '../components/users/LocationMapPicker'
 import type { EndUserRole, LabTestCatalogRow, UserListRow } from '../model/types'
 import { getApiBaseUrl, isApiMode } from '../services/apiBase'
 import { fetchAllDiscounts, type TestDiscountListRow } from '../services/discountService'
@@ -636,8 +636,8 @@ export function OrderManagementPage() {
   const [createSelectedTestIds, setCreateSelectedTestIds] = useState<string[]>([])
   const [createTestSearch, setCreateTestSearch] = useState('')
   const [createTestPickerOpen, setCreateTestPickerOpen] = useState(false)
-  const [createLatitude, setCreateLatitude] = useState<number | ''>(0)
-  const [createLongitude, setCreateLongitude] = useState<number | ''>(0)
+  const [createLatitude, setCreateLatitude] = useState<number | ''>('')
+  const [createLongitude, setCreateLongitude] = useState<number | ''>('')
 
   const [editOpen, setEditOpen] = useState(false)
   const [editOrderId, setEditOrderId] = useState<string | null>(null)
@@ -649,8 +649,8 @@ export function OrderManagementPage() {
   const [editPatientPhone, setEditPatientPhone] = useState('')
   const [editAddress, setEditAddress] = useState('')
   const [editDescription, setEditDescription] = useState('')
-  const [editLatitude, setEditLatitude] = useState<number | ''>(0)
-  const [editLongitude, setEditLongitude] = useState<number | ''>(0)
+  const [editLatitude, setEditLatitude] = useState<number | ''>('')
+  const [editLongitude, setEditLongitude] = useState<number | ''>('')
   const [editOrderDetail, setEditOrderDetail] = useState<ApiOrderDetail | null>(null)
   const [editSelectedTestIds, setEditSelectedTestIds] = useState<string[]>([])
   const [editTestSearch, setEditTestSearch] = useState('')
@@ -948,13 +948,13 @@ export function OrderManagementPage() {
     setCreatePatientName('')
     setCreatePatientAge('')
     setCreatePatientPhone(firstUser?.phone ?? '')
-    setCreateAddress(firstUser?.address ?? '')
+    setCreateAddress('')
     setCreateDescription('')
     setCreateSelectedTestIds([])
     setCreateTestSearch('')
     setCreateTestPickerOpen(false)
-    setCreateLatitude(firstUser ? firstUser.latitude : 0)
-    setCreateLongitude(firstUser ? firstUser.longitude : 0)
+    setCreateLatitude('')
+    setCreateLongitude('')
     if (!firstUser && !firstTest) {
       setCreateError('No users and no lab tests found. Create users/tests first.')
     } else if (!firstUser) {
@@ -972,9 +972,6 @@ export function OrderManagementPage() {
     const u = userMap.get(userId)
     if (!u) return
     setCreatePatientPhone(u.phone)
-    setCreateAddress(u.address)
-    setCreateLatitude(u.latitude)
-    setCreateLongitude(u.longitude)
   }
 
   function toggleCreateTest(testId: string) {
@@ -1002,6 +999,9 @@ export function OrderManagementPage() {
     if (!createPatientName.trim()) return setCreateError('Enter patient name.')
     if (!createPatientPhone.trim()) return setCreateError('Enter patient phone.')
     if (!createAddress.trim()) return setCreateError('Enter address.')
+    if (!hasUsableCoords(createLatitude, createLongitude)) {
+      return setCreateError('Set a pickup location on the map or enter an address that can be located.')
+    }
     const age = typeof createPatientAge === 'number' ? createPatientAge : Number.parseInt(String(createPatientAge), 10)
     if (!Number.isFinite(age) || age < 0) return setCreateError('Enter valid patient age.')
     const { lines, originalSum, finalSum, blendedDisc } = createSelection
@@ -1062,8 +1062,10 @@ export function OrderManagementPage() {
       setEditDescription(order.description?.trim() ?? '')
       const lat = order.latitude != null ? Number(order.latitude) : null
       const lng = order.longitude != null ? Number(order.longitude) : null
-      setEditLatitude(lat != null && Number.isFinite(lat) ? lat : 0)
-      setEditLongitude(lng != null && Number.isFinite(lng) ? lng : 0)
+      const hasCoords =
+        lat != null && lng != null && Number.isFinite(lat) && Number.isFinite(lng) && !(lat === 0 && lng === 0)
+      setEditLatitude(hasCoords ? lat : '')
+      setEditLongitude(hasCoords ? lng : '')
       setEditOpen(true)
     } catch (e) {
       showError(messageFromError(e, 'Failed to load order'))
@@ -1079,6 +1081,9 @@ export function OrderManagementPage() {
     if (!editPatientName.trim()) return setEditError('Enter patient name.')
     if (!editPatientPhone.trim()) return setEditError('Enter patient phone.')
     if (!editAddress.trim()) return setEditError('Enter address.')
+    if (!hasUsableCoords(editLatitude, editLongitude)) {
+      return setEditError('Set a pickup location on the map or enter an address that can be located.')
+    }
     const age =
       typeof editPatientAge === 'number' ? editPatientAge : Number.parseInt(String(editPatientAge), 10)
     if (!Number.isFinite(age) || age < 0) return setEditError('Enter valid patient age.')

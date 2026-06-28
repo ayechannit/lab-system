@@ -7,8 +7,10 @@ import markerShadow from 'leaflet/dist/images/marker-shadow.png'
 import 'leaflet/dist/leaflet.css'
 import { nominatimReverse } from '../../services/nominatimGeocode'
 
-/** Yangon — sensible default when coords are unset or 0,0 */
-const DEFAULT_CENTER: [number, number] = [16.8661, 96.1951]
+/** Leaflet requires an initial view; world overview only — not a pickup default. */
+const MAP_INIT_CENTER: [number, number] = [20, 0]
+const MAP_INIT_ZOOM = 2
+const MAP_SELECTED_ZOOM = 15
 
 delete (L.Icon.Default.prototype as unknown as { _getIconUrl?: unknown })._getIconUrl
 L.Icon.Default.mergeOptions({
@@ -23,7 +25,7 @@ function parseCoord(v: number | ''): number | null {
   return Number.isFinite(n) ? n : null
 }
 
-function hasUsableCoords(lat: number | '', lng: number | ''): boolean {
+export function hasUsableCoords(lat: number | '', lng: number | ''): boolean {
   const la = parseCoord(lat)
   const ln = parseCoord(lng)
   if (la === null || ln === null) return false
@@ -167,10 +169,10 @@ export function LocationMapPicker({
   }, [handlePick])
 
   const usable = hasUsableCoords(latitude, longitude)
-  const la = parseCoord(latitude) ?? DEFAULT_CENTER[0]
-  const ln = parseCoord(longitude) ?? DEFAULT_CENTER[1]
-  const center: [number, number] = usable ? [la, ln] : DEFAULT_CENTER
-  const zoom = usable ? 15 : 12
+  const center: [number, number] = usable
+    ? [parseCoord(latitude)!, parseCoord(longitude)!]
+    : MAP_INIT_CENTER
+  const zoom = usable ? MAP_SELECTED_ZOOM : MAP_INIT_ZOOM
 
   return (
     <div
@@ -197,6 +199,11 @@ export function LocationMapPicker({
         </MapContainer>
       </div>
       <div className="location-map-picker__toolbar">
+        {!usable ? (
+          <span style={{ fontSize: '0.8rem', color: 'var(--muted)', flexBasis: '100%' }} aria-live="polite">
+            No location selected. Click the map or use my location.
+          </span>
+        ) : null}
         <button
           type="button"
           className="btn btn-secondary"

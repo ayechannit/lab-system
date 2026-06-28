@@ -238,6 +238,8 @@ class SessionController extends ChangeNotifier {
 
   Future<List<LabTestPick>> fetchActiveLabTests() => _api.listActiveLabTests();
 
+  Future<List<LabCollectorPick>> fetchActiveCollectors() => _api.listActiveCollectors();
+
   Future<void> acceptProposedSchedule() async {
     final u = _user;
     final o = _trackingOrder;

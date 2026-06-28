@@ -30,6 +30,7 @@ export type ApiOrderDetailItem = {
 export type ApiOrderListRow = {
   id: string
   user_id?: string
+  collector_id?: string | null
   patient_name: string
   patient_phone?: string
   address?: string
@@ -106,6 +107,7 @@ function normalizeOrderDetail(raw: Record<string, unknown>): ApiOrderDetail {
 export type ApiOrderDetail = {
   id: string
   user_id?: string
+  collector_id?: string | null
   /** From users join on GET /orders/:id (may be null if no user row) */
   ordering_user_name?: string | null
   ordering_user_role?: string | null
