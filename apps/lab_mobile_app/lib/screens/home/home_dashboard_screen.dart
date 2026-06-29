@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/session_scope.dart';
+import '../../l10n/app_localizations.dart';
 import '../../models/lab_order.dart';
 import '../../models/user_report.dart';
 import '../../theme/theme_extensions.dart';
@@ -50,6 +51,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
         final tracking = session.trackingOrder;
         final report = session.userReport;
         final loading = session.homeSummaryLoading && report == null;
+        final l10n = AppLocalizations.of(context)!;
 
         return Scaffold(
           appBar: AppBar(
@@ -89,9 +91,9 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
                         (session.homeSummaryLoading && session.advertisements.isEmpty))
                       const SizedBox(height: 18),
                     _SectionTitle(
-                      label: 'YOUR OVERVIEW',
-                      title: 'Account summary',
-                      subtitle: 'Live metrics from your lab account',
+                      label: l10n.homeOverviewLabel,
+                      title: l10n.homeAccountSummary,
+                      subtitle: l10n.homeLiveMetrics,
                     ),
                     const SizedBox(height: 12),
                     if (loading)
@@ -215,6 +217,7 @@ class _KpiGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = context.cs;
+    final l10n = AppLocalizations.of(context)!;
     final iconTile = context.appExtras.iconTileBackground;
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -225,34 +228,34 @@ class _KpiGrid extends StatelessWidget {
             icon: Icons.receipt_long_outlined,
             iconColor: cs.primary,
             iconBg: iconTile,
-            label: 'Total orders',
+            label: l10n.homeTotalOrders,
             value: '${kpis.totalOrders}',
-            hint: '${kpis.completedOrders} completed',
+            hint: l10n.homeCompletedOrdersCount(kpis.completedOrders),
           ),
           _KpiTile(
             icon: Icons.payments_outlined,
             iconColor: cs.secondary,
             iconBg: cs.secondary.withValues(alpha: 0.12),
-            label: 'Total spent',
-            value: '$spentLabel MMK',
-            hint: 'Delivered orders',
+            label: l10n.homeTotalSpent,
+            value: '$spentLabel ${l10n.homeMmkSuffix}',
+            hint: l10n.homeDeliveredOrders,
           ),
           _KpiTile(
             icon: Icons.military_tech_outlined,
             iconColor: const Color(0xFFB45309),
             iconBg: const Color(0xFFFFF4E5),
-            label: 'Loyalty points',
+            label: l10n.homeLoyaltyPoints,
             value: '${kpis.loyaltyPoints}',
-            hint: 'Tap for history',
+            hint: l10n.homeTapForHistory,
             onTap: onPointsTap,
           ),
           _KpiTile(
             icon: Icons.hourglass_top_outlined,
             iconColor: const Color(0xFF7C3AED),
             iconBg: const Color(0xFFF3E8FF),
-            label: 'In progress',
+            label: l10n.homeInProgress,
             value: '${kpis.pendingOrders}',
-            hint: 'Open orders',
+            hint: l10n.homeOpenOrders,
           ),
         ];
 
@@ -427,6 +430,7 @@ class _ActiveOrderBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = context.cs;
+    final l10n = AppLocalizations.of(context)!;
     return Material(
       color: context.appExtras.iconTileBackground,
       borderRadius: BorderRadius.circular(14),
@@ -444,7 +448,7 @@ class _ActiveOrderBanner extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Active order',
+                      l10n.homeActiveOrder,
                       style: Theme.of(context).textTheme.labelLarge?.copyWith(
                             fontWeight: FontWeight.w700,
                             color: cs.primary,
@@ -452,7 +456,7 @@ class _ActiveOrderBanner extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '${order.testType} · ${_statusLabel(order)}',
+                      '${order.testType} · ${_statusLabel(order, l10n)}',
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -470,10 +474,10 @@ class _ActiveOrderBanner extends StatelessWidget {
     );
   }
 
-  static String _statusLabel(LabOrderSummary o) {
-    if (o.isReportReady) return 'Report out';
+  static String _statusLabel(LabOrderSummary o, AppLocalizations l10n) {
+    if (o.isReportReady) return l10n.homeReportOut;
     final s = o.backendStatus?.trim();
-    if (s == null || s.isEmpty) return 'In progress';
+    if (s == null || s.isEmpty) return l10n.homeInProgress;
     return s.replaceAll('_', ' ');
   }
 }
@@ -486,6 +490,7 @@ class _SpendTrendCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = context.cs;
+    final l10n = AppLocalizations.of(context)!;
     final visible = points.length > 7 ? points.sublist(points.length - 7) : points;
     final maxSpent = visible.isEmpty
         ? 0.0
@@ -503,14 +508,14 @@ class _SpendTrendCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Daily spend',
+            l10n.homeDailySpend,
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w700,
                 ),
           ),
           const SizedBox(height: 4),
           Text(
-            'Order activity by day',
+            l10n.homeOrderActivityByDay,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: cs.onSurfaceVariant,
                 ),
@@ -518,7 +523,7 @@ class _SpendTrendCard extends StatelessWidget {
           const SizedBox(height: 18),
           if (visible.isEmpty)
             Text(
-              'No orders yet. Your spend trend will appear here after your first order.',
+              l10n.homeNoOrdersYet,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: cs.onSurfaceVariant,
                     height: 1.4,
@@ -538,7 +543,7 @@ class _SpendTrendCard extends StatelessWidget {
                           mainAxisAlignment: MainAxisAlignment.end,
                           children: [
                             Tooltip(
-                              message: '${_formatMmk(p.spent)} MMK · ${p.orderCount} order(s)',
+                              message: l10n.homeSpendTooltip(_formatMmk(p.spent), p.orderCount),
                               child: Container(
                                 height: maxSpent > 0 ? (p.spent / maxSpent) * 72 + 6 : 6,
                                 decoration: BoxDecoration(
@@ -581,6 +586,7 @@ class _TopTestsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = context.cs;
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
@@ -593,14 +599,14 @@ class _TopTestsCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Top ordered tests',
+            l10n.homeTopOrderedTests,
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w700,
                 ),
           ),
           const SizedBox(height: 4),
           Text(
-            'Your most requested lab tests',
+            l10n.homeMostRequestedTests,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: cs.onSurfaceVariant,
                 ),
@@ -610,7 +616,7 @@ class _TopTestsCard extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(bottom: 8),
               child: Text(
-                'Once you place orders, your favourite tests will show up here.',
+                l10n.homeNoTopTestsYet,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: cs.onSurfaceVariant,
                       height: 1.4,
@@ -643,14 +649,16 @@ class _TopTestsCard extends StatelessWidget {
                   [
                     if (t.category.isNotEmpty) t.category,
                     if (t.testCode.isNotEmpty) t.testCode,
-                    '${t.orderCount} order${t.orderCount == 1 ? '' : 's'}',
+                    t.orderCount == 1
+                        ? l10n.homeOrderCountSingular
+                        : l10n.homeOrdersCount(t.orderCount),
                   ].join(' · '),
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: cs.onSurfaceVariant,
                       ),
                 ),
                 trailing: Text(
-                  '${t.totalSpent.round()} MMK',
+                  '${t.totalSpent.round()} ${l10n.homeMmkSuffix}',
                   style: Theme.of(context).textTheme.labelLarge?.copyWith(
                         fontWeight: FontWeight.w600,
                       ),
@@ -671,6 +679,7 @@ class _WelcomeHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = context.cs;
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(18, 18, 18, 20),
@@ -685,7 +694,7 @@ class _WelcomeHeader extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Welcome back',
+            l10n.welcomeBack,
             style: Theme.of(context).textTheme.labelLarge?.copyWith(
                   color: cs.onSurfaceVariant,
                   letterSpacing: 0.2,
@@ -701,7 +710,7 @@ class _WelcomeHeader extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           Text(
-            'Summary cards and charts are loaded from the lab server. Pull down anytime to refresh.',
+            l10n.homeRefreshHint,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: cs.onSurfaceVariant,
                   height: 1.45,

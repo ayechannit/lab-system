@@ -22,6 +22,7 @@ export type SystemSettingsRow = {
   address: string | null
   contact_phone: string | null
   contact_email: string | null
+  ui_locale?: 'en' | 'my'
   updated_at?: string
 }
 
@@ -37,6 +38,7 @@ export type SystemSettingsUpdateBody = {
   address: string | null
   contact_phone: string | null
   contact_email: string | null
+  ui_locale?: 'en' | 'my'
 }
 
 /** Canonical defaults for theme_settings (kept in sync with lab_backend systemSettingModel). */
@@ -61,6 +63,7 @@ export const DEFAULT_SYSTEM_SETTINGS: SystemSettingsUpdateBody = {
   address: null,
   contact_phone: null,
   contact_email: null,
+  ui_locale: 'en',
 }
 
 export function defaultSystemSettingsRow(): SystemSettingsRow {
@@ -98,6 +101,10 @@ export function normalizeHexColor(v: string | null | undefined, fallback: string
   return fallback
 }
 
+function normalizeUiLocale(v: unknown): 'en' | 'my' {
+  return String(v) === 'my' ? 'my' : 'en'
+}
+
 export function normalizeSystemSettings(raw: Record<string, unknown> | null | undefined): SystemSettingsRow {
   if (!raw) {
     return defaultSystemSettingsRow()
@@ -115,6 +122,7 @@ export function normalizeSystemSettings(raw: Record<string, unknown> | null | un
     address: asNullableStr(raw.address),
     contact_phone: asNullableStr(raw.contact_phone),
     contact_email: asNullableStr(raw.contact_email),
+    ui_locale: normalizeUiLocale(raw.ui_locale),
     updated_at: raw.updated_at != null ? String(raw.updated_at) : undefined,
   }
 }
@@ -147,6 +155,7 @@ function rowToUpdateBody(row: SystemSettingsRow): SystemSettingsUpdateBody {
     address: row.address,
     contact_phone: row.contact_phone,
     contact_email: row.contact_email,
+    ui_locale: row.ui_locale ?? 'en',
   }
 }
 
@@ -183,4 +192,13 @@ export async function uploadSystemSettingsLogo(file: File): Promise<SystemSettin
   const res = await apiFetch('/api/system-settings/logo', { method: 'POST', body: fd })
   if (!res.ok) throw new Error(await readApiErrorBody(res))
   return normalizeSystemSettings((await res.json()) as Record<string, unknown>)
+}
+
+/** Persist shared UI locale so the mobile app follows admin web language. */
+export async function syncUiLocaleToServer(locale: 'en' | 'my'): Promise<void> {
+  const res = await apiFetch('/api/system-settings/ui-locale', {
+    method: 'PATCH',
+    body: JSON.stringify({ ui_locale: locale }),
+  })
+  if (!res.ok) throw new Error(await readApiErrorBody(res))
 }

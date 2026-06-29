@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { THEME_OPTIONS, type AppThemeId, THEME_PRESETS } from '../../theme/appThemes'
 
 type ThemePickerProps = {
@@ -6,10 +7,17 @@ type ThemePickerProps = {
   disabled?: boolean
 }
 
+const THEME_DESC_KEYS: Record<AppThemeId, string> = {
+  light: 'theme.lightDesc',
+  dark: 'theme.darkDesc',
+  idhc: 'theme.idhcDesc',
+}
+
 export function ThemePicker({ value, onChange, disabled }: ThemePickerProps) {
+  const { t } = useTranslation()
   return (
     <fieldset className="theme-picker" disabled={disabled}>
-      <legend className="theme-picker__legend">Appearance</legend>
+      <legend className="theme-picker__legend">{t('theme.appearanceLegend')}</legend>
       <div className="theme-picker__grid">
         {THEME_OPTIONS.map((opt) => {
           const preset = THEME_PRESETS[opt.id]
@@ -50,8 +58,8 @@ export function ThemePicker({ value, onChange, disabled }: ThemePickerProps) {
                 </span>
               </span>
               <span className="theme-picker__copy">
-                <span className="theme-picker__label">{opt.label}</span>
-                <span className="theme-picker__desc">{opt.description}</span>
+                <span className="theme-picker__label">{t(`theme.${opt.id}`)}</span>
+                <span className="theme-picker__desc">{t(THEME_DESC_KEYS[opt.id])}</span>
               </span>
             </label>
           )

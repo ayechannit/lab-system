@@ -14,6 +14,7 @@ class LabSystemSettings {
     this.contactEmail,
     this.latitude,
     this.longitude,
+    this.uiLocale,
   });
 
   final String? id;
@@ -27,6 +28,7 @@ class LabSystemSettings {
   final String? contactEmail;
   final double? latitude;
   final double? longitude;
+  final String? uiLocale;
 
   bool get isDarkTheme => themePreset == AppThemePresetId.dark;
 
@@ -47,7 +49,15 @@ class LabSystemSettings {
       contactEmail: _nullableString(json['contact_email']),
       latitude: _toDouble(json['latitude']),
       longitude: _toDouble(json['longitude']),
+      uiLocale: _normalizeUiLocale(json['ui_locale']),
     );
+  }
+
+  static String? _normalizeUiLocale(dynamic v) {
+    final code = v?.toString().trim().toLowerCase();
+    if (code == 'my') return 'my';
+    if (code == 'en') return 'en';
+    return null;
   }
 
   factory LabSystemSettings.defaults() => const LabSystemSettings(
@@ -67,6 +77,7 @@ class LabSystemSettings {
     String? contactEmail,
     double? latitude,
     double? longitude,
+    String? uiLocale,
   }) {
     return LabSystemSettings(
       id: id ?? this.id,
@@ -80,6 +91,7 @@ class LabSystemSettings {
       contactEmail: contactEmail ?? this.contactEmail,
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
+      uiLocale: uiLocale ?? this.uiLocale,
     );
   }
 

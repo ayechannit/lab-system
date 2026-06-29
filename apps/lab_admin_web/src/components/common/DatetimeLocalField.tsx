@@ -1,11 +1,12 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { useTranslation } from 'react-i18next'
+import { getIntlLocale } from '../../i18n'
 import {
   formatDatetimeLocalParts,
   parseDatetimeLocalParts,
 } from '../../utils/datetimeLocal'
-
-const WEEKDAYS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'] as const
+import { formatDatetimeDisplay, weekdayShortLabels } from '../../utils/dateIntl'
 
 function monthGrid(viewYear: number, viewMonth: number): Date[] {
   const first = new Date(viewYear, viewMonth, 1)
@@ -47,9 +48,11 @@ export function DatetimeLocalField({
   onChange,
   disabled = false,
   allowClear = true,
-  placeholder = 'Select date & time',
+  placeholder,
   schedule = false,
 }: DatetimeLocalFieldProps) {
+  const { t, i18n } = useTranslation()
+  const intlLocale = getIntlLocale()
   const [open, setOpen] = useState(false)
   const [viewY, setViewY] = useState(() => new Date().getFullYear())
   const [viewM, setViewM] = useState(() => new Date().getMonth())
@@ -57,19 +60,14 @@ export function DatetimeLocalField({
   const popRef = useRef<HTMLDivElement>(null)
 
   const parts = parseDatetimeLocalParts(value)
+  const resolvedPlaceholder = placeholder ?? t('datetime.defaultPlaceholder')
 
-  const displayLabel = (() => {
+  const displayLabel = useMemo(() => {
     if (!parts) return ''
-    const d = new Date(parts.y, parts.m - 1, parts.d, parts.h, parts.min)
-    try {
-      return new Intl.DateTimeFormat(undefined, {
-        dateStyle: 'medium',
-        timeStyle: 'short',
-      }).format(d)
-    } catch {
-      return value
-    }
-  })()
+    return formatDatetimeDisplay(parts.y, parts.m, parts.d, parts.h, parts.min, intlLocale)
+  }, [parts, intlLocale, i18n.language])
+
+  const weekdays = useMemo(() => weekdayShortLabels(intlLocale), [intlLocale, i18n.language])
 
   const openPopover = useCallback(() => {
     if (disabled) return
@@ -199,8 +197,8 @@ export function DatetimeLocalField({
   useEffect(() => {
     if (!open) return
     const onOutsidePointer = (e: Event) => {
-      const t = e.target as Node
-      if (popRef.current?.contains(t) || triggerRef.current?.contains(t)) return
+      const target = e.target as Node
+      if (popRef.current?.contains(target) || triggerRef.current?.contains(target)) return
       closePopover()
     }
     document.addEventListener('mousedown', onOutsidePointer)
@@ -211,8 +209,12 @@ export function DatetimeLocalField({
     }
   }, [open, closePopover])
 
-  const monthTitle = new Intl.DateTimeFormat(undefined, { month: 'long', year: 'numeric' }).format(
-    new Date(viewY, viewM, 1),
+  const monthTitle = useMemo(
+    () =>
+      new Intl.DateTimeFormat(intlLocale, { month: 'long', year: 'numeric' }).format(
+        new Date(viewY, viewM, 1),
+      ),
+    [intlLocale, viewY, viewM, i18n.language],
   )
 
   const cells = monthGrid(viewY, viewM)
@@ -234,13 +236,13 @@ export function DatetimeLocalField({
           className="datetime-popover"
           role="dialog"
           aria-modal="true"
-          aria-label="Choose date and time"
+          aria-label={t('datetime.dialogLabel')}
         >
           <div className="datetime-popover__head">
             <button
               type="button"
               className="datetime-popover__nav"
-              aria-label="Previous month"
+              aria-label={t('datetime.prevMonth')}
               onClick={() => {
                 const d = new Date(viewY, viewM - 1, 1)
                 setViewY(d.getFullYear())
@@ -253,7 +255,7 @@ export function DatetimeLocalField({
             <button
               type="button"
               className="datetime-popover__nav"
-              aria-label="Next month"
+              aria-label={t('datetime.nextMonth')}
               onClick={() => {
                 const d = new Date(viewY, viewM + 1, 1)
                 setViewY(d.getFullYear())
@@ -264,8 +266,8 @@ export function DatetimeLocalField({
             </button>
           </div>
           <div className="datetime-popover__weekdays" aria-hidden="true">
-            {WEEKDAYS.map((d) => (
-              <span key={d} className="datetime-popover__weekday">
+            {weekdays.map((d, i) => (
+              <span key={i} className="datetime-popover__weekday">
                 {d}
               </span>
             ))}
@@ -295,11 +297,11 @@ export function DatetimeLocalField({
             })}
           </div>
           <div className="datetime-popover__time">
-            <span className="datetime-popover__time-label">Time</span>
+            <span className="datetime-popover__time-label">{t('datetime.time')}</span>
             <div className="datetime-popover__time-controls">
               <select
                 className="datetime-popover__select"
-                aria-label="Hour"
+                aria-label={t('datetime.hour')}
                 value={hourVal}
                 onChange={(e) => onHourChange(Number.parseInt(e.target.value, 10))}
               >
@@ -312,7 +314,7 @@ export function DatetimeLocalField({
               <span className="datetime-popover__time-sep">:</span>
               <select
                 className="datetime-popover__select"
-                aria-label="Minute"
+                aria-label={t('datetime.minute')}
                 value={minuteVal}
                 onChange={(e) => onMinuteChange(Number.parseInt(e.target.value, 10))}
               >
@@ -328,20 +330,20 @@ export function DatetimeLocalField({
             <div className="datetime-popover__footer-start">
               {allowClear ? (
                 <button type="button" className="btn btn-secondary datetime-popover__btn" onClick={onClear}>
-                  Clear
+                  {t('datetime.clear')}
                 </button>
               ) : null}
             </div>
             <div className="datetime-popover__footer-mid">
               <button type="button" className="btn btn-secondary datetime-popover__btn" onClick={onToday}>
-                Today
+                {t('datetime.today')}
               </button>
               <button type="button" className="btn btn-secondary datetime-popover__btn" onClick={onNow}>
-                Now
+                {t('datetime.now')}
               </button>
             </div>
             <button type="button" className="btn btn-primary datetime-popover__btn" onClick={closePopover}>
-              Done
+              {t('datetime.done')}
             </button>
           </div>
         </div>,
@@ -361,7 +363,7 @@ export function DatetimeLocalField({
         aria-haspopup="dialog"
         onClick={() => (open ? closePopover() : openPopover())}
       >
-        <span className="datetime-local-field__value">{parts ? displayLabel : placeholder}</span>
+        <span className="datetime-local-field__value">{parts ? displayLabel : resolvedPlaceholder}</span>
       </button>
       {popover}
     </div>

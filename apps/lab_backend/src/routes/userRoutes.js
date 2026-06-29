@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { authMiddleware } = require('../middlewares/authMiddleware');
+const { uploadProfile } = require('../middlewares/upload');
 const userController = require('../controllers/userController');
 
 
@@ -373,6 +374,7 @@ router.post('/', userController.createUser);
  *         description: Account not found
  */
 router.put('/fcm-token', authMiddleware, userController.registerFcmToken);
+router.post('/:id/profile-image', authMiddleware, uploadProfile.single('image'), userController.uploadProfileImage);
 router.put('/:id', userController.updateUser);
 router.put('/:id/approve', authMiddleware, userController.approveUser);
 router.delete('/:id', userController.deleteUser);

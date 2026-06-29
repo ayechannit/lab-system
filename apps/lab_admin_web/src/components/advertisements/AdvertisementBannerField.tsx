@@ -1,4 +1,5 @@
 import { useId, useState, type ChangeEvent } from 'react'
+import { useTranslation } from 'react-i18next'
 import { isDisplayableAdImageUrl, resolveAdvertisementImageUrl } from '../../services/advertisementService'
 
 type AdvertisementBannerFieldProps = {
@@ -24,6 +25,7 @@ export function AdvertisementBannerField({
   onClear,
   disabled = false,
 }: AdvertisementBannerFieldProps) {
+  const { t } = useTranslation()
   const fileInputId = useId()
   const [localError, setLocalError] = useState<string | null>(null)
 
@@ -36,7 +38,7 @@ export function AdvertisementBannerField({
     e.target.value = ''
     if (!file) return
     if (!file.type.startsWith('image/')) {
-      setLocalError('Choose a PNG, JPG, GIF, or WebP image.')
+      setLocalError(t('advertisements.banner.errorImageType'))
       return
     }
     setLocalError(null)
@@ -49,22 +51,22 @@ export function AdvertisementBannerField({
   }
 
   const statusLabel = pickedFileName
-    ? `${pickedFileName} (uploads when you save)`
+    ? t('advertisements.banner.uploadOnSave', { name: pickedFileName })
     : value.trim()
       ? value.trim().startsWith('/uploads/')
-        ? 'Banner saved on server'
-        : 'URL set'
-      : 'No banner selected'
+        ? t('advertisements.banner.savedOnServer')
+        : t('advertisements.banner.urlSet')
+      : t('advertisements.banner.noBanner')
 
   const showClear = Boolean(pickedFileName || value.trim() || displayPreview)
 
   return (
     <div className="field logo-url-field">
       <label className="logo-url-field__heading" id={`${id}-label`} htmlFor={fileInputId}>
-        Banner image
+        {t('advertisements.banner.label')}
       </label>
       <p className="staff-profile-image-field__hint" style={{ marginTop: 0 }}>
-        Upload a banner for the mobile app, or paste an image URL. Recommended: wide landscape image (e.g. 1200×400).
+        {t('advertisements.banner.hint')}
       </p>
 
       {displayPreview ? (
@@ -83,18 +85,18 @@ export function AdvertisementBannerField({
           disabled={disabled}
         />
         <label htmlFor={fileInputId} className="file-upload-btn">
-          Choose image
+          {t('advertisements.banner.chooseImage')}
         </label>
         <span className="file-upload-name">{statusLabel}</span>
         {showClear ? (
           <button type="button" className="btn btn-ghost btn-sm" onClick={clearBanner} disabled={disabled}>
-            Clear
+            {t('discounts.form.clear')}
           </button>
         ) : null}
       </div>
 
       <label className="logo-url-field__url-label" htmlFor={id}>
-        Or paste URL
+        {t('advertisements.banner.pasteUrl')}
       </label>
       <input
         id={id}
@@ -104,7 +106,7 @@ export function AdvertisementBannerField({
           setLocalError(null)
           onChange(e.target.value)
         }}
-        placeholder="https://… or /uploads/…"
+        placeholder={t('advertisements.banner.urlPlaceholder')}
         disabled={disabled}
         autoComplete="off"
       />

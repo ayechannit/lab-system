@@ -5,7 +5,7 @@ class User {
   static async getAll(filters = {}) {
     const pool = await poolPromise;
     const request = pool.request();
-    let query = 'SELECT id, name, email, phone, role, address, latitude, longitude, total_points, license_number, is_approved, created_user, updated_user, created_at, updated_at FROM users WHERE is_deleted = 0';
+    let query = 'SELECT id, name, email, phone, role, address, latitude, longitude, total_points, license_number, is_approved, profile_image_url, created_user, updated_user, created_at, updated_at FROM users WHERE is_deleted = 0';
 
     if (filters.role) {
       query += ' AND role = @role';
@@ -46,7 +46,7 @@ class User {
     const pool = await poolPromise;
     const result = await pool.request()
       .input('id', sql.UniqueIdentifier, id)
-      .query('SELECT id, name, email, phone, role, address, latitude, longitude, total_points, license_number, is_approved, created_user, updated_user, created_at, updated_at FROM users WHERE id = @id AND is_deleted = 0');
+      .query('SELECT id, name, email, phone, role, address, latitude, longitude, total_points, license_number, is_approved, profile_image_url, created_user, updated_user, created_at, updated_at FROM users WHERE id = @id AND is_deleted = 0');
     return result.recordset[0];
   }
 
@@ -77,7 +77,7 @@ class User {
       .input('created_user', sql.UniqueIdentifier, createdBy)
       .query(`
         INSERT INTO users (id, name, email, phone, password_hash, role, address, latitude, longitude, total_points, license_number, is_approved, created_user, updated_user, is_deleted)
-        OUTPUT INSERTED.id, INSERTED.name, INSERTED.email, INSERTED.phone, INSERTED.role, INSERTED.address, INSERTED.latitude, INSERTED.longitude, INSERTED.total_points, INSERTED.license_number, INSERTED.is_approved, INSERTED.created_user, INSERTED.updated_user, INSERTED.created_at, INSERTED.updated_at
+        OUTPUT INSERTED.id, INSERTED.name, INSERTED.email, INSERTED.phone, INSERTED.role, INSERTED.address, INSERTED.latitude, INSERTED.longitude, INSERTED.total_points, INSERTED.license_number, INSERTED.is_approved, INSERTED.profile_image_url, INSERTED.created_user, INSERTED.updated_user, INSERTED.created_at, INSERTED.updated_at
         VALUES (NEWID(), @name, @email, @phone, @password_hash, @role, @address, @latitude, @longitude, 0, @license_number, @is_approved, @created_user, @created_user, 0)
       `);
     return result.recordset[0];
@@ -111,9 +111,24 @@ class User {
           license_number = ISNULL(@license_number, license_number),
           updated_user = @updated_user, updated_at = GETDATE()
           ${passwordFragment}
-      OUTPUT INSERTED.id, INSERTED.name, INSERTED.email, INSERTED.phone, INSERTED.role, INSERTED.address, INSERTED.latitude, INSERTED.longitude, INSERTED.total_points, INSERTED.license_number, INSERTED.is_approved, INSERTED.created_user, INSERTED.updated_user, INSERTED.created_at, INSERTED.updated_at
+      OUTPUT INSERTED.id, INSERTED.name, INSERTED.email, INSERTED.phone, INSERTED.role, INSERTED.address, INSERTED.latitude, INSERTED.longitude, INSERTED.total_points, INSERTED.license_number, INSERTED.is_approved, INSERTED.profile_image_url, INSERTED.created_user, INSERTED.updated_user, INSERTED.created_at, INSERTED.updated_at
       WHERE id = @id AND is_deleted = 0
     `);
+    return result.recordset[0];
+  }
+
+  static async updateProfileImage(id, profileImageUrl, updatedBy = null) {
+    const pool = await poolPromise;
+    const result = await pool.request()
+      .input('id', sql.UniqueIdentifier, id)
+      .input('profile_image_url', sql.NVarChar(500), profileImageUrl)
+      .input('updated_user', sql.UniqueIdentifier, updatedBy)
+      .query(`
+        UPDATE users
+        SET profile_image_url = @profile_image_url, updated_user = @updated_user, updated_at = GETDATE()
+        OUTPUT INSERTED.id, INSERTED.name, INSERTED.email, INSERTED.phone, INSERTED.role, INSERTED.address, INSERTED.latitude, INSERTED.longitude, INSERTED.total_points, INSERTED.license_number, INSERTED.is_approved, INSERTED.profile_image_url, INSERTED.created_user, INSERTED.updated_user, INSERTED.created_at, INSERTED.updated_at
+        WHERE id = @id AND is_deleted = 0
+      `);
     return result.recordset[0];
   }
 
@@ -126,7 +141,7 @@ class User {
       .query(`
         UPDATE users 
         SET total_points = total_points + @points, updated_user = @updated_user, updated_at = GETDATE()
-        OUTPUT INSERTED.id, INSERTED.name, INSERTED.email, INSERTED.phone, INSERTED.role, INSERTED.address, INSERTED.latitude, INSERTED.longitude, INSERTED.total_points, INSERTED.license_number, INSERTED.is_approved, INSERTED.created_user, INSERTED.updated_user, INSERTED.created_at, INSERTED.updated_at
+        OUTPUT INSERTED.id, INSERTED.name, INSERTED.email, INSERTED.phone, INSERTED.role, INSERTED.address, INSERTED.latitude, INSERTED.longitude, INSERTED.total_points, INSERTED.license_number, INSERTED.is_approved, INSERTED.profile_image_url, INSERTED.created_user, INSERTED.updated_user, INSERTED.created_at, INSERTED.updated_at
         WHERE id = @id AND is_deleted = 0
       `);
 

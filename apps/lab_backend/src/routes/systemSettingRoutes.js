@@ -141,4 +141,15 @@ router.post('/logo', authMiddleware, upload.uploadLogo.single('logo'), systemSet
  */
 router.post('/reset', authMiddleware, systemSettingController.resetToDefaults);
 
+/**
+ * @swagger
+ * /api/system-settings/ui-locale:
+ *   patch:
+ *     summary: Update shared UI locale for admin web and mobile app
+ *     tags: [SystemSettings]
+ *     security:
+ *       - bearerAuth: []
+ */
+router.patch('/ui-locale', authMiddleware, systemSettingController.updateUiLocale);
+
 module.exports = router;

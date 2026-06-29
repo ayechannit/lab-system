@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { ApiConfigBanner } from '../components/common/ApiConfigBanner'
 import { ConfirmDialog } from '../components/common/ConfirmDialog'
 import { LoadingSpinner } from '../components/common/LoadingSpinner'
 import { UserFormModal } from '../components/users/UserFormModal'
@@ -16,20 +18,13 @@ import {
   fetchUserList,
   type FetchUserListParams,
 } from '../services/userService'
+import { roleLabel } from '../utils/roleLabels'
 import '../components/common/ui.css'
-
-function roleLabel(r: EndUserRole): string {
-  const map: Record<EndUserRole, string> = {
-    clinic: 'Clinic',
-    doctor: 'Doctor',
-    patient: 'Patient',
-  }
-  return map[r]
-}
 
 const USER_ROLES: EndUserRole[] = ['clinic', 'doctor', 'patient']
 
 export function UserManagementPage() {
+  const { t } = useTranslation()
   const hasApi = isApiMode()
   const { showSuccess, showError } = useToast()
   const [rows, setRows] = useState<UserListRow[]>([])
@@ -54,6 +49,15 @@ export function UserManagementPage() {
   const [editInitial, setEditInitial] = useState<UserListRow | null>(null)
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<UserListRow | null>(null)
+
+  const approvalFilterOptions = useMemo(
+    () =>
+      [
+        { value: 'pending' as const, label: t('users.filters.approvalPending') },
+        { value: 'approved' as const, label: t('users.filters.approvalApproved') },
+      ] as const,
+    [t],
+  )
 
   useEffect(() => {
     const id = window.setTimeout(() => {
@@ -105,7 +109,7 @@ export function UserManagementPage() {
           }
         }
       } catch (e) {
-        if (!cancelled) setLoadError(e instanceof Error ? e.message : 'Failed to load users')
+        if (!cancelled) setLoadError(e instanceof Error ? e.message : t('users.loadFailed'))
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -113,7 +117,7 @@ export function UserManagementPage() {
     return () => {
       cancelled = true
     }
-  }, [hasApi, refreshTick, userListQuery])
+  }, [hasApi, refreshTick, userListQuery, t])
 
   const sorted = useMemo(
     () => [...rows].sort((a, b) => a.name.localeCompare(b.name)),
@@ -143,10 +147,10 @@ export function UserManagementPage() {
     setDeleteTarget(null)
     try {
       await deleteUser(row.id)
-      showSuccess(`Deleted user "${row.name}".`)
-      setRefreshTick((t) => t + 1)
+      showSuccess(t('users.toasts.deleted', { name: row.name }))
+      setRefreshTick((tick) => tick + 1)
     } catch (e) {
-      showError(messageFromError(e, 'Delete failed'))
+      showError(messageFromError(e, t('users.toasts.deleteFailed')))
     }
   }
 
@@ -155,10 +159,10 @@ export function UserManagementPage() {
     setOpenMenuId(null)
     try {
       await approveUser(row.id)
-      showSuccess(`Approved "${row.name}". They can sign in on the mobile app now.`)
-      setRefreshTick((t) => t + 1)
+      showSuccess(t('users.toasts.approved', { name: row.name }))
+      setRefreshTick((tick) => tick + 1)
     } catch (e) {
-      showError(messageFromError(e, 'Approve failed'))
+      showError(messageFromError(e, t('users.toasts.approveFailed')))
     }
   }
 
@@ -176,41 +180,30 @@ export function UserManagementPage() {
 
   return (
     <div className="stack">
-      <PageHeader
-        title="Users"
-        description="Manage patient and partner accounts: contact details, location, and loyalty balance."
-      />
+      <PageHeader title={t('pages.users.title')} description={t('pages.users.description')} />
 
-      {!hasApi ? (
-        <div className="card card--muted">
-          <p style={{ margin: 0, fontSize: '0.9rem' }}>
-            Set <code>VITE_API_BASE_URL</code> in <code>apps/lab_admin_web</code> (e.g.{' '}
-            <code>http://localhost:3000</code>) and restart the dev server. Data is loaded only from the
-            backend.
-          </p>
-        </div>
-      ) : null}
+      {!hasApi ? <ApiConfigBanner /> : null}
 
       <div className="card">
         <div className="list-tools-row">
-          <div className="list-filters-bar" aria-label="User filters">
+          <div className="list-filters-bar" aria-label={t('users.filters.ariaLabel')}>
             <ListFilterSearchField
               id="user-filter-name"
-              label="Name"
+              label={t('common.name')}
               value={userFilterNameInput}
               onChange={(e) => setUserFilterNameInput(e.target.value)}
               disabled={loading || !hasApi}
             />
             <ListFilterSearchField
               id="user-filter-phone"
-              label="Phone"
+              label={t('common.phone')}
               value={userFilterPhoneInput}
               onChange={(e) => setUserFilterPhoneInput(e.target.value)}
               disabled={loading || !hasApi}
             />
             <div className="list-filters-bar__group">
               <label className="list-filters-bar__label" htmlFor="user-filter-role">
-                Role
+                {t('common.role')}
               </label>
               <select
                 id="user-filter-role"
@@ -219,7 +212,7 @@ export function UserManagementPage() {
                 onChange={(e) => setUserFilterRole(e.target.value as '' | EndUserRole)}
                 disabled={loading || !hasApi}
               >
-                <option value="">All</option>
+                <option value="">{t('common.all')}</option>
                 {USER_ROLES.map((r) => (
                   <option key={r} value={r}>
                     {roleLabel(r)}
@@ -229,7 +222,7 @@ export function UserManagementPage() {
             </div>
             <div className="list-filters-bar__group">
               <label className="list-filters-bar__label" htmlFor="user-filter-approval">
-                Status
+                {t('common.status')}
               </label>
               <select
                 id="user-filter-approval"
@@ -240,9 +233,12 @@ export function UserManagementPage() {
                 }
                 disabled={loading || !hasApi}
               >
-                <option value="">All</option>
-                <option value="pending">Pending approval</option>
-                <option value="approved">Approved</option>
+                <option value="">{t('common.all')}</option>
+                {approvalFilterOptions.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
               </select>
             </div>
             <button
@@ -251,52 +247,52 @@ export function UserManagementPage() {
               onClick={clearUserFilters}
               disabled={loading || !hasApi}
             >
-              Clear filters
+              {t('filters.clearFilters')}
             </button>
           </div>
           <div className="list-tools-row__actions">
             <button
               type="button"
               className="btn btn-secondary"
-              onClick={() => setRefreshTick((t) => t + 1)}
+              onClick={() => setRefreshTick((tick) => tick + 1)}
               disabled={loading || !hasApi}
             >
-              Refresh
+              {loading ? t('common.refreshing') : t('common.refresh')}
             </button>
             <button type="button" className="btn btn-primary" onClick={openCreate} disabled={loading || !hasApi}>
-              Add user
+              {t('users.actions.add')}
             </button>
           </div>
         </div>
         <h3 className="card-title" style={{ margin: '0 0 0.65rem' }}>
-          User directory
+          {t('users.listTitle')}
         </h3>
         <div className="table-wrap">
           <table className="data-table">
             <thead>
               <tr>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Phone</th>
-                <th>Role</th>
-                <th>Status</th>
-                <th>Address</th>
-                <th>Lat / Lng</th>
-                <th>Points</th>
-                <th className="action-col">Actions</th>
+                <th>{t('users.table.name')}</th>
+                <th>{t('users.table.email')}</th>
+                <th>{t('users.table.phone')}</th>
+                <th>{t('users.table.role')}</th>
+                <th>{t('users.table.status')}</th>
+                <th>{t('users.table.address')}</th>
+                <th>{t('users.table.coords')}</th>
+                <th>{t('users.table.points')}</th>
+                <th className="action-col">{t('users.table.actions')}</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
                   <td colSpan={colSpan} className="data-table__state data-table__state--loading">
-                    <LoadingSpinner label="Loading users" />
+                    <LoadingSpinner label={t('users.loading')} />
                   </td>
                 </tr>
               ) : sorted.length === 0 ? (
                 <tr>
                   <td colSpan={colSpan} className="data-table__state">
-                    No users yet.
+                    {t('users.empty')}
                   </td>
                 </tr>
               ) : (
@@ -304,16 +300,16 @@ export function UserManagementPage() {
                   <tr key={r.id}>
                     <td>{r.name}</td>
                     <td>{r.email}</td>
-                    <td style={{ whiteSpace: 'nowrap' }}>{r.phone || '—'}</td>
+                    <td style={{ whiteSpace: 'nowrap' }}>{r.phone || t('common.none')}</td>
                     <td>{roleLabel(r.role)}</td>
                     <td>
                       {r.is_approved ? (
-                        <span className="badge badge--ok">Approved</span>
+                        <span className="badge badge--ok">{t('users.status.approved')}</span>
                       ) : (
-                        <span className="badge badge--warn">Pending</span>
+                        <span className="badge badge--warn">{t('users.status.pending')}</span>
                       )}
                     </td>
-                    <td style={{ maxWidth: 180, whiteSpace: 'normal' }}>{r.address || '—'}</td>
+                    <td style={{ maxWidth: 180, whiteSpace: 'normal' }}>{r.address || t('common.none')}</td>
                     <td style={{ fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
                       {r.latitude}, {r.longitude}
                     </td>
@@ -326,14 +322,14 @@ export function UserManagementPage() {
                           ...(!r.is_approved
                             ? [
                                 {
-                                  label: 'Approve account',
+                                  label: t('users.actions.approve'),
                                   onSelect: () => void confirmApprove(r),
                                 },
                               ]
                             : []),
-                          { label: 'Edit', onSelect: () => openEdit(r) },
+                          { label: t('users.actions.edit'), onSelect: () => openEdit(r) },
                           {
-                            label: 'Delete',
+                            label: t('common.delete'),
                             onSelect: () => {
                               setDeleteTarget(r)
                               setOpenMenuId(null)
@@ -365,14 +361,10 @@ export function UserManagementPage() {
 
       <ConfirmDialog
         open={deleteTarget !== null}
-        title="Delete user?"
-        message={
-          deleteTarget
-            ? `Delete "${deleteTarget.name}"?`
-            : ''
-        }
-        confirmLabel="Delete"
-        cancelLabel="Cancel"
+        title={t('users.delete.title')}
+        message={deleteTarget ? t('users.delete.message', { name: deleteTarget.name }) : ''}
+        confirmLabel={t('users.delete.confirm')}
+        cancelLabel={t('common.cancel')}
         danger
         onConfirm={() => void confirmDelete()}
         onCancel={() => setDeleteTarget(null)}
@@ -385,8 +377,8 @@ export function UserManagementPage() {
         existingRows={rows}
         onClose={closeForm}
         onSuccess={() => {
-          showSuccess(formMode === 'edit' ? 'User updated.' : 'User created.')
-          setRefreshTick((t) => t + 1)
+          showSuccess(formMode === 'edit' ? t('users.toasts.updated') : t('users.toasts.created'))
+          setRefreshTick((tick) => tick + 1)
         }}
       />
     </div>

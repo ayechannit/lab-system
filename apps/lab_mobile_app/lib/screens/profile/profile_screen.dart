@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/session_scope.dart';
+import '../../app/locale_scope.dart';
+import '../../l10n/app_localizations.dart';
 import '../../theme/theme_extensions.dart';
 import '../../widgets/common/app_branding_row.dart';
 import '../../widgets/common/app_surface_card.dart';
 import '../../widgets/common/notification_bell_button.dart';
+import '../../widgets/common/user_profile_avatar.dart';
 import '../../widgets/navigation/lab_main_bottom_nav.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -14,6 +17,8 @@ class ProfileScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final session = SessionScope.of(context);
+    final localeController = LocaleScope.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final user = session.user;
     final cs = context.cs;
     if (user == null) {
@@ -35,39 +40,12 @@ class ProfileScreen extends StatelessWidget {
         children: [
           const SizedBox(height: 8),
           Center(
-            child: Stack(
-              children: [
-                CircleAvatar(
-                  radius: 58,
-                  backgroundColor: cs.primary.withValues(alpha: 0.12),
-                  child: CircleAvatar(
-                    radius: 53,
-                    backgroundColor: cs.primary.withValues(alpha: 0.85),
-                    child: Text(
-                      user.name.isNotEmpty ? user.name[0].toUpperCase() : '?',
-                      style: TextStyle(
-                        fontSize: 42,
-                        color: cs.onPrimary,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                ),
-                Positioned(
-                  right: 2,
-                  bottom: 2,
-                  child: Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: cs.primary,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: cs.surface, width: 2),
-                    ),
-                    child: Icon(Icons.edit, size: 18, color: cs.onPrimary),
-                  ),
-                ),
-              ],
+            child: UserProfileAvatar(
+              name: user.name,
+              imageUrl: user.profileImageUrl,
+              radius: 58,
+              showEditBadge: true,
+              onEditTap: () => context.push('/edit-profile'),
             ),
           ),
           const SizedBox(height: 14),
@@ -85,7 +63,7 @@ class ProfileScreen extends StatelessWidget {
           _ContactCard(
             icon: Icons.call_outlined,
             iconColor: cs.primary,
-            label: 'Phone',
+            label: l10n.phone,
             value: user.phone,
             leftBorderColor: cs.primary,
           ),
@@ -93,13 +71,13 @@ class ProfileScreen extends StatelessWidget {
           _ContactCard(
             icon: Icons.mail_outline,
             iconColor: const Color(0xFFE07A3A),
-            label: 'Email',
+            label: l10n.email,
             value: user.email,
             leftBorderColor: const Color(0xFFE07A3A),
           ),
           const SizedBox(height: 18),
           Text(
-            'ACCOUNT SETTINGS',
+            l10n.accountSettings,
             style: Theme.of(context).textTheme.labelLarge?.copyWith(
                   color: cs.primary,
                   letterSpacing: 1.4,
@@ -109,16 +87,52 @@ class ProfileScreen extends StatelessWidget {
           const SizedBox(height: 12),
           _SettingTile(
             icon: Icons.person_add_alt_1_outlined,
-            title: 'Edit Profile',
-            subtitle: 'Personal information, medical history',
+            title: l10n.editProfile,
+            subtitle: l10n.editProfileSubtitle,
             onTap: () => context.push('/edit-profile'),
           ),
           const SizedBox(height: 12),
           _SettingTile(
             icon: Icons.palette_outlined,
-            title: 'Lab & appearance',
-            subtitle: 'Theme, logo, and contact info from your lab',
+            title: l10n.labAppearance,
+            subtitle: l10n.labAppearanceSubtitle,
             onTap: () => context.push('/lab-info'),
+          ),
+          _SettingTile(
+            icon: Icons.translate,
+            title: l10n.language,
+            subtitle: localeController.locale.languageCode == 'my'
+                ? l10n.languageMyanmar
+                : l10n.languageEnglish,
+            onTap: () async {
+              final picked = await showModalBottomSheet<String>(
+                context: context,
+                showDragHandle: true,
+                builder: (ctx) => SafeArea(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      ListTile(
+                        title: Text(l10n.languageEnglish),
+                        trailing: localeController.locale.languageCode == 'en'
+                            ? Icon(Icons.check_circle, color: cs.primary)
+                            : null,
+                        onTap: () => Navigator.pop(ctx, 'en'),
+                      ),
+                      ListTile(
+                        title: Text(l10n.languageMyanmar),
+                        trailing: localeController.locale.languageCode == 'my'
+                            ? Icon(Icons.check_circle, color: cs.primary)
+                            : null,
+                        onTap: () => Navigator.pop(ctx, 'my'),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+              if (picked == null || !context.mounted) return;
+              await localeController.setLocale(Locale(picked));
+            },
           ),
           const SizedBox(height: 12),
           Material(
@@ -133,7 +147,7 @@ class ProfileScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'LOYALTY STATUS',
+                      l10n.loyaltyStatus,
                       style: Theme.of(context).textTheme.labelLarge?.copyWith(
                             color: cs.onPrimary.withValues(alpha: 0.75),
                             letterSpacing: 1.2,
@@ -142,8 +156,8 @@ class ProfileScreen extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       session.loyalty.balance > 0
-                          ? '${session.loyalty.balance} points'
-                          : 'View loyalty points',
+                          ? l10n.pointsCount(session.loyalty.balance)
+                          : l10n.viewLoyaltyPoints,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                             color: cs.onPrimary,
                             fontWeight: FontWeight.w700,
@@ -161,7 +175,7 @@ class ProfileScreen extends StatelessWidget {
               context.go('/login');
             },
             icon: Icon(Icons.logout, color: cs.error),
-            label: Text('Logout', style: TextStyle(color: cs.error)),
+            label: Text(l10n.signOut, style: TextStyle(color: cs.error)),
             style: OutlinedButton.styleFrom(
               side: BorderSide(color: cs.error.withValues(alpha: 0.35)),
               padding: const EdgeInsets.symmetric(vertical: 14),

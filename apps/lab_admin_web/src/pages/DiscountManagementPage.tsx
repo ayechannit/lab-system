@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { ApiConfigBanner } from '../components/common/ApiConfigBanner'
 import { ConfirmDialog } from '../components/common/ConfirmDialog'
 import { LoadingSpinner } from '../components/common/LoadingSpinner'
 import { DiscountFormModal } from '../components/discounts/DiscountFormModal'
@@ -21,46 +23,44 @@ import {
   type TestDiscountListRow,
 } from '../services/discountService'
 import { fetchLabTestsList } from '../services/labTestCatalogService'
+import { scheduleStatusLabel } from '../utils/scheduleStatusLabels'
+import { roleLabel } from '../utils/roleLabels'
 import '../components/common/ui.css'
 
 const colSpan = 10
 
+const DISCOUNT_ROLE_FILTER_VALUES: ('' | 'clinic' | 'doctor' | 'patient' | 'all')[] = [
+  '',
+  'clinic',
+  'doctor',
+  'patient',
+  'all',
+]
+
 function discountStatusBadge(row: TestDiscountListRow) {
   if (!row.is_active) {
-    return <span className="badge badge--neutral">Inactive</span>
+    return <span className="badge badge--neutral">{scheduleStatusLabel('inactive')}</span>
   }
   if (isDiscountLiveNow(row)) {
-    return <span className="badge badge--success">Live</span>
+    return <span className="badge badge--success">{scheduleStatusLabel('live')}</span>
   }
   const now = new Date()
   if (row.start_date && now < new Date(row.start_date)) {
-    return <span className="badge badge--neutral">Scheduled</span>
+    return <span className="badge badge--neutral">{scheduleStatusLabel('scheduled')}</span>
   }
   if (row.end_date && now > new Date(row.end_date)) {
-    return <span className="badge badge--neutral">Expired</span>
+    return <span className="badge badge--neutral">{scheduleStatusLabel('expired')}</span>
   }
-  return <span className="badge badge--neutral">Off schedule</span>
+  return <span className="badge badge--neutral">{scheduleStatusLabel('offSchedule')}</span>
 }
 
-const DISCOUNT_ROLE_FILTER_OPTIONS: { value: '' | 'clinic' | 'doctor' | 'patient' | 'all'; label: string }[] = [
-  { value: '', label: 'All roles' },
-  { value: 'clinic', label: 'Clinic' },
-  { value: 'doctor', label: 'Doctor' },
-  { value: 'patient', label: 'Patient' },
-  { value: 'all', label: 'All customers' },
-]
-
-function roleLabel(role: string): string {
-  const map: Record<string, string> = {
-    clinic: 'Clinic',
-    doctor: 'Doctor',
-    patient: 'Patient',
-    all: 'All',
-  }
-  return map[role] ?? role
+function discountRoleLabel(role: string): string {
+  if (role === 'all') return roleLabel('all')
+  return roleLabel(role)
 }
 
 export function DiscountManagementPage() {
+  const { t } = useTranslation()
   const hasApi = isApiMode()
   const { showSuccess, showError } = useToast()
   const [rows, setRows] = useState<TestDiscountListRow[]>([])
@@ -84,6 +84,20 @@ export function DiscountManagementPage() {
   const [discountSearch, setDiscountSearch] = useState('')
   const [discountRoleFilter, setDiscountRoleFilter] = useState<'' | 'clinic' | 'doctor' | 'patient' | 'all'>('')
 
+  const roleFilterOptions = useMemo(
+    () =>
+      DISCOUNT_ROLE_FILTER_VALUES.map((value) => ({
+        value,
+        label:
+          value === ''
+            ? t('common.allRoles')
+            : value === 'all'
+              ? t('common.allCustomers')
+              : roleLabel(value),
+      })),
+    [t],
+  )
+
   useEffect(() => {
     if (!hasApi) {
       setLoading(false)
@@ -102,10 +116,10 @@ export function DiscountManagementPage() {
         ])
         if (!cancelled) {
           setRows(discountList)
-          setTests(catalog.filter((t) => t.is_active && !t.is_deleted))
+          setTests(catalog.filter((test) => test.is_active && !test.is_deleted))
         }
       } catch (e) {
-        if (!cancelled) setLoadError(e instanceof Error ? e.message : 'Failed to load discounts')
+        if (!cancelled) setLoadError(e instanceof Error ? e.message : t('discounts.loadFailed'))
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -113,7 +127,7 @@ export function DiscountManagementPage() {
     return () => {
       cancelled = true
     }
-  }, [hasApi, refreshTick])
+  }, [hasApi, refreshTick, t])
 
   useEffect(() => {
     const id = window.setTimeout(() => setDiscountSearch(discountSearchInput.trim().toLowerCase()), 300)
@@ -175,10 +189,10 @@ export function DiscountManagementPage() {
     setDeleteTarget(null)
     try {
       await deleteDiscountById(row.id)
-      showSuccess('Discount rule deleted.')
-      setRefreshTick((t) => t + 1)
+      showSuccess(t('discounts.delete.success'))
+      setRefreshTick((tick) => tick + 1)
     } catch (e) {
-      showError(messageFromError(e, 'Delete failed'))
+      showError(messageFromError(e, t('common.delete')))
     }
   }
 
@@ -189,41 +203,29 @@ export function DiscountManagementPage() {
     setDiscountPage(1)
   }
 
-  const emptyMessage = {
-    title: 'No discount rules yet',
-    body: 'Add a rule for each test and customer type. The Lab tests list shows base price and example prices when discounts apply.',
-  }
-
   return (
     <div className="stack">
-      <PageHeader
-        title="Test discounts"
-        description="Choose how much each type of customer saves on specific tests. Changes here affect the prices people see when discounts apply."
-      />
+      <PageHeader title={t('pages.discounts.title')} description={t('pages.discounts.description')} />
 
-      {!hasApi ? (
-        <div className="card card--muted">
-          <p style={{ margin: 0, fontSize: '0.9rem' }}>
-            Set <code>VITE_API_BASE_URL</code> in <code>apps/lab_admin_web</code> (e.g.{' '}
-            <code>http://localhost:3000</code>) and restart the dev server. Discounts load from the backend only.
-          </p>
-        </div>
-      ) : null}
+      {!hasApi ? <ApiConfigBanner /> : null}
 
       <div className="card">
         <div className="list-tools-row">
-          <div className="list-filters-bar" aria-label="Discount filters">
+          <div className="list-filters-bar" aria-label={t('discounts.filters.ariaLabel')}>
             <ListFilterSearchField
               id="discount-filter-test"
-              label="Test"
-              placeholder={listFilterSearchPlaceholder('Test', 'name or code')}
+              label={t('common.test')}
+              placeholder={listFilterSearchPlaceholder(
+                t('common.test'),
+                t('discounts.filters.searchDetail'),
+              )}
               value={discountSearchInput}
               onChange={(e) => setDiscountSearchInput(e.target.value)}
               disabled={loading || !hasApi}
             />
             <div className="list-filters-bar__group">
               <label className="list-filters-bar__label" htmlFor="discount-filter-role">
-                Role
+                {t('common.role')}
               </label>
               <select
                 id="discount-filter-role"
@@ -236,7 +238,7 @@ export function DiscountManagementPage() {
                 }
                 disabled={loading || !hasApi}
               >
-                {DISCOUNT_ROLE_FILTER_OPTIONS.map((o) => (
+                {roleFilterOptions.map((o) => (
                   <option key={o.value || 'all-roles'} value={o.value}>
                     {o.label}
                   </option>
@@ -253,41 +255,45 @@ export function DiscountManagementPage() {
                 (discountSearchInput.trim() === '' && discountRoleFilter === '')
               }
             >
-              Clear filters
+              {t('filters.clearFilters')}
             </button>
           </div>
           <div className="list-tools-row__actions">
             <button
               type="button"
               className="btn btn-secondary"
-              onClick={() => setRefreshTick((t) => t + 1)}
+              onClick={() => setRefreshTick((tick) => tick + 1)}
               disabled={loading || !hasApi}
             >
-              Refresh
+              {loading ? t('common.refreshing') : t('common.refresh')}
             </button>
             <button type="button" className="btn btn-primary" onClick={openCreate} disabled={loading || !hasApi}>
-              Add discount
+              {t('discounts.add')}
             </button>
           </div>
         </div>
-        <p className="catalog-mode-hint">
-          Rules apply to active catalog tests only. Optional start/end dates limit when a discount applies; leave empty for always-on.
-        </p>
+        <p className="catalog-mode-hint">{t('discounts.hint')}</p>
         <div className="table-wrap table-wrap--sticky-actions">
           <table className="data-table data-table--discounts">
             <thead>
               <tr>
-                <th scope="col">Test</th>
-                <th scope="col">Code</th>
-                <th scope="col">Role</th>
-                <th scope="col" className="col-num">Base (MMK)</th>
-                <th scope="col" className="col-num">Discount (%)</th>
-                <th scope="col" className="col-num">After discount</th>
-                <th scope="col">Start date</th>
-                <th scope="col">End date</th>
-                <th scope="col">Status</th>
+                <th scope="col">{t('common.test')}</th>
+                <th scope="col">{t('common.code')}</th>
+                <th scope="col">{t('common.role')}</th>
+                <th scope="col" className="col-num">
+                  {t('labTests.table.base')}
+                </th>
+                <th scope="col" className="col-num">
+                  {t('discounts.table.discountPercent')}
+                </th>
+                <th scope="col" className="col-num">
+                  {t('discounts.table.afterDiscount')}
+                </th>
+                <th scope="col">{t('common.startDate')}</th>
+                <th scope="col">{t('common.endDate')}</th>
+                <th scope="col">{t('common.status')}</th>
                 <th scope="col" className="action-col">
-                  Actions
+                  {t('common.actions')}
                 </th>
               </tr>
             </thead>
@@ -295,7 +301,7 @@ export function DiscountManagementPage() {
               {loading ? (
                 <tr>
                   <td colSpan={colSpan} className="data-table__state data-table__state--loading">
-                    <LoadingSpinner label="Loading discounts" />
+                    <LoadingSpinner label={t('discounts.loading')} />
                   </td>
                 </tr>
               ) : sorted.length === 0 ? (
@@ -305,11 +311,11 @@ export function DiscountManagementPage() {
                       <div className="data-table__empty-icon" aria-hidden>
                         <span className="material-symbols-outlined">percent</span>
                       </div>
-                      <p className="data-table__empty-title">{emptyMessage.title}</p>
-                      <p className="data-table__empty-text">{emptyMessage.body}</p>
+                      <p className="data-table__empty-title">{t('discounts.empty.title')}</p>
+                      <p className="data-table__empty-text">{t('discounts.empty.body')}</p>
                       {hasApi ? (
                         <button type="button" className="btn btn-primary" onClick={openCreate}>
-                          Add discount
+                          {t('discounts.add')}
                         </button>
                       ) : null}
                     </div>
@@ -318,25 +324,25 @@ export function DiscountManagementPage() {
               ) : filteredDiscounts.length === 0 ? (
                 <tr>
                   <td colSpan={colSpan} className="data-table__state">
-                    No discounts match these filters. Clear filters or try a different test or role.
+                    {t('discounts.noMatch')}
                   </td>
                 </tr>
               ) : (
                 pagedDiscounts.map((r) => (
                   <tr key={r.id}>
-                    <td>{r.test_name ?? '—'}</td>
+                    <td>{r.test_name ?? t('common.none')}</td>
                     <td>
-                      <code>{r.test_code ?? '—'}</code>
+                      <code>{r.test_code ?? t('common.none')}</code>
                     </td>
-                    <td>{roleLabel(r.role)}</td>
+                    <td>{discountRoleLabel(r.role)}</td>
                     <td className="col-num">
-                      {r.original_price !== undefined ? r.original_price.toLocaleString() : '—'}
+                      {r.original_price !== undefined ? r.original_price.toLocaleString() : t('common.none')}
                     </td>
                     <td className="col-num">{r.discount_percent}</td>
                     <td className="col-num">
                       {r.after_discount_price !== undefined
                         ? r.after_discount_price.toLocaleString()
-                        : '—'}
+                        : t('common.none')}
                     </td>
                     <td className="data-table__date-cell">{formatDiscountDateCell(r.start_date)}</td>
                     <td className="data-table__date-cell">{formatDiscountDateCell(r.end_date)}</td>
@@ -346,9 +352,9 @@ export function DiscountManagementPage() {
                         open={openMenuId === r.id}
                         onOpenChange={(next) => setOpenMenuId(next ? r.id : null)}
                         items={[
-                          { label: 'Edit', onSelect: () => openEdit(r) },
+                          { label: t('common.edit'), onSelect: () => openEdit(r) },
                           {
-                            label: 'Delete',
+                            label: t('common.delete'),
                             onSelect: () => {
                               setDeleteTarget(r)
                               setOpenMenuId(null)
@@ -381,14 +387,17 @@ export function DiscountManagementPage() {
 
       <ConfirmDialog
         open={deleteTarget !== null}
-        title="Delete discount?"
+        title={t('discounts.delete.title')}
         message={
           deleteTarget
-            ? `Delete this ${roleLabel(deleteTarget.role)} discount for "${deleteTarget.test_name ?? deleteTarget.test_id}"?`
+            ? t('discounts.delete.message', {
+                role: discountRoleLabel(deleteTarget.role),
+                test: deleteTarget.test_name ?? deleteTarget.test_id,
+              })
             : ''
         }
-        confirmLabel="Delete"
-        cancelLabel="Cancel"
+        confirmLabel={t('common.delete')}
+        cancelLabel={t('common.cancel')}
         danger
         onConfirm={() => void confirmDelete()}
         onCancel={() => setDeleteTarget(null)}
@@ -401,8 +410,10 @@ export function DiscountManagementPage() {
         tests={tests}
         onClose={closeForm}
         onSuccess={() => {
-          showSuccess(formMode === 'edit' ? 'Discount rule updated.' : 'Discount rule created.')
-          setRefreshTick((t) => t + 1)
+          showSuccess(
+            formMode === 'edit' ? t('discounts.toast.updated') : t('discounts.toast.created'),
+          )
+          setRefreshTick((tick) => tick + 1)
         }}
       />
     </div>

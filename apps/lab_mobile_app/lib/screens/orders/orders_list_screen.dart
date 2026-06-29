@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/session_scope.dart';
+import '../../l10n/app_localizations.dart';
+import '../../l10n/order_l10n.dart';
 import '../../models/lab_order.dart';
 import '../../models/order_list_sort.dart';
 import '../../models/rating.dart';
@@ -75,9 +77,9 @@ class _OrdersListScreenState extends State<OrdersListScreen> {
     return orders.where((o) => _normalizeStatus(o) == _statusFilter).toList();
   }
 
-  String _filterLabel(String status, ColorScheme cs) {
-    if (status.isEmpty) return 'All';
-    return orderStatusStyleFor(status, cs).label;
+  String _filterLabel(String status, ColorScheme cs, AppLocalizations l10n) {
+    if (status.isEmpty) return l10n.ordersAll;
+    return orderStatusStyleFor(status, cs, l10n).label;
   }
 
   @override
@@ -88,6 +90,7 @@ class _OrdersListScreenState extends State<OrdersListScreen> {
       builder: (context, _) {
         final orders = session.activeOrders;
         final filtered = _filteredOrders(orders);
+        final l10n = AppLocalizations.of(context)!;
         void openNewOrder() => context.push('/order-lab-test');
 
         return Scaffold(
@@ -99,7 +102,7 @@ class _OrdersListScreenState extends State<OrdersListScreen> {
               TextButton.icon(
                 onPressed: openNewOrder,
                 icon: const Icon(Icons.add, size: 20),
-                label: const Text('New order'),
+                label: Text(l10n.ordersNewOrder),
                 style: TextButton.styleFrom(
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                 ),
@@ -113,10 +116,10 @@ class _OrdersListScreenState extends State<OrdersListScreen> {
               physics: const ClampingScrollPhysics(),
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
               children: [
-                Text('Your orders', style: Theme.of(context).textTheme.headlineMedium),
+                Text(l10n.ordersTitle, style: Theme.of(context).textTheme.headlineMedium),
                 const SizedBox(height: 6),
                 Text(
-                  'Active requests that are not yet delivered.',
+                  l10n.ordersSubtitle,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: context.cs.onSurfaceVariant),
                 ),
                 const SizedBox(height: 16),
@@ -130,13 +133,13 @@ class _OrdersListScreenState extends State<OrdersListScreen> {
                         Icon(Icons.inbox_outlined, size: 48, color: context.cs.onSurfaceVariant),
                         const SizedBox(height: 12),
                         Text(
-                          'No active orders yet',
+                          l10n.ordersNoActiveYet,
                           textAlign: TextAlign.center,
                           style: Theme.of(context).textTheme.titleMedium,
                         ),
                         const SizedBox(height: 6),
                         Text(
-                          'Use the card above to place your first lab test. Orders stay here until they are delivered.',
+                          l10n.ordersNoActiveHint,
                           textAlign: TextAlign.center,
                           style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: context.cs.onSurfaceVariant),
                         ),
@@ -169,13 +172,15 @@ class _OrdersListScreenState extends State<OrdersListScreen> {
                           Icon(Icons.filter_list_off_outlined, size: 40, color: context.cs.onSurfaceVariant),
                           const SizedBox(height: 10),
                           Text(
-                            'No ${_filterLabel(_statusFilter, context.cs).toLowerCase()} orders',
+                            l10n.ordersNoStatusOrders(
+                              _filterLabel(_statusFilter, context.cs, l10n).toLowerCase(),
+                            ),
                             textAlign: TextAlign.center,
                             style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'Try another status tab or place a new order.',
+                            l10n.ordersTryAnotherFilter,
                             textAlign: TextAlign.center,
                             style: Theme.of(context).textTheme.bodySmall?.copyWith(color: context.cs.onSurfaceVariant),
                           ),
@@ -227,14 +232,17 @@ class _OrderListFilters extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = context.cs;
-    final statusLabel = statusFilter.isEmpty ? 'All orders' : orderStatusStyleFor(statusFilter, cs).label;
+    final l10n = AppLocalizations.of(context)!;
+    final statusLabel = statusFilter.isEmpty
+        ? l10n.ordersAllOrders
+        : orderStatusStyleFor(statusFilter, cs, l10n).label;
     final statusCount = countFor(statusFilter);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          'Active orders ($totalCount)',
+          l10n.ordersActiveCount(totalCount),
           style: Theme.of(context).textTheme.titleSmall?.copyWith(
                 fontWeight: FontWeight.w700,
                 color: cs.onSurfaceVariant,
@@ -247,8 +255,8 @@ class _OrderListFilters extends StatelessWidget {
             Expanded(
               child: _FilterControlTile(
                 icon: Icons.filter_list_rounded,
-                label: 'Status',
-                value: '$statusLabel · $statusCount',
+                label: l10n.ordersStatus,
+                value: l10n.ordersStatusCount(statusLabel, statusCount),
                 onTap: () => _openStatusSheet(context),
               ),
             ),
@@ -256,8 +264,8 @@ class _OrderListFilters extends StatelessWidget {
             Expanded(
               child: _FilterControlTile(
                 icon: Icons.sort_rounded,
-                label: 'Sort',
-                value: sort.label,
+                label: l10n.ordersSort,
+                value: sort.localizedLabel(l10n),
                 onTap: () => _openSortSheet(context),
               ),
             ),
@@ -269,6 +277,7 @@ class _OrderListFilters extends StatelessWidget {
 
   Future<void> _openStatusSheet(BuildContext context) async {
     final cs = context.cs;
+    final l10n = AppLocalizations.of(context)!;
     final tabs = ['', ...statuses];
     final picked = await showModalBottomSheet<String>(
       context: context,
@@ -283,14 +292,16 @@ class _OrderListFilters extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
                 child: Text(
-                  'Filter by status',
+                  l10n.ordersFilterByStatus,
                   style: Theme.of(sheetContext).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
                 ),
               ),
               for (final status in tabs)
                 _StatusFilterSheetTile(
                   status: status,
-                  label: status.isEmpty ? 'All orders' : orderStatusStyleFor(status, sheetContext.cs).label,
+                  label: status.isEmpty
+                      ? l10n.ordersAllOrders
+                      : orderStatusStyleFor(status, sheetContext.cs, l10n).label,
                   count: countFor(status),
                   selected: statusFilter == status,
                   onTap: () => Navigator.pop(sheetContext, status),
@@ -298,7 +309,7 @@ class _OrderListFilters extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
                 child: Text(
-                  'Only active orders that are not yet delivered appear here.',
+                  l10n.ordersActiveOnlyHint,
                   style: Theme.of(sheetContext).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
                 ),
               ),
@@ -313,6 +324,7 @@ class _OrderListFilters extends StatelessWidget {
   }
 
   Future<void> _openSortSheet(BuildContext context) async {
+    final l10n = AppLocalizations.of(context)!;
     final picked = await showModalBottomSheet<OrderListSort>(
       context: context,
       isScrollControlled: true,
@@ -327,7 +339,7 @@ class _OrderListFilters extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
                 child: Text(
-                  'Sort by',
+                  l10n.ordersSortBy,
                   style: Theme.of(sheetContext).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
                 ),
               ),
@@ -337,7 +349,7 @@ class _OrderListFilters extends StatelessWidget {
                     sort == option ? Icons.check_circle_rounded : Icons.circle_outlined,
                     color: sort == option ? cs.primary : cs.onSurfaceVariant,
                   ),
-                  title: Text(option.label),
+                  title: Text(option.localizedLabel(l10n)),
                   onTap: () => Navigator.pop(sheetContext, option),
                 ),
             ],
@@ -441,13 +453,14 @@ class _StatusFilterSheetTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = context.cs;
+    final l10n = AppLocalizations.of(context)!;
     final style = status.isEmpty
         ? OrderStatusStyle(
             label: label,
             foreground: cs.primary,
             background: cs.primary.withValues(alpha: 0.1),
           )
-        : orderStatusStyleFor(status, cs);
+        : orderStatusStyleFor(status, cs, l10n);
 
     return ListTile(
       onTap: onTap,
@@ -528,6 +541,7 @@ class _NewOrderCta extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = context.cs;
+    final l10n = AppLocalizations.of(context)!;
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -572,7 +586,7 @@ class _NewOrderCta extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Order lab test',
+                        l10n.ordersOrderLabTest,
                         style: Theme.of(context).textTheme.titleMedium?.copyWith(
                               fontWeight: FontWeight.w700,
                               color: cs.onSurface,
@@ -580,7 +594,7 @@ class _NewOrderCta extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Add patient details, pick tests, and schedule collection',
+                        l10n.ordersOrderLabTestHint,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: cs.onSurfaceVariant,
                               height: 1.35,
@@ -614,6 +628,7 @@ class _OrderListTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final status = order.backendStatus ?? 'pending';
+    final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Material(
@@ -648,7 +663,7 @@ class _OrderListTile extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              order.patientName.isEmpty ? 'Patient' : order.patientName,
+                              order.patientName.isEmpty ? l10n.ordersPatientFallback : order.patientName,
                               style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
                             ),
                             const SizedBox(height: 2),
@@ -660,7 +675,7 @@ class _OrderListTile extends StatelessWidget {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              'Placed ${order.createdAtLabel}',
+                              l10n.ordersPlaced(order.createdAtLabel),
                               style: Theme.of(context).textTheme.bodySmall?.copyWith(color: context.cs.onSurfaceVariant),
                             ),
                           ],

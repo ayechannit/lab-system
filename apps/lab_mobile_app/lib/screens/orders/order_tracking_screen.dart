@@ -149,26 +149,6 @@ class OrderTrackingScreen extends StatelessWidget {
                     child: StatusTimeline(steps: order.timeline),
                   ),
                 ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () {},
-                        icon: const Icon(Icons.support_agent),
-                        label: const Text('Help Center'),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () {},
-                        icon: const Icon(Icons.description_outlined),
-                        label: const Text('Lab Details'),
-                      ),
-                    ),
-                  ],
-                ),
               ],
             ),
           ),

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/session_scope.dart';
+import '../../l10n/app_localizations.dart';
 import '../../theme/theme_extensions.dart';
 
 /// Which tab is highlighted in the pill nav (use [none] when no tab matches the current screen).
@@ -53,6 +54,7 @@ class LabMainBottomNav extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = context.cs;
+    final l10n = AppLocalizations.of(context)!;
     return SafeArea(
       top: false,
       minimum: const EdgeInsets.fromLTRB(14, 0, 14, 14),
@@ -68,7 +70,7 @@ class LabMainBottomNav extends StatelessWidget {
             Expanded(
               child: _NavCell(
                 icon: Icons.grid_view_rounded,
-                label: 'HOME',
+                label: l10n.navHome,
                 active: _active(LabMainTab.home),
                 onTap: () => _onTap(context, LabMainTab.home),
               ),
@@ -76,7 +78,7 @@ class LabMainBottomNav extends StatelessWidget {
             Expanded(
               child: _NavCell(
                 icon: Icons.biotech_outlined,
-                label: 'ORDERS',
+                label: l10n.navOrders,
                 active: _active(LabMainTab.orders),
                 onTap: () => _onTap(context, LabMainTab.orders),
               ),
@@ -84,7 +86,7 @@ class LabMainBottomNav extends StatelessWidget {
             Expanded(
               child: _NavCell(
                 icon: Icons.assignment_outlined,
-                label: 'RESULTS',
+                label: l10n.navResults,
                 active: _active(LabMainTab.results),
                 onTap: () => _onTap(context, LabMainTab.results),
               ),
@@ -92,7 +94,7 @@ class LabMainBottomNav extends StatelessWidget {
             Expanded(
               child: _NavCell(
                 icon: Icons.military_tech_outlined,
-                label: 'POINTS',
+                label: l10n.navPoints,
                 active: _active(LabMainTab.points),
                 onTap: () => _onTap(context, LabMainTab.points),
               ),
@@ -100,7 +102,7 @@ class LabMainBottomNav extends StatelessWidget {
             Expanded(
               child: _NavCell(
                 icon: Icons.person_outline,
-                label: 'PROFILE',
+                label: l10n.navProfile,
                 active: _active(LabMainTab.profile),
                 onTap: () => _onTap(context, LabMainTab.profile),
               ),

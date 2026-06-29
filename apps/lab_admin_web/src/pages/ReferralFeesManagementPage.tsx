@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { ApiConfigBanner } from '../components/common/ApiConfigBanner'
 import { ConfirmDialog } from '../components/common/ConfirmDialog'
 import { LoadingSpinner } from '../components/common/LoadingSpinner'
 import { ReferralFeeFormModal } from '../components/referral-fees/ReferralFeeFormModal'
@@ -20,29 +22,21 @@ import {
   type TestReferralFeeListRow,
 } from '../services/referralFeeService'
 import { fetchLabTestsList } from '../services/labTestCatalogService'
+import { roleLabel } from '../utils/roleLabels'
 import '../components/common/ui.css'
 
 const colSpan = 8
 
-const REFERRAL_ROLE_FILTER_OPTIONS: { value: '' | ReferralFeeRole; label: string }[] = [
-  { value: '', label: 'All roles' },
-  { value: 'clinic', label: 'Clinic' },
-  { value: 'doctor', label: 'Doctor' },
-  { value: 'patient', label: 'Patient' },
-  { value: 'phlebotomist', label: 'Phlebotomist' },
+const REFERRAL_ROLE_FILTER_VALUES: ('' | ReferralFeeRole)[] = [
+  '',
+  'clinic',
+  'doctor',
+  'patient',
+  'phlebotomist',
 ]
 
-function roleLabel(role: string): string {
-  const map: Record<string, string> = {
-    clinic: 'Clinic',
-    doctor: 'Doctor',
-    patient: 'Patient',
-    phlebotomist: 'Phlebotomist',
-  }
-  return map[role] ?? role
-}
-
 export function ReferralFeesManagementPage() {
+  const { t } = useTranslation()
   const hasApi = isApiMode()
   const { showSuccess, showError } = useToast()
   const [rows, setRows] = useState<TestReferralFeeListRow[]>([])
@@ -66,6 +60,15 @@ export function ReferralFeesManagementPage() {
   const [search, setSearch] = useState('')
   const [roleFilter, setRoleFilter] = useState<'' | ReferralFeeRole>('')
 
+  const roleFilterOptions = useMemo(
+    () =>
+      REFERRAL_ROLE_FILTER_VALUES.map((value) => ({
+        value,
+        label: value === '' ? t('common.allRoles') : roleLabel(value),
+      })),
+    [t],
+  )
+
   useEffect(() => {
     if (!hasApi) {
       setLoading(false)
@@ -81,10 +84,10 @@ export function ReferralFeesManagementPage() {
         const [feeList, catalog] = await Promise.all([fetchAllReferralFees(), fetchLabTestsList()])
         if (!cancelled) {
           setRows(feeList)
-          setTests(catalog.filter((t) => t.is_active && !t.is_deleted))
+          setTests(catalog.filter((test) => test.is_active && !test.is_deleted))
         }
       } catch (e) {
-        if (!cancelled) setLoadError(e instanceof Error ? e.message : 'Failed to load referral fees')
+        if (!cancelled) setLoadError(e instanceof Error ? e.message : t('referralFees.loadFailed'))
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -92,7 +95,7 @@ export function ReferralFeesManagementPage() {
     return () => {
       cancelled = true
     }
-  }, [hasApi, refreshTick])
+  }, [hasApi, refreshTick, t])
 
   useEffect(() => {
     const id = window.setTimeout(() => setSearch(searchInput.trim().toLowerCase()), 300)
@@ -154,10 +157,10 @@ export function ReferralFeesManagementPage() {
     setDeleteTarget(null)
     try {
       await deleteReferralFeeById(row.id)
-      showSuccess('Referral fee rule deleted.')
-      setRefreshTick((t) => t + 1)
+      showSuccess(t('referralFees.delete.success'))
+      setRefreshTick((tick) => tick + 1)
     } catch (e) {
-      showError(messageFromError(e, 'Delete failed'))
+      showError(messageFromError(e, t('common.delete')))
     }
   }
 
@@ -168,41 +171,29 @@ export function ReferralFeesManagementPage() {
     setPage(1)
   }
 
-  const emptyMessage = {
-    title: 'No referral fee rules yet',
-    body: 'Set a referral percentage for each test and referrer role. The fee amount is calculated from the test base price.',
-  }
-
   return (
     <div className="stack">
-      <PageHeader
-        title="Referral fees"
-        description="Configure referral commission percentages per lab test and referrer role (clinic, doctor, patient, phlebotomist)."
-      />
+      <PageHeader title={t('pages.referralFees.title')} description={t('pages.referralFees.description')} />
 
-      {!hasApi ? (
-        <div className="card card--muted">
-          <p style={{ margin: 0, fontSize: '0.9rem' }}>
-            Set <code>VITE_API_BASE_URL</code> in <code>apps/lab_admin_web</code> (e.g.{' '}
-            <code>http://localhost:3000</code>) and restart the dev server. Referral fees load from the backend only.
-          </p>
-        </div>
-      ) : null}
+      {!hasApi ? <ApiConfigBanner /> : null}
 
       <div className="card">
         <div className="list-tools-row">
-          <div className="list-filters-bar" aria-label="Referral fee filters">
+          <div className="list-filters-bar" aria-label={t('referralFees.filters.ariaLabel')}>
             <ListFilterSearchField
               id="referral-fee-filter-test"
-              label="Test"
-              placeholder={listFilterSearchPlaceholder('Test', 'name or code')}
+              label={t('common.test')}
+              placeholder={listFilterSearchPlaceholder(
+                t('common.test'),
+                t('referralFees.filters.searchDetail'),
+              )}
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               disabled={loading || !hasApi}
             />
             <div className="list-filters-bar__group">
               <label className="list-filters-bar__label" htmlFor="referral-fee-filter-role">
-                Role
+                {t('common.role')}
               </label>
               <select
                 id="referral-fee-filter-role"
@@ -211,7 +202,7 @@ export function ReferralFeesManagementPage() {
                 onChange={(e) => setRoleFilter((e.target.value || '') as '' | ReferralFeeRole)}
                 disabled={loading || !hasApi}
               >
-                {REFERRAL_ROLE_FILTER_OPTIONS.map((o) => (
+                {roleFilterOptions.map((o) => (
                   <option key={o.value || 'all-roles'} value={o.value}>
                     {o.label}
                   </option>
@@ -224,45 +215,43 @@ export function ReferralFeesManagementPage() {
               onClick={clearFilters}
               disabled={loading || !hasApi || (searchInput.trim() === '' && roleFilter === '')}
             >
-              Clear filters
+              {t('filters.clearFilters')}
             </button>
           </div>
           <div className="list-tools-row__actions">
             <button
               type="button"
               className="btn btn-secondary"
-              onClick={() => setRefreshTick((t) => t + 1)}
+              onClick={() => setRefreshTick((tick) => tick + 1)}
               disabled={loading || !hasApi}
             >
-              Refresh
+              {loading ? t('common.refreshing') : t('common.refresh')}
             </button>
             <button type="button" className="btn btn-primary" onClick={openCreate} disabled={loading || !hasApi}>
-              Add referral fee
+              {t('referralFees.add')}
             </button>
           </div>
         </div>
-        <p className="catalog-mode-hint">
-          Rules apply to active catalog tests only. Referral fee (MMK) = base price × referral %.
-        </p>
+        <p className="catalog-mode-hint">{t('referralFees.hint')}</p>
         <div className="table-wrap">
           <table className="data-table data-table--discounts">
             <thead>
               <tr>
-                <th>Test</th>
-                <th>Code</th>
-                <th>Role</th>
-                <th className="col-num">Base (MMK)</th>
-                <th className="col-num">Referral (%)</th>
-                <th className="col-num">Fee (MMK)</th>
-                <th>Active</th>
-                <th className="action-col">Actions</th>
+                <th>{t('common.test')}</th>
+                <th>{t('common.code')}</th>
+                <th>{t('common.role')}</th>
+                <th className="col-num">{t('labTests.table.base')}</th>
+                <th className="col-num">{t('referralFees.table.referralPercent')}</th>
+                <th className="col-num">{t('referralFees.table.fee')}</th>
+                <th>{t('common.active')}</th>
+                <th className="action-col">{t('common.actions')}</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
                   <td colSpan={colSpan} className="data-table__state data-table__state--loading">
-                    <LoadingSpinner label="Loading referral fees" />
+                    <LoadingSpinner label={t('referralFees.loading')} />
                   </td>
                 </tr>
               ) : sorted.length === 0 ? (
@@ -272,11 +261,11 @@ export function ReferralFeesManagementPage() {
                       <div className="data-table__empty-icon" aria-hidden>
                         <span className="material-symbols-outlined">payments</span>
                       </div>
-                      <p className="data-table__empty-title">{emptyMessage.title}</p>
-                      <p className="data-table__empty-text">{emptyMessage.body}</p>
+                      <p className="data-table__empty-title">{t('referralFees.empty.title')}</p>
+                      <p className="data-table__empty-text">{t('referralFees.empty.body')}</p>
                       {hasApi ? (
                         <button type="button" className="btn btn-primary" onClick={openCreate}>
-                          Add referral fee
+                          {t('referralFees.add')}
                         </button>
                       ) : null}
                     </div>
@@ -285,29 +274,31 @@ export function ReferralFeesManagementPage() {
               ) : filtered.length === 0 ? (
                 <tr>
                   <td colSpan={colSpan} className="data-table__state">
-                    No referral fees match these filters. Clear filters or try a different test or role.
+                    {t('referralFees.noMatch')}
                   </td>
                 </tr>
               ) : (
                 paged.map((r) => (
                   <tr key={r.id}>
-                    <td>{r.test_name ?? '—'}</td>
+                    <td>{r.test_name ?? t('common.none')}</td>
                     <td>
-                      <code>{r.test_code ?? '—'}</code>
+                      <code>{r.test_code ?? t('common.none')}</code>
                     </td>
                     <td>{roleLabel(r.role)}</td>
                     <td className="col-num">
-                      {r.original_price !== undefined ? r.original_price.toLocaleString() : '—'}
+                      {r.original_price !== undefined ? r.original_price.toLocaleString() : t('common.none')}
                     </td>
                     <td className="col-num">{r.referral_percent}</td>
                     <td className="col-num">
-                      {r.referral_fee_amount !== undefined ? r.referral_fee_amount.toLocaleString() : '—'}
+                      {r.referral_fee_amount !== undefined
+                        ? r.referral_fee_amount.toLocaleString()
+                        : t('common.none')}
                     </td>
                     <td>
                       {r.is_active ? (
-                        <span className="badge badge--success">Yes</span>
+                        <span className="badge badge--success">{t('common.yes')}</span>
                       ) : (
-                        <span className="badge badge--neutral">No</span>
+                        <span className="badge badge--neutral">{t('common.no')}</span>
                       )}
                     </td>
                     <td className="action-cell">
@@ -315,9 +306,9 @@ export function ReferralFeesManagementPage() {
                         open={openMenuId === r.id}
                         onOpenChange={(next) => setOpenMenuId(next ? r.id : null)}
                         items={[
-                          { label: 'Edit', onSelect: () => openEdit(r) },
+                          { label: t('common.edit'), onSelect: () => openEdit(r) },
                           {
-                            label: 'Delete',
+                            label: t('common.delete'),
                             onSelect: () => {
                               setDeleteTarget(r)
                               setOpenMenuId(null)
@@ -350,14 +341,17 @@ export function ReferralFeesManagementPage() {
 
       <ConfirmDialog
         open={deleteTarget !== null}
-        title="Delete referral fee?"
+        title={t('referralFees.delete.title')}
         message={
           deleteTarget
-            ? `Delete this ${roleLabel(deleteTarget.role)} referral fee for "${deleteTarget.test_name ?? deleteTarget.test_id}"?`
+            ? t('referralFees.delete.message', {
+                role: roleLabel(deleteTarget.role),
+                test: deleteTarget.test_name ?? deleteTarget.test_id,
+              })
             : ''
         }
-        confirmLabel="Delete"
-        cancelLabel="Cancel"
+        confirmLabel={t('common.delete')}
+        cancelLabel={t('common.cancel')}
         danger
         onConfirm={() => void confirmDelete()}
         onCancel={() => setDeleteTarget(null)}
@@ -370,8 +364,10 @@ export function ReferralFeesManagementPage() {
         tests={tests}
         onClose={closeForm}
         onSuccess={() => {
-          showSuccess(formMode === 'edit' ? 'Referral fee updated.' : 'Referral fee created.')
-          setRefreshTick((t) => t + 1)
+          showSuccess(
+            formMode === 'edit' ? t('referralFees.toast.updated') : t('referralFees.toast.created'),
+          )
+          setRefreshTick((tick) => tick + 1)
         }}
       />
     </div>

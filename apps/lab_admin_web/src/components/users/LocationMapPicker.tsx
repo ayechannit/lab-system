@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import L from 'leaflet'
 import { MapContainer, Marker, TileLayer, useMap, useMapEvents } from 'react-leaflet'
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png'
@@ -99,6 +100,7 @@ export function LocationMapPicker({
   onAddressFromMap,
   mapHeight = 220,
 }: LocationMapPickerProps) {
+  const { t } = useTranslation()
   const [geoLoading, setGeoLoading] = useState(false)
   const [geoMessage, setGeoMessage] = useState<string | null>(null)
   const [reverseHint, setReverseHint] = useState<string | null>(null)
@@ -110,7 +112,7 @@ export function LocationMapPicker({
       reverseAbortRef.current?.abort()
       const ac = new AbortController()
       reverseAbortRef.current = ac
-      setReverseHint('Looking up address…')
+      setReverseHint(t('locationMap.lookingUpAddress'))
       void nominatimReverse(lat, lng, ac.signal)
         .then((text) => {
           if (ac.signal.aborted) return
@@ -122,7 +124,7 @@ export function LocationMapPicker({
           setReverseHint(null)
         })
     },
-    [onAddressFromMap],
+    [onAddressFromMap, t],
   )
 
   const handlePick = useCallback(
@@ -140,7 +142,7 @@ export function LocationMapPicker({
   const requestBrowserLocation = useCallback(() => {
     setGeoMessage(null)
     if (typeof navigator === 'undefined' || !navigator.geolocation) {
-      setGeoMessage('This browser does not support geolocation.')
+      setGeoMessage(t('locationMap.geolocationNotSupported'))
       return
     }
     setGeoLoading(true)
@@ -155,18 +157,18 @@ export function LocationMapPicker({
         setGeoLoading(false)
         const code = err.code
         if (code === 1) {
-          setGeoMessage('Location permission denied. Allow access in the browser bar or settings.')
+          setGeoMessage(t('locationMap.permissionDenied'))
         } else if (code === 2) {
-          setGeoMessage('Position unavailable. Try again or place the pin manually.')
+          setGeoMessage(t('locationMap.positionUnavailable'))
         } else if (code === 3) {
-          setGeoMessage('Location request timed out. Try again.')
+          setGeoMessage(t('locationMap.requestTimedOut'))
         } else {
-          setGeoMessage('Could not read your location.')
+          setGeoMessage(t('locationMap.couldNotReadLocation'))
         }
       },
       { enableHighAccuracy: true, timeout: 20_000, maximumAge: 60_000 },
     )
-  }, [handlePick])
+  }, [handlePick, t])
 
   const usable = hasUsableCoords(latitude, longitude)
   const center: [number, number] = usable
@@ -201,7 +203,7 @@ export function LocationMapPicker({
       <div className="location-map-picker__toolbar">
         {!usable ? (
           <span style={{ fontSize: '0.8rem', color: 'var(--muted)', flexBasis: '100%' }} aria-live="polite">
-            No location selected. Click the map or use my location.
+            {t('locationMap.noLocationSelected')}
           </span>
         ) : null}
         <button
@@ -211,7 +213,7 @@ export function LocationMapPicker({
           disabled={geoLoading}
           aria-busy={geoLoading}
         >
-          {geoLoading ? 'Getting location…' : 'Use my location'}
+          {geoLoading ? t('locationMap.gettingLocation') : t('locationMap.useMyLocation')}
         </button>
         {reverseHint ? (
           <span style={{ fontSize: '0.8rem', color: 'var(--muted)', flexBasis: '100%' }} aria-live="polite">

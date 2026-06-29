@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import i18n from '../i18n'
 import { nominatimSearch } from '../services/nominatimGeocode'
 
 export const ADDRESS_GEOCODE_DEBOUNCE_MS = 900
@@ -48,7 +49,7 @@ export function useAddressGeocode({
     let alive = true
     const ac = new AbortController()
     const timer = window.setTimeout(() => {
-      setHint('Looking up address…')
+      setHint(i18n.t('locationMap.lookingUpAddress'))
       void (async () => {
         try {
           const hit = await nominatimSearch(trimmed, ac.signal)
@@ -57,11 +58,11 @@ export function useAddressGeocode({
             onCoords(hit.lat, hit.lng)
             setHint(null)
           } else {
-            setHint('No match for that address. Try a fuller line or set the pin on the map.')
+            setHint(i18n.t('locationMap.noAddressMatch'))
           }
         } catch {
           if (!alive || ac.signal.aborted) return
-          setHint('Could not look up address. Set the pin on the map or try again.')
+          setHint(i18n.t('locationMap.geocodeFailed'))
         }
       })()
     }, debounceMs)

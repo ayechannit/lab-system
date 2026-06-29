@@ -1,4 +1,5 @@
 import type { ChangeEventHandler } from 'react'
+import { listFilterSearchPlaceholder } from '../../utils/i18nLabels'
 
 export type ListFilterSearchFieldProps = {
   id: string
@@ -11,13 +12,7 @@ export type ListFilterSearchFieldProps = {
   placeholder?: string
 }
 
-/** Builds placeholders like "Search name…" or "Search name or code…" when detail is passed. */
-export function listFilterSearchPlaceholder(label: string, detail?: string): string {
-  const subject = (detail ?? label).trim()
-  if (!subject) return 'Search…'
-  const lower = subject.charAt(0).toLowerCase() + subject.slice(1)
-  return `Search ${lower}…`
-}
+export { listFilterSearchPlaceholder }
 
 export function ListFilterSearchField({
   id,

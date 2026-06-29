@@ -1,18 +1,16 @@
 import { type FormEvent, useCallback, useEffect, useId, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { createPortal } from 'react-dom'
 import type { EndUserRole, UserListRow } from '../../model/types'
 import { useAddressGeocode } from '../../hooks/useAddressGeocode'
 import { createUser, updateUser, type UserCreateBody, type UserUpdateBody } from '../../services/userService'
+import { roleLabel } from '../../utils/roleLabels'
 import { formatCoordPair, hasUsableCoords, LocationMapPicker } from './LocationMapPicker'
 import '../common/ui.css'
 /** Minimum length for initial password on create (plain value sent as `password_hash` in this admin build). */
 const MIN_INITIAL_PASSWORD_LENGTH = 8
 
-const ROLE_OPTIONS: { value: EndUserRole; label: string }[] = [
-  { value: 'clinic', label: 'Clinic' },
-  { value: 'doctor', label: 'Doctor' },
-  { value: 'patient', label: 'Patient' },
-]
+const USER_ROLES: EndUserRole[] = ['clinic', 'doctor', 'patient']
 
 type UserFormModalProps = {
   open: boolean
@@ -31,6 +29,7 @@ export function UserFormModal({
   onClose,
   onSuccess,
 }: UserFormModalProps) {
+  const { t } = useTranslation()
   const titleId = useId()
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
@@ -111,33 +110,33 @@ export function UserFormModal({
 
     const n = name.trim()
     if (!n) {
-      setFormError('Enter a name.')
+      setFormError(t('users.form.errorName'))
       return
     }
     const em = email.trim().toLowerCase()
     if (!em || !em.includes('@')) {
-      setFormError('Enter a valid email.')
+      setFormError(t('users.form.errorEmail'))
       return
     }
     if (!phone.trim()) {
-      setFormError('Enter a phone number.')
+      setFormError(t('users.form.errorPhone'))
       return
     }
     if (mode === 'create') {
       const pw = password.trim()
       if (!pw) {
-        setFormError('Enter an initial password.')
+        setFormError(t('users.form.errorPasswordRequired'))
         return
       }
       if (pw.length < MIN_INITIAL_PASSWORD_LENGTH) {
-        setFormError(`Password must be at least ${MIN_INITIAL_PASSWORD_LENGTH} characters.`)
+        setFormError(t('users.form.errorPasswordMin', { count: MIN_INITIAL_PASSWORD_LENGTH }))
         return
       }
     }
     if (mode === 'edit') {
       const pw = password.trim()
       if (pw !== '' && pw.length < MIN_INITIAL_PASSWORD_LENGTH) {
-        setFormError(`New password must be at least ${MIN_INITIAL_PASSWORD_LENGTH} characters.`)
+        setFormError(t('users.form.errorNewPasswordMin', { count: MIN_INITIAL_PASSWORD_LENGTH }))
         return
       }
     }
@@ -145,7 +144,7 @@ export function UserFormModal({
       (r) => r.email.toLowerCase() === em && (mode === 'create' || r.id !== initial?.id),
     )
     if (taken) {
-      setFormError('That email is already registered.')
+      setFormError(t('users.form.errorEmailTaken'))
       return
     }
 
@@ -190,7 +189,7 @@ export function UserFormModal({
       onSuccess()
       onClose()
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : 'Request failed')
+      setFormError(err instanceof Error ? err.message : t('users.form.requestFailed'))
     } finally {
       setSubmitting(false)
     }
@@ -198,7 +197,7 @@ export function UserFormModal({
 
   if (!open) return null
 
-  const title = mode === 'create' ? 'Add user' : 'Edit user'
+  const title = mode === 'create' ? t('users.form.createTitle') : t('users.form.editTitle')
 
   const modal = (
     <div
@@ -220,7 +219,7 @@ export function UserFormModal({
               type="button"
               className="btn btn-ghost modal-close"
               onClick={() => !submitting && onClose()}
-              aria-label="Close"
+              aria-label={t('common.close')}
               disabled={submitting}
             >
               ×
@@ -232,28 +231,28 @@ export function UserFormModal({
           <div className="user-form-modal__body">
             <div className="user-form-modal__grid">
               <div className="user-form-modal__stack">
-                <p className="user-form-modal__section-label">Profile</p>
+                <p className="user-form-modal__section-label">{t('users.form.profile')}</p>
                 <div className="grid-2">
                   <div className="field">
-                    <label htmlFor="uf-name">Name</label>
+                    <label htmlFor="uf-name">{t('users.form.name')}</label>
                     <input
                       id="uf-name"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      placeholder="Clinic, doctor, or patient name"
+                      placeholder={t('users.form.namePlaceholder')}
                       autoComplete="name"
                       autoFocus
                       disabled={submitting}
                     />
                   </div>
                   <div className="field">
-                    <label htmlFor="uf-email">Email</label>
+                    <label htmlFor="uf-email">{t('users.form.email')}</label>
                     <input
                       id="uf-email"
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="user@example.com"
+                      placeholder={t('users.form.emailPlaceholder')}
                       autoComplete="email"
                       disabled={submitting}
                     />
@@ -261,18 +260,18 @@ export function UserFormModal({
                 </div>
                 <div className="grid-2">
                   <div className="field">
-                    <label htmlFor="uf-phone">Phone</label>
+                    <label htmlFor="uf-phone">{t('users.form.phone')}</label>
                     <input
                       id="uf-phone"
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
-                      placeholder="+95 …"
+                      placeholder={t('users.form.phonePlaceholder')}
                       autoComplete="tel"
                       disabled={submitting}
                     />
                   </div>
                   <div className="field">
-                    <label htmlFor="uf-role">Role</label>
+                    <label htmlFor="uf-role">{t('users.form.role')}</label>
                     <select
                       id="uf-role"
                       className="select-chevron-left"
@@ -280,9 +279,9 @@ export function UserFormModal({
                       onChange={(e) => setRole(e.target.value as EndUserRole)}
                       disabled={submitting}
                     >
-                      {ROLE_OPTIONS.map((o) => (
-                        <option key={o.value} value={o.value}>
-                          {o.label}
+                      {USER_ROLES.map((r) => (
+                        <option key={r} value={r}>
+                          {roleLabel(r)}
                         </option>
                       ))}
                     </select>
@@ -290,35 +289,41 @@ export function UserFormModal({
                 </div>
                 {mode === 'create' ? (
                   <div className="field">
-                    <label htmlFor="uf-password">Initial password (min. {MIN_INITIAL_PASSWORD_LENGTH} characters)</label>
+                    <label htmlFor="uf-password">
+                      {t('users.form.initialPassword', { count: MIN_INITIAL_PASSWORD_LENGTH })}
+                    </label>
                     <input
                       id="uf-password"
                       type="password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       minLength={MIN_INITIAL_PASSWORD_LENGTH}
-                      placeholder={`At least ${MIN_INITIAL_PASSWORD_LENGTH} characters`}
+                      placeholder={t('users.form.passwordPlaceholder', {
+                        count: MIN_INITIAL_PASSWORD_LENGTH,
+                      })}
                       autoComplete="new-password"
                       disabled={submitting}
                     />
                   </div>
                 ) : (
                   <div className="field">
-                    <label htmlFor="uf-password">New password (optional, min. {MIN_INITIAL_PASSWORD_LENGTH} characters)</label>
+                    <label htmlFor="uf-password">
+                      {t('users.form.newPassword', { count: MIN_INITIAL_PASSWORD_LENGTH })}
+                    </label>
                     <input
                       id="uf-password"
                       type="password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       minLength={MIN_INITIAL_PASSWORD_LENGTH}
-                      placeholder="Leave empty to keep current password"
+                      placeholder={t('users.form.passwordKeepPlaceholder')}
                       autoComplete="new-password"
                       disabled={submitting}
                     />
                   </div>
                 )}
                 <div className="field">
-                  <label htmlFor="uf-points">Total points</label>
+                  <label htmlFor="uf-points">{t('users.form.totalPoints')}</label>
                   <input
                     id="uf-points"
                     type="number"
@@ -334,12 +339,12 @@ export function UserFormModal({
                 </div>
 
                 <div className="field user-form-modal__address">
-                  <label htmlFor="uf-address">Address</label>
+                  <label htmlFor="uf-address">{t('users.form.address')}</label>
                   <textarea
                     id="uf-address"
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
-                    placeholder="Street, city, etc."
+                    placeholder={t('users.form.addressPlaceholder')}
                     disabled={submitting}
                   />
                 </div>
@@ -378,11 +383,20 @@ export function UserFormModal({
             ) : null}
             <div className="user-form-modal__footer-actions">
               <div className="row-actions">
-                <button type="button" className="btn btn-secondary" onClick={() => !submitting && onClose()} disabled={submitting}>
-                  Cancel
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => !submitting && onClose()}
+                  disabled={submitting}
+                >
+                  {t('common.cancel')}
                 </button>
                 <button type="submit" className="btn btn-primary" disabled={submitting}>
-                  {submitting ? 'Saving…' : mode === 'create' ? 'Create user' : 'Save changes'}
+                  {submitting
+                    ? t('common.saving')
+                    : mode === 'create'
+                      ? t('users.form.createSubmit')
+                      : t('users.form.saveChanges')}
                 </button>
               </div>
             </div>

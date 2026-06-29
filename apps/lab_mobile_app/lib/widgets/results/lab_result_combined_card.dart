@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/session_scope.dart';
+import '../../l10n/app_localizations.dart';
 import '../../models/lab_result.dart';
 import '../../services/lab_report_pdf_service.dart';
 import '../../services/rest_lab_user_api.dart';
@@ -36,6 +37,7 @@ class _LabResultCombinedCardState extends State<LabResultCombinedCard> {
 
   Future<void> _downloadPdf() async {
     if (_downloading || !group.hasPdf) return;
+    final l10n = AppLocalizations.of(context)!;
     setState(() => _downloading = true);
     try {
       final session = SessionScope.of(context);
@@ -47,7 +49,7 @@ class _LabResultCombinedCardState extends State<LabResultCombinedCard> {
       AppToast.successInShell(
         context,
         saved,
-        title: kIsWeb ? 'Download started' : 'Report saved',
+        title: kIsWeb ? l10n.labReportDownloadStarted : l10n.labReportReportSaved,
       );
     } on LabReportPdfException catch (e) {
       if (!mounted) return;
@@ -57,7 +59,7 @@ class _LabResultCombinedCardState extends State<LabResultCombinedCard> {
       AppToast.errorInShell(context, e.message);
     } catch (_) {
       if (!mounted) return;
-      AppToast.errorInShell(context, 'Could not download the report. Try again.');
+      AppToast.errorInShell(context, l10n.labReportDownloadFailed);
     } finally {
       if (mounted) setState(() => _downloading = false);
     }
@@ -65,6 +67,7 @@ class _LabResultCombinedCardState extends State<LabResultCombinedCard> {
 
   Future<void> _runAiCheck() async {
     if (_aiRunning || !group.hasPdf) return;
+    final l10n = AppLocalizations.of(context)!;
     final session = SessionScope.of(context);
     setState(() => _aiRunning = true);
     try {
@@ -76,7 +79,7 @@ class _LabResultCombinedCardState extends State<LabResultCombinedCard> {
       AppToast.errorInShell(context, e.message);
     } catch (_) {
       if (!mounted) return;
-      AppToast.errorInShell(context, 'Could not run AI Check. Try again.');
+      AppToast.errorInShell(context, l10n.labReportAiCheckFailed);
     } finally {
       if (mounted) setState(() => _aiRunning = false);
     }
@@ -84,6 +87,7 @@ class _LabResultCombinedCardState extends State<LabResultCombinedCard> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final cs = context.cs;
     final borderColor = cs.primary.withValues(alpha: 0.35);
     final hasPdf = group.hasPdf;
@@ -129,7 +133,7 @@ class _LabResultCombinedCardState extends State<LabResultCombinedCard> {
                         crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
                           Text(
-                            'Combined report',
+                            l10n.labReportCombinedReport,
                             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                                   fontWeight: FontWeight.w700,
                                 ),
@@ -149,12 +153,12 @@ class _LabResultCombinedCardState extends State<LabResultCombinedCard> {
                                   ),
                             ),
                           ),
-                          _StatusBadge(hasPdf: hasPdf),
+                          _StatusBadge(hasPdf: hasPdf, l10n: l10n),
                         ],
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        '${group.tests.length} tests share one PDF',
+                        l10n.labReportTestsSharePdf(group.tests.length),
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: cs.onSurfaceVariant,
                             ),
@@ -167,7 +171,7 @@ class _LabResultCombinedCardState extends State<LabResultCombinedCard> {
                           children: [
                             Icon(Icons.event_outlined, size: 14, color: cs.onSurfaceVariant),
                             Text(
-                              'Released ${_fmtDate(releasedAt)}',
+                              l10n.resultsReleasedDate(_fmtDate(releasedAt)),
                               style: Theme.of(context).textTheme.labelSmall?.copyWith(
                                     color: cs.onSurfaceVariant,
                                   ),
@@ -236,7 +240,7 @@ class _LabResultCombinedCardState extends State<LabResultCombinedCard> {
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            'PDF not uploaded yet for this combined report.',
+                            l10n.labReportPdfNotUploadedCombined,
                             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                   color: cs.onSurfaceVariant,
                                 ),
@@ -260,7 +264,7 @@ class _LabResultCombinedCardState extends State<LabResultCombinedCard> {
                       label: FittedBox(
                         fit: BoxFit.scaleDown,
                         alignment: Alignment.centerLeft,
-                        child: Text(_downloading ? 'Downloading…' : 'Download combined PDF'),
+                        child: Text(_downloading ? l10n.labReportDownloading : l10n.labReportDownloadCombinedPdf),
                       ),
                     ),
                   ),
@@ -271,7 +275,7 @@ class _LabResultCombinedCardState extends State<LabResultCombinedCard> {
                       child: OutlinedButton.icon(
                         onPressed: () => context.push('/ai-analysis'),
                         icon: const Icon(Icons.auto_awesome_rounded, size: 20),
-                        label: const Text('View AI summary'),
+                        label: Text(l10n.labReportViewAiSummary),
                       ),
                     )
                   else
@@ -289,7 +293,7 @@ class _LabResultCombinedCardState extends State<LabResultCombinedCard> {
                         label: FittedBox(
                           fit: BoxFit.scaleDown,
                           alignment: Alignment.centerLeft,
-                          child: Text(_aiRunning ? 'Running AI Check…' : 'Run AI Check'),
+                          child: Text(_aiRunning ? l10n.labReportRunningAiCheck : l10n.labReportRunAiCheck),
                         ),
                       ),
                     ),
@@ -308,9 +312,10 @@ class _LabResultCombinedCardState extends State<LabResultCombinedCard> {
 }
 
 class _StatusBadge extends StatelessWidget {
-  const _StatusBadge({required this.hasPdf});
+  const _StatusBadge({required this.hasPdf, required this.l10n});
 
   final bool hasPdf;
+  final AppLocalizations l10n;
 
   @override
   Widget build(BuildContext context) {
@@ -324,7 +329,7 @@ class _StatusBadge extends StatelessWidget {
         border: Border.all(color: color.withValues(alpha: 0.25)),
       ),
       child: Text(
-        hasPdf ? 'PDF ready' : 'Pending',
+        hasPdf ? l10n.labReportPdfReady : l10n.labReportPdfPending,
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
               color: color,
               fontWeight: FontWeight.w700,

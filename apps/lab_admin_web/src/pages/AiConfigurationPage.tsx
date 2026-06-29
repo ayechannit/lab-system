@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { ApiConfigBanner } from '../components/common/ApiConfigBanner'
 import { ConfirmDialog } from '../components/common/ConfirmDialog'
 import { LoadingSpinner } from '../components/common/LoadingSpinner'
 import { ListFilterSearchField } from '../components/common/ListFilterSearchField'
@@ -30,6 +32,7 @@ function formatWhen(iso?: string): string {
 }
 
 export function AiConfigurationPage() {
+  const { t } = useTranslation()
   const hasApi = isApiMode()
   const { showSuccess, showError } = useToast()
   const [rows, setRows] = useState<AiConfigRow[]>([])
@@ -146,19 +149,9 @@ export function AiConfigurationPage() {
 
   return (
     <div className="stack">
-      <PageHeader
-        title="AI configuration"
-        description="Manage Gemini and OpenAI models and API keys for patient AI summaries."
-      />
+      <PageHeader title={t('pages.aiConfig.title')} description={t('pages.aiConfig.description')} />
 
-      {!hasApi ? (
-        <div className="card card--muted">
-          <p style={{ margin: 0, fontSize: '0.9rem' }}>
-            Set <code>VITE_API_BASE_URL</code> in <code>apps/lab_admin_web</code> (e.g.{' '}
-            <code>http://localhost:3000</code>) and restart the dev server. AI settings load from the backend only.
-          </p>
-        </div>
-      ) : null}
+      {!hasApi ? <ApiConfigBanner /> : null}
 
       <div className="card">
         <div className="list-tools-row">
@@ -192,7 +185,7 @@ export function AiConfigurationPage() {
               onClick={clearFilters}
               disabled={loading || !hasApi}
             >
-              Clear filters
+              {t('filters.clearFilters')}
             </button>
           </div>
           <div className="list-tools-row__actions">
@@ -202,7 +195,7 @@ export function AiConfigurationPage() {
               onClick={() => setRefreshTick((t) => t + 1)}
               disabled={loading || !hasApi}
             >
-              Refresh
+              {loading ? t('common.refreshing') : t('common.refresh')}
             </button>
             <button type="button" className="btn btn-primary" onClick={openCreate} disabled={loading || !hasApi}>
               Add configuration

@@ -1,5 +1,6 @@
 import { getApiBaseUrl } from './apiBase'
 import { getStoredAccessToken } from './authSession'
+import { getAppLocale } from '../i18n'
 
 export function requireApiOrigin(): string {
   const base = getApiBaseUrl()
@@ -19,6 +20,7 @@ export async function apiFetch(path: string, init?: RequestInit): Promise<Respon
   const headers = new Headers(init?.headers)
   const token = getStoredAccessToken()
   if (token) headers.set('Authorization', `Bearer ${token}`)
+  headers.set('Accept-Language', getAppLocale())
   const body = init?.body
   if (
     body != null &&

@@ -1,5 +1,6 @@
 import { type FormEvent, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { useTranslation } from 'react-i18next'
 import { discountedPriceMmk } from '../../model/labTestCatalogApi'
 import type { LabTestCatalogRow } from '../../model/types'
 import {
@@ -9,28 +10,19 @@ import {
   upsertTestDiscount,
 } from '../../services/discountService'
 import { datetimeLocalToIso, toDatetimeLocalValue } from '../../utils/datetimeLocal'
+import { roleLabel } from '../../utils/roleLabels'
 import { DatetimeLocalField } from '../common/DatetimeLocalField'
 import '../common/ui.css'
 
-function roleLabelReadonly(role: string | undefined): string {
-  if (!role) return ''
-  const map: Record<string, string> = {
-    clinic: 'Clinic',
-    doctor: 'Doctor',
-    patient: 'Patient',
-    all: 'All roles',
-  }
-  return map[role] ?? role
-}
-
 const DISCOUNT_TEST_PICKER_MAX = 100
 
-const ROLE_OPTIONS: { value: DiscountUpsertBody['role']; label: string }[] = [
-  { value: 'clinic', label: 'Clinic' },
-  { value: 'doctor', label: 'Doctor' },
-  { value: 'patient', label: 'Patient' },
-  { value: 'all', label: 'All roles (same %)' },
-]
+const ROLE_VALUES: DiscountUpsertBody['role'][] = ['clinic', 'doctor', 'patient', 'all']
+
+function discountRoleDisplay(role: string | undefined, t: (key: string) => string): string {
+  if (!role) return ''
+  if (role === 'all') return t('discounts.form.allRolesSamePercent')
+  return roleLabel(role)
+}
 
 type DiscountFormModalProps = {
   open: boolean
@@ -49,6 +41,7 @@ export function DiscountFormModal({
   onClose,
   onSuccess,
 }: DiscountFormModalProps) {
+  const { t } = useTranslation()
   const titleId = useId()
   const discountActiveId = useId()
   const discountTestFilterId = useId()
@@ -192,16 +185,26 @@ export function DiscountFormModal({
 
   const selectedRoleSet = useMemo(() => new Set(selectedRoles), [selectedRoles])
 
+  const roleOptions = useMemo(
+    () =>
+      ROLE_VALUES.map((value) => ({
+        value,
+        label:
+          value === 'all' ? t('discounts.form.allRolesOption') : roleLabel(value),
+      })),
+    [t],
+  )
+
   const rolePickerSummary = useMemo(() => {
-    if (selectedRoles.length === 0) return 'Choose roles…'
-    if (selectedRoles.includes('all')) return 'All roles (same %)'
+    if (selectedRoles.length === 0) return t('discounts.form.chooseRoles')
+    if (selectedRoles.includes('all')) return t('discounts.form.allRolesSamePercent')
     if (selectedRoles.length === 1) {
-      return ROLE_OPTIONS.find((o) => o.value === selectedRoles[0])?.label ?? '1 role selected'
+      return roleOptions.find((o) => o.value === selectedRoles[0])?.label ?? t('discounts.form.oneRoleSelected')
     }
     const individual: DiscountUpsertBody['role'][] = ['clinic', 'doctor', 'patient']
-    if (individual.every((r) => selectedRoles.includes(r))) return 'Clinic, doctor, patient'
-    return `${selectedRoles.length} roles selected`
-  }, [selectedRoles])
+    if (individual.every((r) => selectedRoles.includes(r))) return t('discounts.form.clinicDoctorPatient')
+    return t('discounts.form.rolesSelected', { count: selectedRoles.length })
+  }, [selectedRoles, roleOptions, t])
 
   function toggleRole(value: DiscountUpsertBody['role']) {
     if (value === 'all') {
@@ -219,24 +222,24 @@ export function DiscountFormModal({
     e.preventDefault()
     setFormError(null)
     if (mode === 'create' && selectedTestIds.length === 0) {
-      setFormError('Select at least one lab test.')
+      setFormError(t('discounts.form.errorSelectTest'))
       return
     }
     if (mode === 'create' && selectedRoles.length === 0) {
-      setFormError('Select at least one role.')
+      setFormError(t('discounts.form.errorSelectRole'))
       return
     }
     const discRaw =
       typeof discountPercent === 'number' ? discountPercent : Number.parseFloat(String(discountPercent))
     if (!Number.isFinite(discRaw) || discRaw < 0 || discRaw > 100) {
-      setFormError('Enter a discount between 0 and 100.')
+      setFormError(t('discounts.form.errorDiscountRange'))
       return
     }
     const discN = Math.round(discRaw * 100) / 100
     const startIso = datetimeLocalToIso(startLocal)
     const endIso = datetimeLocalToIso(endLocal)
     if (startIso && endIso && new Date(endIso) < new Date(startIso)) {
-      setFormError('End date must be on or after the start date.')
+      setFormError(t('discounts.form.errorEndBeforeStart'))
       return
     }
 
@@ -278,7 +281,7 @@ export function DiscountFormModal({
       onSuccess()
       onClose()
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : 'Request failed')
+      setFormError(err instanceof Error ? err.message : t('discounts.form.requestFailed'))
     } finally {
       setSubmitting(false)
     }
@@ -304,7 +307,7 @@ export function DiscountFormModal({
 
   if (!open) return null
 
-  const title = mode === 'create' ? 'Add test discount' : 'Edit test discount'
+  const title = mode === 'create' ? t('discounts.form.createTitle') : t('discounts.form.editTitle')
   const testLabel =
     mode === 'edit' && initial
       ? [initial.test_name, initial.test_code].filter(Boolean).join(' · ') || initial.test_id
@@ -338,7 +341,7 @@ export function DiscountFormModal({
               type="button"
               className="btn btn-ghost modal-close"
               onClick={() => !submitting && onClose()}
-              aria-label="Close"
+              aria-label={t('common.close')}
               disabled={submitting}
             >
               ×
@@ -356,22 +359,22 @@ export function DiscountFormModal({
                       className="user-form-modal__section-label"
                       style={{ display: 'block', marginBottom: '0.35rem' }}
                     >
-                      Lab test
+                      {t('discounts.form.labTest')}
                     </span>
                     <p className="discount-form-modal__readonly-test-name">{testLabel}</p>
                   </div>
                   <div className="field">
-                    <label htmlFor="df-role-ro">Role</label>
+                    <label htmlFor="df-role-ro">{t('discounts.form.roles')}</label>
                     <input
                       id="df-role-ro"
                       readOnly
                       disabled
-                      value={roleLabelReadonly(initial?.role)}
+                      value={discountRoleDisplay(initial?.role, t)}
                       className="lab-test-modal__input-computed"
                     />
                   </div>
                   <div className="field">
-                    <label htmlFor="df-pct">Discount %</label>
+                    <label htmlFor="df-pct">{t('discounts.form.discountPercent')}</label>
                     <input
                       id="df-pct"
                       type="number"
@@ -387,8 +390,10 @@ export function DiscountFormModal({
                     />
                     {selectedTest && previewAfter !== null ? (
                       <p className="discount-form-modal__preview-inline">
-                        Base {selectedTest.base_price_mmk.toLocaleString()} MMK → after discount{' '}
-                        <strong>{previewAfter.toLocaleString()}</strong> MMK
+                        {t('discounts.form.previewInline', {
+                          base: selectedTest.base_price_mmk.toLocaleString(),
+                          after: previewAfter.toLocaleString(),
+                        })}
                       </p>
                     ) : null}
                   </div>
@@ -397,25 +402,22 @@ export function DiscountFormModal({
                 <>
                   <div className="discount-form-modal__fieldset">
                     <span className="user-form-modal__section-label" style={{ display: 'block', marginBottom: '0.35rem' }}>
-                      Lab tests
+                      {t('discounts.form.labTests')}
                     </span>
-                    <p className="discount-form-modal__hint">
-                      Select one or more tests. The same roles, discount %, and active setting apply to each
-                      combination.
-                    </p>
+                    <p className="discount-form-modal__hint">{t('discounts.form.labTestsHint')}</p>
                     {tests.length === 0 ? (
-                      <p className="discount-form-modal__panel-note">No tests in catalog.</p>
+                      <p className="discount-form-modal__panel-note">{t('discounts.form.noTestsInCatalog')}</p>
                     ) : (
                       <div className="discount-form-modal__test-panel">
                         <div className="discount-form-modal__test-toolbar">
                           <label htmlFor={discountTestFilterId} className="visually-hidden">
-                            Search tests
+                            {t('discounts.form.searchTests')}
                           </label>
                           <input
                             ref={testFilterInputRef}
                             id={discountTestFilterId}
                             type="search"
-                            placeholder="Search by name or code…"
+                            placeholder={t('discounts.form.searchPlaceholder')}
                             value={testSearch}
                             onChange={(e) => setTestSearch(e.target.value)}
                             disabled={submitting}
@@ -423,13 +425,15 @@ export function DiscountFormModal({
                             spellCheck={false}
                           />
                           <span className="discount-form-modal__count-badge">
-                            {selectedTestIds.length} selected
+                            {t('discounts.form.selectedCount', { count: selectedTestIds.length })}
                           </span>
                         </div>
                         {filteredTestsSorted.length > DISCOUNT_TEST_PICKER_MAX ? (
                           <p className="discount-form-modal__panel-note">
-                            Showing {DISCOUNT_TEST_PICKER_MAX} of {filteredTestsSorted.length} matches — narrow your
-                            search.
+                            {t('discounts.form.showingMatches', {
+                              shown: DISCOUNT_TEST_PICKER_MAX,
+                              total: filteredTestsSorted.length,
+                            })}
                           </p>
                         ) : null}
                         <div className="discount-form-modal__test-table-wrap table-wrap">
@@ -437,7 +441,7 @@ export function DiscountFormModal({
                             <thead>
                               <tr>
                                 <th className="discount-form-modal__test-table-check" scope="col">
-                                  <span className="visually-hidden">Select</span>
+                                  <span className="visually-hidden">{t('discounts.form.selectColumn')}</span>
                                   <input
                                     ref={selectAllVisibleRef}
                                     type="checkbox"
@@ -446,15 +450,15 @@ export function DiscountFormModal({
                                     disabled={submitting || visibleTestIds.length === 0}
                                     aria-label={
                                       allVisibleTestsSelected
-                                        ? 'Clear selection for visible tests'
-                                        : 'Select all visible tests'
+                                        ? t('discounts.form.clearVisibleSelection')
+                                        : t('discounts.form.selectAllVisible')
                                     }
                                   />
                                 </th>
-                                <th scope="col">Test</th>
-                                <th scope="col">Code</th>
+                                <th scope="col">{t('common.test')}</th>
+                                <th scope="col">{t('common.code')}</th>
                                 <th className="col-num" scope="col">
-                                  Base (MMK)
+                                  {t('labTests.table.base')}
                                 </th>
                               </tr>
                             </thead>
@@ -462,33 +466,33 @@ export function DiscountFormModal({
                               {filteredTestsSorted.length === 0 ? (
                                 <tr>
                                   <td colSpan={4} className="data-table__state">
-                                    No tests match your search.
+                                    {t('discounts.form.noSearchMatch')}
                                   </td>
                                 </tr>
                               ) : (
-                                testsPickerRows.map((t) => {
-                                  const checked = selectedSet.has(t.id)
+                                testsPickerRows.map((testRow) => {
+                                  const checked = selectedSet.has(testRow.id)
                                   return (
                                     <tr
-                                      key={t.id}
+                                      key={testRow.id}
                                       className={checked ? 'discount-form-modal__test-table-row--selected' : undefined}
-                                      onClick={() => !submitting && toggleTestId(t.id)}
+                                      onClick={() => !submitting && toggleTestId(testRow.id)}
                                     >
                                       <td className="discount-form-modal__test-table-check">
                                         <input
                                           type="checkbox"
                                           checked={checked}
-                                          onChange={() => toggleTestId(t.id)}
+                                          onChange={() => toggleTestId(testRow.id)}
                                           onClick={(e) => e.stopPropagation()}
                                           disabled={submitting}
-                                          aria-label={`Select ${t.test_name}`}
+                                          aria-label={t('discounts.form.selectTestAria', { name: testRow.test_name })}
                                         />
                                       </td>
-                                      <td>{t.test_name}</td>
+                                      <td>{testRow.test_name}</td>
                                       <td>
-                                        <code>{t.test_code}</code>
+                                        <code>{testRow.test_code}</code>
                                       </td>
-                                      <td className="col-num">{t.base_price_mmk.toLocaleString()}</td>
+                                      <td className="col-num">{testRow.base_price_mmk.toLocaleString()}</td>
                                     </tr>
                                   )
                                 })
@@ -503,7 +507,7 @@ export function DiscountFormModal({
                             onClick={selectAllTests}
                             disabled={submitting || tests.length === 0}
                           >
-                            Select all
+                            {t('discounts.form.selectAll')}
                           </button>
                           <button
                             type="button"
@@ -511,7 +515,7 @@ export function DiscountFormModal({
                             onClick={clearTestSelection}
                             disabled={submitting || selectedTestIds.length === 0}
                           >
-                            Clear
+                            {t('discounts.form.clear')}
                           </button>
                         </div>
                       </div>
@@ -520,14 +524,14 @@ export function DiscountFormModal({
 
                   <div className="discount-form-modal__fieldset">
                     <p className="discount-form-modal__hint" style={{ marginTop: 0 }}>
-                      Select one or more roles. &quot;All roles&quot; uses one rule for clinic, doctor, and patient.
+                      {t('discounts.form.rolesHint')}
                     </p>
                     <div
                       ref={rolePickerWrapRef}
                       className={`field order-test-multiselect discount-form-modal__roles-picker order-test-multiselect--drop-up${rolesPickerOpen && !submitting ? ' order-test-multiselect--open' : ''}`}
                       style={{ marginBottom: 0 }}
                     >
-                      <label htmlFor={discountRoleTriggerId}>Roles</label>
+                      <label htmlFor={discountRoleTriggerId}>{t('discounts.form.roles')}</label>
                       <div className="order-test-multiselect__anchor">
                         <button
                           type="button"
@@ -548,7 +552,7 @@ export function DiscountFormModal({
                             role="listbox"
                             aria-multiselectable="true"
                           >
-                            {ROLE_OPTIONS.map((o) => {
+                            {roleOptions.map((o) => {
                               const checked = selectedRoleSet.has(o.value)
                               return (
                                 <label key={o.value} className="order-test-multiselect-row">
@@ -575,7 +579,7 @@ export function DiscountFormModal({
                   </div>
 
                   <div className="field">
-                    <label htmlFor="df-pct">Discount %</label>
+                    <label htmlFor="df-pct">{t('discounts.form.discountPercent')}</label>
                     <input
                       id="df-pct"
                       type="number"
@@ -593,15 +597,18 @@ export function DiscountFormModal({
 
                   {selectedTestsCreate.length > 0 && pctForPreview !== null && Number.isFinite(pctForPreview) ? (
                     <div className="discount-form-modal__preview-card" aria-live="polite">
-                      <div className="discount-form-modal__preview-head">After discount (preview)</div>
+                      <div className="discount-form-modal__preview-head">{t('discounts.form.previewTitle')}</div>
                       <ul className="discount-form-modal__preview-rows">
-                        {selectedTestsCreate.map((t) => {
-                          const after = discountedPriceMmk(t.base_price_mmk, pctForPreview)
+                        {selectedTestsCreate.map((testRow) => {
+                          const after = discountedPriceMmk(testRow.base_price_mmk, pctForPreview)
                           return (
-                            <li key={t.id} className="discount-form-modal__preview-row">
-                              <span className="discount-form-modal__preview-row__label">{t.test_name}</span>
+                            <li key={testRow.id} className="discount-form-modal__preview-row">
+                              <span className="discount-form-modal__preview-row__label">{testRow.test_name}</span>
                               <span className="discount-form-modal__preview-row__nums">
-                                {t.base_price_mmk.toLocaleString()} → <strong>{after.toLocaleString()}</strong> MMK
+                                {t('discounts.form.previewRow', {
+                                  base: testRow.base_price_mmk.toLocaleString(),
+                                  after: after.toLocaleString(),
+                                })}
                               </span>
                             </li>
                           )
@@ -614,28 +621,28 @@ export function DiscountFormModal({
 
               <div className="discount-form-modal__pair">
                 <div className="field">
-                  <label htmlFor="df-start">Start (optional)</label>
+                  <label htmlFor="df-start">{t('discounts.form.startOptional')}</label>
                   <DatetimeLocalField
                     id="df-start"
                     value={startLocal}
                     onChange={setStartLocal}
                     disabled={submitting}
-                    placeholder="Start date & time"
+                    placeholder={t('discounts.form.startPlaceholder')}
                   />
                 </div>
                 <div className="field">
-                  <label htmlFor="df-end">End (optional)</label>
+                  <label htmlFor="df-end">{t('discounts.form.endOptional')}</label>
                   <DatetimeLocalField
                     id="df-end"
                     value={endLocal}
                     onChange={setEndLocal}
                     disabled={submitting}
-                    placeholder="End date & time"
+                    placeholder={t('discounts.form.endPlaceholder')}
                   />
                 </div>
               </div>
               <p className="discount-form-modal__hint" style={{ marginTop: 0 }}>
-                Leave both dates empty for an always-on discount. Outside the range the rule is kept but does not apply.
+                {t('discounts.form.datesHint')}
               </p>
 
               <label htmlFor={discountActiveId} className="form-switch">
@@ -651,10 +658,10 @@ export function DiscountFormModal({
                   <span className="form-switch__track" aria-hidden="true" />
                 </span>
                 <span className="form-switch__text">
-                  <span className="form-switch__title">{isActive ? 'Discount is active' : 'Discount is inactive'}</span>
-                  <span className="form-switch__desc">
-                    Inactive rows are kept but do not apply to role-based pricing until turned on again.
+                  <span className="form-switch__title">
+                    {isActive ? t('discounts.form.activeTitle') : t('discounts.form.inactiveTitle')}
                   </span>
+                  <span className="form-switch__desc">{t('discounts.form.activeDesc')}</span>
                 </span>
               </label>
             </div>
@@ -669,18 +676,18 @@ export function DiscountFormModal({
             <div className="discount-form-modal__footer-actions">
               <div className="row-actions">
                 <button type="button" className="btn btn-secondary" onClick={() => !submitting && onClose()} disabled={submitting}>
-                  Cancel
+                  {t('common.cancel')}
                 </button>
                 <button type="submit" className="btn btn-primary" disabled={createSubmitDisabled}>
                   {submitting
                     ? mode === 'create'
-                      ? 'Creating discount…'
-                      : 'Saving discount…'
+                      ? t('discounts.form.creating')
+                      : t('discounts.form.saving')
                     : mode === 'create'
                       ? createDiscountCount > 1
-                        ? `Create ${createDiscountCount} discounts`
-                        : 'Create discount'
-                      : 'Save discount'}
+                        ? t('discounts.form.createDiscounts', { count: createDiscountCount })
+                        : t('discounts.form.createDiscount')
+                      : t('discounts.form.saveDiscount')}
                 </button>
               </div>
             </div>

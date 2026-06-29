@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useAuth } from '../../hooks/AuthContext'
 import { useToast } from '../../hooks/ToastContext'
 import { isApiMode } from '../../services/apiBase'
@@ -19,6 +20,7 @@ const THEME_ICONS: Record<AppThemeId, string> = {
 }
 
 export function HeaderThemeMenu() {
+  const { t } = useTranslation()
   const { signedIn } = useAuth()
   const hasApi = isApiMode()
   const { showError } = useToast()
@@ -26,8 +28,6 @@ export function HeaderThemeMenu() {
   const [theme, setTheme] = useState<AppThemeId>(() => getAppliedAppTheme())
   const [saving, setSaving] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
-
-  const current = THEME_OPTIONS.find((opt) => opt.id === theme) ?? THEME_OPTIONS[0]
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -71,7 +71,7 @@ export function HeaderThemeMenu() {
       } catch {
         applyAppTheme(previous)
         setTheme(previous)
-        showError('Could not save theme.')
+        showError(t('theme.saveFailed'))
       } finally {
         setSaving(false)
       }
@@ -83,7 +83,7 @@ export function HeaderThemeMenu() {
       <button
         type="button"
         className={`header-theme-menu__trigger${open ? ' header-theme-menu__trigger--open' : ''}`}
-        aria-label={`Theme: ${current.label}. Change appearance.`}
+        aria-label={`${t('theme.label')}: ${t(`theme.${theme}`)}. ${t('theme.changeAppearance')}`}
         aria-haspopup="menu"
         aria-expanded={open}
         disabled={saving}
@@ -92,14 +92,14 @@ export function HeaderThemeMenu() {
         <span className="material-symbols-outlined header-theme-menu__icon" aria-hidden>
           {THEME_ICONS[theme]}
         </span>
-        <span className="header-theme-menu__label">{current.label}</span>
+        <span className="header-theme-menu__label">{t(`theme.${theme}`)}</span>
         <span className="material-symbols-outlined header-theme-menu__chevron" aria-hidden>
           expand_more
         </span>
       </button>
 
       {open ? (
-        <div className="header-theme-menu__dropdown" role="menu" aria-label="Choose theme">
+        <div className="header-theme-menu__dropdown" role="menu" aria-label={t('theme.chooseTheme')}>
           <ul className="header-theme-menu__list">
             {THEME_OPTIONS.map((opt) => {
               const active = opt.id === theme
@@ -126,7 +126,7 @@ export function HeaderThemeMenu() {
                         }}
                       />
                     </span>
-                    <span className="header-theme-menu__option-label">{opt.label}</span>
+                    <span className="header-theme-menu__option-label">{t(`theme.${opt.id}`)}</span>
                     {active ? (
                       <span className="material-symbols-outlined header-theme-menu__check" aria-hidden>
                         check

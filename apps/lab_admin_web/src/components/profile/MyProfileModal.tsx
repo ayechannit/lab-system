@@ -1,4 +1,5 @@
 import { type FormEvent, useEffect, useId, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { createPortal } from 'react-dom'
 import type { SessionRole, StaffListRow, StaffRole } from '../../model/types'
 import {
@@ -8,6 +9,7 @@ import {
   type StaffUpdateBody,
 } from '../../services/staffService'
 import type { StoredAccount } from '../../services/authSession'
+import { roleLabel } from '../../utils/roleLabels'
 import { StaffProfileImageField } from '../staff/StaffProfileImageField'
 import '../common/ui.css'
 
@@ -17,21 +19,6 @@ const STAFF_ROLES: readonly StaffRole[] = ['admin', 'lab_technician', 'reception
 
 function isStaffRole(r: string): r is StaffRole {
   return (STAFF_ROLES as readonly string[]).includes(r)
-}
-
-function roleDisplay(role: SessionRole | null): string {
-  if (!role) return 'Signed in'
-  const map: Record<SessionRole, string> = {
-    admin: 'Admin',
-    lab_technician: 'Lab technician',
-    reception: 'Reception',
-    manager: 'Manager',
-    collector: 'Collector',
-    clinic: 'Clinic',
-    doctor: 'Doctor',
-    patient: 'Patient',
-  }
-  return map[role] ?? role
 }
 
 type MyProfileModalProps = {
@@ -49,6 +36,7 @@ export function MyProfileModal({
   onClose,
   onSuccess,
 }: MyProfileModalProps) {
+  const { t } = useTranslation()
   const titleId = useId()
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
@@ -80,14 +68,14 @@ export function MyProfileModal({
         if (!cancelled) setStaffRow(row)
       } catch (err) {
         if (!cancelled) {
-          setLoadError(err instanceof Error ? err.message : 'Could not load profile')
+          setLoadError(err instanceof Error ? err.message : t('profile.loadFailed'))
         }
       }
     })()
     return () => {
       cancelled = true
     }
-  }, [open, account.id, account.name, account.email])
+  }, [open, account.id, account.name, account.email, t])
 
   useEffect(() => {
     return () => {
@@ -120,11 +108,11 @@ export function MyProfileModal({
     setFormError(null)
 
     if (!staffRow) {
-      setFormError(loadError ?? 'Still loading profile — try again in a moment.')
+      setFormError(loadError ?? t('profile.stillLoading'))
       return
     }
     if (!isStaffRole(account.role)) {
-      setFormError('This account cannot be edited here.')
+      setFormError(t('profile.cannotEdit'))
       return
     }
 
@@ -143,11 +131,11 @@ export function MyProfileModal({
     const cpw = confirmPassword.trim()
     if (pw !== '' || cpw !== '') {
       if (pw.length < MIN_PASSWORD_LENGTH) {
-        setFormError(`New password must be at least ${MIN_PASSWORD_LENGTH} characters.`)
+        setFormError(t('profile.passwordMinLength', { count: MIN_PASSWORD_LENGTH }))
         return
       }
       if (pw !== cpw) {
-        setFormError('Password and confirmation do not match.')
+        setFormError(t('profile.passwordMismatch'))
         return
       }
     }
@@ -169,7 +157,7 @@ export function MyProfileModal({
       await onSuccess()
       onClose()
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : 'Request failed')
+      setFormError(err instanceof Error ? err.message : t('profile.requestFailed'))
     } finally {
       setSubmitting(false)
     }
@@ -194,13 +182,13 @@ export function MyProfileModal({
       >
         <div className="modal-head">
           <h2 id={titleId} className="modal-title">
-            My profile
+            {t('profile.title')}
           </h2>
           <button
             type="button"
             className="btn btn-ghost modal-close"
             onClick={() => !submitting && onClose()}
-            aria-label="Close"
+            aria-label={t('common.close')}
             disabled={submitting}
           >
             ×
@@ -213,35 +201,35 @@ export function MyProfileModal({
             </div>
           ) : null}
           <div className="field">
-            <label htmlFor="mp-name">Name</label>
+            <label htmlFor="mp-name">{t('profile.name')}</label>
             <input
               id="mp-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Full name"
+              placeholder={t('profile.namePlaceholder')}
               autoComplete="name"
               autoFocus
               disabled={submitting || !staffRow}
             />
           </div>
           <div className="field">
-            <label htmlFor="mp-email">Email</label>
+            <label htmlFor="mp-email">{t('profile.email')}</label>
             <input
               id="mp-email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="name@lab.example"
+              placeholder={t('profile.emailPlaceholder')}
               autoComplete="email"
               disabled={submitting || !staffRow}
             />
           </div>
           <div className="field">
-            <label htmlFor="mp-role">Role</label>
+            <label htmlFor="mp-role">{t('profile.role')}</label>
             <input
               id="mp-role"
               readOnly
-              value={roleDisplay(sessionRole)}
+              value={roleLabel(sessionRole)}
               tabIndex={-1}
               aria-readonly="true"
             />
@@ -268,27 +256,29 @@ export function MyProfileModal({
             disabled={submitting || !staffRow}
           />
           <div className="field">
-            <label htmlFor="mp-pw">New password (optional, min. {MIN_PASSWORD_LENGTH} characters)</label>
+            <label htmlFor="mp-pw">
+              {t('profile.newPassword')} (optional, min. {MIN_PASSWORD_LENGTH} characters)
+            </label>
             <input
               id="mp-pw"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               minLength={MIN_PASSWORD_LENGTH}
-              placeholder="Leave empty to keep current password"
+              placeholder={t('profile.passwordKeepHint')}
               autoComplete="new-password"
               disabled={submitting || !staffRow}
             />
           </div>
           <div className="field">
-            <label htmlFor="mp-pw2">Confirm new password</label>
+            <label htmlFor="mp-pw2">{t('profile.confirmPassword')}</label>
             <input
               id="mp-pw2"
               type="password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               minLength={MIN_PASSWORD_LENGTH}
-              placeholder="Repeat new password"
+              placeholder={t('profile.confirmPasswordPlaceholder')}
               autoComplete="new-password"
               disabled={submitting || !staffRow}
             />
@@ -300,10 +290,10 @@ export function MyProfileModal({
           ) : null}
           <div className="row-actions" style={{ marginTop: '0.25rem', justifyContent: 'flex-end' }}>
             <button type="submit" className="btn btn-primary" disabled={submitting || !staffRow}>
-              {submitting ? 'Saving…' : 'Save changes'}
+              {submitting ? t('common.saving') : t('profile.saveChanges')}
             </button>
             <button type="button" className="btn btn-secondary" onClick={onClose} disabled={submitting}>
-              Cancel
+              {t('common.cancel')}
             </button>
           </div>
         </form>

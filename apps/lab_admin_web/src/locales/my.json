@@ -1,0 +1,1271 @@
+{
+  "common": {
+    "appTitle": "ဆေးခန်းဓာတ်ခွဲစနစ်",
+    "loading": "ခေတ္တစောင့်",
+    "loadingSession": "Session ခေတ္တစောင့်",
+    "loadingEllipsis": "ခေတ္တစောင့်…",
+    "refresh": "ပြန်လည်ဖတ်ရှု",
+    "refreshing": "ပြန်လည်ဖတ်ရှုနေသည်…",
+    "save": "သိမ်းမည်",
+    "saving": "သိမ်းနေသည်…",
+    "cancel": "မလုပ်တော့",
+    "close": "ပိတ်မည်",
+    "confirm": "အတည်ပြုမည်",
+    "delete": "ဖျက်မည်",
+    "edit": "ပြင်မည်",
+    "logout": "ထွက်မည်",
+    "signedIn": "ဝင်ရောက်ပြီး",
+    "openNav": "မီနူးဖွင့်မည်",
+    "closeNav": "မီနူးပိတ်မည်",
+    "expandSidebar": "ဘေးဘားချဲ့မည်",
+    "collapseSidebar": "ဘေးဘားကို အိုင်ကွန်များသို့ ကျုံ့မည်",
+    "mainNav": "အဓိကမီနူး",
+    "language": "ဘာသာစကား",
+    "chooseLanguage": "ဘာသာစကားရွေးချယ်ပါ",
+    "english": "English",
+    "myanmar": "မြန်မာ",
+    "all": "အားလုံး",
+    "active": "အသုံးပြုနေသည်",
+    "inactive": "မအသုံးပြုတော့",
+    "yes": "ဟုတ်",
+    "no": "မဟုတ်",
+    "actions": "လုပ်ဆောင်ချက်များ",
+    "status": "အခြေအနေ",
+    "name": "အမည်",
+    "email": "အီးမေးလ်",
+    "phone": "ဖုန်း",
+    "role": "အခန်းကဏ္ဍ",
+    "address": "လိပ်စာ",
+    "priority": "ဦးစားပေး",
+    "patient": "လူနာ",
+    "order": "မှာယူမှု",
+    "created": "ဖန်တီးသည့်အချိန်",
+    "updated": "ပြင်ဆင်သည့်အချိန်",
+    "none": "—",
+    "test": "ဓာတ်ခွဲ",
+    "code": "ကုဒ်",
+    "searchLabel": "ရှာဖွေ",
+    "title": "ခေါင်းစဉ်",
+    "description": "ဖော်ပြချက်",
+    "banner": "ဘန်နာ",
+    "schedule": "ကာလ",
+    "startDate": "စတင်ရက်",
+    "endDate": "ပြီးဆုံးရက်",
+    "record": "Record",
+    "user": "အသုံးပြုသူ",
+    "allRoles": "Role အားလုံး",
+    "allCustomers": "Customer အားလုံး",
+    "activeOnly": "Active သာ",
+    "inactiveOnly": "Inactive သာ",
+    "noImage": "ပုံ မရှိ",
+    "off": "ပိတ်",
+    "scheduleStatus": {
+      "live": "တက်ကြွ",
+      "scheduled": "စီစဉ်ထား",
+      "expired": "သက်တမ်းကုန်",
+      "offSchedule": "Off schedule"
+    },
+    "profileUpdated": "Profile ပြင်ဆင်ပြီး။",
+    "accountMenuFor": "{{name}} အတွက် account menu။ Profile ပြင်ပါ။",
+    "dismissMessage": "Message ပိတ်မည်",
+    "openActionsMenu": "Actions menu ဖွင့်မည်"
+  },
+  "pagination": {
+    "navLabel": "စာရင်းမျက်နှာ လှန်ခြင်း",
+    "showingRange": "{{total}} ခုအနက် {{start}}–{{end}} ပြနေသည်",
+    "showingRangeShort": "{{start}}–{{end}} ပြနေသည်",
+    "pageNumber": "စာမျက်နှာ {{page}}",
+    "rowsPerPage": "စာမျက်နှာတစ်ခုလျှင် အတန်းအရေအတွက်",
+    "previous": "ယခင်",
+    "next": "ရှေ့",
+    "previousPage": "ယခင်စာမျက်နှာ",
+    "nextPage": "နောက်စာမျက်နှာ"
+  },
+  "filters": {
+    "clearFilters": "Filter များရှင်းမည်",
+    "search": "ရှာပါ…",
+    "searchSubject": "{{subject}} ရှာပါ…"
+  },
+  "datetime": {
+    "defaultPlaceholder": "ရက်စွဲနှင့် အချိန် ရွေးပါ",
+    "defaultTimePlaceholder": "အချိန် ရွေးပါ",
+    "dialogLabel": "ရက်စွဲနှင့် အချိန် ရွေးချယ်ပါ",
+    "chooseTime": "အချိန် ရွေးချယ်ပါ",
+    "prevMonth": "ယခင် လ",
+    "nextMonth": "နောက်လ",
+    "time": "အချိန်",
+    "hour": "နာရီ",
+    "minute": "မိနစ်",
+    "clear": "ရှင်းပါ",
+    "today": "ယနေ့",
+    "now": "ယခု",
+    "done": "ပြီးပြီ",
+    "startTime": "စတင်ချိန်"
+  },
+  "locationMap": {
+    "noLocationSelected": "တည်နေရာ မရွေးရသေးပါ။ Map ကို နှိပ်ပါ သို့မဟုတ် ကျွန်ုပ်၏ တည်နေရာကို သုံးပါ။",
+    "useMyLocation": "ကျွန်ုပ်၏ တည်နေရာ သုံးမည်",
+    "gettingLocation": "တည်နေရာ ရယူနေသည်…",
+    "lookingUpAddress": "လိပ်စာ ရှာဖွေနေသည်…",
+    "noAddressMatch": "ဤလိပ်စာနှင့် မကိုက်ညီပါ။ ပိုပြည့်စုံသော လိပ်စာ ထည့်ပါ သို့မဟုတ် map တွင် pin ထားပါ။",
+    "geocodeFailed": "လိပ်စာ ရှာ၍ မရပါ။ Map တွင် pin ထားပါ သို့မဟုတ် ထပ်ကြိုးစားပါ။",
+    "geolocationNotSupported": "ဤ browser တွင် geolocation ကို မပံ့ပိုးပါ။",
+    "permissionDenied": "တည်နေရာ ခွင့်ပြုချက် ငြင်းပယ်ခံရသည်။ Browser bar သို့မဟုတ် settings တွင် ခွင့်ပြုပါ။",
+    "positionUnavailable": "တည်နေရာ မရရှိနိုင်ပါ။ ထပ်ကြိုးစားပါ သို့မဟုတ် pin ကို manual ထားပါ။",
+    "requestTimedOut": "တည်နေရာ တောင်းဆိုမှု အချိန်ကုန်သွားသည်။ ထပ်ကြိုးစားပါ။",
+    "couldNotReadLocation": "သင့် တည်နေရာကို မဖတ်နိုင်ပါ။"
+  },
+  "api": {
+    "configureDevServerPrefix": "Set",
+    "configureDevServerMiddle": "in",
+    "configureDevServerSuffix": "(e.g.",
+    "configureDevServerExample": "http://localhost:3000",
+    "configureDevServerEnd": ") and restart the dev server.",
+    "configureSignIn": "VITE_API_BASE_URL သတ်မှတ်ပြီး backend မှ data load လုပ်ရန် sign in လုပ်ပါ။",
+    "configureSignInOrders": "VITE_API_BASE_URL သတ်မှတ်ပြီး backend မှ orders load လုပ်ရန် sign in လုပ်ပါ။",
+    "configureSignInResults": "VITE_API_BASE_URL သတ်မှတ်ပြီး orders load လုပ်ရန် sign in လုပ်ပါ။",
+    "configureSettings": "Backend မှ settings load/save လုပ်ရန် VITE_API_BASE_URL သတ်မှတ်ပါ။",
+    "configureReports": "Reporting data load လုပ်ရန် VITE_API_BASE_URL သတ်မှတ်ပြီး sign in လုပ်ပါ။",
+    "configureNotifications": "Notification inbox ချိတ်ဆက်ရန် VITE_API_BASE_URL သတ်မှတ်ပါ။"
+  },
+  "nav": {
+    "orders": "မှာယူမှုများ",
+    "labTests": "ဓာတ်ခွဲစာရင်းများ",
+    "staff": "ဝန်ထမ်းများ",
+    "users": "အသုံးပြုသူများ",
+    "collections": "စုဆောင်းခြင်း",
+    "results": "ဓာတ်ခွဲရလဒ်များ",
+    "ratings": "အကဲဖြတ်ချက်များ",
+    "discounts": "လျှော့စျေးများ",
+    "referralFees": "ရည်ညွှန်းကြေးများ",
+    "advertisements": "ကြော်ငြာများ",
+    "loyalty": "Loyalty အမှတ်များ",
+    "systemSettings": "စနစ်ဆက်တင်များ",
+    "reports": "အစီရင်ခံစာများ"
+  },
+  "roles": {
+    "admin": "အက်ဒမင်",
+    "lab_technician": "ဓာတ်ခွဲညှိနှိုင်း",
+    "reception": "လက်ခံ",
+    "manager": "မန်နေဂျာ",
+    "collector": "စုဆောင်း",
+    "clinic": "ဆေးခန်း",
+    "doctor": "ဆရာဝန်",
+    "patient": "လူနာ",
+    "phlebotomist": "သွေးယူသူ",
+    "all": "အားလုံး"
+  },
+  "theme": {
+    "label": "Theme",
+    "changeAppearance": "ပုံစံပြောင်းမည်",
+    "chooseTheme": "Theme ရွေးချယ်ပါ",
+    "light": "အလင်း",
+    "dark": "အမှောင်",
+    "idhc": "IDHC",
+    "saveFailed": "Theme သိမ်းမရပါ။",
+    "appearanceLegend": "ပုံစံ",
+    "lightDesc": "ပုံမှန် အလင်းရောင် workspace",
+    "darkDesc": "အလင်းနည်းသော အခန်းများအတွက် မျက်စိသက်သာမှု",
+    "idhcDesc": "International Diagnostic & Healthcare Center — အနီနှင့် ရွှေအမှာယာမှု brand"
+  },
+  "auth": {
+    "staffSignIn": "ဝန်ထမ်းဝင်ရောက်ခြင်း",
+    "staffSignInHint": "Lab staff အကောင့် (admin, technician, reception, manager) ဖြင့် ဝင်ပါ။",
+    "email": "Email",
+    "password": "Password",
+    "forgotPassword": "Password မေ့နေပါသလား?",
+    "rememberMe": "ဆက်လက်ဝင်ရောက်ထားမည်",
+    "signIn": "ဝင်မည်",
+    "signingIn": "ဝင်နေသည်…",
+    "signInFailed": "ဝင်ရောက်မှု မအောင်မြင်ပါ",
+    "showPassword": "Password ပြမည်",
+    "hidePassword": "Password ဖျောက်မည်",
+    "marketingHeadline": "တိကျမှန်ကန်သော သိပ္ပံနည်းကျ လုပ်ငန်းများ။",
+    "marketingLead": "လုံခြုံရေးနှင့် စည်းမျဉ်းစနစ်များဖြင့် ဓာတ်ခွဲခန်းလုပ်ငန်းများကို စီမံခန့်ခွဲနေသော ကျွမ်းကျင်သူများနှင့် ပူးပေါင်းပါ။",
+    "emailPlaceholder": "you@example.com",
+    "passwordPlaceholder": "••••••••",
+    "forgotTitle": "Password မေ့နေပါသလား",
+    "resetTitle": "Password ပြန်သတ်မှတ်မည်",
+    "forgotSubtitle": "Staff email ထည့်ပါ။ 6-digit verification code ပို့ပေးပါမည် (15 မိနစ်သက်တမ်း)။",
+    "resetSubtitle": "{{email}} သို့ပို့ထားသော code ထည့်ပြီး password အသစ်ရွေးချယ်ပါ။",
+    "resetSubtitleFallbackEmail": "your email",
+    "verificationCode": "Verification code",
+    "codePlaceholder": "000000",
+    "newPassword": "Password အသစ်",
+    "confirmPassword": "Password အတည်ပြု",
+    "newPasswordPlaceholder": "At least 8 characters",
+    "confirmPasswordPlaceholder": "Password အသစ် ထပ်ထည့်ပါ",
+    "sendCode": "Verification code ပို့မည်",
+    "sendingCode": "Code ပို့နေသည်…",
+    "resetPassword": "Password ပြန်သတ်မှတ်မည်",
+    "updatingPassword": "Password update လုပ်နေသည်…",
+    "backToSignIn": "Sign in သို့ပြန်မည်",
+    "useDifferentEmail": "Email အခြားတစ်ခုသုံးမည်",
+    "resendCode": "Code ထပ်ပို့မည်",
+    "codeSent": "Verification code ပို့ပြီးပါပြီ။",
+    "codeResent": "Code အသစ် ပို့ပြီးပါပြီ။",
+    "sendCodeFailed": "Verification code ပို့မရပါ",
+    "resendCodeFailed": "Code ထပ်ပို့မရပါ",
+    "passwordMinLength": "Password အနည်းဆုံး 8 characters လိုအပ်ပါသည်။",
+    "passwordMismatch": "Password များ မကိုက်ညီပါ။",
+    "codeRequired": "Email မှ 6-digit code ထည့်ပါ။",
+    "resetSuccess": "Password ပြန်သတ်မှတ်ပြီး။",
+    "resetFailed": "Password ပြန်သတ်မှတ်မရပါ",
+    "brandAlt": "International Diagnostic & Healthcare Center",
+    "securityHighlights": "Security and compliance highlights",
+    "isoCertified": "ISO 15189 Certified",
+    "hipaaCompliant": "HIPAA Compliant"
+  },
+  "footer": {
+    "disclaimer": "Authorized clinical users only. This system is monitored for security and compliance (HIPAA/ISO). All access logs are recorded.",
+    "copyright": "© {{year}} International Diagnostic & Healthcare Center",
+    "privacy": "Privacy",
+    "terms": "Terms",
+    "security": "Security"
+  },
+  "profile": {
+    "title": "My profile",
+    "name": "Name",
+    "email": "Email",
+    "role": "Role",
+    "newPassword": "Password အသစ်",
+    "confirmPassword": "Password အတည်ပြု",
+    "namePlaceholder": "Full name",
+    "emailPlaceholder": "name@lab.example",
+    "passwordKeepHint": "Password မပြောင်းလိုပါက ဗလာထားပါ",
+    "confirmPasswordPlaceholder": "Password ထပ်ထည့်ပါ",
+    "saveChanges": "Save changes",
+    "loadFailed": "Profile load မရပါ",
+    "stillLoading": "Profile load လုပ်နေသည်…",
+    "cannotEdit": "This account cannot be edited here.",
+    "requestFailed": "Request failed",
+    "passwordMinLength": "Password အနည်းဆုံး {{count}} characters လိုအပ်ပါသည်။",
+    "passwordMismatch": "Password များ မကိုက်ညီပါ။"
+  },
+  "pages": {
+    "orders": {
+      "title": "မှာယူမှုစီမံခန့်ခွဲမှု",
+      "description": "Mobile app မှ မှာယူမှုများကို ကြည့်ရှု၊ ညွှန်းကြောင်းအတည်ပြု၊ ဓာတ်ခွဲစာရင်းသတ်မှတ်ပြီး စုဆောင်းချိန် သတ်မှတ်ပါ။"
+    },
+    "labTests": {
+      "title": "ဓာတ်ခွဲစာရင်း",
+      "description": "ဓာတ်ခွဲအမည်၊ code၊ စျေးနှုန်းနှင့် ရရှိနိုင်မှု ပြင်ဆင်ပါ။ Discount column များသည် လျှော့စျေးရှိသော ဥပမာစျေးပြသည် — rule များကို Discounts page တွင် သတ်မှတ်ပါ။"
+    },
+    "staff": {
+      "title": "Lab ဝန်ထမ်းများ",
+      "description": "Lab ဝန်ထမ်းများကို ထည့်သွင်း/ပြင်ဆင်ပါ — role များဖြင့် permissions ထိန်းချုပ်ပါ။"
+    },
+    "users": {
+      "title": "အသုံးပြုသူများ",
+      "description": "Patient/partner accounts — contact, location, loyalty balance စီမံပါ။"
+    },
+    "collections": {
+      "title": "စုဆောင်းခြင်း & routing",
+      "descriptionPending": "Sample pickup လိုအပ်သော မှာယူမှုများကို ရွေးချယ်ပြီး collection route စီစဉ်ပါ။",
+      "descriptionScheduled": "စီစဉ်ထားသော pickup များကို ကြည့်ရှုပြီး sample collection စတင်သည့်အခါ တစ်ခုချင်းစီ collecting အဖြစ် မှတ်သားပါ။"
+    },
+    "results": {
+      "title": "ဓာတ်ခွဲရလဒ် စီမံခန့်ခွဲမှု",
+      "description": "Lab processing၊ PDF upload၊ AI review ပြီးနောက် patient ထံ release လုပ်ပါ။"
+    },
+    "ratings": {
+      "title": "အကဲဖြတ်ချက်နှင့် တုံ့ပြန်ချက်",
+      "description": "Patient/partner ratings ကို order context နှင့် ကြည့်ရှုပါ။"
+    },
+    "discounts": {
+      "title": "ဓာတ်ခွဲလျှော့စျေးများ",
+      "description": "Customer type အလိုက် test discount များ သတ်မှတ်ပါ။"
+    },
+    "referralFees": {
+      "title": "ရည်ညွှန်းကြေးများ",
+      "description": "Lab test နှင့် referrer role အလိုက် referral commission သတ်မှတ်ပါ။"
+    },
+    "advertisements": {
+      "title": "ကြော်ငြာများ",
+      "description": "Mobile app တွင် ပြသမည့် promotional banners စီမံပါ။"
+    },
+    "loyalty": {
+      "title": "Loyalty အမှတ်များ",
+      "description": "အမှတ်ရ rule များ၊ promotion များနှင့် customer balance များ စီမံပါ။"
+    },
+    "systemSettings": {
+      "title": "စနစ်ဆက်တင်များ",
+      "description": "Appearance theme နှင့် contact details။"
+    },
+    "reports": {
+      "title": "အစီရင်ခံစာနှင့် analytics",
+      "description": "Dashboard KPIs၊ queues၊ staff performance နှင့် financial summaries ကို ကြည့်ရှုပါ။"
+    },
+    "aiConfig": {
+      "title": "AI configuration",
+      "description": "Gemini/OpenAI models နှင့် API keys စီမံပါ။"
+    },
+    "aiPrompts": {
+      "title": "AI prompts",
+      "description": "AI conversations အတွက် reusable system prompts ပြင်ဆင်ပါ။"
+    }
+  },
+  "collections": {
+    "title": "စုဆောင်းရန် အဆင်သင့်မှာယူမှုများ",
+    "scheduledTitle": "စီစဉ်ထားသော စုဆောင်းမှုများ",
+    "hint": "အောက်ပါမှာယူမှုများကို ရွေးချယ်ပြီး route စတင်ချိန်နှင့် AI ဖြင့် collection route စီစဉ်ပါ။",
+    "scheduledHint": "စီစဉ်ထားသော မှာယူမှုတစ်ခုကို ရွေးချယ်ပြီး collecting အဖြစ် မှတ်သားပါ။",
+    "planRoute": "Route စီစဉ်မည်",
+    "planningRoute": "Route စီစဉ်နေသည်…",
+    "customerSelected": "Customer ရွေးချယ်ပြီး",
+    "filterOrders": "Collection orders filter",
+    "reportDelivery": "Report delivery",
+    "collector": "စုဆောင်း",
+    "collectionTime": "Collection time",
+    "loadFailed": "မှာယူမှု load မရပါ",
+    "loading": "Samples load လုပ်နေသည်…",
+    "table": {
+      "order": "မှာယူမှု",
+      "patient": "လူနာ",
+      "address": "လိပ်စာ",
+      "priority": "ဦးစားပေး",
+      "status": "အခြေအနေ",
+      "created": "ဖန်တီးသည့်အချိန်"
+    },
+    "empty": {
+      "noMatch": "ဤ filter များနှင့် ကိုက်ညီသော မှာယူမှု မရှိပါ။",
+      "noServer": "Server မှ မှာယူမှု မရပါ။",
+      "noScheduled": "ဤစာရင်းတွင် scheduled မှာယူမှု မရှိပါ။",
+      "noPending": "Pickup routing အတွက် pending မှာယူမှု မရှိပါ။"
+    },
+    "selectAria": {
+      "checkbox": "{{name}} ရွေးချယ်မည်",
+      "radio": "စုဆောင်းရန် {{name}} ရွေးချယ်မည်"
+    },
+    "routeSetup": {
+      "title": "Route setup",
+      "selectedOne": "မှာယူမှု 1 ခု ရွေးထား",
+      "selectedMany": "မှာယူမှု {{count}} ခု ရွေးထား",
+      "hintSuffix": "— route များသည် System settings တွင် lab location မှ စတင်သည်။ ထွက်ခွာချိန်၊ stop တစ်ခုချင်းစီအတွက် minute များသတ်မှတ်ပြီး Route စီစဉ်မည် ကို နှိပ်ပါ။",
+      "startLabel": "Route စတင်ရာ (lab location)",
+      "noLabLocationPrefix": "Lab location မသတ်မှတ်ရသေး။",
+      "systemSettings": "System settings",
+      "locationContact": "Location & contact တွင် သတ်မှတ်ပါ။",
+      "startTime": "စတင်ချိန်",
+      "startTimePlaceholder": "စတင်ချိန် ရွေးပါ",
+      "duration": "Collection duration (min per stop)",
+      "collectorCount": "စုဆောင်း အရေအတွက်",
+      "collectorCountHint": "ဤ route plan အတွက် collector {{max}} ဦးအထိ stop များခွဲထားနိုင်သည်{{suffix}}",
+      "selectOrdersHint": "Collection route စီစဉ်ရန် table အောက်တွင် မှာယူမှု အနည်းဆုံး တစ်ခု ရွေးပါ။"
+    },
+    "scheduled": {
+      "selectedPatient": "{{name}} ရွေးထား — route အောက်တွင် Start collecting သုံးပါ။",
+      "selectOneHint": "Table တွင် scheduled မှာယူမှု တစ်ခု ရွေးပြီး pickup စတင်သည့်အခါ collecting စတင်ပါ။",
+      "pickupStopTitle": "ရွေးထားသော pickup stop",
+      "pickupHint": "Table တွင် ရွေးထားသော stop ဖြစ်သည်။ Collector သို့မဟုတ် stop time ပြင်ပြီး pickup စတင်သည့်အခါ collecting စတင်ပါ။",
+      "stopsAria": "Scheduled collection stops",
+      "updateSchedule": "Schedule update",
+      "startCollecting": "Collecting စတင်မည်",
+      "updating": "Update လုပ်နေသည်…",
+      "selectedForStart": "Collection စတင်ရန် ရွေးထား",
+      "summaryStop": "Stop {{stop}} / {{total}} · {{patient}} · {{collector}} · {{when}}",
+      "summaryMany": "stop {{count}} ခု{{suffix}} · {{collectors}} · နောက်ဆုံး pickup {{finish}}",
+      "patientFallback": "လူနာ",
+      "collectorNotAssigned": "Collector မသတ်မှတ်ရသေး",
+      "collectorNotAssignedYet": "Collector မသတ်မှတ်ရသေး",
+      "collectorsCount": "collector {{count}} ဦး",
+      "noAddress": "လိပ်စာ မရှိ"
+    },
+    "routePlan": {
+      "titleOne": "စီစဉ်ထားသော collection route",
+      "titleMany": "စီစဉ်ထားသော route များ",
+      "metaMany": "route {{routes}} ခု · stop {{stops}} ခု",
+      "metaOne": "stop {{count}} ခု{{suffix}}",
+      "estFinish": "ခန့်မှန်း ပြီးချိန် {{time}}",
+      "routeBadge": "Route {{index}}",
+      "stopsCount": "stop {{count}} ခု{{suffix}}",
+      "estFinishLabel": "ခန့်မှန်း ပြီးချိန်",
+      "noCollectors": "Collector role ဝန်ထမ်း မရှိသေးပါ။ Staff တွင် ထည့်ပြီး route assign လုပ်ပါ။",
+      "hintMany": "Route တစ်ခုစီအတွက် collector ရွေးပါ၊ stop time ပြင်ပါ၊ ပြီးနောက် route အားလုံး assign လုပ်ပါ။",
+      "hintOne": "Collector ရွေးပါ၊ stop time ပြင်ပါ၊ ပြီးနောက် route assign လုပ်ပါ။",
+      "collectorForRoute": "Route {{index}} collector",
+      "assignedCollector": "သတ်မှတ်ထားသော collector",
+      "stopsForRoute": "Route {{index}} stops",
+      "stopsInOrder": "Collection stops (route order)",
+      "stopSchedule": "Stop schedule",
+      "arrive": "ရောက်ရှိ",
+      "from": "မှ",
+      "until": "အထိ",
+      "start": "စတင်",
+      "end": "ပြီး",
+      "noTests": "ဤမှာယူမှုတွင် test မသတ်မှတ်ရသေး",
+      "assignRoute": "Route assign",
+      "assignAllRoutes": "Route အားလုံး assign",
+      "assigning": "Assign လုပ်နေသည်…",
+      "assignRoutes": "Route assign",
+      "assignToRoute": "Route သို့ assign"
+    },
+    "assignModal": {
+      "titleOne": "Route သို့ collector assign",
+      "titleMany": "Route များသို့ collector assign",
+      "bodyMany": "route {{routes}} ခု (stop {{stops}} ခု) assign အတည်ပြုပါ။ Pending မှာယူမှုများ scheduled သို့ ပြောင်းပါမည်။",
+      "bodyOne": "stop {{stops}} ခုလုံး assign အတည်ပြုပါ။ Pending မှာယူမှုများ scheduled သို့ ပြောင်းပါမည်။",
+      "noCollectors": "Collector မရှိပါ။ Staff → collector role ထည့်ပြီး ထပ်ကြိုးစားပါ။",
+      "summaryAria": "ရွေးထားသော collectors",
+      "routeSummary": "Route {{index}} (stop {{count}} ခု{{suffix}}):",
+      "collectorNotSelected": "Collector မရွေးရသေး"
+    },
+    "editModal": {
+      "title": "Schedule update",
+      "body": "{{patient}}{{addressPart}} အတွက် collector နှင့် pickup time ပြင်ပါ။",
+      "thisPatient": "ဤလူနာ",
+      "atAddress": " · {{address}}",
+      "selectCollector": "Collector ရွေးပါ…",
+      "pickupDate": "Pickup date",
+      "stopTimes": "Stop times",
+      "collectFrom": "Collect from",
+      "collectUntil": "Collect until",
+      "saveHint": "သိမ်းမည့် pickup time သည် Collect from (ဗလာဖြစ်လျှင် Arrive) ကို သုံးသည်",
+      "save": "Schedule သိမ်းမည်",
+      "saving": "သိမ်းနေသည်…"
+    },
+    "toasts": {
+      "routeGenerated": "Collection route generate ပြီး။",
+      "routesGenerated": "Collection route {{count}} ခု generate ပြီး။",
+      "routePlanFailed": "Route planning မအောင်မြင်ပါ။",
+      "routeAssignFailed": "Route assign မအောင်မြင်ပါ",
+      "selectOrdersToPlan": "Collection route စီစဉ်ရန် မှာယူမှု အနည်းဆုံး တစ်ခု ရွေးပါ။",
+      "configureLabLocation": "Route စီစဉ်မီ System settings တွင် lab location သတ်မှတ်ပါ။",
+      "invalidStartTime": "မှန်ကန်သော route start time ထည့်ပါ။",
+      "durationRequired": "Stop တစ်ခုချင်းစီအတွက် collection duration (minutes) ထည့်ပါ။",
+      "selectCollectorEach": "Assign မလုပ်မီ route တစ်ခုစီအတွက် collector ရွေးပါ။",
+      "invalidStartTimeAssign": "Collector assign မလုပ်မီ Route setup တွင် valid start time သတ်မှတ်ပါ။",
+      "invalidRouteStart": "Route setup မှ route start time မမှန်ပါ။",
+      "signInStaffAssign": "Collector assign လုပ်ရန် staff account ဖြင့် sign in လုပ်ပါ။",
+      "signInStaffStatus": "Order status update လုပ်ရန် staff account ဖြင့် sign in လုပ်ပါ။",
+      "scheduleUpdated": "Collector နှင့် stop time update ပြီး။",
+      "scheduleUpdateFailed": "Schedule update မအောင်မြင်ပါ",
+      "selectCollectorStaff": "Collector staff member ရွေးပါ။",
+      "pickupDateRequired": "Pickup date ရွေးပါ။",
+      "collectionTimeRequired": "ဤ stop အတွက် collection time သတ်မှတ်ပါ။",
+      "invalidPickupDateTime": "Pickup date သို့မဟုတ် time မမှန်ပါ။",
+      "selectScheduledOne": "Collection စတင်ရန် scheduled မှာယူမှု တစ်ခု ရွေးပါ။",
+      "selectOneToStart": "Collection စတင်ရန် မှာယူမှု အနည်းဆုံး တစ်ခု ရွေးပါ။",
+      "statusUpdatedOne": "Order status collecting သို့ update ပြီး။",
+      "statusUpdatedMany": "မှာယူမှု {{count}} ခု collecting သို့ update ပြီး။",
+      "statusUpdateFailed": "Status update မအောင်မြင်ပါ",
+      "collectionNote": "Sample collection started"
+    }
+  },
+  "orders": {
+    "softCopy": "ဒစ်ဂျစ်တယ်",
+    "hardCopy": "Hard copy",
+    "softAndHardCopy": "ဒစ်ဂျစ်တယ် & hard copy",
+    "both": "Both",
+    "email": "Email",
+    "currency": "MMK",
+    "status": {
+      "pending": "ဆိုင်းငံ့",
+      "scheduled": "စီစဉ်ပြီး",
+      "collecting": "စုဆောင်းနေသည်",
+      "running": "လုပ်ဆောင်နေသည်",
+      "completed": "ပြီးစီး",
+      "delivered": "ပေးပို့ပြီး"
+    },
+    "priority": {
+      "urgent": "အရေးတကြီး",
+      "elective": "ရွေးချယ်နိုင်"
+    },
+    "payment": {
+      "unpaid": "မရှင်းရသေး",
+      "failed": "မအောင်မြင်",
+      "received": "လက်ခံရရှိ",
+      "pending": "ဆိုင်းငံ့",
+      "verified": "အတည်ပြုပြီး",
+      "partialReceived": "တစ်စိတ်တစ်ပိုင်း ရရှိ"
+    },
+    "filters": {
+      "ariaLabel": "မှာယူမှု filter များ",
+      "tests": "ဓာတ်ခွဲများ",
+      "assigned": "သတ်မှတ်ပြီး",
+      "missing": "မရှိ"
+    },
+    "table": {
+      "payment": "ငွေပေးချေမှု",
+      "paid": "ပေးပြီး",
+      "paidTitle": "ဤမှာယူမှုတွင် မှတ်တမ်းတင်ထားသော ငွေပေးချေမှုပေါင်း",
+      "due": "ကျန်ရှိ",
+      "dueTitle": "ဤမှာယူမှုတွင် ကျန်ရှိငွေ",
+      "rx": "ညွှန်း",
+      "rxTitle": "ညွှန်းကြောင်း ဖိုင်တင်ထားသည်",
+      "tests": "ဓာတ်ခွဲများ",
+      "original": "မူလ",
+      "final": "နောက်ဆုံး",
+      "testCount": "ဓာတ်ခွဲ {{count}} ခု",
+      "testCount_other": "ဓာတ်ခွဲ {{count}} ခု",
+      "percentPaid": "{{pct}}% ပေးပြီး",
+      "percentCollected": "စုစုပေါင်း၏ {{pct}}% စုဆောင်းပြီး"
+    },
+    "empty": {
+      "title": "မှာယူမှု မရှိသေးပါ",
+      "text": "Patient များ မှာယူသည့်အခါ ဤနေရာတွင် ပေါ်လာပါမည်။ Filter များဖြင့် စစ်ထုတ်နိုင်ပါသည်။"
+    },
+    "actions": {
+      "createOrder": "မှာယူမှု ဖန်တီးမည်",
+      "detail": "အသေးစိတ်",
+      "updateOrder": "မှာယူမှု ပြင်မည်",
+      "addPayment": "ငွေပေးချေမှု ထည့်မည်",
+      "addTest": "ဓာတ်ခွဲ ထည့်မည်",
+      "updatePayment": "ငွေပေးချေမှု ပြင်မည်"
+    },
+    "create": {
+      "title": "မှာယူမှု ဖန်တီးမည်",
+      "orderingUser": "မှာယူသူ",
+      "noUsers": "အသုံးပြုသူ မရှိပါ",
+      "discountHint": "ဓာတ်ခွဲတစ်ခုချင်းစီလျှော့စျေးသည် အသုံးပြုသူ role အလိုက် (mobile / Assign tests နှင့် တူသည်)။",
+      "testsOnOrder": "ဤမှာယူမှုရှိ ဓာတ်ခွဲများ",
+      "catalogManyHint": "Catalog တွင် ဓာတ်ခွဲများစွာရှိသည်။ Test ဖွင့်ပြီး search box သုံးပါ — အများဆုံး {{limit}} ခု ပြပါသည်။",
+      "testPickerHint": "Test ဖွင့်ပြီး search/checkboxes (multi-select) သုံးပါ။ ရွေးထားသော line များကို table အောက်တွင် ပြပါသည်။",
+      "noTestsAdded": "ဓာတ်ခွဲ မထည့်ရသေးပါ။",
+      "patientName": "လူနာအမည်",
+      "age": "အသက်",
+      "description": "ဖော်ပြချက်",
+      "originalTotal": "မူလစုစုပေါင်း (MMK)",
+      "blendedDiscount": "ပျမ်းမျှ လျှော့စျေး %",
+      "finalTotal": "နောက်ဆုံးစုစုပေါင်း (MMK)",
+      "submit": "ဖန်တီးမည်",
+      "noUsersOrTests": "အသုံးပြုသူနှင့် ဓာတ်ခွဲ မရှိပါ။ အရင် create လုပ်ပါ။",
+      "noUsersOnly": "အသုံးပြုသူ မရှိပါ။ အနည်းဆုံး တစ်ဦးကို create လုပ်ပါ။"
+    },
+    "edit": {
+      "title": "မှာယူမှု update",
+      "saveChanges": "Save changes",
+      "discountRoleHint": "Test ဖွင့်ပြီး search/checkboxes သုံးပါ။ Discounts သည် ordering user role ({{role}}) အလိုက်ဖြစ်သည်။"
+    },
+    "detail": {
+      "title": "Order detail",
+      "loading": "Order load လုပ်နေသည်…",
+      "loadFailed": "Order load မရပါ",
+      "notFound": "Order မတွေ့ပါ။",
+      "orderingUser": "Ordering user",
+      "patientName": "Patient name",
+      "patientAge": "Age",
+      "patientPhone": "Phone",
+      "priority": "Priority",
+      "status": "Status",
+      "address": "Address",
+      "description": "Description",
+      "reportDelivery": "Report delivery",
+      "originalPrice": "Original price",
+      "finalPrice": "Final price",
+      "paymentStatus": "Payment status",
+      "payments": "Payments",
+      "amount": "Amount (MMK)",
+      "method": "Method",
+      "reference": "Reference",
+      "paidAt": "Paid at",
+      "schedule": "Schedule",
+      "collectingPerson": "Collecting person",
+      "collectionTime": "Collection time",
+      "runningTime": "Running time",
+      "reportOut": "Report out",
+      "acceptedByUser": "Accepted by user: {{value}}",
+      "noSchedule": "Schedule မရှိသေးပါ။ Status ကို scheduled သတ်မှတ်သည့်အခါ (collector နှင့် times ဖြင့်) create လုပ်ပါသည်။",
+      "lineItems": "Line items (tests)",
+      "noLineItems": "Test မရှိသေးပါ။",
+      "test": "Test",
+      "qty": "Qty",
+      "unitPrice": "Unit (MMK)",
+      "subtotal": "Subtotal (MMK)"
+    },
+    "prescription": {
+      "title": "Prescription",
+      "preview": "Prescription preview",
+      "alt": "Prescription",
+      "pdfTitle": "Prescription PDF",
+      "openInNewTab": "Open in new tab",
+      "viewPdf": "View PDF",
+      "download": "Download",
+      "pdfHint": "PDF preview may not appear inline in all browsers."
+    },
+    "paymentModal": {
+      "summaryAria": "Order payment summary",
+      "paidInFull": "Paid in full",
+      "amountDue": "Amount due",
+      "balanceRemaining": "Balance remaining",
+      "orderTotal": "Order total",
+      "alreadyPaid": "Already paid",
+      "eyebrow": "Record payment",
+      "title": "Add payment",
+      "amount": "Payment amount",
+      "payRemaining": "Pay remaining balance",
+      "method": "Payment method",
+      "reference": "Reference no. (optional)",
+      "previewAfter": "After this payment",
+      "previewPaid": "Total paid",
+      "previewLeft": "Remaining",
+      "record": "Record payment",
+      "recording": "Recording…"
+    },
+    "assign": {
+      "title": "Add tests to order",
+      "ordering": "Ordering:",
+      "clinicalNotes": "Clinical notes",
+      "noClinicalNotes": "None provided for this order.",
+      "hint": "Catalog မှ test ရွေးချယ်ပါ (multi-select)။ Discounts သည် ordering user role ({{role}}) အလိုက်ဖြစ်သည်။ Search တစ်ခုလျှင် {{limit}} matches အထိ။",
+      "catalogWarn": "Catalog ကြီးသည် — Test ဖွင့်ပြီး search လုပ်ပါ ({{limit}} matches အထိ)။",
+      "submit": "Add selected tests",
+      "submitting": "Adding…"
+    },
+    "testPicker": {
+      "label": "ဓာတ်ခွဲ",
+      "searchLabel": "ဓာတ်ခွဲရှာပါ",
+      "searchPlaceholder": "အမည် သို့မဟုတ် code…",
+      "chooseTests": "ဓာတ်ခွဲရွေးချယ်ပါ…",
+      "selected": "ဓာတ်ခွဲ {{count}} ခု ရွေးထားသည်",
+      "selected_other": "ဓာတ်ခွဲ {{count}} ခု ရွေးထားသည်",
+      "showingMatches": "{{total}} ခုအနက် {{shown}} ခု ပြနေသည် — ရှာဖွေမှုကို ကျဉ်းပါ။",
+      "noMatches": "မတွေ့ပါ — keyword အသစ် စမ်းကြည့်ပါ။",
+      "noDiscount": "လျှော့စျေး မရှိ",
+      "percentOff": "{{pct}}% လျှော့",
+      "done": "ပြီးပြီ",
+      "discount": "လျှော့စျေး",
+      "finalMmk": "နောက်ဆုံး (MMK)"
+    },
+    "delete": {
+      "title": "Delete order?",
+      "message": "Delete order \"{{id}}\" for {{patient}}?",
+      "confirm": "Delete order"
+    },
+    "toasts": {
+      "paymentRecorded": "Payment recorded.",
+      "orderUpdated": "Order updated.",
+      "orderDeleted": "Order deleted.",
+      "deleteFailed": "Delete failed"
+    }
+  },
+  "labTests": {
+    "loadFailed": "Catalog load မရပါ",
+    "filters": {
+      "ariaLabel": "Catalog filter များ",
+      "statusAll": "အခြေအနေ အားလုံး",
+      "statusActive": "အသုံးပြုနေသော သာ",
+      "statusInactive": "မအသုံးပြုတော့ သာ",
+      "tests": "ဓာတ်ခွဲများ"
+    },
+    "actions": {
+      "create": "ဓာတ်ခွဲ ဖန်တီးမည်",
+      "edit": "ပြင်မည်"
+    },
+    "table": {
+      "name": "အမည်",
+      "code": "ကုဒ်",
+      "base": "မူလ (MMK)",
+      "discount": "လျှော့ %",
+      "discountTitle": "ဤဓာတ်ခွဲ၏ role discount များထဲ အများဆုံး discount_percent",
+      "after": "နောက်မှ (MMK)",
+      "afterTitle": "လျှော့စျေးနောက်ပြီး မူလစျေး",
+      "status": "အခြေအနေ",
+      "category": "အမျိုးအစား",
+      "actions": "လုပ်ဆောင်ချက်များ"
+    },
+    "loading": "Catalog load လုပ်နေသည်…",
+    "empty": {
+      "noMatchTitle": "ကိုက်ညီသော ဓာတ်ခွဲ မရှိ",
+      "noMatchBody": "Search keyword အသစ် စမ်းကြည့်ပါ သို့မဟုတ် filter ရှင်းပါ။",
+      "filterTitle": "ဤ filter တွင် မရှိ",
+      "filterBody": "Status filter ပြောင်းပါ သို့မဟုတ် \"အခြေအနေ အားလုံး\" သို့ သတ်မှတ်ပါ။",
+      "noneTitle": "Catalog တွင် ဓာတ်ခွဲ မရှိသေးပါ",
+      "noneBody": "Catalog စတင်တည်ဆောက်ရန် ဓာတ်ခွဲ ဖန်တီးပါ။"
+    },
+    "delete": {
+      "title": "ဓာတ်ခွဲ ဖျက်မလား?",
+      "message": "\"{{name}}\" ကို ဖျက်မလား?",
+      "confirm": "ဖျက်မည်"
+    },
+    "toasts": {
+      "deleted": "ဓာတ်ခွဲ \"{{name}}\" ကို ဖျက်ပြီး။",
+      "deleteFailed": "ဖျက်၍ မရပါ",
+      "updated": "ဓာတ်ခွဲ ပြင်ဆင်ပြီး။",
+      "created": "ဓာတ်ခွဲ ဖန်တီးပြီး။"
+    },
+    "form": {
+      "createTitle": "ဓာတ်ခွဲ ဖန်တီးမည်",
+      "editTitle": "ဓာတ်ခွဲ ပြင်မည်",
+      "testDetails": "ဓာတ်ခွဲ အသေးစိတ်",
+      "pricing": "စျေးနှုန်း (MMK)",
+      "testName": "ဓာတ်ခွဲအမည်",
+      "testNamePlaceholder": "ဥပမာ Liver function panel",
+      "description": "ဖော်ပြချက်",
+      "descriptionPlaceholder": "Panel ပါဝင်မှု၊ အစာမစားရ notes စသည်",
+      "activeTitle": "ဓာတ်ခွဲ active ဖြစ်သည်",
+      "inactiveTitle": "ဓာတ်ခွဲ inactive ဖြစ်သည်",
+      "activeDesc": "Inactive ဓာတ်ခွဲများသည် admin catalog တွင် ရှိသော်လည်း published role pricing တွင် မပြပါ။",
+      "testCode": "ကုဒ် (optional)",
+      "testCodePlaceholder": "ဗလာဖြစ်လျှင် အမည်မှ auto",
+      "category": "အမျိုးအစား (optional)",
+      "categoryPlaceholder": "ဥပမာ Chemistry",
+      "basePrice": "မူလစျေး",
+      "errorName": "ဓာတ်ခွဲအမည် ထည့်ပါ။",
+      "errorPrice": "မှန်ကန်သော amount (MMK) ထည့်ပါ။",
+      "requestFailed": "Request failed",
+      "createSubmit": "ဓာတ်ခွဲ ဖန်တီးမည်",
+      "saveChanges": "ပြောင်းလဲမှုများ သိမ်းမည်"
+    }
+  },
+  "staff": {
+    "loadFailed": "ဝန်ထမ်း load မရပါ",
+    "filters": {
+      "ariaLabel": "ဝန်ထမ်း filter များ"
+    },
+    "listTitle": "ဝန်ထမ်းစာရင်း",
+    "actions": {
+      "add": "ဝန်ထမ်း ထည့်မည်",
+      "edit": "ပြင်မည်"
+    },
+    "table": {
+      "id": "ID",
+      "name": "အမည်",
+      "email": "အီးမေးလ်",
+      "role": "အခန်းကဏ္ဍ",
+      "active": "အသုံးပြုနေသည်",
+      "actions": "လုပ်ဆောင်ချက်များ"
+    },
+    "loading": "ဝန်ထမ်း load လုပ်နေသည်…",
+    "empty": "ဝန်ထမ်း မရှိသေးပါ။",
+    "delete": {
+      "title": "ဝန်ထမ်း ဖျက်မလား?",
+      "message": "\"{{name}}\" ကို ဖျက်မလား?",
+      "confirm": "ဖျက်မည်",
+      "cannotDeleteSelf": "သင့်ကိုယ်တိုင် account ကို ဖျက်၍ မရပါ။"
+    },
+    "toasts": {
+      "deleted": "ဝန်ထမ်း \"{{name}}\" ကို ဖျက်ပြီး။",
+      "deleteFailed": "ဖျက်၍ မရပါ",
+      "updated": "ဝန်ထမ်း ပြင်ဆင်ပြီး။",
+      "created": "ဝန်ထမ်း ဖန်တီးပြီး။"
+    },
+    "form": {
+      "createTitle": "ဝန်ထမ်း ထည့်မည်",
+      "editTitle": "ဝန်ထမ်း ပြင်မည်",
+      "name": "အမည်",
+      "namePlaceholder": "အပြည့်အစုံအမည်",
+      "email": "အီးမေးလ်",
+      "emailPlaceholder": "name@lab.example",
+      "role": "အခန်းကဏ္ဍ",
+      "activeTitle": "Account active ဖြစ်သည်",
+      "inactiveTitle": "Account inactive ဖြစ်သည်",
+      "activeDesc": "Inactive ဝန်ထမ်းများသည် ပြန်ဖွင့်မချင်း sign in မလုပ်နိုင်ပါ။",
+      "initialPassword": "စတင် password (အနည်းဆုံး {{count}} characters)",
+      "newPassword": "Password အသစ် (optional, အနည်းဆုံး {{count}} characters)",
+      "passwordPlaceholder": "အနည်းဆုံး {{count}} characters",
+      "passwordKeepPlaceholder": "လက်ရှိ password ထားရန် ဗလာထားပါ",
+      "createSubmit": "ဝန်ထမ်း ဖန်တီးမည်",
+      "saveChanges": "ပြောင်းလဲမှုများ သိမ်းမည်",
+      "errorName": "အမည် ထည့်ပါ။",
+      "errorEmail": "မှန်ကန်သော email ထည့်ပါ။",
+      "errorEmailTaken": "ဤ email သည် စာရင်းတွင် ရှိပြီးသားဖြစ်သည်။",
+      "errorPasswordRequired": "စတင် password ထည့်ပါ။",
+      "errorPasswordMin": "Password အနည်းဆုံး {{count}} characters လိုအပ်ပါသည်။",
+      "errorNewPasswordMin": "Password အသစ် အနည်းဆုံး {{count}} characters လိုအပ်ပါသည်။",
+      "requestFailed": "Request failed"
+    },
+    "profileImage": {
+      "label": "Profile photo",
+      "hint": "ဤဝန်ထမ်းအတွက် optional photo — staff list နှင့် အမည်ပေါ်တွင် (collector route assignment စသည်) ပြပါသည်။",
+      "choose": "Photo ရွေးမည်",
+      "clear": "ရှင်းမည်",
+      "notSavedYet": "{{name}} (သိမ်းမထားသေး)",
+      "saved": "Profile photo သိမ်းပြီး",
+      "none": "Photo မရွေးရသေး",
+      "invalidType": "PNG, JPG, GIF သို့မဟုတ် WebP image ရွေးပါ။"
+    }
+  },
+  "users": {
+    "loadFailed": "အသုံးပြုသူ load မရပါ",
+    "filters": {
+      "ariaLabel": "အသုံးပြုသူ filter များ",
+      "approvalPending": "အတည်ပြုရန် ဆိုင်းငံ့",
+      "approvalApproved": "အတည်ပြုပြီး"
+    },
+    "listTitle": "အသုံးပြုသူစာရင်း",
+    "actions": {
+      "add": "အသုံးပြုသူ ထည့်မည်",
+      "edit": "ပြင်မည်",
+      "approve": "Account အတည်ပြုမည်"
+    },
+    "table": {
+      "name": "အမည်",
+      "email": "အီးမေးလ်",
+      "phone": "ဖုန်း",
+      "role": "အခန်းကဏ္ဍ",
+      "status": "အခြေအနေ",
+      "address": "လိပ်စာ",
+      "coords": "Lat / Lng",
+      "points": "အမှတ်များ",
+      "actions": "လုပ်ဆောင်ချက်များ"
+    },
+    "status": {
+      "approved": "အတည်ပြုပြီး",
+      "pending": "ဆိုင်းငံ့"
+    },
+    "loading": "အသုံးပြုသူ load လုပ်နေသည်…",
+    "empty": "အသုံးပြုသူ မရှိသေးပါ။",
+    "delete": {
+      "title": "အသုံးပြုသူ ဖျက်မလား?",
+      "message": "\"{{name}}\" ကို ဖျက်မလား?",
+      "confirm": "ဖျက်မည်"
+    },
+    "toasts": {
+      "deleted": "အသုံးပြုသူ \"{{name}}\" ကို ဖျက်ပြီး။",
+      "deleteFailed": "ဖျက်၍ မရပါ",
+      "updated": "အသုံးပြုသူ ပြင်ဆင်ပြီး။",
+      "created": "အသုံးပြုသူ ဖန်တီးပြီး။",
+      "approved": "\"{{name}}\" ကို အတည်ပြုပြီး။ Mobile app မှ sign in လုပ်နိုင်ပါပြီ။",
+      "approveFailed": "အတည်ပြု၍ မရပါ"
+    },
+    "form": {
+      "createTitle": "အသုံးပြုသူ ထည့်မည်",
+      "editTitle": "အသုံးပြုသူ ပြင်မည်",
+      "profile": "ကိုယ်ရေးအချက်အလက်",
+      "name": "အမည်",
+      "namePlaceholder": "Clinic, doctor သို့မဟုတ် patient အမည်",
+      "email": "အီးမေးလ်",
+      "emailPlaceholder": "user@example.com",
+      "phone": "ဖုန်း",
+      "phonePlaceholder": "+95 …",
+      "role": "အခန်းကဏ္ဍ",
+      "totalPoints": "စုစုပေါင်း အမှတ်များ",
+      "address": "လိပ်စာ",
+      "addressPlaceholder": "လမ်း၊ မြို့ စသည်",
+      "initialPassword": "စတင် password (အနည်းဆုံး {{count}} characters)",
+      "newPassword": "Password အသစ် (optional, အနည်းဆုံး {{count}} characters)",
+      "passwordPlaceholder": "အနည်းဆုံး {{count}} characters",
+      "passwordKeepPlaceholder": "လက်ရှိ password ထားရန် ဗလာထားပါ",
+      "createSubmit": "အသုံးပြုသူ ဖန်တီးမည်",
+      "saveChanges": "ပြောင်းလဲမှုများ သိမ်းမည်",
+      "errorName": "အမည် ထည့်ပါ။",
+      "errorEmail": "မှန်ကန်သော email ထည့်ပါ။",
+      "errorPhone": "ဖုန်းနံပါတ် ထည့်ပါ။",
+      "errorEmailTaken": "ဤ email သည် register လုပ်ပြီးသားဖြစ်သည်။",
+      "errorPasswordRequired": "စတင် password ထည့်ပါ။",
+      "errorPasswordMin": "Password အနည်းဆုံး {{count}} characters လိုအပ်ပါသည်။",
+      "errorNewPasswordMin": "Password အသစ် အနည်းဆုံး {{count}} characters လိုအပ်ပါသည်။",
+      "requestFailed": "Request failed"
+    }
+  },
+  "labResults": {
+    "loadFailed": "မှာယူမှု load မရပါ",
+    "detailLoadFailed": "မှာယူမှု detail load မရပါ",
+    "filters": {
+      "ariaLabel": "မှာယူမှု filter များ",
+      "statusAll": "အခြေအနေ အားလုံး"
+    },
+    "selectOrderTitle": "မှာယူမှု ရွေးချယ်ပါ",
+    "selectOrderHint": "Table တွင် မှာယူမှု တစ်ခု ရွေးပြီး အောက်ပါ panel တွင် PDF upload နှင့် AI review လုပ်ပါ။",
+    "selectOrderAria": "{{name}} အတွက် မှာယူမှု ရွေးချယ်ပါ",
+    "loadingOrders": "မှာယူမှု load လုပ်နေသည်…",
+    "loadingDetail": "မှာယူမှု detail load လုပ်နေသည်…",
+    "emptyPanel": "Result PDF upload နှင့် AI review လုပ်ရန် table တွင် မှာယူမှု ရွေးပါ။",
+    "table": {
+      "patient": "လူနာ",
+      "status": "အခြေအနေ",
+      "priority": "ဦးစားပေး",
+      "reportDelivery": "အစီရင်ခံစာ ပေးပို့မှု",
+      "collector": "စုဆောင်း",
+      "collectTime": "စုဆောင်းချိန်",
+      "final": "နောက်ဆုံး (MMK)",
+      "created": "ဖန်တီးသည့်အချိန်"
+    },
+    "empty": {
+      "noMatch": "ဤ filter များနှင့် ကိုက်ညီသော မှာယူမှု မရှိပါ။",
+      "noServer": "Server မှ မှာယူမှု မရပါ။"
+    }
+  },
+  "ratings": {
+    "loadFailed": "Ratings load မရပါ",
+    "filters": {
+      "ariaLabel": "Rating filter များ",
+      "feedback": "တုံ့ပြန်ချက်",
+      "searchDetail": "patient, user, order, tests, status, stars, remark",
+      "rating": "အကဲဖြတ်ချက်",
+      "all": "Rating အားလုံး",
+      "stars": "ကြယ် {{count}} ပွင့်",
+      "oneStar": "ကြယ် 1 ပွင့်"
+    },
+    "table": {
+      "patient": "လူနာ",
+      "submittedBy": "တင်သွင်းသူ",
+      "contact": "ဆက်သွယ်ရန်",
+      "order": "မှာယူမှု",
+      "tests": "ဓာတ်ခွဲများ",
+      "amount": "ပမာဏ",
+      "rating": "အကဲဖြတ်ချက်",
+      "remark": "မှတ်ချက်",
+      "ratedOn": "အကဲဖြတ်သည့်အချိန်",
+      "age": "အသက် {{age}}"
+    },
+    "starsAria": "5 ပွင့်အနက် {{score}}",
+    "loading": "Ratings load လုပ်နေသည်…",
+    "empty": {
+      "none": "Rating မရှိသေးပါ။",
+      "noApi": "Ratings load လုပ်ရန် API configure လုပ်ပါ။",
+      "noMatch": "ဤ search နှင့် ကိုက်ညီသော rating မရှိပါ။"
+    }
+  },
+  "discounts": {
+    "loadFailed": "Discounts load မရပါ",
+    "filters": {
+      "ariaLabel": "Discount filter များ",
+      "searchDetail": "name or code"
+    },
+    "add": "Discount ထည့်မည်",
+    "hint": "Active catalog tests သာ apply လုပ်သည်။ Start/end date မထည့်ပါက အမြဲ apply လုပ်သည်။",
+    "table": {
+      "afterDiscount": "လျှော့စျေးပြီး",
+      "discountPercent": "လျှော့စျေး (%)"
+    },
+    "loading": "Discounts load လုပ်နေသည်…",
+    "empty": {
+      "title": "Discount rule မရှိသေးပါ",
+      "body": "Test နှင့် customer type တစ်ခုစီအတွက် rule ထည့်ပါ။ Lab tests list တွင် base price နှင့် discount ဥပမာစျေးများ ပြသည်။"
+    },
+    "noMatch": "ဤ filter များနှင့် ကိုက်ညီသော discount မရှိပါ။",
+    "delete": {
+      "title": "Discount ဖျက်မလား?",
+      "message": "\"{{test}}\" အတွက် {{role}} discount ကို ဖျက်မလား?",
+      "success": "Discount rule ဖျက်ပြီးပါပြီ။"
+    },
+    "toast": {
+      "created": "Discount rule ဖန်တီးပြီးပါပြီ။",
+      "updated": "Discount rule ပြင်ဆင်ပြီးပါပြီ။"
+    },
+    "form": {
+      "createTitle": "Test discount ထည့်မည်",
+      "editTitle": "Test discount ပြင်မည်",
+      "labTest": "Lab test",
+      "labTests": "Lab tests",
+      "labTestsHint": "Test တစ်ခုနှင့်အထက် ရွေးပါ။ Role၊ discount % နှင့် active setting များသည် combination တစ်ခုစီအတွက် တူညီသည်။",
+      "noTestsInCatalog": "Catalog တွင် test မရှိပါ။",
+      "searchTests": "Tests ရှာပါ",
+      "searchPlaceholder": "name or code ဖြင့် ရှာပါ…",
+      "selectedCount": "{{count}} ခု ရွေးထား",
+      "showingMatches": "{{total}} ခုအနက် {{shown}} ခု ပြနေသည် — search ကို ကျဉ်းပါ။",
+      "selectColumn": "ရွေးချယ်",
+      "clearVisibleSelection": "Visible tests ရွေးချယ်မှုရှင်းပါ",
+      "selectAllVisible": "Visible tests အားလုံး ရွေးပါ",
+      "noSearchMatch": "Search နှင့် ကိုက်ညီသော test မရှိပါ။",
+      "selectTestAria": "{{name}} ရွေးပါ",
+      "selectAll": "အားလုံး ရွေးပါ",
+      "clear": "ရှင်းပါ",
+      "rolesHint": "Role တစ်ခုနှင့်အထက် ရွေးပါ။ \"All roles\" သည် clinic၊ doctor နှင့် patient အတွက် rule တစ်ခု သုံးသည်။",
+      "roles": "Roles",
+      "chooseRoles": "Roles ရွေးပါ…",
+      "allRolesSamePercent": "Role အားလုံး (same %)",
+      "oneRoleSelected": "Role 1 ခု ရွေးထား",
+      "clinicDoctorPatient": "Clinic, doctor, patient",
+      "rolesSelected": "Role {{count}} ခု ရွေးထား",
+      "allRolesOption": "Role အားလုံး (same %)",
+      "discountPercent": "Discount %",
+      "previewInline": "Base {{base}} MMK → after discount {{after}} MMK",
+      "previewTitle": "After discount (preview)",
+      "previewRow": "{{base}} → {{after}} MMK",
+      "startOptional": "စတင်ရက် (optional)",
+      "endOptional": "ပြီးဆုံးရက် (optional)",
+      "startPlaceholder": "စတင်ရက် & အချိန်",
+      "endPlaceholder": "ပြီးဆုံးရက် & အချိန်",
+      "datesHint": "Always-on discount အတွက် date နှစ်ခုလုံး empty ထားပါ။ Range ပြင်ပတွင် rule ထားရှိသော်လည်း apply မလုပ်ပါ။",
+      "activeTitle": "Discount active ဖြစ်သည်",
+      "inactiveTitle": "Discount inactive ဖြစ်သည်",
+      "activeDesc": "Inactive rows များကို ထားရှိသော်လည်း role-based pricing တွင် apply မလုပ်ပါ။",
+      "errorSelectTest": "Lab test အနည်းဆုံး တစ်ခု ရွေးပါ။",
+      "errorSelectRole": "Role အနည်းဆုံး တစ်ခု ရွေးပါ။",
+      "errorDiscountRange": "0 နှင့် 100 အကြား discount ထည့်ပါ။",
+      "errorEndBeforeStart": "End date သည် start date နောက်ကျ/တူညီရမည်။",
+      "requestFailed": "Request failed",
+      "creating": "Discount ဖန်တီးနေသည်…",
+      "saving": "Discount သိမ်းနေသည်…",
+      "createDiscount": "Discount ဖန်တီးမည်",
+      "createDiscounts": "Discount {{count}} ခု ဖန်တီးမည်",
+      "saveDiscount": "Discount သိမ်းမည်"
+    }
+  },
+  "referralFees": {
+    "loadFailed": "Referral fees load မရပါ",
+    "filters": {
+      "ariaLabel": "Referral fee filter များ",
+      "searchDetail": "name or code"
+    },
+    "add": "Referral fee ထည့်မည်",
+    "hint": "Active catalog tests သာ apply လုပ်သည်။ Referral fee (MMK) = base price × referral %။",
+    "table": {
+      "referralPercent": "Referral (%)",
+      "fee": "Fee (MMK)"
+    },
+    "loading": "Referral fees load လုပ်နေသည်…",
+    "empty": {
+      "title": "Referral fee rule မရှိသေးပါ",
+      "body": "Test နှင့် referrer role တစ်ခုစီအတွက် referral % သတ်မှတ်ပါ။ Fee သည် test base price မှ တွက်ချက်သည်။"
+    },
+    "noMatch": "ဤ filter များနှင့် ကိုက်ညီသော referral fee မရှိပါ။",
+    "delete": {
+      "title": "Referral fee ဖျက်မလား?",
+      "message": "\"{{test}}\" အတွက် {{role}} referral fee ကို ဖျက်မလား?",
+      "success": "Referral fee rule ဖျက်ပြီးပါပြီ။"
+    },
+    "toast": {
+      "created": "Referral fee ဖန်တီးပြီးပါပြီ။",
+      "updated": "Referral fee ပြင်ဆင်ပြီးပါပြီ။"
+    },
+    "form": {
+      "createTitle": "Referral fee ထည့်မည်",
+      "editTitle": "Referral fee ပြင်မည်",
+      "labTest": "Lab test",
+      "labTestsHint": "Test တစ်ခုနှင့်အထက် ရွေးပါ။ Role၊ referral % နှင့် active setting များသည် combination တစ်ခုစီအတွက် တူညီသည်။",
+      "referralPercent": "Referral fee %",
+      "rolesHint": "Role တစ်ခုနှင့်အထက် ရွေးပါ။ \"All roles\" သည် clinic၊ doctor၊ patient နှင့် phlebotomist အတွက် same % သုံးသည်။",
+      "previewInline": "Base {{base}} MMK → referral fee {{fee}} MMK",
+      "previewTitle": "Referral fee (preview)",
+      "previewRow": "{{base}} base → {{fee}} MMK",
+      "activeTitle": "Rule active ဖြစ်သည်",
+      "inactiveTitle": "Rule inactive ဖြစ်သည်",
+      "activeDesc": "Inactive rows များကို ထားရှိသော်လည်း apply မလုပ်ပါ။",
+      "errorSelectTest": "Lab test အနည်းဆုံး တစ်ခု ရွေးပါ။",
+      "errorSelectRole": "Role အနည်းဆုံး တစ်ခု ရွေးပါ။",
+      "errorPercentRange": "0% နှင့် 100% အကြား referral fee ထည့်ပါ။",
+      "requestFailed": "Request failed",
+      "creating": "ဖန်တီးနေသည်…",
+      "saving": "သိမ်းနေသည်…",
+      "createRule": "Rule ဖန်တီးမည်",
+      "createRules": "Rule {{count}} ခု ဖန်တီးမည်",
+      "saveRule": "Rule သိမ်းမည်"
+    }
+  },
+  "advertisements": {
+    "loadFailed": "Advertisements load မရပါ",
+    "filters": {
+      "ariaLabel": "Advertisement filter များ",
+      "searchDetail": "title or description"
+    },
+    "add": "Advertisement ထည့်မည်",
+    "hint": "Mobile clients သည် schedule အတွင်း active ads များကို GET /api/advertisements ဖြင့် ရယူသည်။",
+    "loading": "Advertisements load လုပ်နေသည်…",
+    "empty": {
+      "title": "Advertisement မရှိသေးပါ",
+      "body": "Mobile app အတွက် banner/promo ဖန်တီးပါ။ Start/end date ဖြင့် ပြသချိန် schedule လုပ်နိုင်သည်။"
+    },
+    "noMatch": "ဤ filter များနှင့် ကိုက်ညီသော advertisement မရှိပါ။",
+    "delete": {
+      "title": "Advertisement ဖျက်မလား?",
+      "message": "\"{{title}}\" ကို ဖျက်မလား? ပြန်လည်မရနိုင်ပါ။",
+      "success": "Advertisement ဖျက်ပြီးပါပြီ။"
+    },
+    "toast": {
+      "created": "Advertisement ဖန်တီးပြီးပါပြီ။",
+      "updated": "Advertisement ပြင်ဆင်ပြီးပါပြီ။"
+    },
+    "form": {
+      "createTitle": "Advertisement ထည့်မည်",
+      "editTitle": "Advertisement ပြင်မည်",
+      "descriptionPlaceholder": "Banner/promo card အတွက် optional short copy",
+      "actionUrl": "Action URL",
+      "actionUrlPlaceholder": "https://… (tap လုပ်သောအခါ optional link)",
+      "startOptional": "စတင်ရက် (optional)",
+      "endOptional": "ပြီးဆုံးရက် (optional)",
+      "startPlaceholder": "စတင်ရက် & အချိန်",
+      "endPlaceholder": "ပြီးဆုံးရက် & အချိန်",
+      "activeTitle": "Advertisement active ဖြစ်သည်",
+      "inactiveTitle": "Advertisement inactive ဖြစ်သည်",
+      "activeDesc": "Inactive ads များကို list တွင် ထားရှိသော်လည်း mobile app တွင် မပြပါ။",
+      "errorTitleRequired": "Title ထည့်ပါ။",
+      "errorEndBeforeStart": "End date သည် start date နောက်ကျ/တူညီရမည်။",
+      "requestFailed": "Request failed",
+      "uploadingSaving": "Upload & save လုပ်နေသည်…",
+      "saving": "သိမ်းနေသည်…",
+      "saveChanges": "ပြောင်းလဲမှုများ သိမ်းမည်",
+      "create": "Advertisement ဖန်တီးမည်"
+    },
+    "banner": {
+      "label": "Banner image",
+      "hint": "Mobile app အတွက် banner upload လုပ်ပါ သို့မဟုတ် image URL paste လုပ်ပါ။ Recommended: wide landscape (e.g. 1200×400).",
+      "chooseImage": "Image ရွေးပါ",
+      "pasteUrl": "Or paste URL",
+      "urlPlaceholder": "https://… or /uploads/…",
+      "noBanner": "Banner မရွေးရသေး",
+      "uploadOnSave": "{{name}} (save လုပ်သောအခါ upload)",
+      "savedOnServer": "Banner server တွင် သိမ်းပြီး",
+      "urlSet": "URL သတ်မှတ်ပြီး",
+      "errorImageType": "PNG, JPG, GIF, or WebP image ရွေးပါ။"
+    }
+  },
+  "loyalty": {
+    "loadFailed": "Loyalty data load မရပါ",
+    "tabsAria": "Loyalty sections",
+    "tabRules": "အမှတ်ရ rule များ",
+    "tabUsers": "အသုံးပြုသူအမှတ်",
+    "rulesTitle": "အမှတ်ရ rule များ (MMK → အမှတ်)",
+    "rulesHint": "MMK spend threshold ရောက်သောအခါ အမှတ်ပေးသည့် rule များ။ စတင်/ပြီးဆုံးရက်ဖြင့် seasonal campaign ကန့်သတ်နိုင်သည် — inactive rule များသည် အမှတ် မပေးပါ။",
+    "addRule": "Rule ထည့်မည်",
+    "usersTitle": "အသုံးပြုသူအမှတ်",
+    "usersHint": "Support/reconciliation အတွက် account တစ်ခုချင်းစီ၏ live အမှတ်စုစုပေါင်း။",
+    "filters": {
+      "usersAria": "User points search",
+      "searchDetail": "အမည်၊ email၊ role"
+    },
+    "table": {
+      "mmkPerBatch": "MMK batch တစ်ခုလျှင်",
+      "points": "အမှတ်များ",
+      "userId": "User ID",
+      "pointsBalance": "အမှတ်လက်ကျန်"
+    },
+    "loadingRules": "Earn rule များ load လုပ်နေသည်…",
+    "loadingUsers": "Point balances load လုပ်နေသည်…",
+    "noApiRules": "Earn rule များ စီမံရန် API ချိတ်ပါ။",
+    "noApiUsers": "User point balances load လုပ်ရန် API ချိတ်ပါ။",
+    "emptyRules": "Earn rule မရှိသေးပါ။ Paid orders တွင် အမှတ်ပေးရန် rule ထည့်ပါ။",
+    "emptyUsers": "System တွင် user မရှိသေးပါ။",
+    "noUserMatch": "Search နှင့် ကိုက်ညီသော user မရှိပါ။",
+    "schedule": {
+      "anyTime": "မည်သည့်အချိန်မဆို",
+      "from": "{{date}} မှ",
+      "until": "{{date}} အထိ"
+    },
+    "delete": {
+      "title": "Earn rule ဖျက်မလား?",
+      "message": "\"{{name}}\" ကို ဖျက်မလား? User များသည် ဤ rule မှ points မရတော့ပါ။",
+      "success": "Earn rule ဖျက်ပြီးပါပြီ။",
+      "failed": "Rule ဖျက်မရပါ"
+    },
+    "toast": {
+      "created": "Earn rule ဖန်တီးပြီးပါပြီ။",
+      "updated": "Earn rule ပြင်ဆင်ပြီးပါပြီ။"
+    },
+    "form": {
+      "createTitle": "Earn rule ထည့်မည်",
+      "editTitle": "Earn rule ပြင်မည်",
+      "ruleName": "Rule name",
+      "spendMmk": "MMK spend per batch",
+      "pointsPerBatch": "Points earned per batch",
+      "startOptional": "စတင်ရက် (optional)",
+      "endOptional": "ပြီးဆုံးရက် (optional)",
+      "startPlaceholder": "စတင်ရက် & အချိန်",
+      "endPlaceholder": "ပြီးဆုံးရက် & အချိန်",
+      "activeTitle": "Rule active ဖြစ်သည်",
+      "inactiveTitle": "Rule inactive ဖြစ်သည်",
+      "activeDesc": "Inactive ဖြစ်သောအခါ rule ကို list တွင် ထားရှိသော်လည်း orders တွင် points မပေးပါ။",
+      "errorName": "Rule name ထည့်ပါ (e.g. Base tier)။",
+      "errorSpendMin": "MMK spend per batch အနည်းဆုံး 1 ဖြစ်ရမည်။",
+      "errorPointsMin": "Points per batch သည် အနည်းဆုံး 1 ဖြစ်ရမည် (whole number)။",
+      "errorEndBeforeStart": "End date သည် start date နောက်ကျ/တူညီရမည်။",
+      "requestFailed": "Request failed",
+      "saving": "သိမ်းနေသည်…",
+      "saveChanges": "ပြောင်းလဲမှုများ သိမ်းမည်",
+      "createRule": "Rule ဖန်တီးမည်",
+      "defaultTierName": "မူလ tier"
+    }
+  },
+  "systemSettings": {
+    "loadFailed": "System settings load မရပါ",
+    "loading": "System settings load လုပ်နေသည်…",
+    "draftHint": "Save settings နှိပ်မှသာ changes apply လုပ်သည်။ Save မလုပ်ဘဲ page ထွက်ပါက theme ပြန်ပြင်သည်။",
+    "saveSettings": "ဆက်တင်များ သိမ်းမည်",
+    "appearance": "ပုံစံ",
+    "locationContact": "တည်နေရာနှင့် ဆက်သွယ်ရန်",
+    "contactPhone": "ဆက်သွယ်ရန် ဖုန်း",
+    "contactEmail": "ဆက်သွယ်ရန် email",
+    "coordinates": "တည်နေရာကိန်းများ: {{coords}}",
+    "mapHint": "Address ရိုက်ပါ (map pin ရွှေ့) သို့မဟုတ် map click / my location ဖြင့် coordinates သတ်မှတ်ပါ။",
+    "unsavedChanges": "မသိမ်းရသေးသော ပြောင်းလဲမှုများ",
+    "unsavedSub": "App တစ်ခုလုံးတွင် theme apply လုပ်ရန် save လုပ်ပါ",
+    "allSaved": "ပြောင်းလဲမှုများ အားလုံး သိမ်းပြီး",
+    "resetDefaults": "မူလအတိုင်း ပြန်ထားမည်",
+    "reset": {
+      "title": "Reset to defaults?",
+      "message": "Theme နှင့် contact fields များကို default values သို့ ပြန်ထားမည်။ Save မလုပ်ဘဲ undo မလုပ်နိုင်ပါ။",
+      "confirm": "မူလအတိုင်း ပြန်ထားမည်",
+      "success": "Settings များကို default values သို့ ပြန်ထားပြီး။",
+      "failed": "Reset မအောင်မြင်ပါ"
+    },
+    "save": {
+      "success": "System settings သိမ်းပြီး။",
+      "failed": "Save မအောင်မြင်ပါ"
+    },
+    "updatedAt": "ပြင်ဆင်ချိန် {{date}}"
+  },
+  "reports": {
+    "loadFailed": "Dashboard KPIs load မရပါ",
+    "loadingReport": "Report load လုပ်နေသည်…",
+    "loadingSnapshot": "Snapshot load လုပ်နေသည်…",
+    "loadingChart": "Chart load လုပ်နေသည်…",
+    "reportingPeriod": "အစီရင်ခံစာ ကာလ",
+    "rangeDays": "{{count}} ရက်",
+    "snapshot": "အခြေအနေအကျဉ်း",
+    "noSnapshot": "Snapshot data မရှိပါ။",
+    "snapshotLine": "မှာယူမှု {{orders}} ခု · delivered revenue {{revenue}} MMK · urgent {{urgent}} · user {{users}} · AI pass {{pass}} / issues {{issues}} · avg rating {{rating}} (review {{reviews}})",
+    "discountImpact": "Discount သက်ရောက်မှု",
+    "metrics": {
+      "originalValue": "မူလ တန်ဖိုး",
+      "finalRevenue": "နောက်ဆုံး revenue",
+      "discountGiven": "ပေးခဲ့သော discount",
+      "effectiveDiscount": "Effective discount rate",
+      "totalSpent": "စုစုပေါင်း အသုံးပြုမှု",
+      "orders": "မှာယူမှုများ",
+      "completed": "ပြီးမြောက်ပြီး",
+      "pending": "ဆိုင်းငံ့",
+      "loyaltyPoints": "Loyalty အမှတ်များ"
+    },
+    "charts": {
+      "dailyOrders": "နေ့စဉ် မှာယူမှုများ (နောက်ဆုံး {{days}} ရက်)",
+      "monthlyRevenue": "လစဉ် ဝင်ငွေ (MMK)",
+      "revenueByChannel": "Channel အလိုက် ဝင်ငွေ",
+      "testsByCategory": "Category အလိုက် ဓာတ်ခွဲများ",
+      "ratingsBreakdown": "Customer ratings ခွဲခြမ်းစိတ်ဖြာမှု",
+      "revenue": "ဝင်ငွေ",
+      "tests": "ဓာတ်ခွဲများ",
+      "orders": "မှာယူမှုများ"
+    },
+    "pendingQueue": {
+      "title": "ဆိုင်းငံ့ ရလဒ်များ",
+      "openOrders": "ဆိုင်းငံ့ မှာယူမှု {{count}} ခု",
+      "empty": "Queue တွင် ဆိုင်းငံ့ မှာယူမှု မရှိပါ။",
+      "hoursWaiting": "စောင့်ဆိုင်းချိန် (နာရီ)"
+    },
+    "tat": {
+      "title": "လည်ပတ်ချိန် (TAT)",
+      "completedReports": "ပြီးမြောက်သော report {{count}} ခု",
+      "avg": "ပျမ်းမျှ {{time}}",
+      "empty": "ဤကာလတွင် report ထွက်ချိန်ရှိသော order များအတွက် TAT data မရှိပါ။",
+      "collected": "စုဆောင်းပြီး",
+      "reportOut": "Report ထွက်",
+      "column": "TAT",
+      "minutes": "{{count}} မိနစ်",
+      "hoursMinutes": "{{hours}} နာရီ {{minutes}} မိနစ်",
+      "hoursOnly": "{{hours}} နာရီ"
+    },
+    "staffActivity": {
+      "title": "ဝန်ထမ်း လုပ်ဆောင်ချက်",
+      "tracked": "ဝန်ထမ်း {{count}} ဦး ခြေရာခံ",
+      "empty": "ဤကာလတွင် staff activity log မရှိပါ။",
+      "staff": "ဝန်ထမ်း",
+      "actions": "လုပ်ဆောင်ချက်များ",
+      "lastAction": "နောက်ဆုံး လုပ်ဆောင်ချက်"
+    },
+    "collection": {
+      "title": "နမူနာ စုဆောင်းမှု စွမ်းဆောင်ရည်",
+      "collectors": "စုဆောင်း {{count}} ဦး",
+      "empty": "ဤကာလတွင် sample collection လုပ်ဆောင်ချက် မရှိပါ။",
+      "collections": "စုဆောင်းမှုများ",
+      "avgTime": "စုဆောင်းရန် ပျမ်းမျှ အချိန်"
+    },
+    "ratings": {
+      "positive": "အပြိုသော (4–5★)",
+      "neutral": "ကြား (3★)",
+      "negative": "အနှစ် (1–2★)",
+      "latest": "နောက်ဆုံး review များ",
+      "empty": "ဤကာလတွင် review မရှိပါ။",
+      "anonymous": "အမည်မဖော်သူ"
+    },
+    "userSummary": {
+      "title": "အကောင့် အကျဉ်းချုပ်",
+      "hint": "ချိတ်ဆက်ထားသော အကောင့်အတွက် personalized metrics (user-summary API)။",
+      "topTests": "အသုံးပြုများသော ဓာတ်ခွဲများ",
+      "category": "အမျိုးအစား",
+      "spent": "အသုံးပြုမှု"
+    }
+  }
+}

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../config/map_defaults.dart';
 import '../../models/address_map_pick_result.dart';
 import '../../services/nominatim_geocode.dart';
@@ -17,9 +18,9 @@ class AddressLocationFields extends StatefulWidget {
     required this.longitude,
     required this.onChanged,
     this.enabled = true,
-    this.addressLabel = 'Address',
-    this.addressHint = 'Street, city, etc.',
-    this.mapButtonLabel = 'Choose on map',
+    this.addressLabel,
+    this.addressHint,
+    this.mapButtonLabel,
   });
 
   final String addressLine;
@@ -27,19 +28,21 @@ class AddressLocationFields extends StatefulWidget {
   final double longitude;
   final void Function(String addressLine, double latitude, double longitude) onChanged;
   final bool enabled;
-  final String addressLabel;
-  final String addressHint;
-  final String mapButtonLabel;
+  final String? addressLabel;
+  final String? addressHint;
+  final String? mapButtonLabel;
 
   @override
   State<AddressLocationFields> createState() => _AddressLocationFieldsState();
 }
 
+enum _GeoHintKind { lookingUp, noMatch, lookupFailed }
+
 class _AddressLocationFieldsState extends State<AddressLocationFields> {
   late final TextEditingController _address;
   Timer? _forwardDebounce;
   var _forwardBusy = false;
-  String? _geoHint;
+  _GeoHintKind? _geoHint;
   int _forwardSeq = 0;
 
   @override
@@ -84,7 +87,7 @@ class _AddressLocationFieldsState extends State<AddressLocationFields> {
     if (mounted) {
       setState(() {
         _forwardBusy = true;
-        _geoHint = 'Looking up address…';
+        _geoHint = _GeoHintKind.lookingUp;
       });
     }
     try {
@@ -93,7 +96,7 @@ class _AddressLocationFieldsState extends State<AddressLocationFields> {
       if (hit == null) {
         setState(() {
           _forwardBusy = false;
-          _geoHint = 'No match — try a fuller address or choose on the map.';
+          _geoHint = _GeoHintKind.noMatch;
         });
         return;
       }
@@ -108,7 +111,7 @@ class _AddressLocationFieldsState extends State<AddressLocationFields> {
       if (!mounted || id != _forwardSeq) return;
       setState(() {
         _forwardBusy = false;
-        _geoHint = 'Could not look up address. Try again or choose on the map.';
+        _geoHint = _GeoHintKind.lookupFailed;
       });
     }
   }
@@ -138,9 +141,16 @@ class _AddressLocationFieldsState extends State<AddressLocationFields> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final coords = hasMeaningfulCoordinates(widget.latitude, widget.longitude)
         ? '${widget.latitude.toStringAsFixed(5)}, ${widget.longitude.toStringAsFixed(5)}'
         : '—';
+    final geoHintText = switch (_geoHint) {
+      _GeoHintKind.lookingUp => l10n.profileLookingUpAddress,
+      _GeoHintKind.noMatch => l10n.profileNoAddressMatch,
+      _GeoHintKind.lookupFailed => l10n.profileAddressLookupFailed,
+      null => null,
+    };
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -155,8 +165,8 @@ class _AddressLocationFieldsState extends State<AddressLocationFields> {
             _scheduleForward();
           },
           decoration: InputDecoration(
-            labelText: widget.addressLabel,
-            hintText: widget.addressHint,
+            labelText: widget.addressLabel ?? l10n.profileAddress,
+            hintText: widget.addressHint ?? l10n.profileAddressHint,
             suffixIcon: _forwardBusy
                 ? const Padding(
                     padding: EdgeInsets.all(12),
@@ -169,10 +179,10 @@ class _AddressLocationFieldsState extends State<AddressLocationFields> {
                 : null,
           ),
         ),
-        if (_geoHint != null) ...[
+        if (geoHintText != null) ...[
           const SizedBox(height: 6),
           Text(
-            _geoHint!,
+            geoHintText,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(color: context.cs.onSurfaceVariant),
           ),
         ],
@@ -182,12 +192,12 @@ class _AddressLocationFieldsState extends State<AddressLocationFields> {
           child: OutlinedButton.icon(
             onPressed: widget.enabled ? _openMap : null,
             icon: const Icon(Icons.map_outlined, size: 20),
-            label: Text(widget.mapButtonLabel),
+            label: Text(widget.mapButtonLabel ?? l10n.profileChooseOnMap),
           ),
         ),
         const SizedBox(height: 10),
         Text(
-          'Latitude–Longitude',
+          l10n.profileLatLong,
           style: Theme.of(context).textTheme.titleSmall?.copyWith(
                 color: context.cs.onSurface,
                 fontWeight: FontWeight.w600,

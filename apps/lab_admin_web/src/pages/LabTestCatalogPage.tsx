@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { ApiConfigBanner } from '../components/common/ApiConfigBanner'
 import { ConfirmDialog } from '../components/common/ConfirmDialog'
 import { LoadingSpinner } from '../components/common/LoadingSpinner'
 import { LabTestFormModal } from '../components/lab-tests/LabTestFormModal'
@@ -15,13 +17,8 @@ import '../components/common/ui.css'
 
 const colSpan = 8
 
-const STATUS_FILTER_OPTIONS: { value: 'all' | 'active' | 'inactive'; label: string }[] = [
-  { value: 'all', label: 'All statuses' },
-  { value: 'active', label: 'Active only' },
-  { value: 'inactive', label: 'Inactive only' },
-]
-
 export function LabTestCatalogPage() {
+  const { t } = useTranslation()
   const hasApi = isApiMode()
   const { showSuccess, showError } = useToast()
   const [rows, setRows] = useState<LabTestCatalogRow[]>([])
@@ -42,6 +39,16 @@ export function LabTestCatalogPage() {
   const [editInitial, setEditInitial] = useState<LabTestCatalogRow | null>(null)
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<LabTestCatalogRow | null>(null)
+
+  const statusFilterOptions = useMemo(
+    () =>
+      [
+        { value: 'all' as const, label: t('labTests.filters.statusAll') },
+        { value: 'active' as const, label: t('labTests.filters.statusActive') },
+        { value: 'inactive' as const, label: t('labTests.filters.statusInactive') },
+      ] as const,
+    [t],
+  )
 
   useEffect(() => {
     const handle = window.setTimeout(() => setSearchApplied(searchText.trim()), 350)
@@ -70,7 +77,7 @@ export function LabTestCatalogPage() {
         const list = await fetchLabTestsList(query)
         if (!cancelled) setRows(list)
       } catch (e) {
-        if (!cancelled) setLoadError(e instanceof Error ? e.message : 'Failed to load catalog')
+        if (!cancelled) setLoadError(e instanceof Error ? e.message : t('labTests.loadFailed'))
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -78,7 +85,7 @@ export function LabTestCatalogPage() {
     return () => {
       cancelled = true
     }
-  }, [hasApi, refreshTick, activeFilter, searchApplied])
+  }, [hasApi, refreshTick, activeFilter, searchApplied, t])
 
   const sorted = useMemo(
     () => [...rows].sort((a, b) => a.test_name.localeCompare(b.test_name)),
@@ -113,10 +120,10 @@ export function LabTestCatalogPage() {
     setDeleteTarget(null)
     try {
       await deleteLabTest(row.id)
-      showSuccess(`Deleted test "${row.test_name}".`)
-      setRefreshTick((t) => t + 1)
+      showSuccess(t('labTests.toasts.deleted', { name: row.test_name }))
+      setRefreshTick((tick) => tick + 1)
     } catch (e) {
-      showError(messageFromError(e, 'Delete failed'))
+      showError(messageFromError(e, t('labTests.toasts.deleteFailed')))
     }
   }
 
@@ -126,44 +133,36 @@ export function LabTestCatalogPage() {
     setCatalogPage(1)
   }
 
-  const emptyMessage =
-    searchApplied.trim() !== ''
-      ? {
-          title: 'No matching tests',
-          body: 'Try a different search term or clear the filter to see more results.',
-        }
-      : activeFilter !== 'all'
-        ? {
-            title: 'Nothing in this filter',
-            body: 'Change the status filter or set it to “All statuses”.',
-          }
-        : {
-            title: 'No tests in the catalog yet',
-            body: 'Create a lab test to start building your catalog.',
-          }
+  const emptyMessage = useMemo(() => {
+    if (searchApplied.trim() !== '') {
+      return {
+        title: t('labTests.empty.noMatchTitle'),
+        body: t('labTests.empty.noMatchBody'),
+      }
+    }
+    if (activeFilter !== 'all') {
+      return {
+        title: t('labTests.empty.filterTitle'),
+        body: t('labTests.empty.filterBody'),
+      }
+    }
+    return {
+      title: t('labTests.empty.noneTitle'),
+      body: t('labTests.empty.noneBody'),
+    }
+  }, [activeFilter, searchApplied, t])
 
   return (
     <div className="stack">
-      <PageHeader
-        title="Test catalog"
-        description="Browse and edit the tests you offer: names, codes, prices, and whether each test is available. Discount columns show example prices when a discount applies; set those rules on the Discounts page."
-      />
+      <PageHeader title={t('pages.labTests.title')} description={t('pages.labTests.description')} />
 
-      {!hasApi ? (
-        <div className="card card--muted">
-          <p style={{ margin: 0, fontSize: '0.9rem' }}>
-            Set <code>VITE_API_BASE_URL</code> in <code>apps/lab_admin_web</code> (e.g.{' '}
-            <code>http://localhost:3000</code>) and restart the dev server. The catalog is loaded only from the
-            backend.
-          </p>
-        </div>
-      ) : null}
+      {!hasApi ? <ApiConfigBanner /> : null}
 
       <div className="list-tools-row">
-        <div className="list-filters-bar" aria-label="Catalog filters">
+        <div className="list-filters-bar" aria-label={t('labTests.filters.ariaLabel')}>
           <div className="list-filters-bar__group">
             <label className="list-filters-bar__label" htmlFor="lab-catalog-status">
-              Status
+              {t('common.status')}
             </label>
             <select
               id="lab-catalog-status"
@@ -172,7 +171,7 @@ export function LabTestCatalogPage() {
               onChange={(e) => setActiveFilter(e.target.value as 'all' | 'active' | 'inactive')}
               disabled={loading || !hasApi}
             >
-              {STATUS_FILTER_OPTIONS.map((o) => (
+              {statusFilterOptions.map((o) => (
                 <option key={o.value} value={o.value}>
                   {o.label}
                 </option>
@@ -181,7 +180,7 @@ export function LabTestCatalogPage() {
           </div>
           <ListFilterSearchField
             id="lab-catalog-search"
-            label="Tests"
+            label={t('labTests.filters.tests')}
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
             disabled={loading || !hasApi}
@@ -194,20 +193,20 @@ export function LabTestCatalogPage() {
               loading || !hasApi || (activeFilter === 'all' && searchText.trim() === '')
             }
           >
-            Clear filters
+            {t('filters.clearFilters')}
           </button>
         </div>
         <div className="list-tools-row__actions">
           <button
             type="button"
             className="btn btn-secondary"
-            onClick={() => setRefreshTick((t) => t + 1)}
+            onClick={() => setRefreshTick((tick) => tick + 1)}
             disabled={loading || !hasApi}
           >
-            Refresh
+            {loading ? t('common.refreshing') : t('common.refresh')}
           </button>
           <button type="button" className="btn btn-primary" onClick={openCreate} disabled={loading || !hasApi}>
-            Create lab test
+            {t('labTests.actions.create')}
           </button>
         </div>
       </div>
@@ -217,25 +216,25 @@ export function LabTestCatalogPage() {
           <table className="data-table data-table--catalog">
             <thead>
               <tr>
-                <th>Name</th>
-                <th>Code</th>
-                <th className="col-num">Base (MMK)</th>
-                <th className="col-num" title="Highest discount_percent among this test’s configured role discounts">
-                  Disc. %
+                <th>{t('labTests.table.name')}</th>
+                <th>{t('labTests.table.code')}</th>
+                <th className="col-num">{t('labTests.table.base')}</th>
+                <th className="col-num" title={t('labTests.table.discountTitle')}>
+                  {t('labTests.table.discount')}
                 </th>
-                <th className="col-num" title="Base price after that discount">
-                  After (MMK)
+                <th className="col-num" title={t('labTests.table.afterTitle')}>
+                  {t('labTests.table.after')}
                 </th>
-                <th>Status</th>
-                <th>Category</th>
-                <th className="action-col">Actions</th>
+                <th>{t('labTests.table.status')}</th>
+                <th>{t('labTests.table.category')}</th>
+                <th className="action-col">{t('labTests.table.actions')}</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
                   <td colSpan={colSpan} className="data-table__state data-table__state--loading">
-                    <LoadingSpinner label="Loading catalog" />
+                    <LoadingSpinner label={t('labTests.loading')} />
                   </td>
                 </tr>
               ) : sorted.length === 0 ? (
@@ -249,7 +248,7 @@ export function LabTestCatalogPage() {
                       <p className="data-table__empty-text">{emptyMessage.body}</p>
                       {hasApi && !searchApplied.trim() && activeFilter === 'all' ? (
                         <button type="button" className="btn btn-primary" onClick={openCreate}>
-                          Create lab test
+                          {t('labTests.actions.create')}
                         </button>
                       ) : null}
                     </div>
@@ -267,20 +266,20 @@ export function LabTestCatalogPage() {
                     <td className="col-num">{r.discounted_price_mmk.toLocaleString()}</td>
                     <td>
                       {r.is_active ? (
-                        <span className="badge badge--success">Active</span>
+                        <span className="badge badge--success">{t('common.active')}</span>
                       ) : (
-                        <span className="badge badge--neutral">Inactive</span>
+                        <span className="badge badge--neutral">{t('common.inactive')}</span>
                       )}
                     </td>
-                    <td>{r.category || '—'}</td>
+                    <td>{r.category || t('common.none')}</td>
                     <td className="action-cell">
                       <TableActionMenu
                         open={openMenuId === r.id}
                         onOpenChange={(next) => setOpenMenuId(next ? r.id : null)}
                         items={[
-                          { label: 'Edit', onSelect: () => openEdit(r) },
+                          { label: t('labTests.actions.edit'), onSelect: () => openEdit(r) },
                           {
-                            label: 'Delete',
+                            label: t('common.delete'),
                             onSelect: () => {
                               setDeleteTarget(r)
                               setOpenMenuId(null)
@@ -313,14 +312,12 @@ export function LabTestCatalogPage() {
 
       <ConfirmDialog
         open={deleteTarget !== null}
-        title="Delete lab test?"
+        title={t('labTests.delete.title')}
         message={
-          deleteTarget
-            ? `Delete "${deleteTarget.test_name}"?`
-            : ''
+          deleteTarget ? t('labTests.delete.message', { name: deleteTarget.test_name }) : ''
         }
-        confirmLabel="Delete"
-        cancelLabel="Cancel"
+        confirmLabel={t('labTests.delete.confirm')}
+        cancelLabel={t('common.cancel')}
         danger
         onConfirm={() => void confirmDelete()}
         onCancel={() => setDeleteTarget(null)}
@@ -333,8 +330,10 @@ export function LabTestCatalogPage() {
         existingRows={rows}
         onClose={closeForm}
         onSuccess={() => {
-          showSuccess(formMode === 'edit' ? 'Lab test updated.' : 'Lab test created.')
-          setRefreshTick((t) => t + 1)
+          showSuccess(
+            formMode === 'edit' ? t('labTests.toasts.updated') : t('labTests.toasts.created'),
+          )
+          setRefreshTick((tick) => tick + 1)
         }}
       />
     </div>

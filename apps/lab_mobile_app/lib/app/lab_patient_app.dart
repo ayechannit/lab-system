@@ -1,17 +1,21 @@
 import 'dart:async';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:go_router/go_router.dart';
 
 import '../config/lab_api_config.dart';
 import '../routing/app_router.dart';
 import '../services/app_settings_controller.dart';
 import '../services/notification_service.dart';
+import '../services/locale_controller.dart';
 import '../services/rest_lab_user_api.dart';
 import '../services/session_controller.dart';
 import '../theme/app_settings_theme.dart';
+import '../l10n/app_localizations.dart';
 import '../widgets/common/app_toast.dart';
 import 'app_settings_scope.dart';
+import 'locale_scope.dart';
 import 'session_scope.dart';
 
 class LabPatientApp extends StatefulWidget {
@@ -22,12 +26,12 @@ class LabPatientApp extends StatefulWidget {
 }
 
 class _LabPatientAppState extends State<LabPatientApp> with WidgetsBindingObserver {
-  late final SessionController _session = SessionController(
-    api: RestLabUserApi(baseUrl: LabApiConfig.baseUrl),
-  );
+  late final RestLabUserApi _api = RestLabUserApi(baseUrl: LabApiConfig.baseUrl);
+  late final SessionController _session = SessionController(api: _api);
   late final AppSettingsController _settings = AppSettingsController(
     baseUrl: LabApiConfig.baseUrl,
   );
+  late final LocaleController _locale = LocaleController();
   late final GoRouter _router = createAppRouter(_session);
 
   @override
@@ -37,6 +41,20 @@ class _LabPatientAppState extends State<LabPatientApp> with WidgetsBindingObserv
     WidgetsBinding.instance.addObserver(this);
     void loadSettings() => _settings.load();
     loadSettings();
+    _locale.addListener(_syncApiLocale);
+    _syncApiLocale();
+    _settings.addListener(_syncOrgLocaleFromSettings);
+  }
+
+  void _syncOrgLocaleFromSettings() {
+    final code = _settings.uiLocale;
+    if (code == 'en' || code == 'my') {
+      unawaited(_locale.applyOrgLocale(code));
+    }
+  }
+
+  void _syncApiLocale() {
+    _api.setLocaleCode(_locale.locale.languageCode);
   }
 
   @override
@@ -45,6 +63,9 @@ class _LabPatientAppState extends State<LabPatientApp> with WidgetsBindingObserv
     _router.dispose();
     _session.dispose();
     _settings.dispose();
+    _locale.removeListener(_syncApiLocale);
+    _settings.removeListener(_syncOrgLocaleFromSettings);
+    _locale.dispose();
     super.dispose();
   }
 
@@ -58,23 +79,34 @@ class _LabPatientAppState extends State<LabPatientApp> with WidgetsBindingObserv
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: Listenable.merge([_session, _settings]),
+      listenable: Listenable.merge([_session, _settings, _locale]),
       builder: (context, _) {
         final s = _settings.settings;
-        return AppSettingsScope(
-          controller: _settings,
-          child: SessionScope(
-            controller: _session,
-            child: MaterialApp.router(
-              title: _settings.labName,
-              theme: buildAppThemeForSettings(s, brightness: Brightness.light),
-              darkTheme: buildAppThemeForSettings(s, brightness: Brightness.dark),
-              themeMode: _settings.themeMode,
-              routerConfig: _router,
-              debugShowCheckedModeBanner: false,
-              builder: (context, child) {
-                return ForegroundNotificationListener(child: child!);
-              },
+        return LocaleScope(
+          controller: _locale,
+          child: AppSettingsScope(
+            controller: _settings,
+            child: SessionScope(
+              controller: _session,
+              child: MaterialApp.router(
+                title: _settings.labName,
+                locale: _locale.locale,
+                supportedLocales: AppLocalizations.supportedLocales,
+                localizationsDelegates: const [
+                  AppLocalizations.delegate,
+                  GlobalMaterialLocalizations.delegate,
+                  GlobalWidgetsLocalizations.delegate,
+                  GlobalCupertinoLocalizations.delegate,
+                ],
+                theme: buildAppThemeForSettings(s, brightness: Brightness.light),
+                darkTheme: buildAppThemeForSettings(s, brightness: Brightness.dark),
+                themeMode: _settings.themeMode,
+                routerConfig: _router,
+                debugShowCheckedModeBanner: false,
+                builder: (context, child) {
+                  return ForegroundNotificationListener(child: child!);
+                },
+              ),
             ),
           ),
         );

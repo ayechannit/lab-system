@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../models/lab_advertisement.dart';
 import '../../theme/theme_extensions.dart';
 
@@ -84,8 +85,9 @@ class _HomeAdvertisementSectionState extends State<HomeAdvertisementSection> {
     if (uri == null) return;
     final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
     if (!ok && mounted) {
+      final l10n = AppLocalizations.of(context)!;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not open link')),
+        SnackBar(content: Text(l10n.homeCouldNotOpenLink)),
       );
     }
   }
@@ -98,13 +100,14 @@ class _HomeAdvertisementSectionState extends State<HomeAdvertisementSection> {
     if (widget.advertisements.isEmpty) return const SizedBox.shrink();
 
     final cs = context.cs;
+    final l10n = AppLocalizations.of(context)!;
     final ads = widget.advertisements;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'PROMOTIONS',
+          l10n.homePromotionsLabel,
           style: Theme.of(context).textTheme.labelSmall?.copyWith(
                 color: cs.onSurfaceVariant,
                 letterSpacing: 1.0,
@@ -112,7 +115,7 @@ class _HomeAdvertisementSectionState extends State<HomeAdvertisementSection> {
         ),
         const SizedBox(height: 6),
         Text(
-          'Offers & updates',
+          l10n.homeOffersUpdates,
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w700,
               ),
@@ -175,6 +178,7 @@ class _AdvertisementBannerCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = context.cs;
+    final l10n = AppLocalizations.of(context)!;
     final url = ad.bannerImageUrl;
 
     return Material(
@@ -267,7 +271,7 @@ class _AdvertisementBannerCard extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          'Learn more',
+                          l10n.homeLearnMore,
                           style: Theme.of(context).textTheme.labelLarge?.copyWith(
                                 color: Colors.white,
                                 fontWeight: FontWeight.w600,

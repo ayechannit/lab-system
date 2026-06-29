@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/session_scope.dart';
+import '../../l10n/app_localizations.dart';
 import '../../models/lab_result.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/theme_extensions.dart';
@@ -31,15 +32,16 @@ class LabResultDetailScreen extends StatelessWidget {
         final displayRows = report?.displayRows ?? const <LabResultDisplayRow>[];
         final releasedCount = report?.releasedTestCount ?? 0;
         final hasCombinedReports = displayRows.any((row) => row is LabResultCombinedRow);
+        final l10n = AppLocalizations.of(context)!;
 
         return Scaffold(
           appBar: AppBar(
             leading: IconButton(
               icon: const Icon(Icons.arrow_back),
-              tooltip: 'Back',
+              tooltip: l10n.profileBack,
               onPressed: () => _goBack(context),
             ),
-            title: const Text('Lab report'),
+            title: Text(l10n.labReportTitle),
           ),
           body: RefreshIndicator(
             onRefresh: () async {
@@ -53,17 +55,18 @@ class LabResultDetailScreen extends StatelessWidget {
               physics: const AlwaysScrollableScrollPhysics(),
               children: [
                 if (report == null)
-                  _EmptyState(borderColor: borderColor)
+                  _EmptyState(borderColor: borderColor, l10n: l10n)
                 else ...[
                   _OrderHeroCard(
                     report: report,
                     testCount: tests.length,
                     releasedCount: releasedCount,
                     borderColor: borderColor,
+                    l10n: l10n,
                   ),
                   const SizedBox(height: 20),
                   Text(
-                    'TESTS IN THIS ORDER',
+                    l10n.labReportTestsSection,
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
                           color: context.cs.onSurfaceVariant,
                           letterSpacing: 1.0,
@@ -71,16 +74,14 @@ class LabResultDetailScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    tests.length == 1 ? '1 test' : '${tests.length} tests',
+                    l10n.labReportTestCount(tests.length),
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.w700,
                         ),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    hasCombinedReports
-                        ? 'Some tests are grouped into combined reports. Download the shared PDF or run AI Check from each group.'
-                        : 'Download the official PDF or run AI Check for each test separately.',
+                    hasCombinedReports ? l10n.labReportCombinedHint : l10n.labReportSeparateHint,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: context.cs.onSurfaceVariant,
                           height: 1.4,
@@ -89,13 +90,12 @@ class LabResultDetailScreen extends StatelessWidget {
                   const SizedBox(height: 14),
                   if (tests.isEmpty)
                     _InfoBanner(
-                      message: 'No test line items were found for this order.',
+                      message: l10n.labReportNoTestLines,
                       borderColor: borderColor,
                     )
                   else if (releasedCount == 0)
                     _InfoBanner(
-                      message:
-                          'The lab has released this order, but PDFs are not uploaded yet. Check back soon or contact the lab.',
+                      message: l10n.labReportPdfsNotUploadedYet,
                       borderColor: borderColor,
                     ),
                   ...List.generate(displayRows.length, (i) {
@@ -116,7 +116,7 @@ class LabResultDetailScreen extends StatelessWidget {
                   if (report.lines.isNotEmpty) ...[
                     const SizedBox(height: 8),
                     Text(
-                      'Summary values',
+                      l10n.labReportSummaryValues,
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
                             fontWeight: FontWeight.w700,
                             color: context.cs.onSurfaceVariant,
@@ -146,12 +146,14 @@ class _OrderHeroCard extends StatelessWidget {
     required this.testCount,
     required this.releasedCount,
     required this.borderColor,
+    required this.l10n,
   });
 
   final LabResultReport report;
   final int testCount;
   final int releasedCount;
   final Color borderColor;
+  final AppLocalizations l10n;
 
   @override
   Widget build(BuildContext context) {
@@ -160,9 +162,9 @@ class _OrderHeroCard extends StatelessWidget {
         ? report.orderId.substring(0, 8).toUpperCase()
         : report.orderId.toUpperCase();
     final patientLabel =
-        report.patientName.trim().isEmpty ? 'Patient' : report.patientName.trim();
+        report.patientName.trim().isEmpty ? l10n.labReportPatient : report.patientName.trim();
     final patientMeta = <String>[
-      if (report.patientAge != null) 'Age ${report.patientAge}',
+      if (report.patientAge != null) l10n.labReportAge(report.patientAge!),
       if (report.patientPhone.trim().isNotEmpty) report.patientPhone.trim(),
     ].join(' · ');
 
@@ -195,7 +197,7 @@ class _OrderHeroCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(
-                  'Released',
+                  l10n.resultsReleasedBadge,
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
                         color: Colors.white,
                         fontWeight: FontWeight.w700,
@@ -220,7 +222,9 @@ class _OrderHeroCard extends StatelessWidget {
                           const SizedBox(width: 4),
                           Flexible(
                             child: Text(
-                              '$releasedCount/$testCount PDF${testCount == 1 ? '' : 's'}',
+                              testCount == 1
+                                  ? l10n.labReportPdfCountOne(releasedCount, testCount)
+                                  : l10n.labReportPdfCountMany(releasedCount, testCount),
                               overflow: TextOverflow.ellipsis,
                               style: Theme.of(context).textTheme.labelSmall?.copyWith(
                                     color: Colors.white,
@@ -258,7 +262,7 @@ class _OrderHeroCard extends StatelessWidget {
           ],
           const SizedBox(height: 6),
           Text(
-            'Order $orderRef · ${_fmtDate(report.releasedAt)}',
+            l10n.labReportOrderLine(orderRef, _fmtDate(report.releasedAt)),
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: Colors.white.withValues(alpha: 0.88),
                 ),
@@ -312,9 +316,10 @@ class _InfoBanner extends StatelessWidget {
 }
 
 class _EmptyState extends StatelessWidget {
-  const _EmptyState({required this.borderColor});
+  const _EmptyState({required this.borderColor, required this.l10n});
 
   final Color borderColor;
+  final AppLocalizations l10n;
 
   @override
   Widget build(BuildContext context) {
@@ -330,12 +335,12 @@ class _EmptyState extends StatelessWidget {
           Icon(Icons.assignment_outlined, size: 48, color: context.cs.onSurfaceVariant),
           const SizedBox(height: 12),
           Text(
-            'No report loaded',
+            l10n.labReportNoReportLoaded,
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: 6),
           Text(
-            'Select a released order from Results.',
+            l10n.labReportSelectFromResults,
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: context.cs.onSurfaceVariant),
           ),

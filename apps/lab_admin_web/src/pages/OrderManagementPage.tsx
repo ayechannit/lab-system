@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import { useTranslation } from 'react-i18next'
+import { ApiConfigBanner } from '../components/common/ApiConfigBanner'
 import { LoadingSpinner } from '../components/common/LoadingSpinner'
 import { ConfirmDialog } from '../components/common/ConfirmDialog'
 import { ListFilterSearchField } from '../components/common/ListFilterSearchField'
@@ -36,6 +38,15 @@ import {
 import { useAddressGeocode } from '../hooks/useAddressGeocode'
 import { fetchUserList } from '../services/userService'
 import '../components/common/ui.css'
+import i18n from '../i18n'
+import { formatReportDeliveryMethod } from '../utils/orderDisplay'
+import {
+  orderPriorityLabel,
+  orderStatusLabel,
+  paymentDisplayKeyLabel,
+  type PaymentDisplayKey,
+} from '../utils/orderLabels'
+import { roleLabel } from '../utils/roleLabels'
 
 const ORDER_STATUS_OPTIONS: ApiOrderStatus[] = [
   'pending',
@@ -99,19 +110,20 @@ function orderPaymentAmounts(
 
 
 function PaymentModalSummary({ amounts }: { amounts: ReturnType<typeof orderPaymentAmounts> }) {
+  const { t } = useTranslation()
   const due = amounts.balance > 0 ? amounts.balance : 0
   const fullyPaid = amounts.total > 0 && due <= 0
   const pct = amounts.percentPaid
 
   return (
-    <div className="payment-sheet" role="group" aria-label="Order payment summary">
+    <div className="payment-sheet" role="group" aria-label={t('orders.paymentModal.summaryAria')}>
       <div
         className="payment-sheet__progress"
         role="progressbar"
         aria-valuemin={0}
         aria-valuemax={100}
         aria-valuenow={pct}
-        aria-label={`${pct}% paid`}
+        aria-label={t('orders.table.percentPaid', { pct })}
       >
         <div
           className={[
@@ -124,8 +136,8 @@ function PaymentModalSummary({ amounts }: { amounts: ReturnType<typeof orderPaym
         />
       </div>
       <div className="payment-sheet__meta">
-        <span>{pct}% of total collected</span>
-        {fullyPaid ? <span className="payment-sheet__status">Paid in full</span> : null}
+        <span>{t('orders.table.percentCollected', { pct })}</span>
+        {fullyPaid ? <span className="payment-sheet__status">{t('orders.paymentModal.paidInFull')}</span> : null}
       </div>
 
       <div
@@ -136,21 +148,27 @@ function PaymentModalSummary({ amounts }: { amounts: ReturnType<typeof orderPaym
           .filter(Boolean)
           .join(' ')}
       >
-        <span className="payment-sheet__hero-label">{due > 0 ? 'Amount due' : 'Balance remaining'}</span>
+        <span className="payment-sheet__hero-label">
+          {due > 0 ? t('orders.paymentModal.amountDue') : t('orders.paymentModal.balanceRemaining')}
+        </span>
         <span className="payment-sheet__hero-value">
           {due.toLocaleString()}
-          <span>MMK</span>
+          <span>{t('orders.currency')}</span>
         </span>
       </div>
 
       <dl className="payment-sheet__breakdown">
         <div>
-          <dt>Order total</dt>
-          <dd>{amounts.total.toLocaleString()} MMK</dd>
+          <dt>{t('orders.paymentModal.orderTotal')}</dt>
+          <dd>
+            {amounts.total.toLocaleString()} {t('orders.currency')}
+          </dd>
         </div>
         <div>
-          <dt>Already paid</dt>
-          <dd>{amounts.paid.toLocaleString()} MMK</dd>
+          <dt>{t('orders.paymentModal.alreadyPaid')}</dt>
+          <dd>
+            {amounts.paid.toLocaleString()} {t('orders.currency')}
+          </dd>
         </div>
       </dl>
     </div>
@@ -158,7 +176,7 @@ function PaymentModalSummary({ amounts }: { amounts: ReturnType<typeof orderPaym
 }
 
 type OrderPaymentListDisplay = {
-  label: string
+  labelKey: PaymentDisplayKey
   status: ApiPaymentStatus | 'unpaid'
   /** Order fully paid — used for green badge on `received` */
   fullyPaid?: boolean
@@ -169,7 +187,7 @@ function orderPaymentListDisplay(
   data: ApiPaymentOrderSummary | undefined,
   finalPriceMmk: number,
 ): OrderPaymentListDisplay {
-  if (!data) return { label: '—', status: 'unpaid' }
+  if (!data) return { labelKey: 'unpaid', status: 'unpaid' }
   const { balance, total_price, total_paid } = data.summary
   const history = data.history
   const total = total_price > 0 ? total_price : finalPriceMmk
@@ -177,29 +195,29 @@ function orderPaymentListDisplay(
 
   if (history.length === 0) {
     return balance <= 0 && total <= 0
-      ? { label: 'unpaid', status: 'unpaid' }
-      : { label: 'unpaid', status: 'unpaid' }
+      ? { labelKey: 'unpaid', status: 'unpaid' }
+      : { labelKey: 'unpaid', status: 'unpaid' }
   }
 
   const failedOnly = history.every((p) => p.status === 'failed')
-  if (failedOnly) return { label: 'failed', status: 'failed' }
+  if (failedOnly) return { labelKey: 'failed', status: 'failed' }
 
   if (fullyPaid) {
-    return { label: 'received', status: 'received', fullyPaid: true }
+    return { labelKey: 'received', status: 'received', fullyPaid: true }
   }
 
   if (balance > 0) {
     const pending = history.find((p) => p.status === 'pending')
-    if (pending) return { label: 'pending', status: 'pending' }
+    if (pending) return { labelKey: 'pending', status: 'pending' }
     if (total_paid > 0) {
-      return { label: 'partial received', status: 'received', fullyPaid: false }
+      return { labelKey: 'partialReceived', status: 'received', fullyPaid: false }
     }
-    return { label: 'unpaid', status: 'unpaid' }
+    return { labelKey: 'unpaid', status: 'unpaid' }
   }
 
   const latest = history[history.length - 1]
   const status = normalizePaymentStatusForDisplay(latest.status)
-  return { label: status, status }
+  return { labelKey: status as PaymentDisplayKey, status }
 }
 
 function paymentSummaryForOrder(
@@ -231,7 +249,7 @@ function paymentSummaryForOrder(
 }
 
 function fmtDateTime(raw: string | undefined): string {
-  if (!raw) return '—'
+  if (!raw) return i18n.t('common.none')
   const d = new Date(raw)
   if (!Number.isFinite(d.getTime())) return raw
   return d.toLocaleString()
@@ -255,7 +273,7 @@ function renderOrderingUser(
   userMap: Map<string, UserListRow>,
 ) {
   if (!userId) {
-    return <span className="order-detail-value">—</span>
+    return <span className="order-detail-value">{i18n.t('common.none')}</span>
   }
   const fromOrder = orderingUserName?.trim()
   const fromList = userMap.get(userId)?.name?.trim()
@@ -316,6 +334,7 @@ function orderPrescriptionAttachmentUrl(order: {
 }
 
 function PrescriptionPreviewBlock({ url, compact }: { url: string; compact?: boolean }) {
+  const { t } = useTranslation()
   const u = url.trim()
   if (!u) return null
   return (
@@ -323,28 +342,30 @@ function PrescriptionPreviewBlock({ url, compact }: { url: string; compact?: boo
       className="order-detail-section order-detail-section--prescription"
       style={compact ? { marginBottom: '0.65rem' } : undefined}
     >
-      <h3 className="order-detail-section__title">Prescription</h3>
+      <h3 className="order-detail-section__title">{t('orders.prescription.title')}</h3>
       {prescriptionLooksImage(u) ? (
         <div className="order-prescription-preview order-prescription-preview--image-only">
-          <img className="order-prescription-preview__img" src={prescriptionEmbedSrc(u)} alt="Prescription" />
+          <img
+            className="order-prescription-preview__img"
+            src={prescriptionEmbedSrc(u)}
+            alt={t('orders.prescription.alt')}
+          />
           <div className="order-prescription-preview__foot">
             <a className="btn btn-secondary" href={u} target="_blank" rel="noopener noreferrer">
-              Open in new tab
+              {t('orders.prescription.openInNewTab')}
             </a>
           </div>
         </div>
       ) : prescriptionLooksPdf(u) ? (
         <div className="order-prescription-pdf-card">
-          <p className="order-prescription-pdf-card__text">
-            PDF prescription — open in a new tab to view (inline preview is off).
-          </p>
+          <p className="order-prescription-pdf-card__text">{t('orders.prescription.pdfHint')}</p>
           <a className="btn btn-primary" href={u} target="_blank" rel="noopener noreferrer">
-            Open PDF
+            {t('orders.prescription.viewPdf')}
           </a>
         </div>
       ) : (
         <a className="btn btn-secondary" href={u} target="_blank" rel="noopener noreferrer">
-          Open prescription file
+          {t('orders.prescription.openInNewTab')}
         </a>
       )}
     </div>
@@ -353,29 +374,30 @@ function PrescriptionPreviewBlock({ url, compact }: { url: string; compact?: boo
 
 /** Embedded PDF / image preview while assigning tests (right column uses default tall panel). */
 function PrescriptionPanelEmbed({ url }: { url: string }) {
+  const { t } = useTranslation()
   const u = url.trim()
   if (!u) return null
   const src = prescriptionEmbedSrc(u)
   return (
     <div className="assign-tests-prescription-panel">
-      <div className="assign-tests-prescription-panel__header">Prescription preview</div>
+      <div className="assign-tests-prescription-panel__header">{t('orders.prescription.preview')}</div>
       <div className="assign-tests-prescription-panel__body">
         {prescriptionLooksImage(u) ? (
-          <img src={src} alt="Prescription" />
+          <img src={src} alt={t('orders.prescription.alt')} />
         ) : prescriptionLooksPdf(u) ? (
-          <iframe title="Prescription PDF" src={src} />
+          <iframe title={t('orders.prescription.pdfTitle')} src={src} />
         ) : (
           <div style={{ padding: '1rem', fontSize: '0.875rem', color: 'var(--muted)' }}>
-            <p style={{ margin: '0 0 0.65rem' }}>Inline preview isn’t available for this file type.</p>
+            <p style={{ margin: '0 0 0.65rem' }}>{t('orders.prescription.pdfHint')}</p>
             <a className="btn btn-secondary" href={u} target="_blank" rel="noopener noreferrer">
-              Open in new tab
+              {t('orders.prescription.openInNewTab')}
             </a>
           </div>
         )}
       </div>
       <div className="assign-tests-prescription-panel__foot">
         <a className="btn btn-ghost" href={u} target="_blank" rel="noopener noreferrer">
-          Open in new tab
+          {t('orders.prescription.openInNewTab')}
         </a>
       </div>
     </div>
@@ -461,11 +483,12 @@ function OrderTestCheckboxPicker({
   onFilterChange,
   filterInputId,
 }: OrderTestCheckboxPickerProps) {
+  const { t } = useTranslation()
   const wrapRef = useRef<HTMLDivElement>(null)
   const filterInputRef = useRef<HTMLInputElement>(null)
   const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds])
   const n = selectedIds.length
-  const summary = n === 0 ? 'Choose tests…' : `${n} test${n === 1 ? '' : 's'} selected`
+  const summary = n === 0 ? t('orders.testPicker.chooseTests') : t('orders.testPicker.selected', { count: n })
 
   useEffect(() => {
     if (!open || disabled) return
@@ -501,7 +524,7 @@ function OrderTestCheckboxPicker({
       className={`field order-test-multiselect${open && !disabled ? ' order-test-multiselect--open' : ''}`}
       style={{ marginBottom: 0 }}
     >
-      <label htmlFor={triggerId}>Test</label>
+      <label htmlFor={triggerId}>{t('orders.testPicker.label')}</label>
       <div className="order-test-multiselect__anchor">
         <button
           type="button"
@@ -521,14 +544,14 @@ function OrderTestCheckboxPicker({
           <div id={listId} className="order-test-multiselect-panel" role="listbox" aria-multiselectable="true">
           <div className="order-test-multiselect-panel__search">
             <label htmlFor={filterInputId} className="order-test-multiselect-panel__search-label">
-              Search tests
+              {t('orders.testPicker.searchLabel')}
             </label>
             <input
               ref={filterInputRef}
               id={filterInputId}
               type="text"
               className="order-test-multiselect-panel__search-input"
-              placeholder="Name or code…"
+              placeholder={t('orders.testPicker.searchPlaceholder')}
               value={filterValue}
               onChange={(e) => onFilterChange(e.target.value)}
               autoComplete="off"
@@ -538,37 +561,42 @@ function OrderTestCheckboxPicker({
           </div>
           {totalMatches > ORDER_TEST_PICKER_LIMIT ? (
             <p className="order-test-multiselect-panel__hint">
-              Showing {ORDER_TEST_PICKER_LIMIT} of {totalMatches} matches — narrow your search.
+              {t('orders.testPicker.showingMatches', {
+                shown: ORDER_TEST_PICKER_LIMIT,
+                total: totalMatches,
+              })}
             </p>
           ) : null}
           {rows.length === 0 ? (
             <p style={{ margin: '0.6rem 0.75rem', fontSize: '0.85rem', color: 'var(--muted)' }}>
-              No matches — try different keywords.
+              {t('orders.testPicker.noMatches')}
             </p>
           ) : (
-            rows.map((t) => {
-              const pct = activeDiscountPercentForOrder(testDiscounts, t.id, userRole)
-              const unit = t.base_price_mmk
+            rows.map((testRow) => {
+              const pct = activeDiscountPercentForOrder(testDiscounts, testRow.id, userRole)
+              const unit = testRow.base_price_mmk
               const lineFinal =
                 Math.round(unit * (1 - Math.max(0, Math.min(100, pct)) / 100) * 100) / 100
-              const checked = selectedSet.has(t.id)
+              const checked = selectedSet.has(testRow.id)
               return (
-                <label key={t.id} className="order-test-multiselect-row">
+                <label key={testRow.id} className="order-test-multiselect-row">
                   <input
                     type="checkbox"
                     className="order-test-multiselect-row__check"
                     checked={checked}
-                    onChange={() => onToggle(t.id)}
+                    onChange={() => onToggle(testRow.id)}
                     onClick={(e) => e.stopPropagation()}
                   />
                   <span className="order-test-multiselect-row__body">
                     <span className="order-test-multiselect-row__title">
-                      <span className="order-test-multiselect-row__name">{t.test_name}</span>
-                      <span className="order-test-multiselect-row__code">{t.test_code}</span>
+                      <span className="order-test-multiselect-row__name">{testRow.test_name}</span>
+                      <span className="order-test-multiselect-row__code">{testRow.test_code}</span>
                     </span>
                     <span className="order-test-multiselect-row__foot">
                       <span className="order-test-multiselect-row__discount">
-                        {pct > 0 ? `${pct}% off` : 'No discount'}
+                        {pct > 0
+                          ? t('orders.testPicker.percentOff', { pct })
+                          : t('orders.testPicker.noDiscount')}
                       </span>
                       <span className="order-test-multiselect-row__price">
                         {lineFinal.toLocaleString()} MMK
@@ -585,7 +613,7 @@ function OrderTestCheckboxPicker({
               className="btn btn-secondary btn-sm order-test-multiselect-panel__done"
               onClick={() => onOpenChange(false)}
             >
-              Done
+              {t('orders.testPicker.done')}
             </button>
           </div>
         </div>
@@ -596,6 +624,7 @@ function OrderTestCheckboxPicker({
 }
 
 export function OrderManagementPage() {
+  const { t } = useTranslation()
   const hasApi = isApiMode()
   const { showSuccess, showError } = useToast()
   const [rows, setRows] = useState<ApiOrderListRow[]>([])
@@ -756,7 +785,7 @@ export function OrderManagementPage() {
         setTests(testsRes.filter((t) => t.is_active && !t.is_deleted))
         setTestDiscounts(discountsRes)
       } catch (e) {
-        if (!cancelled) setLoadError(e instanceof Error ? e.message : 'Failed to load orders')
+        if (!cancelled) setLoadError(e instanceof Error ? e.message : t('orders.detail.loadFailed'))
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -918,7 +947,7 @@ export function OrderManagementPage() {
         ? paymentUpdateAmount
         : Number.parseFloat(String(paymentUpdateAmount))
     if (!Number.isFinite(amount) || amount <= 0) {
-      return setPaymentUpdateError('Enter a valid payment amount.')
+      return setPaymentUpdateError(t('orders.paymentModal.amount'))
     }
     setPaymentUpdateSubmitting(true)
     try {
@@ -929,12 +958,12 @@ export function OrderManagementPage() {
         status: 'received',
         reference_no: paymentUpdateReference.trim() || null,
       })
-      showSuccess('Payment recorded.')
+      showSuccess(t('orders.toasts.paymentRecorded'))
       setPaymentUpdateOpen(false)
       await refreshPaymentForOrder(paymentUpdateOrder.id)
       if (detailOrder?.id === paymentUpdateOrder.id) void refreshDetailOrder(paymentUpdateOrder.id)
     } catch (err) {
-      setPaymentUpdateError(err instanceof Error ? err.message : 'Payment update failed')
+      setPaymentUpdateError(err instanceof Error ? err.message : t('orders.detail.loadFailed'))
     } finally {
       setPaymentUpdateSubmitting(false)
     }
@@ -956,11 +985,11 @@ export function OrderManagementPage() {
     setCreateLatitude('')
     setCreateLongitude('')
     if (!firstUser && !firstTest) {
-      setCreateError('No users and no lab tests found. Create users/tests first.')
+      setCreateError(t('orders.create.noUsersOrTests'))
     } else if (!firstUser) {
-      setCreateError('No users found. Create at least one user first.')
+      setCreateError(t('orders.create.noUsersOnly'))
     } else if (!firstTest) {
-      setCreateError('No lab tests found. Create at least one lab test first.')
+      setCreateError(t('orders.create.noTestsAdded'))
     } else {
       setCreateError(null)
     }
@@ -994,16 +1023,16 @@ export function OrderManagementPage() {
     e.preventDefault()
     setCreateError(null)
     setCreateTestPickerOpen(false)
-    if (!createUserId) return setCreateError('Select a user.')
-    if (createSelection.lines.length === 0) return setCreateError('Select at least one test.')
-    if (!createPatientName.trim()) return setCreateError('Enter patient name.')
-    if (!createPatientPhone.trim()) return setCreateError('Enter patient phone.')
-    if (!createAddress.trim()) return setCreateError('Enter address.')
+    if (!createUserId) return setCreateError(t('orders.create.orderingUser'))
+    if (createSelection.lines.length === 0) return setCreateError(t('orders.create.testsOnOrder'))
+    if (!createPatientName.trim()) return setCreateError(t('orders.create.patientName'))
+    if (!createPatientPhone.trim()) return setCreateError(t('common.phone'))
+    if (!createAddress.trim()) return setCreateError(t('common.address'))
     if (!hasUsableCoords(createLatitude, createLongitude)) {
-      return setCreateError('Set a pickup location on the map or enter an address that can be located.')
+      return setCreateError(t('orders.detail.address'))
     }
     const age = typeof createPatientAge === 'number' ? createPatientAge : Number.parseInt(String(createPatientAge), 10)
-    if (!Number.isFinite(age) || age < 0) return setCreateError('Enter valid patient age.')
+    if (!Number.isFinite(age) || age < 0) return setCreateError(t('orders.create.age'))
     const { lines, originalSum, finalSum, blendedDisc } = createSelection
     const items = lines.map((l) => ({
       test_id: l.testId,
@@ -1033,7 +1062,7 @@ export function OrderManagementPage() {
       setCreateOpen(false)
       bumpOrderViews()
     } catch (e) {
-      setCreateError(e instanceof Error ? e.message : 'Create failed')
+      setCreateError(e instanceof Error ? e.message : t('orders.detail.loadFailed'))
     } finally {
       setCreateSubmitting(false)
     }
@@ -1048,7 +1077,7 @@ export function OrderManagementPage() {
     try {
       const order = await fetchOrderById(row.id)
       if (!order) {
-        showError('Order not found.')
+        showError(t('orders.detail.notFound'))
         setEditOrderId(null)
         return
       }
@@ -1068,7 +1097,7 @@ export function OrderManagementPage() {
       setEditLongitude(hasCoords ? lng : '')
       setEditOpen(true)
     } catch (e) {
-      showError(messageFromError(e, 'Failed to load order'))
+      showError(messageFromError(e, t('orders.detail.loadFailed')))
       setEditOrderId(null)
     }
   }
@@ -1078,18 +1107,18 @@ export function OrderManagementPage() {
     if (!editOrderId || !editOrderDetail) return
     setEditError(null)
     setEditTestPickerOpen(false)
-    if (!editPatientName.trim()) return setEditError('Enter patient name.')
-    if (!editPatientPhone.trim()) return setEditError('Enter patient phone.')
-    if (!editAddress.trim()) return setEditError('Enter address.')
+    if (!editPatientName.trim()) return setEditError(t('orders.create.patientName'))
+    if (!editPatientPhone.trim()) return setEditError(t('common.phone'))
+    if (!editAddress.trim()) return setEditError(t('common.address'))
     if (!hasUsableCoords(editLatitude, editLongitude)) {
-      return setEditError('Set a pickup location on the map or enter an address that can be located.')
+      return setEditError(t('orders.detail.address'))
     }
     const age =
       typeof editPatientAge === 'number' ? editPatientAge : Number.parseInt(String(editPatientAge), 10)
-    if (!Number.isFinite(age) || age < 0) return setEditError('Enter valid patient age.')
+    if (!Number.isFinite(age) || age < 0) return setEditError(t('orders.create.age'))
     const testsEditable = canEditOrderTests(editOrderDetail.status)
     if (testsEditable && editSelection.lines.length === 0) {
-      return setEditError('Select at least one test.')
+      return setEditError(t('orders.create.testsOnOrder'))
     }
     const { latitude: latApi, longitude: lngApi } = coordsForOrderApi(editLatitude, editLongitude)
     setEditSubmitting(true)
@@ -1124,11 +1153,11 @@ export function OrderManagementPage() {
       }
       setEditOpen(false)
       setEditOrderId(null)
-      showSuccess('Order updated.')
+      showSuccess(t('orders.toasts.orderUpdated'))
       bumpOrderViews()
       if (detailOrder?.id === editOrderId) void refreshDetailOrder(editOrderId)
     } catch (e) {
-      setEditError(e instanceof Error ? e.message : 'Update failed')
+      setEditError(e instanceof Error ? e.message : t('orders.detail.loadFailed'))
     } finally {
       setEditSubmitting(false)
     }
@@ -1141,13 +1170,13 @@ export function OrderManagementPage() {
     try {
       const order = await fetchOrderById(id)
       if (!order) {
-        setDetailError('Order not found.')
+        setDetailError(t('orders.detail.notFound'))
       } else {
         setDetailOrder(order)
         void refreshPaymentForOrder(id)
       }
     } catch (e) {
-      setDetailError(e instanceof Error ? e.message : 'Failed to load detail')
+      setDetailError(e instanceof Error ? e.message : t('orders.detail.loadFailed'))
     } finally {
       setDetailLoading(false)
     }
@@ -1162,14 +1191,14 @@ export function OrderManagementPage() {
     try {
       const order = await fetchOrderById(o.id)
       if (!order) {
-        showError('Order not found.')
+        showError(t('orders.detail.notFound'))
         return
       }
       setAssignOrderDetail(order)
       setAssignOrderId(order.id)
       setAssignOpen(true)
     } catch (e) {
-      showError(messageFromError(e, 'Failed to load order'))
+      showError(messageFromError(e, t('orders.detail.loadFailed')))
     }
   }
 
@@ -1197,11 +1226,11 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
     setAssignError(null)
     setAssignTestPickerOpen(false)
     if (!assignOrderId || !assignOrderDetail || assignOrderDetail.id !== assignOrderId) {
-      setAssignError('Order context lost. Close this dialog and try again.')
+      setAssignError(t('orders.detail.loadFailed'))
       return
     }
     if (assignSelectedIds.length === 0) {
-      setAssignError('Select at least one test.')
+      setAssignError(t('orders.create.testsOnOrder'))
       return
     }
     const role = resolveOrderingUserRole(assignOrderDetail, userMap)
@@ -1215,7 +1244,7 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
       items.push({ test_id: testId, quantity: 1, unit_price_mmk: unit, subtotal_mmk: sub })
     }
     if (items.length === 0) {
-      setAssignError('No valid tests selected.')
+      setAssignError(t('orders.create.noTestsAdded'))
       return
     }
     const originalSum = items.reduce((s, it) => s + it.unit_price_mmk * it.quantity, 0)
@@ -1237,7 +1266,7 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
       setAssignOpen(false)
       bumpOrderViews()
     } catch (err) {
-      setAssignError(err instanceof Error ? err.message : 'Failed to assign tests')
+      setAssignError(err instanceof Error ? err.message : t('orders.detail.loadFailed'))
     } finally {
       setAssignSubmitting(false)
     }
@@ -1257,10 +1286,10 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
     setDeleteTarget(null)
     try {
       await deleteOrder(row.id)
-      showSuccess('Order deleted.')
+      showSuccess(t('orders.toasts.orderDeleted'))
       bumpOrderViews()
     } catch (e) {
-      showError(messageFromError(e, 'Delete failed'))
+      showError(messageFromError(e, t('orders.toasts.deleteFailed')))
     }
   }
 
@@ -1275,31 +1304,22 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
 
   return (
     <div className="stack">
-      <PageHeader
-        title="Order management"
-        description="Review orders from the mobile app: confirm prescription, assign lab tests with role-based discounts, set collection schedule, then advance status through delivery."
-      />
+      <PageHeader title={t('pages.orders.title')} description={t('pages.orders.description')} />
 
-      {!hasApi ? (
-        <div className="card card--muted">
-          <p style={{ margin: 0, fontSize: '0.9rem' }}>
-            Set <code>VITE_API_BASE_URL</code> in <code>apps/lab_admin_web</code> (e.g. <code>http://localhost:3000</code>) and restart the dev server.
-          </p>
-        </div>
-      ) : null}
+      {!hasApi ? <ApiConfigBanner /> : null}
 
       <div className="list-tools-row">
-        <div className="list-filters-bar" aria-label="Order filters">
+        <div className="list-filters-bar" aria-label={t('orders.filters.ariaLabel')}>
           <ListFilterSearchField
             id="order-filter-patient"
-            label="Patient"
+            label={t('common.patient')}
             value={orderFilterPatientInput}
             onChange={(e) => setOrderFilterPatientInput(e.target.value)}
             disabled={!hasApi || loading}
           />
           <div className="list-filters-bar__group">
             <label className="list-filters-bar__label" htmlFor="order-filter-status">
-              Status
+              {t('common.status')}
             </label>
             <select
               id="order-filter-status"
@@ -1308,17 +1328,17 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
               onChange={(e) => setOrderFilterStatus(e.target.value as '' | ApiOrderStatus)}
               disabled={!hasApi || loading}
             >
-              <option value="">All</option>
+              <option value="">{t('common.all')}</option>
               {ORDER_STATUS_OPTIONS.map((s) => (
                 <option key={s} value={s}>
-                  {s}
+                  {orderStatusLabel(s)}
                 </option>
               ))}
             </select>
           </div>
           <div className="list-filters-bar__group">
             <label className="list-filters-bar__label" htmlFor="order-filter-priority">
-              Priority
+              {t('common.priority')}
             </label>
             <select
               id="order-filter-priority"
@@ -1327,14 +1347,14 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
               onChange={(e) => setOrderFilterPriority(e.target.value as '' | 'urgent' | 'elective')}
               disabled={!hasApi || loading}
             >
-              <option value="">All</option>
-              <option value="elective">Elective</option>
-              <option value="urgent">Urgent</option>
+              <option value="">{t('common.all')}</option>
+              <option value="elective">{orderPriorityLabel('elective')}</option>
+              <option value="urgent">{orderPriorityLabel('urgent')}</option>
             </select>
           </div>
           <div className="list-filters-bar__group">
             <label className="list-filters-bar__label" htmlFor="order-filter-tests">
-              Tests
+              {t('orders.filters.tests')}
             </label>
             <select
               id="order-filter-tests"
@@ -1343,9 +1363,9 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
               onChange={(e) => setOrderFilterTests(e.target.value as '' | 'assigned' | 'missing')}
               disabled={!hasApi || loading}
             >
-              <option value="">All</option>
-              <option value="assigned">Assigned</option>
-              <option value="missing">Missing</option>
+              <option value="">{t('common.all')}</option>
+              <option value="assigned">{t('orders.filters.assigned')}</option>
+              <option value="missing">{t('orders.filters.missing')}</option>
             </select>
           </div>
           <button
@@ -1354,7 +1374,7 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
             onClick={clearOrderFilters}
             disabled={!hasApi || loading}
           >
-            Clear filters
+            {t('filters.clearFilters')}
           </button>
         </div>
         <div className="list-tools-row__actions">
@@ -1364,7 +1384,7 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
             onClick={() => setRefreshTick((t) => t + 1)}
             disabled={!hasApi || loading}
           >
-            Refresh
+            {loading ? t('common.refreshing') : t('common.refresh')}
           </button>
           <button
             type="button"
@@ -1372,7 +1392,7 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
             onClick={openCreateOrder}
             disabled={!hasApi || loading}
           >
-            Create order
+            {t('orders.actions.createOrder')}
           </button>
         </div>
       </div>
@@ -1382,35 +1402,35 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
           <table className="data-table data-table--catalog data-table--orders">
             <thead>
               <tr>
-                <th scope="col">Patient</th>
-                <th scope="col">Phone</th>
-                <th scope="col">Priority</th>
-                <th scope="col">Status</th>
+                <th scope="col">{t('common.patient')}</th>
+                <th scope="col">{t('common.phone')}</th>
+                <th scope="col">{t('common.priority')}</th>
+                <th scope="col">{t('common.status')}</th>
                 <th scope="col" className="order-col-pay-status">
-                  Payment
+                  {t('orders.table.payment')}
                 </th>
                 <th
                   scope="col"
                   className="col-num order-col-paid"
-                  title="Sum of payments recorded on this order"
+                  title={t('orders.table.paidTitle')}
                 >
-                  Paid
+                  {t('orders.table.paid')}
                 </th>
-                <th scope="col" className="col-num order-col-due" title="Amount still owed on this order">
-                  Due
+                <th scope="col" className="col-num order-col-due" title={t('orders.table.dueTitle')}>
+                  {t('orders.table.due')}
                 </th>
-                <th scope="col" title="Prescription file uploaded">
-                  Rx
+                <th scope="col" title={t('orders.table.rxTitle')}>
+                  {t('orders.table.rx')}
                 </th>
-                <th scope="col">Tests</th>
+                <th scope="col">{t('orders.table.tests')}</th>
                 <th scope="col" className="col-num">
-                  Original
+                  {t('orders.table.original')}
                 </th>
                 <th scope="col" className="col-num">
-                  Final
+                  {t('orders.table.final')}
                 </th>
                 <th scope="col" className="action-col">
-                  Actions
+                  {t('common.actions')}
                 </th>
               </tr>
             </thead>
@@ -1418,7 +1438,7 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
               {loading ? (
                 <tr>
                   <td colSpan={12} className="data-table__state data-table__state--loading">
-                    <LoadingSpinner label="Loading orders" />
+                    <LoadingSpinner label={t('common.loading')} />
                   </td>
                 </tr>
               ) : sorted.length === 0 ? (
@@ -1428,13 +1448,11 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
                       <div className="data-table__empty-icon" aria-hidden>
                         <span className="material-symbols-outlined">receipt_long</span>
                       </div>
-                      <p className="data-table__empty-title">No orders yet</p>
-                      <p className="data-table__empty-text">
-                        When patients place orders they will appear here. Use filters above to narrow the list.
-                      </p>
+                      <p className="data-table__empty-title">{t('orders.empty.title')}</p>
+                      <p className="data-table__empty-text">{t('orders.empty.text')}</p>
                       {hasApi ? (
                         <button type="button" className="btn btn-primary" onClick={openCreateOrder}>
-                          Create order
+                          {t('orders.actions.createOrder')}
                         </button>
                       ) : null}
                     </div>
@@ -1450,14 +1468,14 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
                           {o.patient_phone.trim()}
                         </a>
                       ) : (
-                        '—'
+                        t('common.none')
                       )}
                     </td>
                     <td>
-                      <span className={priorityBadgeClass(o.priority)}>{o.priority}</span>
+                      <span className={priorityBadgeClass(o.priority)}>{orderPriorityLabel(o.priority)}</span>
                     </td>
                     <td>
-                      <span className={statusBadgeClass(o.status)}>{o.status}</span>
+                      <span className={statusBadgeClass(o.status)}>{orderStatusLabel(o.status)}</span>
                     </td>
                     <td className="order-col-pay-status">
                       {(() => {
@@ -1470,7 +1488,7 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
                         return (
                           <div className="order-pay-status">
                             <span className={paymentBadgeClass(display.status, display.fullyPaid)}>
-                              {display.label}
+                              {paymentDisplayKeyLabel(display.labelKey)}
                             </span>
                             {amounts.total > 0 ? (
                               <div
@@ -1479,14 +1497,14 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
                                 aria-valuenow={amounts.percentPaid}
                                 aria-valuemin={0}
                                 aria-valuemax={100}
-                                aria-label={`${amounts.percentPaid}% paid`}
+                                aria-label={t('orders.table.percentPaid', { pct: amounts.percentPaid })}
                               >
                                 <div className="order-pay-progress__track">
                                   <div
                                     className={`order-pay-progress__fill${
                                       amounts.balance <= 0
                                         ? ' order-pay-progress__fill--complete'
-                                        : display.label === 'partial received'
+                                        : display.labelKey === 'partialReceived'
                                           ? ' order-pay-progress__fill--partial'
                                           : ''
                                     }`}
@@ -1512,7 +1530,7 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
                         const payData = paymentByOrderId.get(o.id)
                         if (paymentsLoading && !payData) return <span className="order-pay-muted">…</span>
                         const { balance, total } = orderPaymentAmounts(payData, o.final_price_mmk)
-                        if (total <= 0) return '—'
+                        if (total <= 0) return t('common.none')
                         if (balance <= 0) {
                           return <span className="order-due-zero">0</span>
                         }
@@ -1522,10 +1540,10 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
                     <td>
                       {o.prescription_url ? (
                         <span className="badge badge--success" title={o.prescription_url}>
-                          Yes
+                          {t('common.yes')}
                         </span>
                       ) : (
-                        <span className="badge badge--neutral">No</span>
+                        <span className="badge badge--neutral">{t('common.no')}</span>
                       )}
                     </td>
                     <td>
@@ -1538,7 +1556,7 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
                           const more = n > 2 ? ` +${n - 2}` : ''
                           return (
                             <span title={(o.items ?? []).map((it) => it.test_name ?? it.test_id).join(', ')}>
-                              {n} test{n === 1 ? '' : 's'}
+                              {t('orders.table.testCount', { count: n })}
                               {names.length > 0 ? (
                                 <span className="order-list-tests-hint">
                                   {' '}
@@ -1550,9 +1568,9 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
                           )
                         }
                         return testsAssignedFlag(o.is_tests_assigned) ? (
-                          <span className="badge badge--success">Assigned</span>
+                          <span className="badge badge--success">{t('orders.filters.assigned')}</span>
                         ) : (
-                          <span className="badge badge--warn">Missing</span>
+                          <span className="badge badge--warn">{t('orders.filters.missing')}</span>
                         )
                       })()}
                     </td>
@@ -1564,19 +1582,19 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
                         onOpenChange={(next) => setOpenMenuId(next ? o.id : null)}
                         items={[
                           {
-                            label: 'Detail',
+                            label: t('orders.actions.detail'),
                             onSelect: () => {
                               void openDetail(o.id)
                             },
                           },
                           {
-                            label: 'Update order',
+                            label: t('orders.actions.updateOrder'),
                             onSelect: () => {
                               void openEditOrder(o)
                             },
                           },
                           {
-                            label: 'Add payment',
+                            label: t('orders.actions.addPayment'),
                             onSelect: () => {
                               openPaymentUpdate(o)
                             },
@@ -1584,7 +1602,7 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
                           ...(canAddTestFromListRow(o)
                             ? [
                                 {
-                                  label: 'Add test',
+                                  label: t('orders.actions.addTest'),
                                   onSelect: () => {
                                     void openAddTestsFromListRow(o)
                                   },
@@ -1592,7 +1610,7 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
                               ]
                             : []),
                           {
-                            label: 'Delete',
+                            label: t('common.delete'),
                             onSelect: () => setDeleteTarget(o),
                             danger: true,
                           },
@@ -1630,12 +1648,12 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
           <div className="modal-card modal-card--order-create" onMouseDown={(e) => e.stopPropagation()}>
             <div className="order-create-modal__head">
               <div className="modal-head">
-                <h2 className="modal-title">Create order</h2>
+                <h2 className="modal-title">{t('orders.create.title')}</h2>
                 <button
                   type="button"
                   className="btn btn-ghost modal-close"
                   onClick={() => !createSubmitting && setCreateOpen(false)}
-                  aria-label="Close"
+                  aria-label={t('common.close')}
                   disabled={createSubmitting}
                 >
                   ×
@@ -1646,35 +1664,33 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
               <div className="order-create-modal__body">
                 <div className="order-create-modal__stack">
               <div className="field">
-                <label htmlFor="om-user">Ordering user</label>
+                <label htmlFor="om-user">{t('orders.create.orderingUser')}</label>
                 <select id="om-user" className="select-chevron-left" value={createUserId} onChange={(e) => onCreateUserChange(e.target.value)} disabled={createSubmitting}>
                   {users.length === 0 ? (
-                    <option value="">No users available</option>
+                    <option value="">{t('orders.create.noUsers')}</option>
                   ) : (
                     users.map((u) => (
                       <option key={u.id} value={u.id}>
-                        {u.name} ({u.role})
+                        {u.name} ({roleLabel(u.role)})
                       </option>
                     ))
                   )}
                 </select>
                 <p style={{ margin: '0.35rem 0 0', fontSize: '0.78rem', color: 'var(--muted)' }}>
-                  Per-test discounts use this user’s role (same rules as mobile / Assign tests).
+                  {t('orders.create.discountHint')}
                 </p>
               </div>
               <div className="field">
                 <div id="om-tests-label" style={{ fontWeight: 600, fontSize: '0.875rem', marginBottom: '0.35rem', color: 'var(--heading)' }}>
-                  Tests on this order
+                  {t('orders.create.testsOnOrder')}
                 </div>
                 {tests.length > ORDER_TEST_PICKER_LIMIT && !createTestSearch.trim() ? (
                   <p style={{ margin: '0 0 0.5rem', fontSize: '0.78rem', color: '#9a6700' }}>
-                    Many tests in the catalog. Open <strong>Test</strong> and use the search box — the list shows at most{' '}
-                    {ORDER_TEST_PICKER_LIMIT} matches at a time.
+                    {t('orders.create.catalogManyHint', { limit: ORDER_TEST_PICKER_LIMIT })}
                   </p>
                 ) : null}
                 <p style={{ margin: '0 0 0.45rem', fontSize: '0.82rem', color: 'var(--muted)' }}>
-                  Open <strong>Test</strong> for search and checkboxes (multi-select). Selected lines also appear in the
-                  table below — use Delete there if a test is not in the current search results.
+                  {t('orders.create.testPickerHint')}
                 </p>
                 <OrderTestCheckboxPicker
                   disabled={createSubmitting || tests.length === 0}
@@ -1697,24 +1713,25 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
                     <table className="data-table">
                       <thead>
                         <tr>
-                          <th>Test</th>
-                          <th>Discount</th>
-                          <th>Final (MMK)</th>
+                          <th>{t('orders.testPicker.label')}</th>
+                          <th>{t('orders.testPicker.discount')}</th>
+                          <th>{t('orders.testPicker.finalMmk')}</th>
                           <th className="action-col"> </th>
                         </tr>
                       </thead>
                       <tbody>
                         {createSelectedTestIds.map((id) => {
-                          const t = testMap.get(id)
-                          if (!t) return null
+                          const test = testMap.get(id)
+                          if (!test) return null
                           const pct = activeDiscountPercentForOrder(testDiscounts, id, createOrderUser?.role)
-                          const unit = Math.round(t.base_price_mmk * 100) / 100
+                          const unit = Math.round(test.base_price_mmk * 100) / 100
                           const sub =
                             Math.round(unit * (1 - Math.max(0, Math.min(100, pct)) / 100) * 100) / 100
                           return (
                             <tr key={id}>
                               <td>
-                                {t.test_name} <span style={{ color: 'var(--muted)' }}>({t.test_code})</span>
+                                {test.test_name}{' '}
+                                <span style={{ color: 'var(--muted)' }}>({test.test_code})</span>
                               </td>
                               <td>{pct}%</td>
                               <td>{sub.toLocaleString()}</td>
@@ -1726,7 +1743,7 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
                                   onClick={() => removeCreateTest(id)}
                                   disabled={createSubmitting}
                                 >
-                                  Delete
+                                  {t('common.delete')}
                                 </button>
                               </td>
                             </tr>
@@ -1736,34 +1753,36 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
                     </table>
                   </div>
                 ) : (
-                  <p style={{ margin: '0.55rem 0 0', fontSize: '0.82rem', color: 'var(--muted)' }}>No tests added yet.</p>
+                  <p style={{ margin: '0.55rem 0 0', fontSize: '0.82rem', color: 'var(--muted)' }}>
+                    {t('orders.create.noTestsAdded')}
+                  </p>
                 )}
               </div>
               <div className="grid-2">
                 <div className="field">
-                  <label htmlFor="om-name">Patient name</label>
+                  <label htmlFor="om-name">{t('orders.create.patientName')}</label>
                   <input id="om-name" value={createPatientName} onChange={(e) => setCreatePatientName(e.target.value)} disabled={createSubmitting} />
                 </div>
                 <div className="field">
-                  <label htmlFor="om-age">Age</label>
+                  <label htmlFor="om-age">{t('orders.create.age')}</label>
                   <input id="om-age" type="number" min={0} value={createPatientAge === '' ? '' : createPatientAge} onChange={(e) => setCreatePatientAge(e.target.value === '' ? '' : Number(e.target.value))} disabled={createSubmitting} />
                 </div>
               </div>
               <div className="grid-2">
                 <div className="field">
-                  <label htmlFor="om-phone">Phone</label>
+                  <label htmlFor="om-phone">{t('common.phone')}</label>
                   <input id="om-phone" value={createPatientPhone} onChange={(e) => setCreatePatientPhone(e.target.value)} disabled={createSubmitting} />
                 </div>
                 <div className="field">
-                  <label htmlFor="om-pri">Priority</label>
+                  <label htmlFor="om-pri">{t('common.priority')}</label>
                   <select id="om-pri" className="select-chevron-left" value={createPriority} onChange={(e) => setCreatePriority(e.target.value as 'urgent' | 'elective')} disabled={createSubmitting}>
-                    <option value="elective">Elective</option>
-                    <option value="urgent">Urgent</option>
+                    <option value="elective">{orderPriorityLabel('elective')}</option>
+                    <option value="urgent">{orderPriorityLabel('urgent')}</option>
                   </select>
                 </div>
               </div>
               <div className="field">
-                <label htmlFor="om-address">Address</label>
+                <label htmlFor="om-address">{t('common.address')}</label>
                 <textarea id="om-address" value={createAddress} onChange={(e) => setCreateAddress(e.target.value)} disabled={createSubmitting} />
               </div>
               <div className="user-form-modal__location-card">
@@ -1783,20 +1802,20 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
                 {createGeocodeHint ? <p className="user-form-modal__geocode-hint">{createGeocodeHint}</p> : null}
               </div>
               <div className="field">
-                <label htmlFor="om-desc">Description</label>
+                <label htmlFor="om-desc">{t('orders.create.description')}</label>
                 <textarea id="om-desc" value={createDescription} onChange={(e) => setCreateDescription(e.target.value)} disabled={createSubmitting} />
               </div>
               <div className="order-create-modal__grid-three">
                 <div className="field">
-                  <label>Original total (MMK)</label>
+                  <label>{t('orders.create.originalTotal')}</label>
                   <input readOnly disabled value={createSelection.originalSum.toLocaleString()} className="lab-test-modal__input-computed" />
                 </div>
                 <div className="field">
-                  <label>Blended discount %</label>
+                  <label>{t('orders.create.blendedDiscount')}</label>
                   <input readOnly disabled value={String(createSelection.blendedDisc)} className="lab-test-modal__input-computed" />
                 </div>
                 <div className="field">
-                  <label>Final total (MMK)</label>
+                  <label>{t('orders.create.finalTotal')}</label>
                   <input readOnly disabled value={createSelection.finalSum.toLocaleString()} className="lab-test-modal__input-computed" />
                 </div>
               </div>
@@ -1811,14 +1830,14 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
               <div className="order-create-modal__footer-actions">
                 <div className="row-actions">
                 <button type="button" className="btn btn-secondary" onClick={() => setCreateOpen(false)} disabled={createSubmitting}>
-                  Cancel
+                  {t('common.cancel')}
                 </button>
                 <button
                   type="submit"
                   className="btn btn-primary"
                   disabled={createSubmitting || users.length === 0 || tests.length === 0 || createSelection.lines.length === 0}
                 >
-                  {createSubmitting ? 'Saving…' : 'Create'}
+                  {createSubmitting ? t('common.saving') : t('orders.create.submit')}
                 </button>
                 </div>
               </div>
@@ -1840,13 +1859,13 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
             <div className="order-create-modal__head">
               <div className="modal-head">
                 <h2 className="modal-title" id="edit-order-title">
-                  Update order
+                  {t('orders.edit.title')}
                 </h2>
                 <button
                   type="button"
                   className="btn btn-ghost modal-close"
                   onClick={() => !editSubmitting && setEditOpen(false)}
-                  aria-label="Close"
+                  aria-label={t('common.close')}
                   disabled={editSubmitting}
                 >
                   ×
@@ -1862,23 +1881,22 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
                         id="om-edit-tests-label"
                         style={{ fontWeight: 600, fontSize: '0.875rem', marginBottom: '0.35rem', color: 'var(--heading)' }}
                       >
-                        Tests on this order
+                        {t('orders.create.testsOnOrder')}
                       </div>
                       {tests.length > ORDER_TEST_PICKER_LIMIT && !editTestSearch.trim() ? (
                         <p style={{ margin: '0 0 0.5rem', fontSize: '0.78rem', color: '#9a6700' }}>
-                          Many tests in the catalog. Open <strong>Test</strong> and use the search box — the list shows at
-                          most {ORDER_TEST_PICKER_LIMIT} matches at a time.
+                          {t('orders.create.catalogManyHint', { limit: ORDER_TEST_PICKER_LIMIT })}
                         </p>
                       ) : null}
                       <p style={{ margin: '0 0 0.45rem', fontSize: '0.82rem', color: 'var(--muted)' }}>
-                        Open <strong>Test</strong> for search and checkboxes (multi-select). Discounts follow the
-                        ordering user&apos;s role (
-                        {editOrderDetail.user_id
-                          ? resolveOrderingUserRole(editOrderDetail, userMap) ??
-                            userMap.get(editOrderDetail.user_id)?.role ??
-                            '—'
-                          : '—'}
-                        ).
+                        {t('orders.edit.discountRoleHint', {
+                          role:
+                            (editOrderDetail.user_id
+                              ? resolveOrderingUserRole(editOrderDetail, userMap) ??
+                                userMap.get(editOrderDetail.user_id)?.role ??
+                                t('common.none')
+                              : t('common.none')) as string,
+                        })}
                       </p>
                       <OrderTestCheckboxPicker
                         disabled={editSubmitting || tests.length === 0}
@@ -1901,28 +1919,29 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
                           <table className="data-table">
                             <thead>
                               <tr>
-                                <th>Test</th>
-                                <th>Discount</th>
-                                <th>Final (MMK)</th>
+                                <th>{t('orders.testPicker.label')}</th>
+                                <th>{t('orders.testPicker.discount')}</th>
+                                <th>{t('orders.testPicker.finalMmk')}</th>
                                 <th className="action-col"> </th>
                               </tr>
                             </thead>
                             <tbody>
                               {editSelectedTestIds.map((id) => {
-                                const t = testMap.get(id)
-                                if (!t) return null
+                                const test = testMap.get(id)
+                                if (!test) return null
                                 const pct = activeDiscountPercentForOrder(
                                   testDiscounts,
                                   id,
                                   resolveOrderingUserRole(editOrderDetail, userMap),
                                 )
-                                const unit = Math.round(t.base_price_mmk * 100) / 100
+                                const unit = Math.round(test.base_price_mmk * 100) / 100
                                 const sub =
                                   Math.round(unit * (1 - Math.max(0, Math.min(100, pct)) / 100) * 100) / 100
                                 return (
                                   <tr key={id}>
                                     <td>
-                                      {t.test_name} <span style={{ color: 'var(--muted)' }}>({t.test_code})</span>
+                                      {test.test_name}{' '}
+                                      <span style={{ color: 'var(--muted)' }}>({test.test_code})</span>
                                     </td>
                                     <td>{pct}%</td>
                                     <td>{sub.toLocaleString()}</td>
@@ -1934,7 +1953,7 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
                                         onClick={() => removeEditTest(id)}
                                         disabled={editSubmitting}
                                       >
-                                        Delete
+                                        {t('common.delete')}
                                       </button>
                                     </td>
                                   </tr>
@@ -1945,12 +1964,12 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
                         </div>
                       ) : (
                         <p style={{ margin: '0.55rem 0 0', fontSize: '0.82rem', color: 'var(--muted)' }}>
-                          No tests added yet.
+                          {t('orders.create.noTestsAdded')}
                         </p>
                       )}
                       <div className="order-create-modal__grid-three" style={{ marginTop: '0.85rem' }}>
                         <div className="field">
-                          <label>Original total (MMK)</label>
+                          <label>{t('orders.create.originalTotal')}</label>
                           <input
                             readOnly
                             disabled
@@ -1959,7 +1978,7 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
                           />
                         </div>
                         <div className="field">
-                          <label>Blended discount %</label>
+                          <label>{t('orders.create.blendedDiscount')}</label>
                           <input
                             readOnly
                             disabled
@@ -1968,7 +1987,7 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
                           />
                         </div>
                         <div className="field">
-                          <label>Final total (MMK)</label>
+                          <label>{t('orders.create.finalTotal')}</label>
                           <input
                             readOnly
                             disabled
@@ -1981,7 +2000,7 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
                   ) : null}
                   <div className="grid-2">
                     <div className="field">
-                      <label htmlFor="om-edit-name">Patient name</label>
+                      <label htmlFor="om-edit-name">{t('orders.create.patientName')}</label>
                       <input
                         id="om-edit-name"
                         value={editPatientName}
@@ -1990,7 +2009,7 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
                       />
                     </div>
                     <div className="field">
-                      <label htmlFor="om-edit-age">Age</label>
+                      <label htmlFor="om-edit-age">{t('orders.create.age')}</label>
                       <input
                         id="om-edit-age"
                         type="number"
@@ -2005,7 +2024,7 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
                   </div>
                   <div className="grid-2">
                     <div className="field">
-                      <label htmlFor="om-edit-phone">Phone</label>
+                      <label htmlFor="om-edit-phone">{t('common.phone')}</label>
                       <input
                         id="om-edit-phone"
                         value={editPatientPhone}
@@ -2014,7 +2033,7 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
                       />
                     </div>
                     <div className="field">
-                      <label htmlFor="om-edit-pri">Priority</label>
+                      <label htmlFor="om-edit-pri">{t('common.priority')}</label>
                       <select
                         id="om-edit-pri"
                         className="select-chevron-left"
@@ -2022,13 +2041,13 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
                         onChange={(e) => setEditPriority(e.target.value as 'urgent' | 'elective')}
                         disabled={editSubmitting}
                       >
-                        <option value="elective">Elective</option>
-                        <option value="urgent">Urgent</option>
+                        <option value="elective">{orderPriorityLabel('elective')}</option>
+                        <option value="urgent">{orderPriorityLabel('urgent')}</option>
                       </select>
                     </div>
                   </div>
                   <div className="field">
-                    <label htmlFor="om-edit-address">Address</label>
+                    <label htmlFor="om-edit-address">{t('common.address')}</label>
                     <textarea
                       id="om-edit-address"
                       value={editAddress}
@@ -2053,7 +2072,7 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
                     {editGeocodeHint ? <p className="user-form-modal__geocode-hint">{editGeocodeHint}</p> : null}
                   </div>
                   <div className="field">
-                    <label htmlFor="om-edit-desc">Description</label>
+                    <label htmlFor="om-edit-desc">{t('orders.create.description')}</label>
                     <textarea
                       id="om-edit-desc"
                       value={editDescription}
@@ -2077,7 +2096,7 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
                       onClick={() => setEditOpen(false)}
                       disabled={editSubmitting}
                     >
-                      Cancel
+                      {t('common.cancel')}
                     </button>
                     <button
                       type="submit"
@@ -2089,7 +2108,7 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
                           editSelection.lines.length === 0)
                       }
                     >
-                      {editSubmitting ? 'Saving…' : 'Save changes'}
+                      {editSubmitting ? t('common.saving') : t('orders.edit.saveChanges')}
                     </button>
                   </div>
                 </div>
@@ -2132,9 +2151,9 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
                 <>
                   <div className="modal-head payment-sheet-head">
                     <div>
-                      <p className="payment-sheet-head__eyebrow">Record payment</p>
+                      <p className="payment-sheet-head__eyebrow">{t('orders.paymentModal.eyebrow')}</p>
                       <h2 id="payment-modal-title" className="modal-title">
-                        Add payment
+                        {t('orders.paymentModal.title')}
                       </h2>
                       <p className="payment-sheet-head__patient">{paymentUpdateOrder.patient_name}</p>
                     </div>
@@ -2142,7 +2161,7 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
                       type="button"
                       className="btn btn-ghost modal-close"
                       onClick={() => !paymentUpdateSubmitting && setPaymentUpdateOpen(false)}
-                      aria-label="Close"
+                      aria-label={t('common.close')}
                       disabled={paymentUpdateSubmitting}
                     >
                       ×
@@ -2161,7 +2180,7 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
                     <div className="payment-sheet-form">
                       <div className="field">
                         <div className="payment-sheet__amount-head">
-                          <label htmlFor="pu-amount">Payment amount</label>
+                          <label htmlFor="pu-amount">{t('orders.paymentModal.amount')}</label>
                           {amounts.balance > 0 ? (
                             <button
                               type="button"
@@ -2171,7 +2190,7 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
                               }
                               disabled={paymentUpdateSubmitting}
                             >
-                              Pay remaining balance
+                              {t('orders.paymentModal.payRemaining')}
                             </button>
                           ) : null}
                         </div>
@@ -2193,13 +2212,13 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
                             disabled={paymentUpdateSubmitting}
                           />
                           <span className="payment-sheet__amount-unit" aria-hidden="true">
-                            MMK
+                            {t('orders.currency')}
                           </span>
                         </div>
                       </div>
 
                       <div className="field">
-                        <label htmlFor="pu-method">Payment method</label>
+                        <label htmlFor="pu-method">{t('orders.paymentModal.method')}</label>
                         <select
                           id="pu-method"
                           className="select-chevron-left"
@@ -2219,21 +2238,26 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
 
                       {fullyPaid ? (
                         <p className="payment-sheet__hint">
-                          This order is fully paid. Enter an amount only for additional charges.
+                          {t('orders.paymentModal.paidInFull')}
                         </p>
                       ) : null}
 
                       {adding > 0 ? (
                         <p className="payment-sheet__preview" role="status">
-                          After recording:{' '}
-                          <strong>{previewPaid.toLocaleString()} MMK paid</strong>
+                          {t('orders.paymentModal.previewAfter')}{' '}
+                          <strong>
+                            {t('orders.paymentModal.previewPaid')}: {previewPaid.toLocaleString()} {t('orders.currency')}
+                          </strong>
                           {previewLeft > 0 ? (
                             <>
-                              {' '}
-                              · <strong>{previewLeft.toLocaleString()} MMK</strong> still due
+                              {' · '}
+                              <strong>
+                                {t('orders.paymentModal.previewLeft')}: {previewLeft.toLocaleString()}{' '}
+                                {t('orders.currency')}
+                              </strong>
                             </>
                           ) : (
-                            <> · order will be paid in full</>
+                            <> · {t('orders.paymentModal.paidInFull')}</>
                           )}
                         </p>
                       ) : null}
@@ -2247,7 +2271,7 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
                       onClick={() => setPaymentUpdateOpen(false)}
                       disabled={paymentUpdateSubmitting}
                     >
-                      Cancel
+                      {t('common.cancel')}
                     </button>
                     <button
                       type="button"
@@ -2255,7 +2279,9 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
                       onClick={() => void submitPaymentUpdate()}
                       disabled={!canRecordPayment}
                     >
-                      {paymentUpdateSubmitting ? 'Recording…' : 'Record payment'}
+                      {paymentUpdateSubmitting
+                        ? t('orders.paymentModal.recording')
+                        : t('orders.paymentModal.record')}
                     </button>
                   </div>
                 </>
@@ -2269,10 +2295,10 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
         <div className="modal-backdrop" role="dialog" aria-modal="true">
           <div className="modal-card" style={{ maxWidth: 560 }}>
             <div className="modal-head">
-              <h2 className="modal-title">Order detail</h2>
+              <h2 className="modal-title">{t('orders.detail.title')}</h2>
             </div>
             <div className="card-body-loading">
-              <LoadingSpinner label="Loading order detail" />
+              <LoadingSpinner label={t('orders.detail.loading')} />
             </div>
           </div>
         </div>
@@ -2282,8 +2308,15 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
         <div className="modal-backdrop" role="dialog" aria-modal="true" onMouseDown={(e) => e.target === e.currentTarget && setDetailError(null)}>
           <div className="modal-card" style={{ maxWidth: 520 }} onMouseDown={(e) => e.stopPropagation()}>
             <div className="modal-head">
-              <h2 className="modal-title">Order detail</h2>
-              <button type="button" className="btn btn-ghost modal-close" onClick={() => setDetailError(null)} aria-label="Close">×</button>
+              <h2 className="modal-title">{t('orders.detail.title')}</h2>
+              <button
+                type="button"
+                className="btn btn-ghost modal-close"
+                onClick={() => setDetailError(null)}
+                aria-label={t('common.close')}
+              >
+                ×
+              </button>
             </div>
             <div style={{ padding: '1.25rem' }}>
               <div className="form-alert form-alert--error">{detailError}</div>
@@ -2296,43 +2329,50 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
         <div className="modal-backdrop" role="dialog" aria-modal="true" onMouseDown={(e) => e.target === e.currentTarget && setDetailOrder(null)}>
           <div className="modal-card modal-card--order-detail" onMouseDown={(e) => e.stopPropagation()}>
             <div className="modal-card--order-detail__head modal-head">
-              <h2 className="modal-title">Order detail</h2>
-              <button type="button" className="btn btn-ghost modal-close" onClick={() => setDetailOrder(null)} aria-label="Close">×</button>
+              <h2 className="modal-title">{t('orders.detail.title')}</h2>
+              <button
+                type="button"
+                className="btn btn-ghost modal-close"
+                onClick={() => setDetailOrder(null)}
+                aria-label={t('common.close')}
+              >
+                ×
+              </button>
             </div>
             <div className="modal-card--order-detail__body">
               <div className="order-detail-summary">
                 <section className="order-detail-summary__card" aria-labelledby="od-summary-people">
                   <h3 id="od-summary-people" className="order-detail-summary__title">
-                    Order &amp; people
+                    {t('common.order')}
                   </h3>
                   <div className="order-detail-grid order-detail-grid--in-card">
                     <div className="order-detail-item order-detail-item--span">
-                      <span className="order-detail-label">Order ID</span>
+                      <span className="order-detail-label">{t('common.order')} ID</span>
                       <span className="order-detail-value order-detail-value--id">{detailOrder.id}</span>
                     </div>
                     <div className="order-detail-item">
-                      <span className="order-detail-label">Ordering user</span>
+                      <span className="order-detail-label">{t('orders.detail.orderingUser')}</span>
                       {renderOrderingUser(detailOrder.user_id, detailOrder.ordering_user_name, userMap)}
                     </div>
                     <div className="order-detail-item">
-                      <span className="order-detail-label">Patient</span>
+                      <span className="order-detail-label">{t('orders.detail.patientName')}</span>
                       <span className="order-detail-value">{detailOrder.patient_name}</span>
                     </div>
                     <div className="order-detail-item">
-                      <span className="order-detail-label">Patient age</span>
-                      <span className="order-detail-value">{detailOrder.patient_age ?? '—'}</span>
+                      <span className="order-detail-label">{t('orders.detail.patientAge')}</span>
+                      <span className="order-detail-value">{detailOrder.patient_age ?? t('common.none')}</span>
                     </div>
                     <div className="order-detail-item">
-                      <span className="order-detail-label">Phone</span>
+                      <span className="order-detail-label">{t('orders.detail.patientPhone')}</span>
                       <span className="order-detail-value">{detailOrder.patient_phone}</span>
                     </div>
                     <div className="order-detail-item order-detail-item--span">
-                      <span className="order-detail-label">Address</span>
+                      <span className="order-detail-label">{t('orders.detail.address')}</span>
                       <span className="order-detail-value">{detailOrder.address}</span>
                     </div>
                     {detailOrder.description ? (
                       <div className="order-detail-item order-detail-item--span order-detail-item--notes">
-                        <span className="order-detail-label">Notes</span>
+                        <span className="order-detail-label">{t('orders.detail.description')}</span>
                         <span className="order-detail-value order-detail-value--notes">{detailOrder.description}</span>
                       </div>
                     ) : null}
@@ -2341,60 +2381,68 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
 
                 <section className="order-detail-summary__card" aria-labelledby="od-summary-care">
                   <h3 id="od-summary-care" className="order-detail-summary__title">
-                    Status &amp; delivery
+                    {t('orders.detail.reportDelivery')}
                   </h3>
                   <div className="order-detail-grid order-detail-grid--in-card">
                     <div className="order-detail-item">
-                      <span className="order-detail-label">Status</span>
-                      <span className={statusBadgeClass(detailOrder.status)}>{detailOrder.status}</span>
+                      <span className="order-detail-label">{t('orders.detail.status')}</span>
+                      <span className={statusBadgeClass(detailOrder.status)}>
+                        {orderStatusLabel(detailOrder.status)}
+                      </span>
                     </div>
                     <div className="order-detail-item">
-                      <span className="order-detail-label">Priority</span>
-                      <span className="order-detail-value">{detailOrder.priority}</span>
+                      <span className="order-detail-label">{t('orders.detail.priority')}</span>
+                      <span className="order-detail-value">{orderPriorityLabel(detailOrder.priority)}</span>
                     </div>
                     <div className="order-detail-item order-detail-item--span">
-                      <span className="order-detail-label">Report delivery</span>
-                      <span className="order-detail-value">{detailOrder.report_delivery_method ?? '—'}</span>
+                      <span className="order-detail-label">{t('orders.detail.reportDelivery')}</span>
+                      <span className="order-detail-value">
+                        {formatReportDeliveryMethod(detailOrder.report_delivery_method)}
+                      </span>
                     </div>
                   </div>
                 </section>
 
                 <section className="order-detail-summary__card" aria-labelledby="od-summary-money">
                   <h3 id="od-summary-money" className="order-detail-summary__title">
-                    Pricing &amp; activity
+                    {t('orders.detail.finalPrice')}
                   </h3>
                   <div className="order-detail-grid order-detail-grid--in-card">
                     <div className="order-detail-item">
-                      <span className="order-detail-label">Original</span>
-                      <span className="order-detail-value">{detailOrder.original_price_mmk.toLocaleString()} MMK</span>
-                    </div>
-                    <div className="order-detail-item">
-                      <span className="order-detail-label">Discount</span>
-                      <span className="order-detail-value">{detailOrder.discount_percent}%</span>
-                    </div>
-                    <div className="order-detail-item">
-                      <span className="order-detail-label">Final</span>
-                      <span className="order-detail-value order-detail-value--emphasis">
-                        {detailOrder.final_price_mmk.toLocaleString()} MMK
+                      <span className="order-detail-label">{t('orders.detail.originalPrice')}</span>
+                      <span className="order-detail-value">
+                        {detailOrder.original_price_mmk.toLocaleString()} {t('orders.currency')}
                       </span>
                     </div>
                     <div className="order-detail-item">
-                      <span className="order-detail-label">Total paid</span>
-                      <span className="order-detail-value">{(detailOrder.total_paid_mmk ?? 0).toLocaleString()} MMK</span>
+                      <span className="order-detail-label">{t('orders.create.blendedDiscount')}</span>
+                      <span className="order-detail-value">{detailOrder.discount_percent}%</span>
                     </div>
                     <div className="order-detail-item">
-                      <span className="order-detail-label">Left to pay</span>
+                      <span className="order-detail-label">{t('orders.detail.finalPrice')}</span>
+                      <span className="order-detail-value order-detail-value--emphasis">
+                        {detailOrder.final_price_mmk.toLocaleString()} {t('orders.currency')}
+                      </span>
+                    </div>
+                    <div className="order-detail-item">
+                      <span className="order-detail-label">{t('orders.paymentModal.alreadyPaid')}</span>
+                      <span className="order-detail-value">
+                        {(detailOrder.total_paid_mmk ?? 0).toLocaleString()} {t('orders.currency')}
+                      </span>
+                    </div>
+                    <div className="order-detail-item">
+                      <span className="order-detail-label">{t('orders.paymentModal.balanceRemaining')}</span>
                       <span className="order-detail-value order-detail-value--emphasis">
                         {Math.max(
                           0,
                           detailOrder.balance_mmk ??
                             detailOrder.final_price_mmk - (detailOrder.total_paid_mmk ?? 0),
                         ).toLocaleString()}{' '}
-                        MMK
+                        {t('orders.currency')}
                       </span>
                     </div>
                     <div className="order-detail-item">
-                      <span className="order-detail-label">Payment</span>
+                      <span className="order-detail-label">{t('orders.detail.paymentStatus')}</span>
                       {(() => {
                         const payData = paymentByOrderId.get(detailOrder.id)
                         const display = orderPaymentListDisplay(
@@ -2415,17 +2463,17 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
                         )
                         return (
                           <span className={paymentBadgeClass(display.status, display.fullyPaid)}>
-                            {display.label}
+                            {paymentDisplayKeyLabel(display.labelKey)}
                           </span>
                         )
                       })()}
                     </div>
                     <div className="order-detail-item">
-                      <span className="order-detail-label">Created</span>
+                      <span className="order-detail-label">{t('common.created')}</span>
                       <span className="order-detail-value order-detail-value--muted">{fmtDateTime(detailOrder.created_at)}</span>
                     </div>
                     <div className="order-detail-item order-detail-item--span">
-                      <span className="order-detail-label">Updated</span>
+                      <span className="order-detail-label">{t('common.updated')}</span>
                       <span className="order-detail-value order-detail-value--muted">{fmtDateTime(detailOrder.updated_at)}</span>
                     </div>
                   </div>
@@ -2438,16 +2486,16 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
 
               {(detailOrder.payments?.length ?? 0) > 0 ? (
                 <div className="order-detail-section">
-                  <h3 className="order-detail-section__title">Payments</h3>
+                  <h3 className="order-detail-section__title">{t('orders.detail.payments')}</h3>
                   <div className="table-wrap">
                     <table className="data-table">
                       <thead>
                         <tr>
-                          <th>Amount (MMK)</th>
-                          <th>Status</th>
-                          <th>Method</th>
-                          <th>Reference</th>
-                          <th>Paid at</th>
+                          <th>{t('orders.detail.amount')}</th>
+                          <th>{t('orders.detail.status')}</th>
+                          <th>{t('orders.detail.method')}</th>
+                          <th>{t('orders.detail.reference')}</th>
+                          <th>{t('orders.detail.paidAt')}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -2457,10 +2505,12 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
                           <tr key={p.id}>
                             <td>{p.amount_mmk.toLocaleString()}</td>
                             <td>
-                              <span className={paymentBadgeClass(displayStatus)}>{displayStatus}</span>
+                              <span className={paymentBadgeClass(displayStatus)}>
+                                {paymentDisplayKeyLabel(displayStatus as PaymentDisplayKey)}
+                              </span>
                             </td>
-                            <td>{p.method ?? '—'}</td>
-                            <td>{p.reference_no?.trim() || '—'}</td>
+                            <td>{p.method ?? t('common.none')}</td>
+                            <td>{p.reference_no?.trim() || t('common.none')}</td>
                             <td>{fmtDateTime(p.paid_at ?? undefined)}</td>
                           </tr>
                           )
@@ -2473,50 +2523,52 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
 
               {detailOrder.schedule ? (
                 <div className="order-detail-section">
-                  <h3 className="order-detail-section__title">Schedule</h3>
+                  <h3 className="order-detail-section__title">{t('orders.detail.schedule')}</h3>
                   <div className="order-detail-schedule-grid">
                     <div className="order-detail-item">
-                      <span className="order-detail-label">Collecting person</span>
-                      <span className="order-detail-value">{detailOrder.schedule.collecting_person ?? '—'}</span>
+                      <span className="order-detail-label">{t('orders.detail.collectingPerson')}</span>
+                      <span className="order-detail-value">
+                        {detailOrder.schedule.collecting_person ?? t('common.none')}
+                      </span>
                     </div>
                     <div className="order-detail-item">
-                      <span className="order-detail-label">Collection time</span>
+                      <span className="order-detail-label">{t('orders.detail.collectionTime')}</span>
                       <span className="order-detail-value">{fmtDateTime(detailOrder.schedule.collection_time ?? undefined)}</span>
                     </div>
                     <div className="order-detail-item">
-                      <span className="order-detail-label">Running time</span>
+                      <span className="order-detail-label">{t('orders.detail.runningTime')}</span>
                       <span className="order-detail-value">{fmtDateTime(detailOrder.schedule.running_time ?? undefined)}</span>
                     </div>
                     <div className="order-detail-item">
-                      <span className="order-detail-label">Report out</span>
+                      <span className="order-detail-label">{t('orders.detail.reportOut')}</span>
                       <span className="order-detail-value">{fmtDateTime(detailOrder.schedule.report_out_time ?? undefined)}</span>
                     </div>
                   </div>
                   <p className="order-detail-section__footer-note">
-                    Accepted by user: {detailOrder.schedule.accepted_by_user ? 'Yes' : 'No'}
+                    {t('orders.detail.acceptedByUser', {
+                      value: detailOrder.schedule.accepted_by_user ? t('common.yes') : t('common.no'),
+                    })}
                   </p>
                 </div>
               ) : (
                 <div className="order-detail-section order-detail-section--muted">
-                  <p className="order-detail-section__empty">
-                    No schedule yet. It is created when you set status to <strong>scheduled</strong> (with collector and times).
-                  </p>
+                  <p className="order-detail-section__empty">{t('orders.detail.noSchedule')}</p>
                 </div>
               )}
 
               <div className="order-detail-section order-detail-section--flush">
-                <h3 className="order-detail-section__title">Line items (tests)</h3>
+                <h3 className="order-detail-section__title">{t('orders.detail.lineItems')}</h3>
                 {detailOrder.items.length === 0 ? (
-                  <p style={{ margin: 0, color: 'var(--muted)' }}>No tests on this order yet.</p>
+                  <p style={{ margin: 0, color: 'var(--muted)' }}>{t('orders.detail.noLineItems')}</p>
                 ) : (
                   <div className="table-wrap">
                     <table className="data-table">
                       <thead>
                         <tr>
-                          <th>Test</th>
-                          <th>Qty</th>
-                          <th>Unit (MMK)</th>
-                          <th>Subtotal (MMK)</th>
+                          <th>{t('orders.detail.test')}</th>
+                          <th>{t('orders.detail.qty')}</th>
+                          <th>{t('orders.detail.unitPrice')}</th>
+                          <th>{t('orders.detail.subtotal')}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -2563,10 +2615,10 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
                   }
                 }}
               >
-                Update payment
+                {t('orders.actions.updatePayment')}
               </button>
               <button type="button" className="btn btn-primary" onClick={() => setDetailOrder(null)}>
-                Close
+                {t('common.close')}
               </button>
             </div>
           </div>
@@ -2584,8 +2636,14 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
         >
           <div className="modal-card modal-card--assign-tests" onMouseDown={(e) => e.stopPropagation()}>
             <div className="modal-head">
-              <h2 id="assign-tests-title" className="modal-title">Add tests to order</h2>
-              <button type="button" className="btn btn-ghost modal-close" onClick={() => !assignSubmitting && setAssignOpen(false)} aria-label="Close" disabled={assignSubmitting}>
+              <h2 id="assign-tests-title" className="modal-title">{t('orders.assign.title')}</h2>
+              <button
+                type="button"
+                className="btn btn-ghost modal-close"
+                onClick={() => !assignSubmitting && setAssignOpen(false)}
+                aria-label={t('common.close')}
+                disabled={assignSubmitting}
+              >
                 ×
               </button>
             </div>
@@ -2597,7 +2655,7 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
                       <span className="assign-tests-order-summary__patient">{assignOrderDetail.patient_name}</span>
                       {assignOrderDetail.user_id ? (
                         <span className="assign-tests-order-summary__user">
-                          Ordering:{' '}
+                          {t('orders.assign.ordering')}{' '}
                           {assignOrderDetail.ordering_user_name?.trim() ||
                             userMap.get(assignOrderDetail.user_id)?.name ||
                             assignOrderDetail.user_id}
@@ -2606,7 +2664,7 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
                             (
                             {resolveOrderingUserRole(assignOrderDetail, userMap) ??
                               userMap.get(assignOrderDetail.user_id)?.role ??
-                              '—'}
+                              t('common.none')}
                             )
                           </span>
                         </span>
@@ -2614,14 +2672,14 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
                     </div>
                     {assignOrderDetail.description?.trim() ? (
                       <div className="assign-tests-clinical-card">
-                        <div className="assign-tests-clinical-card__title">Clinical notes</div>
+                        <div className="assign-tests-clinical-card__title">{t('orders.assign.clinicalNotes')}</div>
                         <div className="assign-tests-clinical-card__body">{assignOrderDetail.description.trim()}</div>
                       </div>
                     ) : (
                       <div className="assign-tests-clinical-card assign-tests-clinical-card--muted">
-                        <div className="assign-tests-clinical-card__title">Clinical notes</div>
+                        <div className="assign-tests-clinical-card__title">{t('orders.assign.clinicalNotes')}</div>
                         <div className="assign-tests-clinical-card__body assign-tests-clinical-card__body--placeholder">
-                          None provided for this order.
+                          {t('orders.assign.noClinicalNotes')}
                         </div>
                       </div>
                     )}
@@ -2630,20 +2688,19 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
                   <div className="assign-tests-left-body">
                     <div className="assign-tests-catalog-block">
                       <p className="assign-tests-dialog__hint">
-                        Choose tests from the catalog (multi-select). Open <strong>Test</strong> and use the search box
-                        there. Discounts follow the ordering user&apos;s role (
-                        {assignOrderDetail.user_id
-                          ? resolveOrderingUserRole(assignOrderDetail, userMap) ??
-                            userMap.get(assignOrderDetail.user_id)?.role ??
-                            '—'
-                          : '—'}
-                        ). Up to{' '}
-                        {ORDER_TEST_PICKER_LIMIT} matches per search.
+                        {t('orders.assign.hint', {
+                          role:
+                            (assignOrderDetail.user_id
+                              ? resolveOrderingUserRole(assignOrderDetail, userMap) ??
+                                userMap.get(assignOrderDetail.user_id)?.role ??
+                                t('common.none')
+                              : t('common.none')) as string,
+                          limit: ORDER_TEST_PICKER_LIMIT,
+                        })}
                       </p>
                       {tests.length > ORDER_TEST_PICKER_LIMIT && !assignTestSearch.trim() ? (
                         <p className="assign-tests-banner assign-tests-banner--warn">
-                          Large catalog: open <strong>Test</strong> and search — the list shows at most{' '}
-                          {ORDER_TEST_PICKER_LIMIT} matches at a time.
+                          {t('orders.assign.catalogWarn', { limit: ORDER_TEST_PICKER_LIMIT })}
                         </p>
                       ) : null}
                       <OrderTestCheckboxPicker
@@ -2666,7 +2723,7 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
 
                     <div className="assign-tests-queue-section">
                       <div className="assign-tests-queue-section__head">
-                        <span className="assign-tests-queue-section__title">Tests queued for save</span>
+                        <span className="assign-tests-queue-section__title">{t('orders.create.testsOnOrder')}</span>
                         {assignSelectedIds.length > 0 ? (
                           <span className="assign-tests-queue-section__count">{assignSelectedIds.length}</span>
                         ) : null}
@@ -2676,28 +2733,29 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
                           <table className="data-table">
                             <thead>
                               <tr>
-                                <th>Test</th>
-                                <th>Discount</th>
-                                <th>Final (MMK)</th>
+                                <th>{t('orders.testPicker.label')}</th>
+                                <th>{t('orders.testPicker.discount')}</th>
+                                <th>{t('orders.testPicker.finalMmk')}</th>
                                 <th className="action-col"> </th>
                               </tr>
                             </thead>
                             <tbody>
                               {assignSelectedIds.map((id) => {
-                                const t = testMap.get(id)
-                                if (!t) return null
+                                const test = testMap.get(id)
+                                if (!test) return null
                                 const pct = activeDiscountPercentForOrder(
                                   testDiscounts,
                                   id,
                                   resolveOrderingUserRole(assignOrderDetail, userMap),
                                 )
-                                const unit = Math.round(t.base_price_mmk * 100) / 100
+                                const unit = Math.round(test.base_price_mmk * 100) / 100
                                 const sub =
                                   Math.round(unit * (1 - Math.max(0, Math.min(100, pct)) / 100) * 100) / 100
                                 return (
                                   <tr key={id}>
                                     <td>
-                                      {t.test_name} <span style={{ color: 'var(--muted)' }}>({t.test_code})</span>
+                                      {test.test_name}{' '}
+                                      <span style={{ color: 'var(--muted)' }}>({test.test_code})</span>
                                     </td>
                                     <td>{pct}%</td>
                                     <td>{sub.toLocaleString()}</td>
@@ -2709,7 +2767,7 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
                                         onClick={() => removeAssignTest(id)}
                                         disabled={assignSubmitting}
                                       >
-                                        Delete
+                                        {t('common.delete')}
                                       </button>
                                     </td>
                                   </tr>
@@ -2720,10 +2778,9 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
                         </div>
                       ) : (
                         <div className="assign-tests-queue-empty" role="status">
-                          <p className="assign-tests-queue-empty__lead">No tests selected yet</p>
+                          <p className="assign-tests-queue-empty__lead">{t('orders.create.noTestsAdded')}</p>
                           <p className="assign-tests-queue-empty__hint">
-                            Use <strong>Test</strong> → search, then tick tests to queue. Selected tests and discounted
-                            totals appear here before you save.
+                            {t('orders.create.testPickerHint')}
                           </p>
                         </div>
                       )}
@@ -2737,14 +2794,14 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
                   </div>
                 </div>
 
-                <div className="assign-tests-body-split__preview" aria-label="Prescription preview">
+                <div className="assign-tests-body-split__preview" aria-label={t('orders.prescription.preview')}>
                   {(() => {
                     const rxUrl = orderPrescriptionAttachmentUrl(assignOrderDetail)
                     return rxUrl ? (
                       <PrescriptionPanelEmbed url={rxUrl} />
                     ) : (
                       <div className="assign-tests-prescription-panel assign-tests-prescription-panel--empty-side">
-                        <p>No prescription file on this order.</p>
+                        <p>{t('common.none')}</p>
                       </div>
                     )
                   })()}
@@ -2753,10 +2810,10 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
 
               <div className="modal-card--assign-tests__footer row-actions">
                 <button type="button" className="btn btn-secondary" onClick={() => setAssignOpen(false)} disabled={assignSubmitting}>
-                  Cancel
+                  {t('common.cancel')}
                 </button>
                 <button type="submit" className="btn btn-primary" disabled={assignSubmitting || tests.length === 0 || assignSelectedIds.length === 0}>
-                  {assignSubmitting ? 'Saving…' : 'Save to order'}
+                  {assignSubmitting ? t('orders.assign.submitting') : t('orders.assign.submit')}
                 </button>
               </div>
             </form>
@@ -2766,14 +2823,14 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
 
       <ConfirmDialog
         open={deleteTarget !== null}
-        title="Delete order?"
+        title={t('orders.delete.title')}
         message={
           deleteTarget
-            ? `Delete order "${deleteTarget.id}" for ${deleteTarget.patient_name}?`
+            ? t('orders.delete.message', { id: deleteTarget.id, patient: deleteTarget.patient_name })
             : ''
         }
-        confirmLabel="Delete"
-        cancelLabel="Cancel"
+        confirmLabel={t('orders.delete.confirm')}
+        cancelLabel={t('common.cancel')}
         danger
         onConfirm={() => void confirmDelete()}
         onCancel={() => setDeleteTarget(null)}

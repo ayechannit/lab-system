@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { ApiConfigBanner } from '../components/common/ApiConfigBanner'
 import { ConfirmDialog } from '../components/common/ConfirmDialog'
 import { LoadingSpinner } from '../components/common/LoadingSpinner'
 import { ListFilterSearchField } from '../components/common/ListFilterSearchField'
@@ -28,6 +30,7 @@ function formatWhen(iso?: string): string {
 }
 
 export function AiPromptsPage() {
+  const { t } = useTranslation()
   const hasApi = isApiMode()
   const { showSuccess, showError } = useToast()
   const [rows, setRows] = useState<PromptRow[]>([])
@@ -145,19 +148,9 @@ export function AiPromptsPage() {
 
   return (
     <div className="stack">
-      <PageHeader
-        title="AI prompts"
-        description="Create and edit reusable system prompts for AI conversations."
-      />
+      <PageHeader title={t('pages.aiPrompts.title')} description={t('pages.aiPrompts.description')} />
 
-      {!hasApi ? (
-        <div className="card card--muted">
-          <p style={{ margin: 0, fontSize: '0.9rem' }}>
-            Set <code>VITE_API_BASE_URL</code> in <code>apps/lab_admin_web</code> (e.g.{' '}
-            <code>http://localhost:3000</code>) and restart the dev server. Prompts load from the backend only.
-          </p>
-        </div>
-      ) : null}
+      {!hasApi ? <ApiConfigBanner /> : null}
 
       <div className="card">
         <div className="list-tools-row">
@@ -182,7 +175,7 @@ export function AiPromptsPage() {
               onClick={clearFilters}
               disabled={loading || !hasApi}
             >
-              Clear filters
+              {t('filters.clearFilters')}
             </button>
           </div>
           <div className="list-tools-row__actions">
@@ -192,7 +185,7 @@ export function AiPromptsPage() {
               onClick={() => setRefreshTick((t) => t + 1)}
               disabled={loading || !hasApi}
             >
-              Refresh
+              {loading ? t('common.refreshing') : t('common.refresh')}
             </button>
             <button type="button" className="btn btn-primary" onClick={openCreate} disabled={loading || !hasApi}>
               Add prompt

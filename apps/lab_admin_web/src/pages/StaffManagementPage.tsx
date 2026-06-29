@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { ApiConfigBanner } from '../components/common/ApiConfigBanner'
 import { ConfirmDialog } from '../components/common/ConfirmDialog'
 import { LoadingSpinner } from '../components/common/LoadingSpinner'
 import { StaffFormModal } from '../components/staff/StaffFormModal'
@@ -13,22 +15,13 @@ import type { StaffListRow, StaffRole } from '../model/types'
 import { useAuth } from '../hooks/AuthContext'
 import { isApiMode } from '../services/apiBase'
 import { deleteStaff, fetchStaffList, type FetchStaffListParams } from '../services/staffService'
+import { roleLabel } from '../utils/roleLabels'
 import '../components/common/ui.css'
-
-function roleLabel(r: StaffRole): string {
-  const map: Record<StaffRole, string> = {
-    admin: 'Admin',
-    lab_technician: 'Lab technician',
-    reception: 'Reception',
-    manager: 'Manager',
-    collector: 'Collector',
-  }
-  return map[r]
-}
 
 const STAFF_ROLES: StaffRole[] = ['admin', 'lab_technician', 'reception', 'manager', 'collector']
 
 export function StaffManagementPage() {
+  const { t } = useTranslation()
   const hasApi = isApiMode()
   const { account } = useAuth()
   const { showSuccess, showError } = useToast()
@@ -100,7 +93,7 @@ export function StaffManagementPage() {
           }
         }
       } catch (e) {
-        if (!cancelled) setLoadError(e instanceof Error ? e.message : 'Failed to load staff')
+        if (!cancelled) setLoadError(e instanceof Error ? e.message : t('staff.loadFailed'))
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -108,7 +101,7 @@ export function StaffManagementPage() {
     return () => {
       cancelled = true
     }
-  }, [hasApi, refreshTick, staffListQuery])
+  }, [hasApi, refreshTick, staffListQuery, t])
 
   const sorted = useMemo(
     () => [...rows].sort((a, b) => a.name.localeCompare(b.name)),
@@ -137,15 +130,15 @@ export function StaffManagementPage() {
     const row = deleteTarget
     setDeleteTarget(null)
     if (currentStaffId && row.id === currentStaffId) {
-      showError('You cannot delete your own account.')
+      showError(t('staff.delete.cannotDeleteSelf'))
       return
     }
     try {
       await deleteStaff(row.id)
-      showSuccess(`Deleted staff member "${row.name}".`)
-      setRefreshTick((t) => t + 1)
+      showSuccess(t('staff.toasts.deleted', { name: row.name }))
+      setRefreshTick((tick) => tick + 1)
     } catch (e) {
-      showError(messageFromError(e, 'Delete failed'))
+      showError(messageFromError(e, t('staff.toasts.deleteFailed')))
     }
   }
 
@@ -159,34 +152,23 @@ export function StaffManagementPage() {
 
   return (
     <div className="stack">
-      <PageHeader
-        title="Lab staff"
-        description="Add and maintain people who work in the lab—roles control what they can do in the system."
-      />
+      <PageHeader title={t('pages.staff.title')} description={t('pages.staff.description')} />
 
-      {!hasApi ? (
-        <div className="card card--muted">
-          <p style={{ margin: 0, fontSize: '0.9rem' }}>
-            Set <code>VITE_API_BASE_URL</code> in <code>apps/lab_admin_web</code> (e.g.{' '}
-            <code>http://localhost:3000</code>) and restart the dev server. Data is loaded only from the
-            backend.
-          </p>
-        </div>
-      ) : null}
+      {!hasApi ? <ApiConfigBanner /> : null}
 
       <div className="card">
         <div className="list-tools-row">
-          <div className="list-filters-bar" aria-label="Staff filters">
+          <div className="list-filters-bar" aria-label={t('staff.filters.ariaLabel')}>
             <ListFilterSearchField
               id="staff-filter-name"
-              label="Name"
+              label={t('common.name')}
               value={staffFilterNameInput}
               onChange={(e) => setStaffFilterNameInput(e.target.value)}
               disabled={loading || !hasApi}
             />
             <div className="list-filters-bar__group">
               <label className="list-filters-bar__label" htmlFor="staff-filter-role">
-                Role
+                {t('common.role')}
               </label>
               <select
                 id="staff-filter-role"
@@ -195,7 +177,7 @@ export function StaffManagementPage() {
                 onChange={(e) => setStaffFilterRole(e.target.value as '' | StaffRole)}
                 disabled={loading || !hasApi}
               >
-                <option value="">All</option>
+                <option value="">{t('common.all')}</option>
                 {STAFF_ROLES.map((r) => (
                   <option key={r} value={r}>
                     {roleLabel(r)}
@@ -205,7 +187,7 @@ export function StaffManagementPage() {
             </div>
             <div className="list-filters-bar__group">
               <label className="list-filters-bar__label" htmlFor="staff-filter-active">
-                Active
+                {t('common.active')}
               </label>
               <select
                 id="staff-filter-active"
@@ -214,9 +196,9 @@ export function StaffManagementPage() {
                 onChange={(e) => setStaffFilterActive(e.target.value as '' | 'yes' | 'no')}
                 disabled={loading || !hasApi}
               >
-                <option value="">All</option>
-                <option value="yes">Yes</option>
-                <option value="no">No</option>
+                <option value="">{t('common.all')}</option>
+                <option value="yes">{t('common.yes')}</option>
+                <option value="no">{t('common.no')}</option>
               </select>
             </div>
             <button
@@ -225,49 +207,49 @@ export function StaffManagementPage() {
               onClick={clearStaffFilters}
               disabled={loading || !hasApi}
             >
-              Clear filters
+              {t('filters.clearFilters')}
             </button>
           </div>
           <div className="list-tools-row__actions">
             <button
               type="button"
               className="btn btn-secondary"
-              onClick={() => setRefreshTick((t) => t + 1)}
+              onClick={() => setRefreshTick((tick) => tick + 1)}
               disabled={loading || !hasApi}
             >
-              Refresh
+              {loading ? t('common.refreshing') : t('common.refresh')}
             </button>
             <button type="button" className="btn btn-primary" onClick={openCreate} disabled={loading || !hasApi}>
-              Add staff
+              {t('staff.actions.add')}
             </button>
           </div>
         </div>
         <h3 className="card-title" style={{ margin: '0 0 0.65rem' }}>
-          Staff list
+          {t('staff.listTitle')}
         </h3>
         <div className="table-wrap">
           <table className="data-table">
             <thead>
               <tr>
-                <th>ID</th>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Role</th>
-                <th>Active</th>
-                <th className="action-col">Actions</th>
+                <th>{t('staff.table.id')}</th>
+                <th>{t('staff.table.name')}</th>
+                <th>{t('staff.table.email')}</th>
+                <th>{t('staff.table.role')}</th>
+                <th>{t('staff.table.active')}</th>
+                <th className="action-col">{t('staff.table.actions')}</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
                   <td colSpan={6} className="data-table__state data-table__state--loading">
-                    <LoadingSpinner label="Loading staff" />
+                    <LoadingSpinner label={t('staff.loading')} />
                   </td>
                 </tr>
               ) : sorted.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="data-table__state">
-                    No staff yet.
+                    {t('staff.empty')}
                   </td>
                 </tr>
               ) : (
@@ -290,9 +272,9 @@ export function StaffManagementPage() {
                     <td>{roleLabel(r.role)}</td>
                     <td>
                       {r.is_active ? (
-                        <span className="badge badge--success">Yes</span>
+                        <span className="badge badge--success">{t('common.yes')}</span>
                       ) : (
-                        <span className="badge badge--neutral">No</span>
+                        <span className="badge badge--neutral">{t('common.no')}</span>
                       )}
                     </td>
                     <td className="action-cell">
@@ -300,12 +282,12 @@ export function StaffManagementPage() {
                         open={openMenuId === r.id}
                         onOpenChange={(next) => setOpenMenuId(next ? r.id : null)}
                         items={[
-                          { label: 'Edit', onSelect: () => openEdit(r) },
+                          { label: t('staff.actions.edit'), onSelect: () => openEdit(r) },
                           ...(currentStaffId === r.id
                             ? []
                             : [
                                 {
-                                  label: 'Delete',
+                                  label: t('common.delete'),
                                   onSelect: () => {
                                     setDeleteTarget(r)
                                     setOpenMenuId(null)
@@ -338,14 +320,10 @@ export function StaffManagementPage() {
 
       <ConfirmDialog
         open={deleteTarget !== null}
-        title="Delete staff?"
-        message={
-          deleteTarget
-            ? `Delete "${deleteTarget.name}"?`
-            : ''
-        }
-        confirmLabel="Delete"
-        cancelLabel="Cancel"
+        title={t('staff.delete.title')}
+        message={deleteTarget ? t('staff.delete.message', { name: deleteTarget.name }) : ''}
+        confirmLabel={t('staff.delete.confirm')}
+        cancelLabel={t('common.cancel')}
         danger
         onConfirm={() => void confirmDelete()}
         onCancel={() => setDeleteTarget(null)}
@@ -358,8 +336,8 @@ export function StaffManagementPage() {
         existingRows={rows}
         onClose={closeForm}
         onSuccess={() => {
-          showSuccess(formMode === 'edit' ? 'Staff member updated.' : 'Staff member created.')
-          setRefreshTick((t) => t + 1)
+          showSuccess(formMode === 'edit' ? t('staff.toasts.updated') : t('staff.toasts.created'))
+          setRefreshTick((tick) => tick + 1)
         }}
       />
     </div>

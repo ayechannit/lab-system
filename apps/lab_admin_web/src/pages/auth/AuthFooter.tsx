@@ -1,4 +1,7 @@
+import { useTranslation } from 'react-i18next'
+
 export function AuthFooter() {
+  const { t } = useTranslation()
   const year = new Date().getFullYear()
 
   return (
@@ -7,15 +10,13 @@ export function AuthFooter() {
         <span className="material-symbols-outlined" aria-hidden>
           lock_clock
         </span>
-        <p>
-          Authorized clinical users only. This system is monitored for security and compliance (HIPAA/ISO). All access logs are recorded.
-        </p>
+        <p>{t('footer.disclaimer')}</p>
       </div>
       <div className="auth-footer-meta">
-        <span>© {year} International Diagnostic &amp; Healthcare Center</span>
-        <a href="#">Privacy</a>
-        <a href="#">Terms</a>
-        <a href="#">Security</a>
+        <span>{t('footer.copyright', { year })}</span>
+        <a href="#">{t('footer.privacy')}</a>
+        <a href="#">{t('footer.terms')}</a>
+        <a href="#">{t('footer.security')}</a>
       </div>
     </footer>
   )

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../app/session_scope.dart';
 import '../../models/lab_order.dart';
 import '../../models/order_list_sort.dart';
@@ -58,6 +59,7 @@ class _ResultsListScreenState extends State<ResultsListScreen> {
       listenable: session,
       builder: (context, _) {
         final orders = session.releasedOrders;
+        final l10n = AppLocalizations.of(context)!;
         return Scaffold(
           appBar: AppBar(
             automaticallyImplyLeading: false,
@@ -71,10 +73,10 @@ class _ResultsListScreenState extends State<ResultsListScreen> {
               physics: const ClampingScrollPhysics(),
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
               children: [
-                Text('Your results', style: Theme.of(context).textTheme.headlineMedium),
+                Text(l10n.resultsTitle, style: Theme.of(context).textTheme.headlineMedium),
                 const SizedBox(height: 6),
                 Text(
-                  'Lab reports the team has released to you.',
+                  l10n.resultsSubtitle,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: context.cs.onSurfaceVariant),
                 ),
                 const SizedBox(height: 16),
@@ -86,13 +88,13 @@ class _ResultsListScreenState extends State<ResultsListScreen> {
                         Icon(Icons.assignment_outlined, size: 48, color: context.cs.onSurfaceVariant),
                         const SizedBox(height: 12),
                         Text(
-                          'No released results yet',
+                          l10n.resultsNoReleasedYet,
                           textAlign: TextAlign.center,
                           style: Theme.of(context).textTheme.titleMedium,
                         ),
                         const SizedBox(height: 6),
                         Text(
-                          'When the lab releases your report, it will show up here for PDF download and AI Check.',
+                          l10n.resultsNoReleasedHint,
                           textAlign: TextAlign.center,
                           style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: context.cs.onSurfaceVariant),
                         ),
@@ -114,7 +116,7 @@ class _ResultsListScreenState extends State<ResultsListScreen> {
                         },
                       );
                       final heading = Text(
-                        'Released reports (${orders.length})',
+                        l10n.resultsReleasedReportsCount(orders.length),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.titleSmall?.copyWith(
@@ -190,6 +192,7 @@ class _ReleasedOrderTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final accent = context.cs.secondary;
+    final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Material(
@@ -225,7 +228,7 @@ class _ReleasedOrderTile extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              order.patientName.isEmpty ? 'Patient' : order.patientName,
+                              order.patientName.isEmpty ? l10n.ordersPatientFallback : order.patientName,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
@@ -239,7 +242,7 @@ class _ReleasedOrderTile extends StatelessWidget {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              'Released ${order.createdAtLabel}',
+                              l10n.resultsReleasedDate(order.createdAtLabel),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: Theme.of(context).textTheme.bodySmall?.copyWith(color: context.cs.onSurfaceVariant),
@@ -247,7 +250,7 @@ class _ReleasedOrderTile extends StatelessWidget {
                             const SizedBox(height: 8),
                             Align(
                               alignment: Alignment.centerLeft,
-                              child: _ReleasedChip(accent: accent),
+                              child: _ReleasedChip(accent: accent, label: l10n.resultsReleasedBadge),
                             ),
                           ],
                         ),
@@ -274,9 +277,10 @@ class _ReleasedOrderTile extends StatelessWidget {
 }
 
 class _ReleasedChip extends StatelessWidget {
-  const _ReleasedChip({required this.accent});
+  const _ReleasedChip({required this.accent, required this.label});
 
   final Color accent;
+  final String label;
 
   @override
   Widget build(BuildContext context) {
@@ -288,7 +292,7 @@ class _ReleasedChip extends StatelessWidget {
         border: Border.all(color: accent.withValues(alpha: 0.22)),
       ),
       child: Text(
-        'Released',
+        label,
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
               color: accent,
               fontWeight: FontWeight.w700,

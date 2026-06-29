@@ -1,0 +1,17 @@
+{
+  "errors": {
+    "authRequired": "Authentication required",
+    "forbidden": "Forbidden",
+    "notFound": "Not found",
+    "userNotFound": "User not found",
+    "invalidCredentials": "Invalid email or password",
+    "invalidToken": "Invalid or expired token",
+    "serverError": "Something went wrong"
+  },
+  "notifications": {
+    "orderPlacedTitle": "Order placed",
+    "orderPlacedBody": "Your lab order was submitted successfully.",
+    "resultsReadyTitle": "Lab results ready",
+    "resultsReadyBody": "Your lab results are available in the app."
+  }
+}

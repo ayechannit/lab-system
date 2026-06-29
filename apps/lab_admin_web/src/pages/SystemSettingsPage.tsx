@@ -1,7 +1,8 @@
 import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { ApiConfigBanner } from '../components/common/ApiConfigBanner'
 import { ConfirmDialog } from '../components/common/ConfirmDialog'
 import { LoadingSpinner } from '../components/common/LoadingSpinner'
-import { PageBanner } from '../components/common/PageBanner'
 import { PageHeader } from '../components/common/PageHeader'
 import { ThemePicker } from '../components/settings/ThemePicker'
 import { useToast } from '../hooks/ToastContext'
@@ -18,6 +19,8 @@ import {
   resetSystemSettingsToDefaults,
   updateSystemSettings,
 } from '../services/systemSettingService'
+import { getIntlLocale } from '../i18n'
+import { formatIsoDatetime } from '../utils/dateIntl'
 import {
   applyAppTheme,
   type AppThemeId,
@@ -83,6 +86,8 @@ function snapshotFromRow(row: SystemSettingsRow): string {
 }
 
 export function SystemSettingsPage() {
+  const { t } = useTranslation()
+  const intlLocale = getIntlLocale()
   const hasApi = isApiMode()
   const { showSuccess, showError } = useToast()
   const [loading, setLoading] = useState(hasApi)
@@ -199,7 +204,7 @@ export function SystemSettingsPage() {
           setLoadedAddressBaseline(addr && hasCoords ? addr : '')
         }
       } catch (e) {
-        if (!cancelled) setLoadError(e instanceof Error ? e.message : 'Failed to load system settings')
+        if (!cancelled) setLoadError(e instanceof Error ? e.message : t('systemSettings.loadFailed'))
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -219,9 +224,9 @@ export function SystemSettingsPage() {
       applyRowToState(next, setters)
       commitSavedToApp(next)
       setLoadedAddressBaseline('')
-      showSuccess('Settings reset to defaults.')
+      showSuccess(t('systemSettings.reset.success'))
     } catch (err) {
-      showError(messageFromError(err, 'Reset failed'))
+      showError(messageFromError(err, t('systemSettings.reset.failed')))
     } finally {
       setResetting(false)
     }
@@ -246,9 +251,9 @@ export function SystemSettingsPage() {
       const next = await updateSystemSettings(body)
       applyRowToState(next, setters)
       commitSavedToApp(next)
-      showSuccess('System settings saved.')
+      showSuccess(t('systemSettings.save.success'))
     } catch (err) {
-      showError(messageFromError(err, 'Save failed'))
+      showError(messageFromError(err, t('systemSettings.save.failed')))
     } finally {
       setSubmitting(false)
     }
@@ -256,40 +261,32 @@ export function SystemSettingsPage() {
 
   return (
     <div className="system-settings-page">
-      <PageHeader
-        title="System settings"
-        description="Appearance theme and contact details."
-      />
+      <PageHeader title={t('pages.systemSettings.title')} description={t('pages.systemSettings.description')} />
 
-      {!hasApi ? (
-        <PageBanner kind="info">
-          Set <code>VITE_API_BASE_URL</code> to load and save settings from the backend.
-        </PageBanner>
-      ) : null}
+      {!hasApi ? <ApiConfigBanner variant="settings" /> : null}
 
       <div className="card system-settings-panel">
         {loading ? (
-          <LoadingSpinner layout="block" label="Loading system settings" />
+          <LoadingSpinner layout="block" label={t('systemSettings.loading')} />
         ) : (
           <form className="system-settings-form" onSubmit={(e) => void handleSubmit(e)}>
             <div className="system-settings-callout" role="note">
               <span className="material-symbols-outlined system-settings-callout__icon" aria-hidden>
                 info
               </span>
-              <p className="system-settings-callout__text">
-                Changes are drafts until you click <strong>Save settings</strong>. Leaving this page without
-                saving restores your last saved theme.
-              </p>
+              <p className="system-settings-callout__text">{t('systemSettings.draftHint')}</p>
             </div>
 
             {settingsId ? (
               <div className="system-settings-meta">
                 <span>
-                  Record <code>{settingsId}</code>
+                  {t('common.record')} <code>{settingsId}</code>
                 </span>
                 {updatedAt ? (
                   <span className="system-settings-meta__updated">
-                    Updated {new Date(updatedAt).toLocaleString()}
+                    {t('systemSettings.updatedAt', {
+                      date: formatIsoDatetime(updatedAt, intlLocale),
+                    })}
                   </span>
                 ) : null}
               </div>
@@ -297,7 +294,7 @@ export function SystemSettingsPage() {
 
             <div className="system-settings-panel__grid">
               <section className="system-settings-section">
-                <h2 className="system-settings-section__title">Appearance</h2>
+                <h2 className="system-settings-section__title">{t('systemSettings.appearance')}</h2>
                 <div className="settings-form__stack settings-form__stack--relaxed">
                   <ThemePicker
                     value={mode}
@@ -308,10 +305,10 @@ export function SystemSettingsPage() {
               </section>
 
               <section className="system-settings-section">
-                <h2 className="system-settings-section__title">Location & contact</h2>
+                <h2 className="system-settings-section__title">{t('systemSettings.locationContact')}</h2>
                 <div className="settings-form__stack settings-form__stack--relaxed">
                   <div className="field">
-                    <label htmlFor="sys-address">Address</label>
+                    <label htmlFor="sys-address">{t('common.address')}</label>
                     <textarea
                       id="sys-address"
                       value={address}
@@ -341,14 +338,16 @@ export function SystemSettingsPage() {
                   </div>
                   {geocodeHint ? <p className="user-form-modal__geocode-hint">{geocodeHint}</p> : null}
                   <p className="catalog-mode-hint" style={{ margin: 0 }}>
-                    Coordinates: {formatCoordPair(latitude, longitude)}
+                    {t('systemSettings.coordinates', {
+                      coords: formatCoordPair(latitude, longitude),
+                    })}
                   </p>
                   <p className="catalog-mode-hint" style={{ margin: '0.35rem 0 0' }}>
-                    Type an address to move the map pin, or click the map / use my location to set coordinates.
+                    {t('systemSettings.mapHint')}
                   </p>
                   <div className="settings-form__pair">
                     <div className="field">
-                      <label htmlFor="sys-phone">Contact phone</label>
+                      <label htmlFor="sys-phone">{t('systemSettings.contactPhone')}</label>
                       <input
                         id="sys-phone"
                         value={contactPhone}
@@ -357,7 +356,7 @@ export function SystemSettingsPage() {
                       />
                     </div>
                     <div className="field">
-                      <label htmlFor="sys-email">Contact email</label>
+                      <label htmlFor="sys-email">{t('systemSettings.contactEmail')}</label>
                       <input
                         id="sys-email"
                         type="email"
@@ -378,9 +377,9 @@ export function SystemSettingsPage() {
                 {isDirty ? (
                   <>
                     <span className="system-settings-actions__dot" aria-hidden />
-                    <span className="system-settings-actions__label">Unsaved changes</span>
+                    <span className="system-settings-actions__label">{t('systemSettings.unsavedChanges')}</span>
                     <span className="system-settings-actions__sub">
-                      Save to apply theme across the app
+                      {t('systemSettings.unsavedSub')}
                     </span>
                   </>
                 ) : (
@@ -388,7 +387,7 @@ export function SystemSettingsPage() {
                     <span className="material-symbols-outlined system-settings-actions__saved-icon" aria-hidden>
                       check_circle
                     </span>
-                    <span className="system-settings-actions__label">All changes saved</span>
+                    <span className="system-settings-actions__label">{t('systemSettings.allSaved')}</span>
                   </>
                 )}
               </div>
@@ -399,14 +398,14 @@ export function SystemSettingsPage() {
                   disabled={submitting || resetting || !hasApi}
                   onClick={() => setResetConfirmOpen(true)}
                 >
-                  Reset to defaults
+                  {t('systemSettings.resetDefaults')}
                 </button>
                 <button
                   type="submit"
                   className="btn btn-primary"
                   disabled={submitting || resetting || !hasApi || !isDirty}
                 >
-                  {submitting ? 'Saving…' : 'Save settings'}
+                  {submitting ? t('common.saving') : t('systemSettings.saveSettings')}
                 </button>
               </div>
             </div>
@@ -416,10 +415,10 @@ export function SystemSettingsPage() {
 
       <ConfirmDialog
         open={resetConfirmOpen}
-        title="Reset to defaults?"
-        message="Theme and contact fields will be restored to the application defaults. This cannot be undone except by saving again."
-        confirmLabel="Reset to defaults"
-        cancelLabel="Cancel"
+        title={t('systemSettings.reset.title')}
+        message={t('systemSettings.reset.message')}
+        confirmLabel={t('systemSettings.reset.confirm')}
+        cancelLabel={t('common.cancel')}
         danger
         onConfirm={() => void confirmResetToDefaults()}
         onCancel={() => setResetConfirmOpen(false)}

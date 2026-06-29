@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { useAuth } from '../../hooks/AuthContext'
 import { useToast } from '../../hooks/ToastContext'
 import { messageFromError } from '../../hooks/usePageNotify'
@@ -11,6 +12,7 @@ import { AuthScreenHeader } from './AuthScreenHeader'
 import './auth-screens.css'
 
 export function LoginPage() {
+  const { t } = useTranslation()
   const { signInWithStaffCredentials, signedIn, initializing } = useAuth()
   const { showError } = useToast()
   const navigate = useNavigate()
@@ -26,8 +28,8 @@ export function LoginPage() {
     <div className="auth-split">
       <AuthMarketingPanel
         heroImage={authImages.loginHero}
-        headline="Advancing Science through Precision."
-        lead="Join thousands of clinical professionals managing laboratory workflows with state-of-the-art security and compliance."
+        headline={t('auth.marketingHeadline')}
+        lead={t('auth.marketingLead')}
       />
       <div className="auth-side">
         <AuthScreenHeader />
@@ -36,8 +38,8 @@ export function LoginPage() {
             <div className="auth-icon-tile">
               <span className="material-symbols-outlined">shield_person</span>
             </div>
-            <h1 className="auth-title">Staff sign in</h1>
-            <p className="auth-subtitle">Use your lab staff account (admin, technician, reception, or manager).</p>
+            <h1 className="auth-title">{t('auth.staffSignIn')}</h1>
+            <p className="auth-subtitle">{t('auth.staffSignInHint')}</p>
 
             <form
               className="auth-stack"
@@ -50,7 +52,7 @@ export function LoginPage() {
                     await signInWithStaffCredentials(email, password, remember)
                     navigate('/')
                   } catch (err) {
-                    showError(messageFromError(err, 'Sign-in failed'))
+                    showError(messageFromError(err, t('auth.signInFailed')))
                   } finally {
                     setSubmitting(false)
                   }
@@ -59,7 +61,7 @@ export function LoginPage() {
             >
               <div className="auth-field">
                 <label className="auth-label" htmlFor="identity">
-                  Email
+                  {t('auth.email')}
                 </label>
                 <div className="auth-input-wrap">
                   <span className="material-symbols-outlined auth-input-icon">mail</span>
@@ -67,7 +69,7 @@ export function LoginPage() {
                     id="identity"
                     name="identity"
                     className="auth-input"
-                    placeholder="you@example.com"
+                    placeholder={t('auth.emailPlaceholder')}
                     type="email"
                     autoComplete="username"
                     value={email}
@@ -81,10 +83,10 @@ export function LoginPage() {
               <div className="auth-field">
                 <div className="auth-label-row">
                   <label className="auth-label" htmlFor="password">
-                    Password
+                    {t('auth.password')}
                   </label>
                   <Link className="auth-link" to="/forgot-password">
-                    Forgot Password?
+                    {t('auth.forgotPassword')}
                   </Link>
                 </div>
                 <div className="auth-input-wrap">
@@ -93,7 +95,7 @@ export function LoginPage() {
                     id="password"
                     name="password"
                     className="auth-input auth-input--password"
-                    placeholder="••••••••"
+                    placeholder={t('auth.passwordPlaceholder')}
                     type={showPassword ? 'text' : 'password'}
                     autoComplete="current-password"
                     value={password}
@@ -104,7 +106,7 @@ export function LoginPage() {
                   <button
                     type="button"
                     className="auth-toggle-vis"
-                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    aria-label={showPassword ? t('auth.hidePassword') : t('auth.showPassword')}
                     onClick={() => setShowPassword((v) => !v)}
                   >
                     <span className="material-symbols-outlined">
@@ -130,12 +132,12 @@ export function LoginPage() {
                   disabled={submitting}
                 />
                 <label className="auth-checkbox-label" htmlFor="remember">
-                  Keep me signed in
+                  {t('auth.rememberMe')}
                 </label>
               </div>
 
               <button type="submit" className="auth-primary-btn" disabled={submitting}>
-                {submitting ? 'Signing in…' : 'Sign in'}
+                {submitting ? t('auth.signingIn') : t('auth.signIn')}
               </button>
             </form>
           </div>

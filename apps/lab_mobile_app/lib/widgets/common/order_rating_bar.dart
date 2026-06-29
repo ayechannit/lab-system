@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../app/session_scope.dart';
 import '../../models/rating.dart';
 import '../../theme/theme_extensions.dart';
@@ -18,6 +19,7 @@ class OrderRatingBar extends StatelessWidget {
   final bool compact;
 
   Future<void> _submit(BuildContext context, int stars) async {
+    final l10n = AppLocalizations.of(context)!;
     final remark = TextEditingController();
     try {
       final session = SessionScope.of(context);
@@ -38,7 +40,7 @@ class OrderRatingBar extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(
-                  'Rate this order',
+                  l10n.ordersRateThisOrder,
                   style: Theme.of(sheetContext).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 6),
@@ -56,15 +58,15 @@ class OrderRatingBar extends StatelessWidget {
                 TextField(
                   controller: remark,
                   maxLines: 3,
-                  decoration: const InputDecoration(
-                    labelText: 'Comment (optional)',
-                    hintText: 'Share feedback for the lab team',
+                  decoration: InputDecoration(
+                    labelText: l10n.ordersCommentOptional,
+                    hintText: l10n.ordersCommentHint,
                   ),
                 ),
                 const SizedBox(height: 16),
                 FilledButton(
                   onPressed: () => Navigator.pop(sheetContext, true),
-                  child: const Text('Submit rating'),
+                  child: Text(l10n.ordersSubmitRating),
                 ),
               ],
             ),
@@ -80,18 +82,19 @@ class OrderRatingBar extends StatelessWidget {
       if (!context.mounted) return;
       AppToast.successInShell(
         context,
-        'You rated this order $stars star${stars == 1 ? '' : 's'}.',
-        title: 'Thanks for your feedback',
+        stars == 1 ? l10n.ordersRatedToastSingular : l10n.ordersRatedToast(stars),
+        title: l10n.ordersThanksFeedback,
       );
     } catch (e) {
       if (!context.mounted) return;
-      AppToast.errorInShell(context, '$e', title: 'Rating failed');
+      AppToast.errorInShell(context, '$e', title: l10n.ordersRatingFailed);
     } finally {
       remark.dispose();
     }
   }
 
   void _showRatedDetail(BuildContext context, OrderRatingSummary rated) {
+    final l10n = AppLocalizations.of(context)!;
     showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
@@ -105,7 +108,7 @@ class OrderRatingBar extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                'Your rating',
+                l10n.ordersYourRating,
                 style: Theme.of(sheetContext).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 10),
@@ -122,7 +125,7 @@ class OrderRatingBar extends StatelessWidget {
               if (remark.isNotEmpty) ...[
                 const SizedBox(height: 16),
                 Text(
-                  'Your comment',
+                  l10n.ordersYourComment,
                   style: Theme.of(sheetContext).textTheme.labelLarge?.copyWith(
                         color: cs.onSurfaceVariant,
                         fontWeight: FontWeight.w700,
@@ -146,7 +149,7 @@ class OrderRatingBar extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.only(top: 12),
                   child: Text(
-                    'No comment was added with this rating.',
+                    l10n.ordersNoComment,
                     style: Theme.of(sheetContext).textTheme.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
                   ),
                 ),
@@ -160,6 +163,7 @@ class OrderRatingBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = context.cs;
+    final l10n = AppLocalizations.of(context)!;
     final rated = existing;
     final starSize = compact ? 20.0 : 24.0;
     final remark = rated?.remark.trim() ?? '';
@@ -175,7 +179,7 @@ class OrderRatingBar extends StatelessWidget {
             child: Row(
               children: [
                 Text(
-                  rated == null ? 'Rate' : 'Rated',
+                  rated == null ? l10n.ordersRate : l10n.ordersRated,
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
                         color: cs.onSurfaceVariant,
                         fontWeight: FontWeight.w600,

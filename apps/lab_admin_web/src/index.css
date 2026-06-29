@@ -45,8 +45,13 @@ textarea::placeholder {
 }
 
 input[type='checkbox'],
-input[type='radio'] {
+input[type='radio'],
+select {
   accent-color: var(--primary);
+}
+
+input[type='checkbox'],
+input[type='radio'] {
   cursor: pointer;
 }
 

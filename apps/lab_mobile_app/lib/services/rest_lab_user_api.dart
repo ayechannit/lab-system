@@ -49,6 +49,12 @@ class RestLabUserApi implements LabUserApi {
 
   final String _base;
   String? _token;
+  String _localeCode = 'en';
+
+  @override
+  void setLocaleCode(String? localeCode) {
+    _localeCode = localeCode == 'my' ? 'my' : 'en';
+  }
 
   @override
   String? get accessToken => _token;
@@ -130,6 +136,7 @@ class RestLabUserApi implements LabUserApi {
     if (withAuth && _token != null) {
       h['Authorization'] = 'Bearer $_token';
     }
+    h['Accept-Language'] = _localeCode;
     return h;
   }
 
@@ -244,6 +251,16 @@ class RestLabUserApi implements LabUserApi {
     }
   }
 
+  String? _profileImageUrlFrom(dynamic raw) {
+    final urlRaw = '${raw ?? ''}'.trim();
+    if (urlRaw.isEmpty) return null;
+    if (urlRaw.startsWith('http://') || urlRaw.startsWith('https://') || urlRaw.startsWith('/')) {
+      return _absoluteUrl(urlRaw);
+    }
+    final segments = urlRaw.replaceFirst(RegExp(r'^/+'), '').split('/').map(Uri.encodeComponent).join('/');
+    return '$_base/api/media/$segments';
+  }
+
   AppUser _userFromMe(Map<String, dynamic> m) {
     final id = '${_gv(m, 'id') ?? ''}';
     return AppUser(
@@ -256,6 +273,7 @@ class RestLabUserApi implements LabUserApi {
       address: '${_gv(m, 'address') ?? ''}'.trim(),
       latitude: _asDouble(_gv(m, 'latitude')),
       longitude: _asDouble(_gv(m, 'longitude')),
+      profileImageUrl: _profileImageUrlFrom(_gv(m, 'profile_image_url') ?? _gv(m, 'profileImageUrl')),
     );
   }
 
@@ -368,6 +386,39 @@ class RestLabUserApi implements LabUserApi {
     );
     if (r.statusCode >= 400) _throwFromResponse(r);
     final map = _asObj(jsonDecode(r.body));
+    return _userFromMe(map);
+  }
+
+  @override
+  Future<AppUser> uploadProfileImage({
+    required String userId,
+    required List<int> bytes,
+    required String filename,
+  }) async {
+    final mp = http.MultipartRequest('POST', Uri.parse('$_base/api/users/$userId/profile-image'));
+    if (_token != null) {
+      mp.headers['Authorization'] = 'Bearer $_token';
+    }
+    mp.headers['Accept'] = 'application/json';
+    final rawName = filename.trim();
+    final shortName = rawName.contains('/') ? rawName.split('/').last : rawName.split(r'\').last;
+    final nameForPart = shortName.isEmpty ? 'profile.jpg' : shortName;
+    mp.files.add(
+      http.MultipartFile.fromBytes(
+        'image',
+        bytes,
+        filename: nameForPart,
+        contentType: _prescriptionMediaTypeFromFilename(nameForPart),
+      ),
+    );
+    final streamed = await mp.send();
+    final r = await http.Response.fromStream(streamed);
+    if (r.statusCode >= 400) _throwFromResponse(r);
+    final map = _asObj(jsonDecode(r.body));
+    final userRaw = map['user'];
+    if (userRaw is Map) {
+      return _userFromMe(_asObj(userRaw));
+    }
     return _userFromMe(map);
   }
 
