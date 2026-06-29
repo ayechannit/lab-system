@@ -894,7 +894,6 @@ export function SampleCollectionPage() {
         estimatedMinutes: result.estimatedMinutes,
         routeStops: [],
       }
-      const plannedOrders = orderStopsInRouteOrder(picked, result.orderedStops)
       const plan = {
         collectorCount,
         routes: [{ collectorIndex: 1, result: fullResult }],
