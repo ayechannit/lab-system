@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../app/session_scope.dart';
 import '../../theme/theme_extensions.dart';
