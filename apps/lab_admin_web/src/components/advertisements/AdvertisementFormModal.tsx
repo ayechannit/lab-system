@@ -1,5 +1,6 @@
 import { type FormEvent, useEffect, useId, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { useTranslation } from 'react-i18next'
 import { AdvertisementBannerField } from './AdvertisementBannerField'
 import { DatetimeLocalField } from '../common/DatetimeLocalField'
 import {
@@ -27,6 +28,7 @@ export function AdvertisementFormModal({
   onClose,
   onSuccess,
 }: AdvertisementFormModalProps) {
+  const { t } = useTranslation()
   const titleId = useId()
   const activeFieldId = useId()
   const bannerFieldId = useId()
@@ -135,13 +137,13 @@ export function AdvertisementFormModal({
     setFormError(null)
     const titleTrim = title.trim()
     if (!titleTrim) {
-      setFormError('Title is required.')
+      setFormError(t('advertisements.form.errorTitleRequired'))
       return
     }
     const startIso = datetimeLocalToIso(startLocal)
     const endIso = datetimeLocalToIso(endLocal)
     if (startIso && endIso && new Date(endIso) < new Date(startIso)) {
-      setFormError('End date must be on or after the start date.')
+      setFormError(t('advertisements.form.errorEndBeforeStart'))
       return
     }
 
@@ -172,7 +174,7 @@ export function AdvertisementFormModal({
       onSuccess()
       onClose()
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : 'Request failed')
+      setFormError(err instanceof Error ? err.message : t('advertisements.form.requestFailed'))
     } finally {
       setSubmitting(false)
     }
@@ -180,7 +182,8 @@ export function AdvertisementFormModal({
 
   if (!open) return null
 
-  const modalTitle = mode === 'edit' ? 'Edit advertisement' : 'Add advertisement'
+  const modalTitle =
+    mode === 'edit' ? t('advertisements.form.editTitle') : t('advertisements.form.createTitle')
 
   const modal = (
     <div
@@ -202,7 +205,7 @@ export function AdvertisementFormModal({
               type="button"
               className="btn btn-ghost modal-close"
               onClick={() => !submitting && onClose()}
-              aria-label="Close"
+              aria-label={t('common.close')}
               disabled={submitting}
             >
               ×
@@ -214,7 +217,7 @@ export function AdvertisementFormModal({
           <div className="discount-form-modal__body">
             <div className="discount-form-modal__stack">
               <div className="field">
-                <label htmlFor="ad-title">Title</label>
+                <label htmlFor="ad-title">{t('common.title')}</label>
                 <input
                   id="ad-title"
                   value={title}
@@ -225,14 +228,14 @@ export function AdvertisementFormModal({
                 />
               </div>
               <div className="field">
-                <label htmlFor="ad-description">Description</label>
+                <label htmlFor="ad-description">{t('common.description')}</label>
                 <textarea
                   id="ad-description"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   rows={3}
                   disabled={submitting}
-                  placeholder="Optional short copy for the banner or promo card"
+                  placeholder={t('advertisements.form.descriptionPlaceholder')}
                 />
               </div>
               <AdvertisementBannerField
@@ -247,35 +250,35 @@ export function AdvertisementFormModal({
                 disabled={submitting}
               />
               <div className="field">
-                <label htmlFor="ad-action">Action URL</label>
+                <label htmlFor="ad-action">{t('advertisements.form.actionUrl')}</label>
                 <input
                   id="ad-action"
                   value={actionUrl}
                   onChange={(e) => setActionUrl(e.target.value)}
                   disabled={submitting}
-                  placeholder="https://… (optional link when tapped)"
+                  placeholder={t('advertisements.form.actionUrlPlaceholder')}
                   autoComplete="off"
                 />
               </div>
               <div className="discount-form-modal__pair">
                 <div className="field">
-                  <label htmlFor="ad-start">Start (optional)</label>
+                  <label htmlFor="ad-start">{t('advertisements.form.startOptional')}</label>
                   <DatetimeLocalField
                     id="ad-start"
                     value={startLocal}
                     onChange={setStartLocal}
                     disabled={submitting}
-                    placeholder="Start date & time"
+                    placeholder={t('advertisements.form.startPlaceholder')}
                   />
                 </div>
                 <div className="field">
-                  <label htmlFor="ad-end">End (optional)</label>
+                  <label htmlFor="ad-end">{t('advertisements.form.endOptional')}</label>
                   <DatetimeLocalField
                     id="ad-end"
                     value={endLocal}
                     onChange={setEndLocal}
                     disabled={submitting}
-                    placeholder="End date & time"
+                    placeholder={t('advertisements.form.endPlaceholder')}
                   />
                 </div>
               </div>
@@ -292,10 +295,10 @@ export function AdvertisementFormModal({
                   <span className="form-switch__track" aria-hidden="true" />
                 </span>
                 <span className="form-switch__text">
-                  <span className="form-switch__title">{isActive ? 'Advertisement is active' : 'Advertisement is inactive'}</span>
-                  <span className="form-switch__desc">
-                    Inactive ads stay in the list but are not shown in the mobile app.
+                  <span className="form-switch__title">
+                    {isActive ? t('advertisements.form.activeTitle') : t('advertisements.form.inactiveTitle')}
                   </span>
+                  <span className="form-switch__desc">{t('advertisements.form.activeDesc')}</span>
                 </span>
               </label>
             </div>
@@ -310,16 +313,16 @@ export function AdvertisementFormModal({
             <div className="discount-form-modal__footer-actions">
               <div className="row-actions">
                 <button type="button" className="btn btn-secondary" onClick={() => !submitting && onClose()} disabled={submitting}>
-                  Cancel
+                  {t('common.cancel')}
                 </button>
                 <button type="submit" className="btn btn-primary" disabled={submitting}>
                   {submitting
                     ? bannerFile
-                      ? 'Uploading & saving…'
-                      : 'Saving…'
+                      ? t('advertisements.form.uploadingSaving')
+                      : t('advertisements.form.saving')
                     : mode === 'edit'
-                      ? 'Save changes'
-                      : 'Create advertisement'}
+                      ? t('advertisements.form.saveChanges')
+                      : t('advertisements.form.create')}
                 </button>
               </div>
             </div>

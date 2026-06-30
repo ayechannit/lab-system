@@ -1,5 +1,6 @@
 import { type FormEvent, useEffect, useId, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { useTranslation } from 'react-i18next'
 import { DatetimeLocalField } from '../common/DatetimeLocalField'
 import {
   createPointSetting,
@@ -25,16 +26,38 @@ export function PointSettingFormModal({
   onClose,
   onSuccess,
 }: PointSettingFormModalProps) {
+  const { t } = useTranslation()
   const titleId = useId()
   const activeFieldId = useId()
-  const [name, setName] = useState(() => (initial ? initial.name : 'Default tier'))
-  const [spendMmk, setSpendMmk] = useState<number | ''>(() => (initial ? initial.spend_amount_mmk : 100_000))
-  const [pointsReward, setPointsReward] = useState<number | ''>(() => (initial ? initial.points_reward : 10))
-  const [startLocal, setStartLocal] = useState(() => toDatetimeLocalValue(initial?.start_date ?? null))
-  const [endLocal, setEndLocal] = useState(() => toDatetimeLocalValue(initial?.end_date ?? null))
-  const [isActive, setIsActive] = useState(() => initial?.is_active ?? true)
+  const [name, setName] = useState('')
+  const [spendMmk, setSpendMmk] = useState<number | ''>(100_000)
+  const [pointsReward, setPointsReward] = useState<number | ''>(10)
+  const [startLocal, setStartLocal] = useState('')
+  const [endLocal, setEndLocal] = useState('')
+  const [isActive, setIsActive] = useState(true)
   const [formError, setFormError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+
+  useEffect(() => {
+    if (!open) return
+    setFormError(null)
+    setSubmitting(false)
+    if (mode === 'edit' && initial) {
+      setName(initial.name)
+      setSpendMmk(initial.spend_amount_mmk)
+      setPointsReward(initial.points_reward)
+      setStartLocal(toDatetimeLocalValue(initial.start_date))
+      setEndLocal(toDatetimeLocalValue(initial.end_date))
+      setIsActive(initial.is_active)
+    } else {
+      setName(t('loyalty.form.defaultTierName'))
+      setSpendMmk(100_000)
+      setPointsReward(10)
+      setStartLocal('')
+      setEndLocal('')
+      setIsActive(true)
+    }
+  }, [open, mode, initial, t])
 
   useEffect(() => {
     if (!open) return
@@ -59,25 +82,25 @@ export function PointSettingFormModal({
     setFormError(null)
     const nameTrim = name.trim()
     if (!nameTrim) {
-      setFormError('Enter a name for this rule (e.g. Base tier).')
+      setFormError(t('loyalty.form.errorName'))
       return
     }
     const spend =
       typeof spendMmk === 'number' ? spendMmk : Number.parseFloat(String(spendMmk))
     if (!Number.isFinite(spend) || spend < 1) {
-      setFormError('MMK spend per batch must be at least 1.')
+      setFormError(t('loyalty.form.errorSpendMin'))
       return
     }
     const pts =
       typeof pointsReward === 'number' ? pointsReward : Number.parseInt(String(pointsReward), 10)
     if (!Number.isFinite(pts) || pts < 1 || !Number.isInteger(pts)) {
-      setFormError('Points per batch must be a whole number of at least 1.')
+      setFormError(t('loyalty.form.errorPointsMin'))
       return
     }
     const startIso = datetimeLocalToIso(startLocal)
     const endIso = datetimeLocalToIso(endLocal)
     if (startIso && endIso && new Date(endIso) < new Date(startIso)) {
-      setFormError('End date must be on or after the start date.')
+      setFormError(t('loyalty.form.errorEndBeforeStart'))
       return
     }
     const body: PointSettingUpsertBody = {
@@ -98,7 +121,7 @@ export function PointSettingFormModal({
       onSuccess()
       onClose()
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : 'Request failed')
+      setFormError(err instanceof Error ? err.message : t('loyalty.form.requestFailed'))
     } finally {
       setSubmitting(false)
     }
@@ -106,7 +129,7 @@ export function PointSettingFormModal({
 
   if (!open) return null
 
-  const title = mode === 'edit' ? 'Edit earn rule' : 'Add earn rule'
+  const title = mode === 'edit' ? t('loyalty.form.editTitle') : t('loyalty.form.createTitle')
 
   const modal = (
     <div
@@ -128,7 +151,7 @@ export function PointSettingFormModal({
               type="button"
               className="btn btn-ghost modal-close"
               onClick={() => !submitting && onClose()}
-              aria-label="Close"
+              aria-label={t('common.close')}
               disabled={submitting}
             >
               ×
@@ -140,7 +163,7 @@ export function PointSettingFormModal({
           <div className="discount-form-modal__body">
             <div className="discount-form-modal__stack">
               <div className="field">
-                <label htmlFor="ps-name">Rule name</label>
+                <label htmlFor="ps-name">{t('loyalty.form.ruleName')}</label>
                 <input
                   id="ps-name"
                   value={name}
@@ -150,7 +173,7 @@ export function PointSettingFormModal({
                 />
               </div>
               <div className="field">
-                <label htmlFor="ps-spend">MMK spend per batch</label>
+                <label htmlFor="ps-spend">{t('loyalty.form.spendMmk')}</label>
                 <input
                   id="ps-spend"
                   type="number"
@@ -165,7 +188,7 @@ export function PointSettingFormModal({
                 />
               </div>
               <div className="field">
-                <label htmlFor="ps-points">Points earned per batch</label>
+                <label htmlFor="ps-points">{t('loyalty.form.pointsPerBatch')}</label>
                 <input
                   id="ps-points"
                   type="number"
@@ -181,23 +204,23 @@ export function PointSettingFormModal({
               </div>
               <div className="discount-form-modal__pair">
                 <div className="field">
-                  <label htmlFor="ps-start">Start (optional)</label>
+                  <label htmlFor="ps-start">{t('loyalty.form.startOptional')}</label>
                   <DatetimeLocalField
                     id="ps-start"
                     value={startLocal}
                     onChange={setStartLocal}
                     disabled={submitting}
-                    placeholder="Start date & time"
+                    placeholder={t('loyalty.form.startPlaceholder')}
                   />
                 </div>
                 <div className="field">
-                  <label htmlFor="ps-end">End (optional)</label>
+                  <label htmlFor="ps-end">{t('loyalty.form.endOptional')}</label>
                   <DatetimeLocalField
                     id="ps-end"
                     value={endLocal}
                     onChange={setEndLocal}
                     disabled={submitting}
-                    placeholder="End date & time"
+                    placeholder={t('loyalty.form.endPlaceholder')}
                   />
                 </div>
               </div>
@@ -214,10 +237,10 @@ export function PointSettingFormModal({
                   <span className="form-switch__track" aria-hidden="true" />
                 </span>
                 <span className="form-switch__text">
-                  <span className="form-switch__title">{isActive ? 'Rule is active' : 'Rule is inactive'}</span>
-                  <span className="form-switch__desc">
-                    When inactive, the rule stays in the list but does not award points on orders.
+                  <span className="form-switch__title">
+                    {isActive ? t('loyalty.form.activeTitle') : t('loyalty.form.inactiveTitle')}
                   </span>
+                  <span className="form-switch__desc">{t('loyalty.form.activeDesc')}</span>
                 </span>
               </label>
             </div>
@@ -232,10 +255,14 @@ export function PointSettingFormModal({
             <div className="discount-form-modal__footer-actions">
               <div className="row-actions">
                 <button type="button" className="btn btn-secondary" onClick={() => !submitting && onClose()} disabled={submitting}>
-                  Cancel
+                  {t('common.cancel')}
                 </button>
                 <button type="submit" className="btn btn-primary" disabled={submitting}>
-                  {submitting ? 'Saving…' : mode === 'edit' ? 'Save changes' : 'Create rule'}
+                  {submitting
+                    ? t('loyalty.form.saving')
+                    : mode === 'edit'
+                      ? t('loyalty.form.saveChanges')
+                      : t('loyalty.form.createRule')}
                 </button>
               </div>
             </div>

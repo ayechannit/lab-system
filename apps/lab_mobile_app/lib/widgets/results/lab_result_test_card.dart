@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/session_scope.dart';
+import '../../l10n/app_localizations.dart';
 import '../../models/lab_result.dart';
 import '../../services/lab_report_pdf_service.dart';
 import '../../services/rest_lab_user_api.dart';
@@ -36,6 +37,7 @@ class _LabResultTestCardState extends State<LabResultTestCard> {
 
   Future<void> _downloadPdf() async {
     if (_downloading || !test.hasPdf) return;
+    final l10n = AppLocalizations.of(context)!;
     setState(() => _downloading = true);
     try {
       final session = SessionScope.of(context);
@@ -44,7 +46,7 @@ class _LabResultTestCardState extends State<LabResultTestCard> {
       AppToast.successInShell(
         context,
         saved,
-        title: kIsWeb ? 'Download started' : 'Report saved',
+        title: kIsWeb ? l10n.labReportDownloadStarted : l10n.labReportReportSaved,
       );
     } on LabReportPdfException catch (e) {
       if (!mounted) return;
@@ -54,7 +56,7 @@ class _LabResultTestCardState extends State<LabResultTestCard> {
       AppToast.errorInShell(context, e.message);
     } catch (_) {
       if (!mounted) return;
-      AppToast.errorInShell(context, 'Could not download the report. Try again.');
+      AppToast.errorInShell(context, l10n.labReportDownloadFailed);
     } finally {
       if (mounted) setState(() => _downloading = false);
     }
@@ -62,6 +64,7 @@ class _LabResultTestCardState extends State<LabResultTestCard> {
 
   Future<void> _runAiCheck() async {
     if (_aiRunning || !test.hasPdf) return;
+    final l10n = AppLocalizations.of(context)!;
     final session = SessionScope.of(context);
     setState(() => _aiRunning = true);
     try {
@@ -73,7 +76,7 @@ class _LabResultTestCardState extends State<LabResultTestCard> {
       AppToast.errorInShell(context, e.message);
     } catch (_) {
       if (!mounted) return;
-      AppToast.errorInShell(context, 'Could not run AI Check. Try again.');
+      AppToast.errorInShell(context, l10n.labReportAiCheckFailed);
     } finally {
       if (mounted) setState(() => _aiRunning = false);
     }
@@ -90,6 +93,7 @@ class _LabResultTestCardState extends State<LabResultTestCard> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final cs = context.cs;
     final borderColor = cs.outlineVariant.withValues(alpha: 0.55);
     final hasPdf = test.hasPdf;
@@ -145,7 +149,7 @@ class _LabResultTestCardState extends State<LabResultTestCard> {
                                   fontWeight: FontWeight.w700,
                                 ),
                           ),
-                          _StatusBadge(hasPdf: hasPdf),
+                          _StatusBadge(hasPdf: hasPdf, l10n: l10n),
                         ],
                       ),
                       const SizedBox(height: 4),
@@ -167,7 +171,7 @@ class _LabResultTestCardState extends State<LabResultTestCard> {
                           children: [
                             Icon(Icons.event_outlined, size: 14, color: cs.onSurfaceVariant),
                             Text(
-                              'Released ${_fmtDate(test.releasedAt!)}',
+                              l10n.resultsReleasedDate(_fmtDate(test.releasedAt!)),
                               style: Theme.of(context).textTheme.labelSmall?.copyWith(
                                     color: cs.onSurfaceVariant,
                                   ),
@@ -214,7 +218,7 @@ class _LabResultTestCardState extends State<LabResultTestCard> {
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            'PDF not uploaded yet for this test.',
+                            l10n.labReportPdfNotUploadedTest,
                             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                   color: cs.onSurfaceVariant,
                                 ),
@@ -238,7 +242,7 @@ class _LabResultTestCardState extends State<LabResultTestCard> {
                       label: FittedBox(
                         fit: BoxFit.scaleDown,
                         alignment: Alignment.centerLeft,
-                        child: Text(_downloading ? 'Downloading…' : 'Download PDF'),
+                        child: Text(_downloading ? l10n.labReportDownloading : l10n.labReportDownloadPdf),
                       ),
                     ),
                   ),
@@ -249,7 +253,7 @@ class _LabResultTestCardState extends State<LabResultTestCard> {
                       child: OutlinedButton.icon(
                         onPressed: _viewExistingAi,
                         icon: const Icon(Icons.auto_awesome_rounded, size: 20),
-                        label: const Text('View AI summary'),
+                        label: Text(l10n.labReportViewAiSummary),
                       ),
                     )
                   else
@@ -267,7 +271,7 @@ class _LabResultTestCardState extends State<LabResultTestCard> {
                         label: FittedBox(
                           fit: BoxFit.scaleDown,
                           alignment: Alignment.centerLeft,
-                          child: Text(_aiRunning ? 'Running AI Check…' : 'Run AI Check'),
+                          child: Text(_aiRunning ? l10n.labReportRunningAiCheck : l10n.labReportRunAiCheck),
                         ),
                       ),
                     ),
@@ -286,9 +290,10 @@ class _LabResultTestCardState extends State<LabResultTestCard> {
 }
 
 class _StatusBadge extends StatelessWidget {
-  const _StatusBadge({required this.hasPdf});
+  const _StatusBadge({required this.hasPdf, required this.l10n});
 
   final bool hasPdf;
+  final AppLocalizations l10n;
 
   @override
   Widget build(BuildContext context) {
@@ -302,7 +307,7 @@ class _StatusBadge extends StatelessWidget {
         border: Border.all(color: color.withValues(alpha: 0.25)),
       ),
       child: Text(
-        hasPdf ? 'PDF ready' : 'Pending',
+        hasPdf ? l10n.labReportPdfReady : l10n.labReportPdfPending,
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
               color: color,
               fontWeight: FontWeight.w700,

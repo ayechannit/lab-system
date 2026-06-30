@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { useAuth } from '../../hooks/AuthContext'
 import { useToast } from '../../hooks/ToastContext'
 import { messageFromError } from '../../hooks/usePageNotify'
@@ -13,6 +14,7 @@ import './auth-screens.css'
 type Step = 'request' | 'reset'
 
 export function ForgotPasswordPage() {
+  const { t } = useTranslation()
   const { signedIn, initializing } = useAuth()
   const { showError, showSuccess } = useToast()
   const navigate = useNavigate()
@@ -32,10 +34,10 @@ export function ForgotPasswordPage() {
     setSubmitting(true)
     try {
       const result = await requestPasswordReset(email)
-      showSuccess(result.message || 'Verification code sent.')
+      showSuccess(result.message || t('auth.codeSent'))
       setStep('reset')
     } catch (err) {
-      showError(messageFromError(err, 'Could not send verification code'))
+      showError(messageFromError(err, t('auth.sendCodeFailed')))
     } finally {
       setSubmitting(false)
     }
@@ -44,42 +46,44 @@ export function ForgotPasswordPage() {
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault()
     if (newPassword.length < 8) {
-      showError('Password must be at least 8 characters.')
+      showError(t('auth.passwordMinLength'))
       return
     }
     if (newPassword !== confirmPassword) {
-      showError('Passwords do not match.')
+      showError(t('auth.passwordMismatch'))
       return
     }
     if (code.trim().length !== 6) {
-      showError('Enter the 6-digit code from your email.')
+      showError(t('auth.codeRequired'))
       return
     }
 
     setSubmitting(true)
     try {
       const result = await resetPasswordWithCode(email, code, newPassword)
-      showSuccess(result.message || 'Password reset successfully.')
+      showSuccess(result.message || t('auth.resetSuccess'))
       navigate('/login', { replace: true })
     } catch (err) {
-      showError(messageFromError(err, 'Could not reset password'))
+      showError(messageFromError(err, t('auth.resetFailed')))
     } finally {
       setSubmitting(false)
     }
   }
 
+  const resetEmailLabel = email.trim() || t('auth.resetSubtitleFallbackEmail')
+
   return (
     <div className="auth-split">
       <AuthMarketingPanel
         heroImage={authImages.loginHero}
-        headline="Advancing Science through Precision."
-        lead="Join thousands of clinical professionals managing laboratory workflows with state-of-the-art security and compliance."
+        headline={t('auth.marketingHeadline')}
+        lead={t('auth.marketingLead')}
       />
       <div className="auth-side">
         <AuthScreenHeader
           trailing={
             <Link className="auth-help-link" to="/login">
-              Sign in
+              {t('auth.signIn')}
             </Link>
           }
         />
@@ -90,20 +94,18 @@ export function ForgotPasswordPage() {
                 {step === 'request' ? 'mark_email_unread' : 'pin'}
               </span>
             </div>
-            <h1 className="auth-title">
-              {step === 'request' ? 'Forgot password' : 'Reset password'}
-            </h1>
+            <h1 className="auth-title">{step === 'request' ? t('auth.forgotTitle') : t('auth.resetTitle')}</h1>
             <p className="auth-subtitle">
               {step === 'request'
-                ? 'Enter your staff email and we will send a 6-digit verification code (valid for 15 minutes).'
-                : `Enter the code sent to ${email.trim() || 'your email'} and choose a new password.`}
+                ? t('auth.forgotSubtitle')
+                : t('auth.resetSubtitle', { email: resetEmailLabel })}
             </p>
 
             {step === 'request' ? (
               <form className="auth-stack" style={{ marginTop: '2rem' }} onSubmit={handleRequestCode}>
                 <div className="auth-field">
                   <label className="auth-label" htmlFor="forgot-email">
-                    Email
+                    {t('auth.email')}
                   </label>
                   <div className="auth-input-wrap">
                     <span className="material-symbols-outlined auth-input-icon">mail</span>
@@ -111,7 +113,7 @@ export function ForgotPasswordPage() {
                       id="forgot-email"
                       name="email"
                       className="auth-input"
-                      placeholder="you@example.com"
+                      placeholder={t('auth.emailPlaceholder')}
                       type="email"
                       autoComplete="email"
                       value={email}
@@ -123,21 +125,21 @@ export function ForgotPasswordPage() {
                 </div>
 
                 <button type="submit" className="auth-primary-btn" disabled={submitting}>
-                  {submitting ? 'Sending code…' : 'Send verification code'}
+                  {submitting ? t('auth.sendingCode') : t('auth.sendCode')}
                 </button>
 
                 <Link className="auth-back-link" to="/login">
                   <span className="material-symbols-outlined" aria-hidden>
                     arrow_back
                   </span>
-                  Back to sign in
+                  {t('auth.backToSignIn')}
                 </Link>
               </form>
             ) : (
               <form className="auth-stack" style={{ marginTop: '2rem' }} onSubmit={handleResetPassword}>
                 <div className="auth-field">
                   <label className="auth-label" htmlFor="reset-code">
-                    Verification code
+                    {t('auth.verificationCode')}
                   </label>
                   <div className="auth-input-wrap">
                     <span className="material-symbols-outlined auth-input-icon">pin</span>
@@ -145,7 +147,7 @@ export function ForgotPasswordPage() {
                       id="reset-code"
                       name="code"
                       className="auth-input auth-input--code"
-                      placeholder="000000"
+                      placeholder={t('auth.codePlaceholder')}
                       type="text"
                       inputMode="numeric"
                       autoComplete="one-time-code"
@@ -161,7 +163,7 @@ export function ForgotPasswordPage() {
 
                 <div className="auth-field">
                   <label className="auth-label" htmlFor="new-password">
-                    New password
+                    {t('auth.newPassword')}
                   </label>
                   <div className="auth-input-wrap">
                     <span className="material-symbols-outlined auth-input-icon">lock</span>
@@ -169,7 +171,7 @@ export function ForgotPasswordPage() {
                       id="new-password"
                       name="new_password"
                       className="auth-input auth-input--password"
-                      placeholder="At least 8 characters"
+                      placeholder={t('auth.newPasswordPlaceholder')}
                       type={showPassword ? 'text' : 'password'}
                       autoComplete="new-password"
                       value={newPassword}
@@ -181,7 +183,7 @@ export function ForgotPasswordPage() {
                     <button
                       type="button"
                       className="auth-toggle-vis"
-                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      aria-label={showPassword ? t('auth.hidePassword') : t('auth.showPassword')}
                       onClick={() => setShowPassword((v) => !v)}
                     >
                       <span className="material-symbols-outlined">
@@ -193,7 +195,7 @@ export function ForgotPasswordPage() {
 
                 <div className="auth-field">
                   <label className="auth-label" htmlFor="confirm-password">
-                    Confirm password
+                    {t('auth.confirmPassword')}
                   </label>
                   <div className="auth-input-wrap">
                     <span className="material-symbols-outlined auth-input-icon">lock_reset</span>
@@ -201,7 +203,7 @@ export function ForgotPasswordPage() {
                       id="confirm-password"
                       name="confirm_password"
                       className="auth-input"
-                      placeholder="Re-enter new password"
+                      placeholder={t('auth.confirmPasswordPlaceholder')}
                       type={showPassword ? 'text' : 'password'}
                       autoComplete="new-password"
                       value={confirmPassword}
@@ -214,7 +216,7 @@ export function ForgotPasswordPage() {
                 </div>
 
                 <button type="submit" className="auth-primary-btn" disabled={submitting}>
-                  {submitting ? 'Updating password…' : 'Reset password'}
+                  {submitting ? t('auth.updatingPassword') : t('auth.resetPassword')}
                 </button>
 
                 <div className="auth-reset-actions">
@@ -229,7 +231,7 @@ export function ForgotPasswordPage() {
                       setConfirmPassword('')
                     }}
                   >
-                    Use a different email
+                    {t('auth.useDifferentEmail')}
                   </button>
                   <button
                     type="button"
@@ -240,17 +242,17 @@ export function ForgotPasswordPage() {
                         setSubmitting(true)
                         try {
                           const result = await requestPasswordReset(email)
-                          showSuccess(result.message || 'A new code has been sent.')
+                          showSuccess(result.message || t('auth.codeResent'))
                           setCode('')
                         } catch (err) {
-                          showError(messageFromError(err, 'Could not resend code'))
+                          showError(messageFromError(err, t('auth.resendCodeFailed')))
                         } finally {
                           setSubmitting(false)
                         }
                       })()
                     }}
                   >
-                    Resend code
+                    {t('auth.resendCode')}
                   </button>
                 </div>
 
@@ -258,7 +260,7 @@ export function ForgotPasswordPage() {
                   <span className="material-symbols-outlined" aria-hidden>
                     arrow_back
                   </span>
-                  Back to sign in
+                  {t('auth.backToSignIn')}
                 </Link>
               </form>
             )}

@@ -211,6 +211,20 @@ class SessionController extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> uploadProfileImage({
+    required List<int> bytes,
+    required String filename,
+  }) async {
+    final u = _user;
+    if (u == null) return;
+    _user = await _api.uploadProfileImage(
+      userId: u.id,
+      bytes: bytes,
+      filename: filename,
+    );
+    notifyListeners();
+  }
+
   Future<void> submitLabOrder(LabOrderRequest order) async {
     final u = _user;
     if (u == null) return;

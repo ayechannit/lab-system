@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
+import { ApiConfigBanner } from '../components/common/ApiConfigBanner'
 import {
   Area,
   AreaChart,
@@ -41,15 +43,15 @@ import {
   type UserReportResponse,
 } from '../services/reportService'
 import { themeChartColors } from '../theme/appThemes'
+import { getIntlLocale } from '../i18n'
+import { formatIsoDatetimeShort } from '../utils/dateIntl'
+import { orderPriorityLabel, orderStatusLabel } from '../utils/orderLabels'
+import { roleLabel } from '../utils/roleLabels'
 import '../components/common/ui.css'
 
 type ReportRangeDays = 7 | 14 | 30
 
-const RANGE_OPTIONS: { days: ReportRangeDays; label: string }[] = [
-  { days: 7, label: '7 days' },
-  { days: 14, label: '14 days' },
-  { days: 30, label: '30 days' },
-]
+const RANGE_DAY_VALUES: ReportRangeDays[] = [7, 14, 30]
 
 function dayKey(d: Date): string {
   return d.toISOString().slice(0, 10)
@@ -98,23 +100,24 @@ function buildMonthlyRevenueSeries(trend: RevenueTrendRow[]): { month: string; m
   return [...sums.keys()].sort().map((month) => ({ month, mmk: sums.get(month) ?? 0 }))
 }
 
-function formatRole(role: string): string {
-  return role.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
-}
-
-function fmtWhen(iso: string | null | undefined): string {
-  if (!iso) return '—'
-  const d = new Date(iso)
-  if (!Number.isFinite(d.getTime())) return iso
-  return d.toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })
-}
-
-function fmtTatMinutes(minutes: number): string {
+function fmtTatMinutes(
+  minutes: number,
+  t: (key: string, opts?: Record<string, unknown>) => string,
+): string {
   if (!Number.isFinite(minutes) || minutes <= 0) return '—'
   const h = Math.floor(minutes / 60)
   const m = Math.round(minutes % 60)
-  if (h <= 0) return `${m} min`
-  return m > 0 ? `${h} hr ${m} min` : `${h} hr`
+  if (h <= 0) return t('reports.tat.minutes', { count: m })
+  return m > 0
+    ? t('reports.tat.hoursMinutes', { hours: h, minutes: m })
+    : t('reports.tat.hoursOnly', { hours: h })
+}
+
+function fmtWhen(iso: string | null | undefined, locale: string): string {
+  if (!iso) return '—'
+  const d = new Date(iso)
+  if (!Number.isFinite(d.getTime())) return iso
+  return formatIsoDatetimeShort(iso, locale)
 }
 
 function avgTatMinutes(rows: TatReportRow[]): number | null {
@@ -127,17 +130,19 @@ function ReportTableWrap({
   loading,
   empty,
   emptyLabel,
+  loadingLabel,
   children,
 }: {
   loading: boolean
   empty: boolean
   emptyLabel: string
+  loadingLabel: string
   children: ReactNode
 }) {
   if (loading) {
     return (
       <div className="reports-table-loading">
-        <LoadingSpinner label="Loading report" />
+        <LoadingSpinner label={loadingLabel} />
       </div>
     )
   }
@@ -148,6 +153,8 @@ function ReportTableWrap({
 }
 
 export function ReportsAnalyticsPage() {
+  const { t } = useTranslation()
+  const intlLocale = getIntlLocale()
   const hasApi = isApiMode()
   const chartColors = themeChartColors()
   const [rangeDays, setRangeDays] = useState<ReportRangeDays>(14)
@@ -187,7 +194,7 @@ export function ReportsAnalyticsPage() {
     const dashboard = results[0].status === 'fulfilled' ? results[0].value : null
     if (!dashboard && results[0].status === 'rejected') {
       const err = results[0].reason
-      setLoadError(err instanceof Error ? err.message : 'Failed to load dashboard KPIs')
+      setLoadError(err instanceof Error ? err.message : t('reports.loadFailed'))
     } else {
       setLoadError(null)
     }
@@ -203,7 +210,7 @@ export function ReportsAnalyticsPage() {
     setCollectionReport(results[7].status === 'fulfilled' ? results[7].value : null)
     setDiscountImpact(results[8].status === 'fulfilled' ? results[8].value : null)
     setUserReport(results[9].status === 'fulfilled' ? results[9].value : null)
-  }, [])
+  }, [t])
 
   useEffect(() => {
     if (!hasApi) {
@@ -232,6 +239,15 @@ export function ReportsAnalyticsPage() {
     }
   }, [hasApi, rangeDays, loadReports])
 
+  const rangeOptions = useMemo(
+    () =>
+      RANGE_DAY_VALUES.map((days) => ({
+        days,
+        label: t('reports.rangeDays', { count: days }),
+      })),
+    [t],
+  )
+
   const dailyOrdersSeries = useMemo(
     () => buildDailyOrdersSeries(revenueTrend, rangeDays),
     [revenueTrend, rangeDays],
@@ -243,35 +259,26 @@ export function ReportsAnalyticsPage() {
     if (!ratings) return []
     const { stats } = ratings
     return [
-      { label: 'Positive (4–5★)', count: stats.positive_reviews },
+      { label: t('reports.ratings.positive'), count: stats.positive_reviews },
       {
-        label: 'Neutral (3★)',
+        label: t('reports.ratings.neutral'),
         count: Math.max(0, stats.total_reviews - stats.positive_reviews - stats.negative_reviews),
       },
-      { label: 'Negative (1–2★)', count: stats.negative_reviews },
+      { label: t('reports.ratings.negative'), count: stats.negative_reviews },
     ]
-  }, [ratings])
+  }, [ratings, t])
 
   return (
     <div className="stack">
-      <PageHeader
-        title="Reports & analytics"
-        description="Dashboard KPIs, operational queues, staff performance, and financial summaries from the reporting API."
-      />
+      <PageHeader title={t('pages.reports.title')} description={t('pages.reports.description')} />
 
-      {!hasApi ? (
-        <div className="card card--muted">
-          <p style={{ margin: 0, fontSize: '0.9rem' }}>
-            Set <code>VITE_API_BASE_URL</code> and sign in to load reporting data.
-          </p>
-        </div>
-      ) : null}
+      {!hasApi ? <ApiConfigBanner variant="reports" /> : null}
 
       {hasApi ? (
         <div className="reports-range-bar card">
-          <span className="reports-range-bar__label">Reporting period</span>
-          <div className="reports-range-bar__options" role="group" aria-label="Reporting period">
-            {RANGE_OPTIONS.map(({ days, label }) => (
+          <span className="reports-range-bar__label">{t('reports.reportingPeriod')}</span>
+          <div className="reports-range-bar__options" role="group" aria-label={t('reports.reportingPeriod')}>
+            {rangeOptions.map(({ days, label }) => (
               <button
                 key={days}
                 type="button"
@@ -287,54 +294,53 @@ export function ReportsAnalyticsPage() {
       ) : null}
 
       <div className="card">
-        <h3 className="card-title">Snapshot</h3>
+        <h3 className="card-title">{t('reports.snapshot')}</h3>
         {loading ? (
           <div className="reports-snapshot-loading">
-            <LoadingSpinner label="Loading snapshot" />
+            <LoadingSpinner label={t('reports.loadingSnapshot')} />
           </div>
         ) : kpis ? (
           <p style={{ margin: 0, color: 'var(--muted)', fontSize: '0.9rem' }}>
-            <strong>{kpis.total_orders}</strong> orders · delivered revenue:{' '}
-            <strong>{kpis.total_revenue.toLocaleString()} MMK</strong> ·{' '}
-            <strong>{kpis.urgent_orders}</strong> urgent · <strong>{kpis.total_users}</strong> users · AI checks:{' '}
-            <strong>{kpis.ai_pass_count}</strong> pass / <strong>{kpis.ai_issue_count}</strong> issues
-            {ratings ? (
-              <>
-                {' '}
-                · avg rating <strong>{ratings.stats.average_rating.toFixed(1)}</strong> (
-                {ratings.stats.total_reviews} reviews)
-              </>
-            ) : null}
+            {t('reports.snapshotLine', {
+              orders: kpis.total_orders,
+              revenue: kpis.total_revenue.toLocaleString(),
+              urgent: kpis.urgent_orders,
+              users: kpis.total_users,
+              pass: kpis.ai_pass_count,
+              issues: kpis.ai_issue_count,
+              rating: ratings ? ratings.stats.average_rating.toFixed(1) : '—',
+              reviews: ratings ? ratings.stats.total_reviews : 0,
+            })}
           </p>
         ) : (
-          <p style={{ margin: 0, color: 'var(--muted)', fontSize: '0.9rem' }}>No snapshot data available.</p>
+          <p style={{ margin: 0, color: 'var(--muted)', fontSize: '0.9rem' }}>{t('reports.noSnapshot')}</p>
         )}
       </div>
 
       {discountImpact ? (
         <div className="card">
-          <h3 className="card-title">Discount impact</h3>
+          <h3 className="card-title">{t('reports.discountImpact')}</h3>
           <div className="reports-metric-grid">
             <div className="reports-metric">
-              <span className="reports-metric__label">Original value</span>
+              <span className="reports-metric__label">{t('reports.metrics.originalValue')}</span>
               <span className="reports-metric__value">
                 {discountImpact.total_original_value.toLocaleString()} MMK
               </span>
             </div>
             <div className="reports-metric">
-              <span className="reports-metric__label">Final revenue</span>
+              <span className="reports-metric__label">{t('reports.metrics.finalRevenue')}</span>
               <span className="reports-metric__value">
                 {discountImpact.total_final_revenue.toLocaleString()} MMK
               </span>
             </div>
             <div className="reports-metric reports-metric--warn">
-              <span className="reports-metric__label">Discount given</span>
+              <span className="reports-metric__label">{t('reports.metrics.discountGiven')}</span>
               <span className="reports-metric__value">
                 {discountImpact.total_discount_given.toLocaleString()} MMK
               </span>
             </div>
             <div className="reports-metric">
-              <span className="reports-metric__label">Effective discount</span>
+              <span className="reports-metric__label">{t('reports.metrics.effectiveDiscount')}</span>
               <span className="reports-metric__value">
                 {discountImpact.effective_discount_percent.toFixed(1)}%
               </span>
@@ -345,10 +351,10 @@ export function ReportsAnalyticsPage() {
 
       <div className="grid-2">
         <div className="card chart-card">
-          <h3 className="card-title">Daily orders (last {rangeDays} days)</h3>
+          <h3 className="card-title">{t('reports.charts.dailyOrders', { days: rangeDays })}</h3>
           <div style={{ width: '100%', height: 240 }}>
             {loading ? (
-              <LoadingSpinner label="Loading chart" />
+              <LoadingSpinner label={t('reports.loadingChart')} />
             ) : (
               <ResponsiveContainer>
                 <AreaChart data={dailyOrdersSeries}>
@@ -361,26 +367,32 @@ export function ReportsAnalyticsPage() {
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                   <XAxis dataKey="date" tick={{ fontSize: 11 }} />
                   <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
-                  <Tooltip />
-                  <Area type="monotone" dataKey="orders" stroke={chartColors.primary} fill="url(#gOrders)" />
+                  <Tooltip formatter={(value: number) => [value, t('reports.charts.orders')]} />
+                  <Area
+                    type="monotone"
+                    dataKey="orders"
+                    name={t('reports.charts.orders')}
+                    stroke={chartColors.primary}
+                    fill="url(#gOrders)"
+                  />
                 </AreaChart>
               </ResponsiveContainer>
             )}
           </div>
         </div>
         <div className="card chart-card">
-          <h3 className="card-title">Monthly revenue (MMK)</h3>
+          <h3 className="card-title">{t('reports.charts.monthlyRevenue')}</h3>
           <div style={{ width: '100%', height: 240 }}>
             {loading ? (
-              <LoadingSpinner label="Loading chart" />
+              <LoadingSpinner label={t('reports.loadingChart')} />
             ) : (
               <ResponsiveContainer>
                 <BarChart data={monthlyRevenueSeries}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                   <XAxis dataKey="month" tick={{ fontSize: 11 }} />
                   <YAxis tickFormatter={(v) => `${(v / 1_000_000).toFixed(1)}M`} tick={{ fontSize: 11 }} />
-                  <Tooltip formatter={(v: number) => [`${v.toLocaleString()} MMK`, 'Revenue']} />
-                  <Bar dataKey="mmk" fill="#0d8a5b" radius={[6, 6, 0, 0]} />
+                  <Tooltip formatter={(v: number) => [`${v.toLocaleString()} MMK`, t('reports.charts.revenue')]} />
+                  <Bar dataKey="mmk" name={t('reports.charts.revenue')} fill={chartColors.primary} radius={[6, 6, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             )}
@@ -390,32 +402,32 @@ export function ReportsAnalyticsPage() {
 
       <div className="grid-2">
         <div className="card chart-card">
-          <h3 className="card-title">Revenue by channel</h3>
+          <h3 className="card-title">{t('reports.charts.revenueByChannel')}</h3>
           <div style={{ width: '100%', height: 240 }}>
             {loading ? (
-              <LoadingSpinner label="Loading chart" />
+              <LoadingSpinner label={t('reports.loadingChart')} />
             ) : (
               <ResponsiveContainer>
                 <BarChart
-                  data={revenueByChannel.map((r) => ({ ...r, roleLabel: formatRole(r.role) }))}
+                  data={revenueByChannel.map((r) => ({ ...r, roleLabel: roleLabel(r.role) }))}
                   layout="vertical"
                   margin={{ left: 8 }}
                 >
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                   <XAxis type="number" tickFormatter={(v) => `${(v / 1_000_000).toFixed(1)}M`} />
                   <YAxis dataKey="roleLabel" type="category" width={88} tick={{ fontSize: 11 }} />
-                  <Tooltip formatter={(v: number) => [`${v.toLocaleString()} MMK`, 'Revenue']} />
-                  <Bar dataKey="revenue" fill={chartColors.primary} radius={[0, 6, 6, 0]} />
+                  <Tooltip formatter={(v: number) => [`${v.toLocaleString()} MMK`, t('reports.charts.revenue')]} />
+                  <Bar dataKey="revenue" name={t('reports.charts.revenue')} fill={chartColors.primary} radius={[0, 6, 6, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             )}
           </div>
         </div>
         <div className="card chart-card">
-          <h3 className="card-title">Tests by category</h3>
+          <h3 className="card-title">{t('reports.charts.testsByCategory')}</h3>
           <div style={{ width: '100%', height: 240 }}>
             {loading ? (
-              <LoadingSpinner label="Loading chart" />
+              <LoadingSpinner label={t('reports.loadingChart')} />
             ) : (
               <ResponsiveContainer>
                 <BarChart data={testCategories}>
@@ -424,7 +436,7 @@ export function ReportsAnalyticsPage() {
                   <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
                   <Tooltip />
                   <Legend />
-                  <Bar dataKey="test_count" name="Tests" fill={chartColors.primaryLight} radius={[6, 6, 0, 0]} />
+                  <Bar dataKey="test_count" name={t('reports.charts.tests')} fill={chartColors.primaryLight} radius={[6, 6, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             )}
@@ -434,34 +446,35 @@ export function ReportsAnalyticsPage() {
 
       <div className="card">
         <div className="reports-section-head">
-          <h3 className="card-title">Pending results queue</h3>
+          <h3 className="card-title">{t('reports.pendingQueue.title')}</h3>
           <span className="reports-section-head__meta">
-            {pendingQueue ? `${pendingQueue.length} open orders` : ''}
+            {pendingQueue ? t('reports.pendingQueue.openOrders', { count: pendingQueue.length }) : ''}
           </span>
         </div>
         <ReportTableWrap
           loading={loading}
           empty={pendingQueue != null && pendingQueue.length === 0}
-          emptyLabel="No pending orders in the queue."
+          emptyLabel={t('reports.pendingQueue.empty')}
+          loadingLabel={t('reports.loadingReport')}
         >
           <table className="data-table">
             <thead>
               <tr>
-                <th>Patient</th>
-                <th>Status</th>
-                <th>Priority</th>
-                <th>Hours waiting</th>
-                <th>Created</th>
+                <th>{t('common.patient')}</th>
+                <th>{t('common.status')}</th>
+                <th>{t('common.priority')}</th>
+                <th>{t('reports.pendingQueue.hoursWaiting')}</th>
+                <th>{t('common.created')}</th>
               </tr>
             </thead>
             <tbody>
               {(pendingQueue ?? []).slice(0, 15).map((row) => (
                 <tr key={row.order_id}>
                   <td>{row.patient_name}</td>
-                  <td>{row.status}</td>
-                  <td>{row.priority}</td>
+                  <td>{orderStatusLabel(row.status)}</td>
+                  <td>{orderPriorityLabel(row.priority)}</td>
                   <td>{row.hours_elapsed}</td>
-                  <td>{fmtWhen(row.created_at)}</td>
+                  <td>{fmtWhen(row.created_at, intlLocale)}</td>
                 </tr>
               ))}
             </tbody>
@@ -472,35 +485,36 @@ export function ReportsAnalyticsPage() {
       {tatRows != null ? (
         <div className="card">
           <div className="reports-section-head">
-            <h3 className="card-title">Turnaround time (TAT)</h3>
+            <h3 className="card-title">{t('reports.tat.title')}</h3>
             <span className="reports-section-head__meta">
-              {tatRows.length} completed reports
-              {tatAverage != null ? ` · avg ${fmtTatMinutes(tatAverage)}` : ''}
+              {t('reports.tat.completedReports', { count: tatRows.length })}
+              {tatAverage != null ? ` · ${t('reports.tat.avg', { time: fmtTatMinutes(tatAverage, t) })}` : ''}
             </span>
           </div>
           <ReportTableWrap
             loading={loading}
             empty={tatRows.length === 0}
-            emptyLabel="No TAT data for orders with report-out times in this period."
+            emptyLabel={t('reports.tat.empty')}
+            loadingLabel={t('reports.loadingReport')}
           >
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>Patient</th>
-                  <th>Priority</th>
-                  <th>Collected</th>
-                  <th>Report out</th>
-                  <th>TAT</th>
+                  <th>{t('common.patient')}</th>
+                  <th>{t('common.priority')}</th>
+                  <th>{t('reports.tat.collected')}</th>
+                  <th>{t('reports.tat.reportOut')}</th>
+                  <th>{t('reports.tat.column')}</th>
                 </tr>
               </thead>
               <tbody>
                 {tatRows.slice(0, 15).map((row) => (
                   <tr key={row.order_id}>
                     <td>{row.patient_name}</td>
-                    <td>{row.priority}</td>
-                    <td>{fmtWhen(row.collection_time)}</td>
-                    <td>{fmtWhen(row.report_out_time)}</td>
-                    <td>{fmtTatMinutes(row.tat_minutes)}</td>
+                    <td>{orderPriorityLabel(row.priority)}</td>
+                    <td>{fmtWhen(row.collection_time, intlLocale)}</td>
+                    <td>{fmtWhen(row.report_out_time, intlLocale)}</td>
+                    <td>{fmtTatMinutes(row.tat_minutes, t)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -512,30 +526,33 @@ export function ReportsAnalyticsPage() {
       {staffActivity != null ? (
         <div className="card">
           <div className="reports-section-head">
-            <h3 className="card-title">Staff activity</h3>
-            <span className="reports-section-head__meta">{staffActivity.length} staff tracked</span>
+            <h3 className="card-title">{t('reports.staffActivity.title')}</h3>
+            <span className="reports-section-head__meta">
+              {t('reports.staffActivity.tracked', { count: staffActivity.length })}
+            </span>
           </div>
           <ReportTableWrap
             loading={loading}
             empty={staffActivity.length === 0}
-            emptyLabel="No staff activity logged in this period."
+            emptyLabel={t('reports.staffActivity.empty')}
+            loadingLabel={t('reports.loadingReport')}
           >
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>Staff</th>
-                  <th>Role</th>
-                  <th>Actions</th>
-                  <th>Last action</th>
+                  <th>{t('reports.staffActivity.staff')}</th>
+                  <th>{t('common.role')}</th>
+                  <th>{t('reports.staffActivity.actions')}</th>
+                  <th>{t('reports.staffActivity.lastAction')}</th>
                 </tr>
               </thead>
               <tbody>
                 {staffActivity.slice(0, 15).map((row) => (
                   <tr key={`${row.staff_name}-${row.staff_role}`}>
                     <td>{row.staff_name}</td>
-                    <td>{formatRole(row.staff_role)}</td>
+                    <td>{roleLabel(row.staff_role)}</td>
                     <td>{row.actions_performed}</td>
-                    <td>{fmtWhen(row.last_action_at)}</td>
+                    <td>{fmtWhen(row.last_action_at, intlLocale)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -547,20 +564,23 @@ export function ReportsAnalyticsPage() {
       {collectionReport != null ? (
         <div className="card">
           <div className="reports-section-head">
-            <h3 className="card-title">Sample collection performance</h3>
-            <span className="reports-section-head__meta">{collectionReport.length} collectors</span>
+            <h3 className="card-title">{t('reports.collection.title')}</h3>
+            <span className="reports-section-head__meta">
+              {t('reports.collection.collectors', { count: collectionReport.length })}
+            </span>
           </div>
           <ReportTableWrap
             loading={loading}
             empty={collectionReport.length === 0}
-            emptyLabel="No collection activity in this period."
+            emptyLabel={t('reports.collection.empty')}
+            loadingLabel={t('reports.loadingReport')}
           >
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>Collector</th>
-                  <th>Collections</th>
-                  <th>Avg time to collect</th>
+                  <th>{t('collections.collector')}</th>
+                  <th>{t('reports.collection.collections')}</th>
+                  <th>{t('reports.collection.avgTime')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -568,7 +588,7 @@ export function ReportsAnalyticsPage() {
                   <tr key={row.staff_id}>
                     <td>{row.staff_name}</td>
                     <td>{row.collections_count}</td>
-                    <td>{fmtTatMinutes(row.avg_assignment_to_collection_minutes)}</td>
+                    <td>{fmtTatMinutes(row.avg_assignment_to_collection_minutes, t)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -580,7 +600,7 @@ export function ReportsAnalyticsPage() {
       {ratings && ratings.stats.total_reviews > 0 ? (
         <div className="grid-2">
           <div className="card chart-card">
-            <h3 className="card-title">Customer ratings breakdown</h3>
+            <h3 className="card-title">{t('reports.charts.ratingsBreakdown')}</h3>
             <div style={{ width: '100%', height: 240 }}>
               <ResponsiveContainer>
                 <LineChart data={ratingsTrend}>
@@ -594,21 +614,21 @@ export function ReportsAnalyticsPage() {
             </div>
           </div>
           <div className="card">
-            <h3 className="card-title">Latest reviews</h3>
+            <h3 className="card-title">{t('reports.ratings.latest')}</h3>
             {ratings.latestReviews.length === 0 ? (
-              <p className="reports-empty">No reviews in this period.</p>
+              <p className="reports-empty">{t('reports.ratings.empty')}</p>
             ) : (
               <ul className="reports-review-list">
                 {ratings.latestReviews.map((review, i) => (
                   <li key={`${review.created_at}-${i}`} className="reports-review-list__item">
                     <div className="reports-review-list__head">
-                      <strong>{review.user_name || 'Anonymous'}</strong>
+                      <strong>{review.user_name || t('reports.ratings.anonymous')}</strong>
                       <span>{'★'.repeat(Math.min(5, Math.max(0, review.rating)))}</span>
                     </div>
                     {review.remark ? (
                       <p className="reports-review-list__remark">{review.remark}</p>
                     ) : null}
-                    <span className="reports-review-list__when">{fmtWhen(review.created_at)}</span>
+                    <span className="reports-review-list__when">{fmtWhen(review.created_at, intlLocale)}</span>
                   </li>
                 ))}
               </ul>
@@ -619,29 +639,29 @@ export function ReportsAnalyticsPage() {
 
       {userReport ? (
         <div className="card">
-          <h3 className="card-title">Your account summary</h3>
+          <h3 className="card-title">{t('reports.userSummary.title')}</h3>
           <p style={{ margin: '0 0 1rem', color: 'var(--muted)', fontSize: '0.875rem' }}>
-            Personalized metrics for the signed-in account (from user-summary API).
+            {t('reports.userSummary.hint')}
           </p>
           <div className="reports-metric-grid">
             <div className="reports-metric">
-              <span className="reports-metric__label">Total spent</span>
+              <span className="reports-metric__label">{t('reports.metrics.totalSpent')}</span>
               <span className="reports-metric__value">{userReport.kpis.total_spent.toLocaleString()} MMK</span>
             </div>
             <div className="reports-metric">
-              <span className="reports-metric__label">Orders</span>
+              <span className="reports-metric__label">{t('reports.metrics.orders')}</span>
               <span className="reports-metric__value">{userReport.kpis.total_orders}</span>
             </div>
             <div className="reports-metric">
-              <span className="reports-metric__label">Completed</span>
+              <span className="reports-metric__label">{t('reports.metrics.completed')}</span>
               <span className="reports-metric__value">{userReport.kpis.completed_orders}</span>
             </div>
             <div className="reports-metric">
-              <span className="reports-metric__label">Pending</span>
+              <span className="reports-metric__label">{t('reports.metrics.pending')}</span>
               <span className="reports-metric__value">{userReport.kpis.pending_orders}</span>
             </div>
             <div className="reports-metric">
-              <span className="reports-metric__label">Loyalty points</span>
+              <span className="reports-metric__label">{t('reports.metrics.loyaltyPoints')}</span>
               <span className="reports-metric__value">{userReport.kpis.loyalty_points}</span>
             </div>
           </div>
@@ -650,10 +670,10 @@ export function ReportsAnalyticsPage() {
               <table className="data-table">
                 <thead>
                   <tr>
-                    <th>Top tests</th>
-                    <th>Category</th>
-                    <th>Orders</th>
-                    <th>Spent</th>
+                    <th>{t('reports.userSummary.topTests')}</th>
+                    <th>{t('reports.userSummary.category')}</th>
+                    <th>{t('reports.metrics.orders')}</th>
+                    <th>{t('reports.userSummary.spent')}</th>
                   </tr>
                 </thead>
                 <tbody>

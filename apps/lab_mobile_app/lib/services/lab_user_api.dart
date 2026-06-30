@@ -52,6 +52,9 @@ abstract class LabUserApi {
 
   void setAccessToken(String? token);
 
+  /// Preferred API locale (`Accept-Language` header).
+  void setLocaleCode(String? localeCode);
+
   /// `GET /api/auth/me` using the current bearer token.
   Future<AppUser> getCurrentUser();
 
@@ -77,6 +80,12 @@ abstract class LabUserApi {
     String? address,
     double? latitude,
     double? longitude,
+  });
+
+  Future<AppUser> uploadProfileImage({
+    required String userId,
+    required List<int> bytes,
+    required String filename,
   });
   Future<List<LabTestPick>> listActiveLabTests();
   Future<List<LabCollectorPick>> listActiveCollectors();

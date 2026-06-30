@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
+import '../../l10n/order_l10n.dart';
 import '../../models/order_list_sort.dart';
 import '../../theme/theme_extensions.dart';
 
@@ -16,6 +18,7 @@ class OrderListSortButton extends StatelessWidget {
   final ValueChanged<OrderListSort> onSelected;
 
   Future<void> _openSheet(BuildContext context) async {
+    final l10n = AppLocalizations.of(context)!;
     final picked = await showModalBottomSheet<OrderListSort>(
       context: context,
       isScrollControlled: true,
@@ -30,7 +33,7 @@ class OrderListSortButton extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
                 child: Text(
-                  'Sort by',
+                  l10n.ordersSortBy,
                   style: Theme.of(ctx).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
                 ),
               ),
@@ -40,7 +43,7 @@ class OrderListSortButton extends StatelessWidget {
                     selected == option ? Icons.check_circle_rounded : Icons.circle_outlined,
                     color: selected == option ? cs.primary : cs.onSurfaceVariant,
                   ),
-                  title: Text(option.label),
+                  title: Text(option.localizedLabel(l10n)),
                   onTap: () => Navigator.pop(ctx, option),
                 ),
             ],
@@ -56,11 +59,12 @@ class OrderListSortButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = context.cs;
+    final l10n = AppLocalizations.of(context)!;
     return TextButton.icon(
       onPressed: () => _openSheet(context),
       icon: Icon(Icons.sort_rounded, size: 18, color: cs.primary),
       label: Text(
-        selected.label,
+        selected.localizedLabel(l10n),
         style: Theme.of(context).textTheme.labelLarge?.copyWith(
               color: cs.primary,
               fontWeight: FontWeight.w600,

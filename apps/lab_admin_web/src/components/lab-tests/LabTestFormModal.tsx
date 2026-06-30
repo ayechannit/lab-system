@@ -1,4 +1,5 @@
 import { type FormEvent, useEffect, useId, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { createPortal } from 'react-dom'
 import type { LabTestCatalogRow } from '../../model/types'
 import { createLabTest, updateLabTest, type LabTestWriteBody } from '../../services/labTestCatalogService'
@@ -41,6 +42,7 @@ export function LabTestFormModal({
   onClose,
   onSuccess,
 }: LabTestFormModalProps) {
+  const { t } = useTranslation()
   const titleId = useId()
   const catalogActiveId = useId()
   const [testName, setTestName] = useState('')
@@ -97,13 +99,13 @@ export function LabTestFormModal({
 
     const name = testName.trim()
     if (!name) {
-      setFormError('Enter a test name.')
+      setFormError(t('labTests.form.errorName'))
       return
     }
     const price =
       typeof basePriceMmk === 'number' ? basePriceMmk : Number.parseFloat(String(basePriceMmk))
     if (!Number.isFinite(price) || price < 0) {
-      setFormError('Enter a valid amount (MMK).')
+      setFormError(t('labTests.form.errorPrice'))
       return
     }
 
@@ -134,7 +136,7 @@ export function LabTestFormModal({
       onSuccess()
       onClose()
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : 'Request failed')
+      setFormError(err instanceof Error ? err.message : t('labTests.form.requestFailed'))
     } finally {
       setSubmitting(false)
     }
@@ -142,7 +144,7 @@ export function LabTestFormModal({
 
   if (!open) return null
 
-  const title = mode === 'create' ? 'Create lab test' : 'Edit lab test'
+  const title = mode === 'create' ? t('labTests.form.createTitle') : t('labTests.form.editTitle')
 
   const modal = (
     <div
@@ -164,7 +166,7 @@ export function LabTestFormModal({
               type="button"
               className="btn btn-ghost modal-close"
               onClick={() => !submitting && onClose()}
-              aria-label="Close"
+              aria-label={t('common.close')}
               disabled={submitting}
             >
               ×
@@ -175,17 +177,21 @@ export function LabTestFormModal({
         <form className="lab-test-modal__form" onSubmit={(e) => void handleSubmit(e)}>
           <div className="lab-test-modal__body">
             <div className="lab-test-modal__grid">
-              <p className="user-form-modal__section-label lab-test-modal__area-tl">Test details</p>
-              <p className="user-form-modal__section-label lab-test-modal__area-tr">Pricing (MMK)</p>
+              <p className="user-form-modal__section-label lab-test-modal__area-tl">
+                {t('labTests.form.testDetails')}
+              </p>
+              <p className="user-form-modal__section-label lab-test-modal__area-tr">
+                {t('labTests.form.pricing')}
+              </p>
 
               <div className="lab-test-modal__col-left">
                 <div className="field">
-                  <label htmlFor="ltf-name">Test name</label>
+                  <label htmlFor="ltf-name">{t('labTests.form.testName')}</label>
                   <input
                     id="ltf-name"
                     value={testName}
                     onChange={(e) => setTestName(e.target.value)}
-                    placeholder="e.g. Liver function panel"
+                    placeholder={t('labTests.form.testNamePlaceholder')}
                     autoComplete="off"
                     autoFocus
                     disabled={submitting}
@@ -193,12 +199,12 @@ export function LabTestFormModal({
                 </div>
 
                 <div className="field lab-test-modal__desc">
-                  <label htmlFor="ltf-desc">Description</label>
+                  <label htmlFor="ltf-desc">{t('labTests.form.description')}</label>
                   <textarea
                     id="ltf-desc"
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
-                    placeholder="What the panel includes, fasting notes, etc."
+                    placeholder={t('labTests.form.descriptionPlaceholder')}
                     disabled={submitting}
                   />
                 </div>
@@ -216,32 +222,32 @@ export function LabTestFormModal({
                     <span className="form-switch__track" aria-hidden="true" />
                   </span>
                   <span className="form-switch__text">
-                    <span className="form-switch__title">{isActive ? 'Test is active' : 'Test is inactive'}</span>
-                    <span className="form-switch__desc">
-                      Inactive tests stay in the catalog for admin but are hidden from published role pricing.
+                    <span className="form-switch__title">
+                      {isActive ? t('labTests.form.activeTitle') : t('labTests.form.inactiveTitle')}
                     </span>
+                    <span className="form-switch__desc">{t('labTests.form.activeDesc')}</span>
                   </span>
                 </label>
 
                 <div className="lab-test-modal__codes-stack">
                   <div className="field">
-                    <label htmlFor="ltf-code">Test code (optional)</label>
+                    <label htmlFor="ltf-code">{t('labTests.form.testCode')}</label>
                     <input
                       id="ltf-code"
                       value={testCode}
                       onChange={(e) => setTestCode(e.target.value.toUpperCase())}
-                      placeholder="Auto from name if empty"
+                      placeholder={t('labTests.form.testCodePlaceholder')}
                       autoComplete="off"
                       disabled={submitting}
                     />
                   </div>
                   <div className="field">
-                    <label htmlFor="ltf-cat">Category (optional)</label>
+                    <label htmlFor="ltf-cat">{t('labTests.form.category')}</label>
                     <input
                       id="ltf-cat"
                       value={category}
                       onChange={(e) => setCategory(e.target.value)}
-                      placeholder="e.g. Chemistry"
+                      placeholder={t('labTests.form.categoryPlaceholder')}
                       autoComplete="off"
                       disabled={submitting}
                     />
@@ -252,7 +258,7 @@ export function LabTestFormModal({
               <div className="lab-test-modal__col-right">
                 <div className="lab-test-modal__prices-stack">
                   <div className="field">
-                    <label htmlFor="ltf-price">Base price</label>
+                    <label htmlFor="ltf-price">{t('labTests.form.basePrice')}</label>
                     <input
                       id="ltf-price"
                       type="number"
@@ -280,11 +286,20 @@ export function LabTestFormModal({
             ) : null}
             <div className="lab-test-modal__footer-actions">
               <div className="row-actions">
-                <button type="button" className="btn btn-secondary" onClick={() => !submitting && onClose()} disabled={submitting}>
-                  Cancel
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => !submitting && onClose()}
+                  disabled={submitting}
+                >
+                  {t('common.cancel')}
                 </button>
                 <button type="submit" className="btn btn-primary" disabled={submitting}>
-                  {submitting ? 'Saving…' : mode === 'create' ? 'Create test' : 'Save changes'}
+                  {submitting
+                    ? t('common.saving')
+                    : mode === 'create'
+                      ? t('labTests.form.createSubmit')
+                      : t('labTests.form.saveChanges')}
                 </button>
               </div>
             </div>

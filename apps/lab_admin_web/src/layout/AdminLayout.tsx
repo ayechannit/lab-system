@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { IdhcBrandLockup } from '../components/common/IdhcBrandLockup'
+import { HeaderLanguageMenu } from '../components/common/HeaderLanguageMenu'
 import { HeaderThemeMenu } from '../components/common/HeaderThemeMenu'
 import { NotificationBell } from '../components/common/NotificationBell'
 import { MyProfileModal } from '../components/profile/MyProfileModal'
@@ -9,6 +11,7 @@ import { useAuth } from '../hooks/AuthContext'
 import { useToast } from '../hooks/ToastContext'
 import { fetchStaffById } from '../services/staffService'
 import type { SessionRole } from '../model/types'
+import { roleLabel } from '../utils/roleLabels'
 import './admin-layout.css'
 
 const MOBILE_NAV_BREAKPOINT = 900
@@ -21,51 +24,41 @@ function initialsFromName(name: string): string {
   return one.slice(0, 2).toUpperCase()
 }
 
-function roleDisplay(role: SessionRole | null): string {
-  if (!role) return 'Signed in'
-  const map: Record<SessionRole, string> = {
-    admin: 'Admin',
-    lab_technician: 'Lab technician',
-    reception: 'Reception',
-    manager: 'Manager',
-    collector: 'Collector',
-    clinic: 'Clinic',
-    doctor: 'Doctor',
-    patient: 'Patient',
-  }
-  return map[role] ?? role
+function roleDisplay(role: SessionRole | null, t: (key: string) => string): string {
+  if (!role) return t('common.signedIn')
+  return roleLabel(role)
 }
 
 type NavItem = {
   to: string
-  label: string
+  labelKey: string
   /** Material Symbols ligature name (`material-symbols-outlined`). */
   icon: string
   end?: boolean
 }
 
 const nav: NavItem[] = [
-  { to: '/orders', label: 'Orders', icon: 'receipt_long' },
-  { to: '/lab-tests', label: 'Lab tests', icon: 'science' },
-  { to: '/staff', label: 'Staff', icon: 'badge' },
-  { to: '/users', label: 'Users', icon: 'group' },
-  { to: '/collections', label: 'Collection', icon: 'water_drop' },
-  { to: '/results', label: 'Lab results', icon: 'assignment' },
-  { to: '/ratings', label: 'Ratings & feedback', icon: 'reviews' },
-  { to: '/discounts', label: 'Discounts', icon: 'sell' },
-  { to: '/referral-fees', label: 'Referral fees', icon: 'payments' },
-  { to: '/advertisements', label: 'Advertisements', icon: 'campaign' },
-  { to: '/loyalty', label: 'Loyalty points', icon: 'card_giftcard' },
-  { to: '/system-settings', label: 'System settings', icon: 'settings' },
-  { to: '/reports', label: 'Reports', icon: 'bar_chart' },
+  { to: '/orders', labelKey: 'nav.orders', icon: 'receipt_long' },
+  { to: '/lab-tests', labelKey: 'nav.labTests', icon: 'science' },
+  { to: '/staff', labelKey: 'nav.staff', icon: 'badge' },
+  { to: '/users', labelKey: 'nav.users', icon: 'group' },
+  { to: '/collections', labelKey: 'nav.collections', icon: 'water_drop' },
+  { to: '/results', labelKey: 'nav.results', icon: 'assignment' },
+  { to: '/ratings', labelKey: 'nav.ratings', icon: 'reviews' },
+  { to: '/discounts', labelKey: 'nav.discounts', icon: 'sell' },
+  { to: '/referral-fees', labelKey: 'nav.referralFees', icon: 'payments' },
+  { to: '/advertisements', labelKey: 'nav.advertisements', icon: 'campaign' },
+  { to: '/loyalty', labelKey: 'nav.loyalty', icon: 'card_giftcard' },
+  { to: '/system-settings', labelKey: 'nav.systemSettings', icon: 'settings' },
+  { to: '/reports', labelKey: 'nav.reports', icon: 'bar_chart' },
 ]
 
-function headerTitleForPath(pathname: string): string {
+function headerTitleForPath(pathname: string, t: (key: string) => string): string {
   const path = pathname.replace(/\/$/, '') || '/'
   const match = nav.find((item) => item.to === path)
-  if (match) return match.label
-  if (path === '/') return nav[0].label
-  return 'Healthcare lab admin'
+  if (match) return t(match.labelKey)
+  if (path === '/') return t(nav[0].labelKey)
+  return t('common.appTitle')
 }
 
 function readSidebarCollapsed(): boolean {
@@ -74,11 +67,12 @@ function readSidebarCollapsed(): boolean {
 }
 
 export function AdminLayout() {
+  const { t } = useTranslation()
   const { showSuccess } = useToast()
   const { signOut, account, role, refreshAccount } = useAuth()
   const navigate = useNavigate()
   const { pathname } = useLocation()
-  const headerTitle = headerTitleForPath(pathname)
+  const headerTitle = headerTitleForPath(pathname, t)
   const [profileOpen, setProfileOpen] = useState(false)
   const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null)
 
@@ -173,7 +167,7 @@ export function AdminLayout() {
         <button
           type="button"
           className="admin-drawer-backdrop"
-          aria-label="Close navigation menu"
+          aria-label={t('common.closeNav')}
           onClick={closeMobileDrawer}
         />
       ) : null}
@@ -189,18 +183,22 @@ export function AdminLayout() {
           aria-expanded={isMobile ? mobileDrawerOpen : !sidebarCollapsed}
           aria-controls="admin-sidebar"
           aria-label={
-            isMobile ? 'Close navigation menu' : sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar to icons'
+            isMobile
+              ? t('common.closeNav')
+              : sidebarCollapsed
+                ? t('common.expandSidebar')
+                : t('common.collapseSidebar')
           }
         >
           <IdhcBrandLockup compact={!isMobile && sidebarCollapsed} />
         </button>
-        <nav className="admin-nav" aria-label="Main navigation">
+        <nav className="admin-nav" aria-label={t('common.mainNav')}>
           {nav.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
               end={item.end}
-              title={!isMobile && sidebarCollapsed ? item.label : undefined}
+              title={!isMobile && sidebarCollapsed ? t(item.labelKey) : undefined}
               className={({ isActive }) =>
                 `admin-nav-link${isActive ? ' admin-nav-link--active' : ''}`
               }
@@ -211,7 +209,7 @@ export function AdminLayout() {
               <span className="admin-nav-link__icon" aria-hidden="true">
                 <span className="material-symbols-outlined">{item.icon}</span>
               </span>
-              <span className="admin-nav-link__label">{item.label}</span>
+              <span className="admin-nav-link__label">{t(item.labelKey)}</span>
             </NavLink>
           ))}
         </nav>
@@ -219,7 +217,7 @@ export function AdminLayout() {
           <button
             type="button"
             className="admin-sidebar-logout"
-            title={!isMobile && sidebarCollapsed ? 'Logout' : undefined}
+            title={!isMobile && sidebarCollapsed ? t('common.logout') : undefined}
             onClick={() => {
               closeMobileDrawer()
               signOut()
@@ -229,7 +227,7 @@ export function AdminLayout() {
             <span className="admin-sidebar-logout__icon" aria-hidden="true">
               <span className="material-symbols-outlined">logout</span>
             </span>
-            <span className="admin-sidebar-logout__label">Logout</span>
+            <span className="admin-sidebar-logout__label">{t('common.logout')}</span>
           </button>
         </div>
       </aside>
@@ -240,7 +238,7 @@ export function AdminLayout() {
               <button
                 type="button"
                 className="admin-header-logo-btn"
-                aria-label="Open navigation menu"
+                aria-label={t('common.openNav')}
                 aria-controls="admin-sidebar"
                 aria-expanded={false}
                 onClick={() => setMobileDrawerOpen(true)}
@@ -257,7 +255,7 @@ export function AdminLayout() {
                   type="button"
                   className="admin-profile"
                   title={`${account.name} · ${account.email}`}
-                  aria-label={`Account menu for ${account.name}. Edit profile and settings.`}
+                  aria-label={t('common.accountMenuFor', { name: account.name })}
                   aria-haspopup="dialog"
                   aria-expanded={profileOpen}
                   onClick={() => setProfileOpen(true)}
@@ -275,12 +273,13 @@ export function AdminLayout() {
                   )}
                   <div className="admin-profile__meta">
                     <span className="admin-profile__name">{account.name}</span>
-                    <span className="admin-profile__role">{roleDisplay(role)}</span>
+                    <span className="admin-profile__role">{roleDisplay(role, t)}</span>
                   </div>
                   <span className="admin-profile__chevron" aria-hidden="true">
                     <span className="material-symbols-outlined">expand_more</span>
                   </span>
                 </button>
+                <HeaderLanguageMenu />
                 <HeaderThemeMenu />
                 <NotificationBell />
                 <MyProfileModal
@@ -290,7 +289,7 @@ export function AdminLayout() {
                   onClose={() => setProfileOpen(false)}
                   onSuccess={() => {
                     void refreshAccount()
-                    showSuccess('Profile updated.')
+                    showSuccess(t('common.profileUpdated'))
                   }}
                 />
               </>

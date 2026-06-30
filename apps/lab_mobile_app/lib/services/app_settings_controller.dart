@@ -20,6 +20,7 @@ class AppSettingsController extends ChangeNotifier {
 
   String get labName => _settings.labName;
   String? get logoUrl => _settings.logoUrl;
+  String? get uiLocale => _settings.uiLocale;
   ThemeMode get themeMode => _settings.isDarkTheme ? ThemeMode.dark : ThemeMode.light;
 
   Future<void> load() async {

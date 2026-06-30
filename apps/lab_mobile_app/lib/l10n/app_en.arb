@@ -1,0 +1,289 @@
+{
+  "@@locale": "en",
+  "appTitle": "Lab Patient App",
+  "@appTitle": {
+    "description": "Application title"
+  },
+  "navHome": "HOME",
+  "navOrders": "ORDERS",
+  "navResults": "RESULTS",
+  "navPoints": "POINTS",
+  "navProfile": "PROFILE",
+  "language": "Language",
+  "languageEnglish": "English",
+  "languageMyanmar": "Myanmar (Burmese)",
+  "signIn": "Sign in",
+  "signingIn": "Signing in…",
+  "email": "Email",
+  "password": "Password",
+  "rememberMe": "Keep me signed in",
+  "forgotPassword": "Forgot password?",
+  "noAccountPrompt": "Don't have an account?",
+  "createNewAccount": "Create New Account",
+  "emailRequired": "Enter your email",
+  "emailInvalid": "Enter a valid email",
+  "passwordRequired": "Enter your password",
+  "accountSettings": "ACCOUNT SETTINGS",
+  "editProfile": "Edit Profile",
+  "editProfileSubtitle": "Personal information, medical history",
+  "labAppearance": "Lab & appearance",
+  "labAppearanceSubtitle": "Theme, logo, and contact info from your lab",
+  "loyaltyStatus": "LOYALTY STATUS",
+  "viewLoyaltyPoints": "View loyalty points",
+  "pointsCount": "{count} points",
+  "@pointsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "phone": "Phone",
+  "signOut": "Sign out",
+  "orderTracking": "Order tracking",
+  "collectorPending": "Pending",
+  "preferredCollector": "Preferred collector",
+  "noCollectorPreference": "No preference — lab assigns",
+  "collectorOptionalHint": "Optional — same collector when planning routes",
+  "welcomeBack": "Welcome back",
+  "homeRefreshHint": "Summary cards and charts are loaded from the lab server. Pull down anytime to refresh.",
+  "homeOverviewLabel": "YOUR OVERVIEW",
+  "homeAccountSummary": "Account summary",
+  "homeLiveMetrics": "Live metrics from your lab account",
+  "homePromotionsLabel": "PROMOTIONS",
+  "homeOffersUpdates": "Offers & updates",
+  "homeLearnMore": "Learn more",
+  "homeCouldNotOpenLink": "Could not open link",
+  "homeTotalOrders": "Total orders",
+  "homeCompletedOrdersCount": "{count} completed",
+  "@homeCompletedOrdersCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "homeTotalSpent": "Total spent",
+  "homeDeliveredOrders": "Delivered orders",
+  "homeLoyaltyPoints": "Loyalty points",
+  "homeTapForHistory": "Tap for history",
+  "homeInProgress": "In progress",
+  "homeOpenOrders": "Open orders",
+  "homeActiveOrder": "Active order",
+  "homeReportOut": "Report out",
+  "homeDailySpend": "Daily spend",
+  "homeOrderActivityByDay": "Order activity by day",
+  "homeNoOrdersYet": "No orders yet. Your spend trend will appear here after your first order.",
+  "homeSpendTooltip": "{amount} MMK · {count} order(s)",
+  "@homeSpendTooltip": {
+    "placeholders": {
+      "amount": { "type": "String" },
+      "count": { "type": "int" }
+    }
+  },
+  "homeTopOrderedTests": "Top ordered tests",
+  "homeMostRequestedTests": "Your most requested lab tests",
+  "homeNoTopTestsYet": "Once you place orders, your favourite tests will show up here.",
+  "homeOrdersCount": "{count} orders",
+  "@homeOrdersCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "homeOrderCountSingular": "1 order",
+  "homeMmkSuffix": "MMK",
+  "ordersNewOrder": "New order",
+  "ordersTitle": "Your orders",
+  "ordersSubtitle": "Active requests that are not yet delivered.",
+  "ordersNoActiveYet": "No active orders yet",
+  "ordersNoActiveHint": "Use the card above to place your first lab test. Orders stay here until they are delivered.",
+  "ordersActiveCount": "Active orders ({count})",
+  "@ordersActiveCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "ordersStatus": "Status",
+  "ordersSort": "Sort",
+  "ordersAllOrders": "All orders",
+  "ordersAll": "All",
+  "ordersFilterByStatus": "Filter by status",
+  "ordersActiveOnlyHint": "Only active orders that are not yet delivered appear here.",
+  "ordersSortBy": "Sort by",
+  "ordersNoStatusOrders": "No {status} orders",
+  "@ordersNoStatusOrders": {
+    "placeholders": { "status": { "type": "String" } }
+  },
+  "ordersTryAnotherFilter": "Try another status tab or place a new order.",
+  "ordersOrderLabTest": "Order lab test",
+  "ordersOrderLabTestHint": "Add patient details, pick tests, and schedule collection",
+  "ordersPlaced": "Placed {date}",
+  "@ordersPlaced": {
+    "placeholders": { "date": { "type": "String" } }
+  },
+  "ordersPatientFallback": "Patient",
+  "ordersStatusCount": "{label} · {count}",
+  "@ordersStatusCount": {
+    "placeholders": {
+      "label": { "type": "String" },
+      "count": { "type": "int" }
+    }
+  },
+  "orderStatusPending": "Pending",
+  "orderStatusScheduled": "Scheduled",
+  "orderStatusCollecting": "Collecting",
+  "orderStatusRunning": "Running",
+  "orderStatusCompleted": "Completed",
+  "orderStatusDelivered": "Delivered",
+  "orderStatusUnknown": "Unknown",
+  "ordersSortNewestFirst": "Newest first",
+  "ordersSortOldestFirst": "Oldest first",
+  "ordersSortRecentlyUpdated": "Recently updated",
+  "ordersSortByStatus": "Status",
+  "ordersSortPriority": "Priority (urgent first)",
+  "ordersSortRecentlyReleased": "Recently released",
+  "ordersSortOldestReleased": "Oldest released",
+  "ordersSortNewestPlaced": "Newest placed",
+  "ordersSortOldestPlaced": "Oldest placed",
+  "ordersRate": "Rate",
+  "ordersRated": "Rated",
+  "ordersRateThisOrder": "Rate this order",
+  "ordersCommentOptional": "Comment (optional)",
+  "ordersCommentHint": "Share feedback for the lab team",
+  "ordersSubmitRating": "Submit rating",
+  "ordersThanksFeedback": "Thanks for your feedback",
+  "ordersRatedToast": "You rated this order {stars} stars.",
+  "@ordersRatedToast": {
+    "placeholders": { "stars": { "type": "int" } }
+  },
+  "ordersRatedToastSingular": "You rated this order 1 star.",
+  "ordersRatingFailed": "Rating failed",
+  "ordersYourRating": "Your rating",
+  "ordersYourComment": "Your comment",
+  "ordersNoComment": "No comment was added with this rating.",
+  "resultsTitle": "Your results",
+  "resultsSubtitle": "Lab reports the team has released to you.",
+  "resultsNoReleasedYet": "No released results yet",
+  "resultsNoReleasedHint": "When the lab releases your report, it will show up here for PDF download and AI Check.",
+  "resultsReleasedReportsCount": "Released reports ({count})",
+  "@resultsReleasedReportsCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "resultsReleasedDate": "Released {date}",
+  "@resultsReleasedDate": {
+    "placeholders": { "date": { "type": "String" } }
+  },
+  "resultsReleasedBadge": "Released",
+  "labReportTitle": "Lab report",
+  "labReportTestsSection": "TESTS IN THIS ORDER",
+  "labReportTestCount": "{count, plural, =1{1 test}other{{count} tests}}",
+  "@labReportTestCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "labReportCombinedHint": "Some tests are grouped into combined reports. Download the shared PDF or run AI Check from each group.",
+  "labReportSeparateHint": "Download the official PDF or run AI Check for each test separately.",
+  "labReportNoTestLines": "No test line items were found for this order.",
+  "labReportPdfsNotUploadedYet": "The lab has released this order, but PDFs are not uploaded yet. Check back soon or contact the lab.",
+  "labReportSummaryValues": "Summary values",
+  "labReportNoReportLoaded": "No report loaded",
+  "labReportSelectFromResults": "Select a released order from Results.",
+  "labReportPatient": "Patient",
+  "labReportAge": "Age {age}",
+  "@labReportAge": {
+    "placeholders": { "age": { "type": "int" } }
+  },
+  "labReportOrderLine": "Order {ref} · {date}",
+  "@labReportOrderLine": {
+    "placeholders": {
+      "ref": { "type": "String" },
+      "date": { "type": "String" }
+    }
+  },
+  "labReportPdfCountOne": "{released}/{total} PDF",
+  "@labReportPdfCountOne": {
+    "placeholders": {
+      "released": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "labReportPdfCountMany": "{released}/{total} PDFs",
+  "@labReportPdfCountMany": {
+    "placeholders": {
+      "released": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "labReportCombinedReport": "Combined report",
+  "labReportTestsSharePdf": "{count, plural, =1{1 test shares one PDF}other{{count} tests share one PDF}}",
+  "@labReportTestsSharePdf": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "labReportPdfNotUploadedCombined": "PDF not uploaded yet for this combined report.",
+  "labReportPdfNotUploadedTest": "PDF not uploaded yet for this test.",
+  "labReportDownloadCombinedPdf": "Download combined PDF",
+  "labReportDownloadPdf": "Download PDF",
+  "labReportDownloading": "Downloading…",
+  "labReportRunAiCheck": "Run AI Check",
+  "labReportRunningAiCheck": "Running AI Check…",
+  "labReportViewAiSummary": "View AI summary",
+  "labReportPdfReady": "PDF ready",
+  "labReportPdfPending": "Pending",
+  "labReportDownloadStarted": "Download started",
+  "labReportReportSaved": "Report saved",
+  "labReportDownloadFailed": "Could not download the report. Try again.",
+  "labReportAiCheckFailed": "Could not run AI Check. Try again.",
+  "loyaltyLoadError": "Could not load point history. Pull down to retry.",
+  "loyaltyAvailableBalance": "Available balance",
+  "loyaltyPointsUnit": "pts",
+  "loyaltyBalanceHint": "Balance comes from your account total_points. Points are earned when the lab verifies a payment, using the rules below.",
+  "loyaltyHowToEarn": "How to earn",
+  "loyaltyEarnRulesHint": "Active rules from your lab (point_settings).",
+  "loyaltySpendRule": "Spend {amount} MMK → +{points} pts",
+  "@loyaltySpendRule": {
+    "placeholders": {
+      "amount": { "type": "String" },
+      "points": { "type": "int" }
+    }
+  },
+  "loyaltyEarned": "Earned",
+  "loyaltyRedeemed": "Redeemed",
+  "loyaltyTransactions": "Transactions",
+  "loyaltyTxnsShort": "Txns",
+  "loyaltyActivity": "Activity",
+  "loyaltyFilterAll": "All",
+  "loyaltyFilterAdjustments": "Adjustments",
+  "loyaltyPaymentOrderRef": "Payment / order ref.",
+  "loyaltyNothingToShow": "Nothing to show",
+  "loyaltyNoActivityYet": "No activity yet",
+  "loyaltyNoFilteredTransactions": "No {type} transactions in this filter.",
+  "@loyaltyNoFilteredTransactions": {
+    "placeholders": { "type": { "type": "String" } }
+  },
+  "loyaltyNoActivityHint": "Your point activity will appear here after lab visits, ratings, or rewards from the lab.",
+  "loyaltyTypeAdjustment": "Adjustment",
+  "loyaltyTypePoints": "Points",
+  "profileEditTitle": "Edit profile",
+  "profileBack": "Back",
+  "profileEditIntro": "Update how the lab reaches you. Changes apply to your signed-in account.",
+  "profileContactDetails": "Contact details",
+  "profileContactHint": "Used for orders, results, and account recovery.",
+  "profileFullName": "Full name",
+  "profileNameRequired": "Enter your name",
+  "profileNameTooShort": "Name looks too short",
+  "profilePhoneRequired": "Enter a phone number",
+  "profilePhoneInvalid": "Enter a valid phone number",
+  "profileSaveChanges": "Save changes",
+  "profileCancel": "Cancel",
+  "profileSaved": "Profile saved",
+  "profileSaveFailed": "Could not save changes",
+  "profileSavedHint": "Your details are updated on the lab account. Returning to your profile…",
+  "profileSaveErrorHint": "Please check your connection and try again.",
+  "profileDismiss": "Dismiss",
+  "profileAddress": "Address",
+  "profileAddressHint": "Street, city, etc.",
+  "profileChooseOnMap": "Choose on map",
+  "profileLatLong": "Latitude–Longitude",
+  "profileLookingUpAddress": "Looking up address…",
+  "profileNoAddressMatch": "No match — try a fuller address or choose on the map.",
+  "profileAddressLookupFailed": "Could not look up address. Try again or choose on the map.",
+  "profilePhotoTitle": "Profile photo",
+  "profileTakePhoto": "Take photo",
+  "profileChooseFromGallery": "Choose from gallery",
+  "profilePhotoPickFailed": "Could not load photo. Try again."
+}

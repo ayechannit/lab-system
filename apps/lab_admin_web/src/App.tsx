@@ -1,7 +1,9 @@
 import { BrowserRouter, HashRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { LoadingSpinner } from './components/common/LoadingSpinner'
 import { useAuth } from './hooks/AuthContext'
 import { useAppThemeSync } from './hooks/useAppTheme'
+import { useAppLocaleSync } from './hooks/useAppLocaleSync'
 import { AdminLayout } from './layout/AdminLayout'
 import { LoginPage } from './pages/auth/LoginPage'
 import { ForgotPasswordPage } from './pages/auth/ForgotPasswordPage'
@@ -20,11 +22,12 @@ import { UserManagementPage } from './pages/UserManagementPage'
 import { SystemSettingsPage } from './pages/SystemSettingsPage'
 
 function RequireAuth() {
+  const { t } = useTranslation()
   const { signedIn, initializing } = useAuth()
   if (initializing) {
     return (
       <div className="card-body-loading" style={{ minHeight: '40vh' }}>
-        <LoadingSpinner layout="block" label="Loading session" />
+        <LoadingSpinner layout="block" label={t('common.loadingSession')} />
       </div>
     )
   }
@@ -36,13 +39,18 @@ function AppThemeSync() {
   useAppThemeSync(true)
   return null
 }
-//make deployment (2026-06-29)
+function AppLocaleSync() {
+  useAppLocaleSync(true)
+  return null
+}
+
 export default function App() {
   const Router = window.location.protocol === 'file:' ? HashRouter : BrowserRouter
 
   return (
     <Router>
       <AppThemeSync />
+      <AppLocaleSync />
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />

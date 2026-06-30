@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../app/session_scope.dart';
 import '../../models/post_register_login_hint.dart';
+import '../../l10n/app_localizations.dart';
 import '../../theme/theme_extensions.dart';
 import '../../services/auth_session_storage.dart';
 import '../../services/rest_lab_user_api.dart';
@@ -65,6 +66,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final session = SessionScope.of(context);
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       body: SafeArea(
         child: LayoutBuilder(
@@ -99,7 +101,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          const _FieldLabel(label: 'Email'),
+                          _FieldLabel(label: l10n.email),
                           _InputShell(
                             child: TextFormField(
                               controller: _email,
@@ -115,8 +117,8 @@ class _LoginScreenState extends State<LoginScreen> {
                               textInputAction: TextInputAction.next,
                               validator: (v) {
                                 final t = (v ?? '').trim();
-                                if (t.isEmpty) return 'Enter your email';
-                                if (!t.contains('@')) return 'Enter a valid email';
+                                if (t.isEmpty) return l10n.emailRequired;
+                                if (!t.contains('@')) return l10n.emailInvalid;
                                 return null;
                               },
                             ),
@@ -125,7 +127,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           Row(
                             crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
-                              const Expanded(child: _FieldLabel(label: 'Password')),
+                              Expanded(child: _FieldLabel(label: l10n.password)),
                               TextButton(
                                 style: TextButton.styleFrom(
                                   padding: EdgeInsets.zero,
@@ -135,7 +137,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 onPressed: () {
                                   context.push('/forgot-password', extra: _email.text.trim());
                                 },
-                                child: const Text('Forgot password'),
+                                child: Text(l10n.forgotPassword),
                               ),
                             ],
                           ),
@@ -165,7 +167,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                               textInputAction: TextInputAction.done,
                               validator: (v) {
-                                if ((v ?? '').isEmpty) return 'Enter your password';
+                                if ((v ?? '').isEmpty) return l10n.passwordRequired;
                                 return null;
                               },
                             ),
@@ -181,7 +183,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               contentPadding: EdgeInsets.zero,
                               controlAffinity: ListTileControlAffinity.leading,
                               title: Text(
-                                'Keep me signed in',
+                                l10n.rememberMe,
                                 style: Theme.of(context)
                                     .textTheme
                                     .bodyLarge
@@ -241,14 +243,14 @@ class _LoginScreenState extends State<LoginScreen> {
                                       ),
                                     )
                                   : const Icon(Icons.arrow_forward, size: 20),
-                              label: Text(_submitting ? 'Signing in…' : 'Login'),
+                              label: Text(_submitting ? l10n.signingIn : l10n.signIn),
                             ),
                           ),
                           const SizedBox(height: 20),
                           const Divider(height: 1),
                           const SizedBox(height: 18),
                           Text(
-                            "Don't have an account?",
+                            l10n.noAccountPrompt,
                             textAlign: TextAlign.center,
                             style: Theme.of(context)
                                 .textTheme
@@ -260,7 +262,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             height: 58,
                             child: OutlinedButton(
                               onPressed: () => context.push('/register'),
-                              child: const Text('Create New Account'),
+                              child: Text(l10n.createNewAccount),
                             ),
                           ),
                         ],

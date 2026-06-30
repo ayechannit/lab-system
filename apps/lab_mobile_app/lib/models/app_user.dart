@@ -11,6 +11,7 @@ class AppUser {
     this.address = '',
     this.latitude = 0,
     this.longitude = 0,
+    this.profileImageUrl,
   });
 
   final String id;
@@ -24,6 +25,7 @@ class AppUser {
   final String address;
   final double latitude;
   final double longitude;
+  final String? profileImageUrl;
 
   AppUser copyWith({
     String? name,
@@ -34,6 +36,7 @@ class AppUser {
     String? address,
     double? latitude,
     double? longitude,
+    String? profileImageUrl,
   }) {
     return AppUser(
       id: id,
@@ -45,6 +48,7 @@ class AppUser {
       address: address ?? this.address,
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
+      profileImageUrl: profileImageUrl ?? this.profileImageUrl,
     );
   }
 }

@@ -173,6 +173,46 @@ const registerFcmToken = async (req, res) => {
   }
 };
 
+const uploadProfileImage = async (req, res) => {
+  try {
+    const targetId = req.params.id;
+    const selfId = req.user?.id;
+    if (!req.user) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+
+    const existing = await User.getById(targetId);
+    if (!existing) return res.status(404).json({ message: 'User not found' });
+
+    const isStaff = req.user.type === 'staff';
+    const isAdmin = isStaff && ['admin', 'manager'].includes(req.user.role);
+    const same =
+      String(targetId).replace(/[{}]/g, '').toLowerCase() ===
+      String(selfId).replace(/[{}]/g, '').toLowerCase();
+
+    if (!same && !isAdmin) {
+      return res.status(403).json({ message: 'You can only upload a profile image for your own account' });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ message: 'No image file uploaded' });
+    }
+
+    const StorageService = require('../utils/storageService');
+    const fileKey = await StorageService.uploadFile(req.file, 'profiles');
+    const fileUrl = (await StorageService.getFileUrl(fileKey)) || fileKey;
+
+    const updatedUser = await User.updateProfileImage(targetId, fileUrl, selfId);
+
+    res.json({
+      message: 'Profile image uploaded successfully',
+      user: updatedUser,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 module.exports = {
   getAllUsers,
   getUserById,
@@ -182,4 +222,5 @@ module.exports = {
   approveUser,
   deleteUser,
   registerFcmToken,
+  uploadProfileImage,
 };

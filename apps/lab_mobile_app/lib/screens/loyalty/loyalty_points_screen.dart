@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
+import '../../l10n/loyalty_l10n.dart';
 import '../../app/session_scope.dart';
 import '../../models/loyalty.dart';
 import '../../theme/app_colors.dart';
@@ -50,6 +52,7 @@ class _LoyaltyPointsScreenState extends State<LoyaltyPointsScreen> {
       builder: (context, _) {
         final loyalty = session.loyalty;
         final filtered = loyalty.filtered(_filter);
+        final l10n = AppLocalizations.of(context)!;
         return Scaffold(
           appBar: AppBar(
             automaticallyImplyLeading: false,
@@ -79,7 +82,7 @@ class _LoyaltyPointsScreenState extends State<LoyaltyPointsScreen> {
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
-                            'Could not load point history. Pull down to retry.\n$_loadError',
+                            '${l10n.loyaltyLoadError}\n$_loadError',
                             style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.error),
                           ),
                         ),
@@ -95,7 +98,7 @@ class _LoyaltyPointsScreenState extends State<LoyaltyPointsScreen> {
                 ],
                 const SizedBox(height: 20),
                 Text(
-                  'Activity',
+                  l10n.loyaltyActivity,
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.w700,
                         color: context.cs.primary,
@@ -137,6 +140,7 @@ class _BalanceHeroCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = context.cs;
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(22),
@@ -168,7 +172,7 @@ class _BalanceHeroCard extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            'Available balance',
+            l10n.loyaltyAvailableBalance,
             style: Theme.of(context).textTheme.labelLarge?.copyWith(
                   color: Colors.white70,
                   letterSpacing: 0.6,
@@ -194,7 +198,7 @@ class _BalanceHeroCard extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.only(bottom: 4),
                   child: Text(
-                    'pts',
+                    l10n.loyaltyPointsUnit,
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           color: Colors.white70,
                           fontWeight: FontWeight.w600,
@@ -206,7 +210,7 @@ class _BalanceHeroCard extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           Text(
-            'Balance comes from your account total_points. Points are earned when the lab verifies a payment, using the rules below.',
+            l10n.loyaltyBalanceHint,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: Colors.white.withValues(alpha: 0.82),
                   height: 1.45,
@@ -225,11 +229,12 @@ class _EarnRulesSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'How to earn',
+          l10n.loyaltyHowToEarn,
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.w700,
                 color: context.cs.primary,
@@ -237,7 +242,7 @@ class _EarnRulesSection extends StatelessWidget {
         ),
         const SizedBox(height: 4),
         Text(
-          'Active rules from your lab (point_settings).',
+          l10n.loyaltyEarnRulesHint,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(color: context.cs.onSurfaceVariant),
         ),
         const SizedBox(height: 10),
@@ -265,7 +270,7 @@ class _EarnRulesSection extends StatelessWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'Spend ${_formatMmk(rule.spendAmountMmk)} MMK → +${rule.pointsReward} pts',
+                        l10n.loyaltySpendRule(_formatMmk(rule.spendAmountMmk), rule.pointsReward),
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: context.cs.onSurfaceVariant,
                             ),
@@ -294,23 +299,24 @@ class _StatsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return LayoutBuilder(
       builder: (context, constraints) {
         final narrow = constraints.maxWidth < 520;
         final earned = _StatTile(
-          label: 'Earned',
+          label: l10n.loyaltyEarned,
           value: '+${loyalty.totalEarned}',
           icon: Icons.trending_up_rounded,
           color: AppColors.accentGreen,
         );
         final redeemed = _StatTile(
-          label: 'Redeemed',
+          label: l10n.loyaltyRedeemed,
           value: loyalty.totalRedeemed > 0 ? '-${loyalty.totalRedeemed}' : '0',
           icon: Icons.redeem_rounded,
           color: context.cs.primary,
         );
         final txCount = _StatTile(
-          label: narrow ? 'Txns' : 'Transactions',
+          label: narrow ? l10n.loyaltyTxnsShort : l10n.loyaltyTransactions,
           value: '${loyalty.entries.length}',
           icon: Icons.receipt_long_rounded,
           color: AppColors.warningLow,
@@ -399,14 +405,15 @@ class _FilterChips extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
         children: [
-          _chip(context, label: 'All', value: null),
-          _chip(context, label: 'Earned', value: PointTransactionType.earn),
-          _chip(context, label: 'Redeemed', value: PointTransactionType.redeem),
-          _chip(context, label: 'Adjustments', value: PointTransactionType.adjustment),
+          _chip(context, label: l10n.loyaltyFilterAll, value: null),
+          _chip(context, label: l10n.loyaltyEarned, value: PointTransactionType.earn),
+          _chip(context, label: l10n.loyaltyRedeemed, value: PointTransactionType.redeem),
+          _chip(context, label: l10n.loyaltyFilterAdjustments, value: PointTransactionType.adjustment),
         ],
       ),
     );
@@ -443,6 +450,7 @@ class _TransactionTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final credit = entry.isCredit;
     final accent = credit ? AppColors.accentGreen : context.cs.primary;
+    final l10n = AppLocalizations.of(context)!;
     final icon = switch (entry.transactionType) {
       PointTransactionType.earn => Icons.biotech_outlined,
       PointTransactionType.redeem => Icons.shopping_bag_outlined,
@@ -504,7 +512,7 @@ class _TransactionTile extends StatelessWidget {
                             children: [
                               _TypeBadge(type: entry.transactionType),
                               if (entry.sourceOrderId != null)
-                                _MetaChip(label: 'Payment / order ref.'),
+                                _MetaChip(label: l10n.loyaltyPaymentOrderRef),
                             ],
                           ),
                         ],
@@ -542,6 +550,7 @@ class _TypeBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
@@ -549,7 +558,7 @@ class _TypeBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
-        type.label,
+        type.localizedLabel(l10n),
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
               color: context.cs.onSurfaceVariant,
               fontWeight: FontWeight.w600,
@@ -591,9 +600,10 @@ class _EmptyHistory extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final message = hasAny
-        ? 'No ${filter?.label.toLowerCase() ?? ''} transactions in this filter.'
-        : 'Your point activity will appear here after lab visits, ratings, or rewards from the lab.';
+        ? l10n.loyaltyNoFilteredTransactions(filter?.localizedLabel(l10n).toLowerCase() ?? '')
+        : l10n.loyaltyNoActivityHint;
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.only(top: 8),
@@ -608,7 +618,7 @@ class _EmptyHistory extends StatelessWidget {
           Icon(Icons.history_rounded, size: 40, color: context.cs.primary.withValues(alpha: 0.55)),
           const SizedBox(height: 12),
           Text(
-            hasAny ? 'Nothing to show' : 'No activity yet',
+            hasAny ? l10n.loyaltyNothingToShow : l10n.loyaltyNoActivityYet,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 6),

@@ -1,4 +1,5 @@
 import { useEffect, useId } from 'react'
+import { useTranslation } from 'react-i18next'
 import { createPortal } from 'react-dom'
 import './ui.css'
 
@@ -24,7 +25,10 @@ export function ConfirmDialog({
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
+  const { t } = useTranslation()
   const titleId = useId()
+  const resolvedConfirm = confirmLabel ?? t('common.confirm')
+  const resolvedCancel = cancelLabel ?? t('common.cancel')
 
   useEffect(() => {
     if (!open) return
@@ -61,21 +65,21 @@ export function ConfirmDialog({
           <h2 id={titleId} className="modal-title">
             {title}
           </h2>
-          <button type="button" className="btn btn-ghost modal-close" onClick={onCancel} aria-label="Close">
+          <button type="button" className="btn btn-ghost modal-close" onClick={onCancel} aria-label={t('common.close')}>
             ×
           </button>
         </div>
         <p className="confirm-dialog__message">{message}</p>
         <div className="confirm-dialog__actions">
           <button type="button" className="btn btn-secondary" onClick={onCancel}>
-            {cancelLabel}
+            {resolvedCancel}
           </button>
           <button
             type="button"
             className={danger ? 'btn btn-danger' : 'btn btn-primary'}
             onClick={onConfirm}
           >
-            {confirmLabel}
+            {resolvedConfirm}
           </button>
         </div>
       </div>

@@ -33,3 +33,15 @@ exports.resetToDefaults = async (req, res, next) => {
 exports.uploadLogo = async (req, res) => {
   res.status(403).json({ message: 'Lab logo cannot be changed.' });
 };
+
+exports.updateUiLocale = async (req, res, next) => {
+  try {
+    if (req.user?.type !== 'staff') {
+      return res.status(403).json({ message: 'Only staff can update UI locale.' });
+    }
+    const settings = await SystemSetting.updateUiLocale(req.body?.ui_locale, req.user?.id);
+    res.json(settings);
+  } catch (error) {
+    next(error);
+  }
+};

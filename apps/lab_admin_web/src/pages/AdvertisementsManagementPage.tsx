@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { ApiConfigBanner } from '../components/common/ApiConfigBanner'
 import { AdvertisementFormModal } from '../components/advertisements/AdvertisementFormModal'
 import { ConfirmDialog } from '../components/common/ConfirmDialog'
 import { LoadingSpinner } from '../components/common/LoadingSpinner'
@@ -20,35 +22,37 @@ import {
   resolveAdvertisementImageUrl,
   type AdvertisementRow,
 } from '../services/advertisementService'
+import { scheduleStatusLabel } from '../utils/scheduleStatusLabels'
 import '../components/common/ui.css'
 
 const colSpan = 7
 
-function truncate(text: string | null, max = 80): string {
-  if (!text) return '—'
-  const t = text.trim()
-  if (t.length <= max) return t
-  return `${t.slice(0, max - 1)}…`
+function truncate(text: string | null, max = 80, none = '—'): string {
+  if (!text) return none
+  const trimmed = text.trim()
+  if (trimmed.length <= max) return trimmed
+  return `${trimmed.slice(0, max - 1)}…`
 }
 
 function liveStatusBadge(row: AdvertisementRow) {
   if (!row.is_active) {
-    return <span className="badge badge--neutral">Inactive</span>
+    return <span className="badge badge--neutral">{scheduleStatusLabel('inactive')}</span>
   }
   if (isAdLiveNow(row)) {
-    return <span className="badge badge--success">Live</span>
+    return <span className="badge badge--success">{scheduleStatusLabel('live')}</span>
   }
   const now = new Date()
   if (row.start_date && now < new Date(row.start_date)) {
-    return <span className="badge badge--neutral">Scheduled</span>
+    return <span className="badge badge--neutral">{scheduleStatusLabel('scheduled')}</span>
   }
   if (row.end_date && now > new Date(row.end_date)) {
-    return <span className="badge badge--neutral">Expired</span>
+    return <span className="badge badge--neutral">{scheduleStatusLabel('expired')}</span>
   }
-  return <span className="badge badge--neutral">Off schedule</span>
+  return <span className="badge badge--neutral">{scheduleStatusLabel('offSchedule')}</span>
 }
 
 export function AdvertisementsManagementPage() {
+  const { t } = useTranslation()
   const hasApi = isApiMode()
   const { showSuccess, showError } = useToast()
   const [rows, setRows] = useState<AdvertisementRow[]>([])
@@ -85,7 +89,7 @@ export function AdvertisementsManagementPage() {
         const list = await fetchAdvertisements({ sortBy: 'created_at', sortOrder: 'DESC' })
         if (!cancelled) setRows(list)
       } catch (e) {
-        if (!cancelled) setLoadError(e instanceof Error ? e.message : 'Failed to load advertisements')
+        if (!cancelled) setLoadError(e instanceof Error ? e.message : t('advertisements.loadFailed'))
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -93,7 +97,7 @@ export function AdvertisementsManagementPage() {
     return () => {
       cancelled = true
     }
-  }, [hasApi, refreshTick])
+  }, [hasApi, refreshTick, t])
 
   useEffect(() => {
     const id = window.setTimeout(() => setSearch(searchInput.trim().toLowerCase()), 300)
@@ -147,10 +151,10 @@ export function AdvertisementsManagementPage() {
     setDeleteTarget(null)
     try {
       await deleteAdvertisement(row.id)
-      showSuccess('Advertisement deleted.')
-      setRefreshTick((t) => t + 1)
+      showSuccess(t('advertisements.delete.success'))
+      setRefreshTick((tick) => tick + 1)
     } catch (e) {
-      showError(messageFromError(e, 'Delete failed'))
+      showError(messageFromError(e, t('common.delete')))
     }
   }
 
@@ -161,41 +165,29 @@ export function AdvertisementsManagementPage() {
     setPage(1)
   }
 
-  const emptyMessage = {
-    title: 'No advertisements yet',
-    body: 'Create banners and promos for the mobile app. Set optional start and end dates to schedule when they appear.',
-  }
-
   return (
     <div className="stack">
-      <PageHeader
-        title="Advertisements"
-        description="Manage promotional banners shown in the patient mobile app. Each ad can include an image, description, optional link, and schedule."
-      />
+      <PageHeader title={t('pages.advertisements.title')} description={t('pages.advertisements.description')} />
 
-      {!hasApi ? (
-        <div className="card card--muted">
-          <p style={{ margin: 0, fontSize: '0.9rem' }}>
-            Set <code>VITE_API_BASE_URL</code> in <code>apps/lab_admin_web</code> (e.g.{' '}
-            <code>http://localhost:3000</code>) and restart the dev server. Advertisements load from the backend only.
-          </p>
-        </div>
-      ) : null}
+      {!hasApi ? <ApiConfigBanner /> : null}
 
       <div className="card">
         <div className="list-tools-row">
-          <div className="list-filters-bar" aria-label="Advertisement filters">
+          <div className="list-filters-bar" aria-label={t('advertisements.filters.ariaLabel')}>
             <ListFilterSearchField
               id="ad-filter-title"
-              label="Search"
-              placeholder={listFilterSearchPlaceholder('Advertisement', 'title or description')}
+              label={t('common.searchLabel')}
+              placeholder={listFilterSearchPlaceholder(
+                t('common.title'),
+                t('advertisements.filters.searchDetail'),
+              )}
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               disabled={loading || !hasApi}
             />
             <div className="list-filters-bar__group">
               <label className="list-filters-bar__label" htmlFor="ad-filter-active">
-                Status
+                {t('common.status')}
               </label>
               <select
                 id="ad-filter-active"
@@ -204,9 +196,9 @@ export function AdvertisementsManagementPage() {
                 onChange={(e) => setActiveFilter((e.target.value || '') as '' | 'active' | 'inactive')}
                 disabled={loading || !hasApi}
               >
-                <option value="">All</option>
-                <option value="active">Active only</option>
-                <option value="inactive">Inactive only</option>
+                <option value="">{t('common.all')}</option>
+                <option value="active">{t('common.activeOnly')}</option>
+                <option value="inactive">{t('common.inactiveOnly')}</option>
               </select>
             </div>
             <button
@@ -215,44 +207,42 @@ export function AdvertisementsManagementPage() {
               onClick={clearFilters}
               disabled={loading || !hasApi || (searchInput.trim() === '' && activeFilter === '')}
             >
-              Clear filters
+              {t('filters.clearFilters')}
             </button>
           </div>
           <div className="list-tools-row__actions">
             <button
               type="button"
               className="btn btn-secondary"
-              onClick={() => setRefreshTick((t) => t + 1)}
+              onClick={() => setRefreshTick((tick) => tick + 1)}
               disabled={loading || !hasApi}
             >
-              Refresh
+              {loading ? t('common.refreshing') : t('common.refresh')}
             </button>
             <button type="button" className="btn btn-primary" onClick={openCreate} disabled={loading || !hasApi}>
-              Add advertisement
+              {t('advertisements.add')}
             </button>
           </div>
         </div>
-        <p className="catalog-mode-hint">
-          Mobile clients fetch active ads within their schedule via <code>GET /api/advertisements</code>.
-        </p>
+        <p className="catalog-mode-hint">{t('advertisements.hint')}</p>
         <div className="table-wrap">
           <table className="data-table data-table--discounts">
             <thead>
               <tr>
-                <th>Banner</th>
-                <th>Title</th>
-                <th>Description</th>
-                <th>Schedule</th>
-                <th>Status</th>
-                <th>Active</th>
-                <th className="action-col">Actions</th>
+                <th>{t('common.banner')}</th>
+                <th>{t('common.title')}</th>
+                <th>{t('common.description')}</th>
+                <th>{t('common.schedule')}</th>
+                <th>{t('common.status')}</th>
+                <th>{t('common.active')}</th>
+                <th className="action-col">{t('common.actions')}</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
                   <td colSpan={colSpan} className="data-table__state data-table__state--loading">
-                    <LoadingSpinner label="Loading advertisements" />
+                    <LoadingSpinner label={t('advertisements.loading')} />
                   </td>
                 </tr>
               ) : rows.length === 0 ? (
@@ -262,11 +252,11 @@ export function AdvertisementsManagementPage() {
                       <div className="data-table__empty-icon" aria-hidden>
                         <span className="material-symbols-outlined">campaign</span>
                       </div>
-                      <p className="data-table__empty-title">{emptyMessage.title}</p>
-                      <p className="data-table__empty-text">{emptyMessage.body}</p>
+                      <p className="data-table__empty-title">{t('advertisements.empty.title')}</p>
+                      <p className="data-table__empty-text">{t('advertisements.empty.body')}</p>
                       {hasApi ? (
                         <button type="button" className="btn btn-primary" onClick={openCreate}>
-                          Add advertisement
+                          {t('advertisements.add')}
                         </button>
                       ) : null}
                     </div>
@@ -275,7 +265,7 @@ export function AdvertisementsManagementPage() {
               ) : filtered.length === 0 ? (
                 <tr>
                   <td colSpan={colSpan} className="data-table__state">
-                    No advertisements match these filters.
+                    {t('advertisements.noMatch')}
                   </td>
                 </tr>
               ) : (
@@ -298,18 +288,18 @@ export function AdvertisementsManagementPage() {
                             }}
                           />
                         ) : (
-                          <span className="badge badge--neutral">No image</span>
+                          <span className="badge badge--neutral">{t('common.noImage')}</span>
                         )}
                       </td>
                       <td>{r.title}</td>
-                      <td>{truncate(r.description)}</td>
+                      <td>{truncate(r.description, 80, t('common.none'))}</td>
                       <td style={{ fontSize: '0.85rem' }}>{formatAdSchedulePeriod(r.start_date, r.end_date)}</td>
                       <td>{liveStatusBadge(r)}</td>
                       <td>
                         {r.is_active ? (
-                          <span className="badge badge--success">Yes</span>
+                          <span className="badge badge--success">{t('common.yes')}</span>
                         ) : (
-                          <span className="badge badge--neutral">No</span>
+                          <span className="badge badge--neutral">{t('common.no')}</span>
                         )}
                       </td>
                       <td className="action-cell">
@@ -317,9 +307,9 @@ export function AdvertisementsManagementPage() {
                           open={openMenuId === r.id}
                           onOpenChange={(next) => setOpenMenuId(next ? r.id : null)}
                           items={[
-                            { label: 'Edit', onSelect: () => openEdit(r) },
+                            { label: t('common.edit'), onSelect: () => openEdit(r) },
                             {
-                              label: 'Delete',
+                              label: t('common.delete'),
                               onSelect: () => {
                                 setDeleteTarget(r)
                                 setOpenMenuId(null)
@@ -353,10 +343,10 @@ export function AdvertisementsManagementPage() {
 
       <ConfirmDialog
         open={deleteTarget !== null}
-        title="Delete advertisement?"
-        message={deleteTarget ? `Delete "${deleteTarget.title}"? This cannot be undone.` : ''}
-        confirmLabel="Delete"
-        cancelLabel="Cancel"
+        title={t('advertisements.delete.title')}
+        message={deleteTarget ? t('advertisements.delete.message', { title: deleteTarget.title }) : ''}
+        confirmLabel={t('common.delete')}
+        cancelLabel={t('common.cancel')}
         danger
         onConfirm={() => void confirmDelete()}
         onCancel={() => setDeleteTarget(null)}
@@ -368,8 +358,10 @@ export function AdvertisementsManagementPage() {
         initial={editInitial}
         onClose={closeForm}
         onSuccess={() => {
-          showSuccess(formMode === 'edit' ? 'Advertisement updated.' : 'Advertisement created.')
-          setRefreshTick((t) => t + 1)
+          showSuccess(
+            formMode === 'edit' ? t('advertisements.toast.updated') : t('advertisements.toast.created'),
+          )
+          setRefreshTick((tick) => tick + 1)
         }}
       />
     </div>

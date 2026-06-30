@@ -1,0 +1,1271 @@
+{
+  "common": {
+    "appTitle": "Healthcare lab admin",
+    "loading": "Loading",
+    "loadingSession": "Loading session",
+    "loadingEllipsis": "Loading…",
+    "refresh": "Refresh",
+    "refreshing": "Refreshing…",
+    "save": "Save",
+    "saving": "Saving…",
+    "cancel": "Cancel",
+    "close": "Close",
+    "confirm": "Confirm",
+    "delete": "Delete",
+    "edit": "Edit",
+    "logout": "Logout",
+    "signedIn": "Signed in",
+    "openNav": "Open navigation menu",
+    "closeNav": "Close navigation menu",
+    "expandSidebar": "Expand sidebar",
+    "collapseSidebar": "Collapse sidebar to icons",
+    "mainNav": "Main navigation",
+    "language": "Language",
+    "chooseLanguage": "Choose language",
+    "english": "English",
+    "myanmar": "Myanmar (Burmese)",
+    "all": "All",
+    "active": "Active",
+    "inactive": "Inactive",
+    "yes": "Yes",
+    "no": "No",
+    "actions": "Actions",
+    "status": "Status",
+    "name": "Name",
+    "email": "Email",
+    "phone": "Phone",
+    "role": "Role",
+    "address": "Address",
+    "priority": "Priority",
+    "patient": "Patient",
+    "order": "Order",
+    "created": "Created",
+    "updated": "Updated",
+    "none": "—",
+    "test": "Test",
+    "code": "Code",
+    "searchLabel": "Search",
+    "title": "Title",
+    "description": "Description",
+    "banner": "Banner",
+    "schedule": "Schedule",
+    "startDate": "Start date",
+    "endDate": "End date",
+    "record": "Record",
+    "user": "User",
+    "allRoles": "All roles",
+    "allCustomers": "All customers",
+    "activeOnly": "Active only",
+    "inactiveOnly": "Inactive only",
+    "noImage": "No image",
+    "off": "Off",
+    "scheduleStatus": {
+      "live": "Live",
+      "scheduled": "Scheduled",
+      "expired": "Expired",
+      "offSchedule": "Off schedule"
+    },
+    "profileUpdated": "Profile updated.",
+    "accountMenuFor": "Account menu for {{name}}. Edit profile and settings.",
+    "dismissMessage": "Dismiss message",
+    "openActionsMenu": "Open actions menu"
+  },
+  "pagination": {
+    "navLabel": "Table pagination",
+    "showingRange": "Showing {{start}}–{{end}} of {{total}}",
+    "showingRangeShort": "Showing {{start}}–{{end}}",
+    "pageNumber": "Page {{page}}",
+    "rowsPerPage": "Rows per page",
+    "previous": "Previous",
+    "next": "Next",
+    "previousPage": "Previous page",
+    "nextPage": "Next page"
+  },
+  "filters": {
+    "clearFilters": "Clear filters",
+    "search": "Search…",
+    "searchSubject": "Search {{subject}}…"
+  },
+  "datetime": {
+    "defaultPlaceholder": "Select date & time",
+    "defaultTimePlaceholder": "Select time",
+    "dialogLabel": "Choose date and time",
+    "chooseTime": "Choose time",
+    "prevMonth": "Previous month",
+    "nextMonth": "Next month",
+    "time": "Time",
+    "hour": "Hour",
+    "minute": "Minute",
+    "clear": "Clear",
+    "today": "Today",
+    "now": "Now",
+    "done": "Done",
+    "startTime": "Start time"
+  },
+  "locationMap": {
+    "noLocationSelected": "No location selected. Click the map or use my location.",
+    "useMyLocation": "Use my location",
+    "gettingLocation": "Getting location…",
+    "lookingUpAddress": "Looking up address…",
+    "noAddressMatch": "No match for that address. Try a fuller line or set the pin on the map.",
+    "geocodeFailed": "Could not look up address. Set the pin on the map or try again.",
+    "geolocationNotSupported": "This browser does not support geolocation.",
+    "permissionDenied": "Location permission denied. Allow access in the browser bar or settings.",
+    "positionUnavailable": "Position unavailable. Try again or place the pin manually.",
+    "requestTimedOut": "Location request timed out. Try again.",
+    "couldNotReadLocation": "Could not read your location."
+  },
+  "api": {
+    "configureDevServerPrefix": "Set",
+    "configureDevServerMiddle": "in",
+    "configureDevServerSuffix": "(e.g.",
+    "configureDevServerExample": "http://localhost:3000",
+    "configureDevServerEnd": ") and restart the dev server.",
+    "configureSignIn": "Set VITE_API_BASE_URL and sign in to load data from the backend.",
+    "configureSignInOrders": "Set VITE_API_BASE_URL and sign in to load orders from the backend.",
+    "configureSignInResults": "Set VITE_API_BASE_URL and sign in to load orders.",
+    "configureSettings": "Set VITE_API_BASE_URL to load and save settings from the backend.",
+    "configureReports": "Set VITE_API_BASE_URL and sign in to load reporting data.",
+    "configureNotifications": "Set VITE_API_BASE_URL to connect the notification inbox."
+  },
+  "nav": {
+    "orders": "Orders",
+    "labTests": "Lab tests",
+    "staff": "Staff",
+    "users": "Users",
+    "collections": "Collection",
+    "results": "Lab results",
+    "ratings": "Ratings & feedback",
+    "discounts": "Discounts",
+    "referralFees": "Referral fees",
+    "advertisements": "Advertisements",
+    "loyalty": "Loyalty points",
+    "systemSettings": "System settings",
+    "reports": "Reports"
+  },
+  "roles": {
+    "admin": "Admin",
+    "lab_technician": "Lab technician",
+    "reception": "Reception",
+    "manager": "Manager",
+    "collector": "Collector",
+    "clinic": "Clinic",
+    "doctor": "Doctor",
+    "patient": "Patient",
+    "phlebotomist": "Phlebotomist",
+    "all": "All"
+  },
+  "theme": {
+    "label": "Theme",
+    "changeAppearance": "Change appearance",
+    "chooseTheme": "Choose theme",
+    "light": "Light",
+    "dark": "Dark",
+    "idhc": "IDHC",
+    "saveFailed": "Could not save theme.",
+    "appearanceLegend": "Appearance",
+    "lightDesc": "Default bright workspace",
+    "darkDesc": "Reduced glare for low-light rooms",
+    "idhcDesc": "International Diagnostic & Healthcare Center — red & gold brand"
+  },
+  "auth": {
+    "staffSignIn": "Staff sign in",
+    "staffSignInHint": "Use your lab staff account (admin, technician, reception, or manager).",
+    "email": "Email",
+    "password": "Password",
+    "forgotPassword": "Forgot Password?",
+    "rememberMe": "Keep me signed in",
+    "signIn": "Sign in",
+    "signingIn": "Signing in…",
+    "signInFailed": "Sign-in failed",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
+    "marketingHeadline": "Advancing Science through Precision.",
+    "marketingLead": "Join thousands of clinical professionals managing laboratory workflows with state-of-the-art security and compliance.",
+    "emailPlaceholder": "you@example.com",
+    "passwordPlaceholder": "••••••••",
+    "forgotTitle": "Forgot password",
+    "resetTitle": "Reset password",
+    "forgotSubtitle": "Enter your staff email and we will send a 6-digit verification code (valid for 15 minutes).",
+    "resetSubtitle": "Enter the code sent to {{email}} and choose a new password.",
+    "resetSubtitleFallbackEmail": "your email",
+    "verificationCode": "Verification code",
+    "codePlaceholder": "000000",
+    "newPassword": "New password",
+    "confirmPassword": "Confirm password",
+    "newPasswordPlaceholder": "At least 8 characters",
+    "confirmPasswordPlaceholder": "Re-enter new password",
+    "sendCode": "Send verification code",
+    "sendingCode": "Sending code…",
+    "resetPassword": "Reset password",
+    "updatingPassword": "Updating password…",
+    "backToSignIn": "Back to sign in",
+    "useDifferentEmail": "Use a different email",
+    "resendCode": "Resend code",
+    "codeSent": "Verification code sent.",
+    "codeResent": "A new code has been sent.",
+    "sendCodeFailed": "Could not send verification code",
+    "resendCodeFailed": "Could not resend code",
+    "passwordMinLength": "Password must be at least 8 characters.",
+    "passwordMismatch": "Passwords do not match.",
+    "codeRequired": "Enter the 6-digit code from your email.",
+    "resetSuccess": "Password reset successfully.",
+    "resetFailed": "Could not reset password",
+    "brandAlt": "International Diagnostic & Healthcare Center",
+    "securityHighlights": "Security and compliance highlights",
+    "isoCertified": "ISO 15189 Certified",
+    "hipaaCompliant": "HIPAA Compliant"
+  },
+  "footer": {
+    "disclaimer": "Authorized clinical users only. This system is monitored for security and compliance (HIPAA/ISO). All access logs are recorded.",
+    "copyright": "© {{year}} International Diagnostic & Healthcare Center",
+    "privacy": "Privacy",
+    "terms": "Terms",
+    "security": "Security"
+  },
+  "profile": {
+    "title": "My profile",
+    "name": "Name",
+    "email": "Email",
+    "role": "Role",
+    "newPassword": "New password",
+    "confirmPassword": "Confirm password",
+    "namePlaceholder": "Full name",
+    "emailPlaceholder": "name@lab.example",
+    "passwordKeepHint": "Leave empty to keep current password",
+    "confirmPasswordPlaceholder": "Repeat new password",
+    "saveChanges": "Save changes",
+    "loadFailed": "Could not load profile",
+    "stillLoading": "Still loading profile…",
+    "cannotEdit": "This account cannot be edited here.",
+    "requestFailed": "Request failed",
+    "passwordMinLength": "Password must be at least {{count}} characters.",
+    "passwordMismatch": "Passwords do not match."
+  },
+  "pages": {
+    "orders": {
+      "title": "Order management",
+      "description": "Review orders from the mobile app: confirm prescription, assign lab tests with role-based discounts, set collection schedule, then advance status through delivery."
+    },
+    "labTests": {
+      "title": "Test catalog",
+      "description": "Browse and edit the tests you offer: names, codes, prices, and whether each test is available. Discount columns show example prices when a discount applies; set those rules on the Discounts page."
+    },
+    "staff": {
+      "title": "Lab staff",
+      "description": "Add and maintain people who work in the lab—roles control what they can do in the system."
+    },
+    "users": {
+      "title": "Users",
+      "description": "Manage patient and partner accounts: contact details, location, and loyalty balance."
+    },
+    "collections": {
+      "title": "Collection & routing",
+      "descriptionPending": "Choose orders that need a sample pickup, then plan an efficient collection route.",
+      "descriptionScheduled": "Review scheduled pickups and mark one order at a time as collecting when sample collection begins."
+    },
+    "results": {
+      "title": "Lab result management",
+      "description": "Advance each order through lab processing, upload result PDFs when complete, run AI review, then release to the patient."
+    },
+    "ratings": {
+      "title": "Ratings & feedback",
+      "description": "Review patient and partner ratings with order context — patient, tests, status, and contact details."
+    },
+    "discounts": {
+      "title": "Test discounts",
+      "description": "Choose how much each type of customer saves on specific tests. Changes here affect the prices people see when discounts apply."
+    },
+    "referralFees": {
+      "title": "Referral fees",
+      "description": "Configure referral commission percentages per lab test and referrer role (clinic, doctor, patient, phlebotomist)."
+    },
+    "advertisements": {
+      "title": "Advertisements",
+      "description": "Manage promotional banners shown in the patient mobile app. Each ad can include an image, description, optional link, and schedule."
+    },
+    "loyalty": {
+      "title": "Loyalty points",
+      "description": "Control how members earn points from spending, manage active promotions, and check point balances for your customers."
+    },
+    "systemSettings": {
+      "title": "System settings",
+      "description": "Appearance theme and contact details."
+    },
+    "reports": {
+      "title": "Reports & analytics",
+      "description": "Dashboard KPIs, operational queues, staff performance, and financial summaries from the reporting API."
+    },
+    "aiConfig": {
+      "title": "AI configuration",
+      "description": "Manage Gemini and OpenAI models and API keys for patient AI summaries."
+    },
+    "aiPrompts": {
+      "title": "AI prompts",
+      "description": "Create and edit reusable system prompts for AI conversations."
+    }
+  },
+  "collections": {
+    "title": "Orders ready for pickup routing",
+    "scheduledTitle": "Scheduled collections",
+    "hint": "Select one or more orders below, then set route start details and plan a collection route with AI.",
+    "scheduledHint": "Select one scheduled order, then mark it as collecting when pickup starts.",
+    "planRoute": "Plan route",
+    "planningRoute": "Planning route…",
+    "customerSelected": "Customer selected",
+    "filterOrders": "Filter orders for collection",
+    "reportDelivery": "Report delivery",
+    "collector": "Collector",
+    "collectionTime": "Collection time",
+    "loadFailed": "Failed to load orders",
+    "loading": "Loading samples",
+    "table": {
+      "order": "Order",
+      "patient": "Patient",
+      "address": "Address",
+      "priority": "Priority",
+      "status": "Status",
+      "created": "Created"
+    },
+    "empty": {
+      "noMatch": "No orders match these filters.",
+      "noServer": "No orders returned from the server.",
+      "noScheduled": "No scheduled orders in this list.",
+      "noPending": "No pending orders ready for pickup routing."
+    },
+    "selectAria": {
+      "checkbox": "Select {{name}}",
+      "radio": "Select {{name}} to start collecting"
+    },
+    "routeSetup": {
+      "title": "Route setup",
+      "selectedOne": "1 order selected",
+      "selectedMany": "{{count}} orders selected",
+      "hintSuffix": "— routes start from your lab location in System settings. Set departure time and on-site minutes per stop, then click Plan route.",
+      "startLabel": "Route start (lab location)",
+      "noLabLocationPrefix": "No lab location configured. Set it under",
+      "systemSettings": "System settings",
+      "locationContact": "Location & contact.",
+      "startTime": "Start time",
+      "startTimePlaceholder": "Select start time",
+      "duration": "Collection duration (min per stop)",
+      "collectorCount": "Number of collectors",
+      "collectorCountHint": "Split stops across up to {{max}} collector{{suffix}} for this route plan.",
+      "selectOrdersHint": "Select at least one order in the table above to set up a collection route."
+    },
+    "scheduled": {
+      "selectedPatient": "{{name}} selected — use Start collecting below the route.",
+      "selectOneHint": "Select one scheduled order in the table above, then start collecting when pickup begins.",
+      "pickupStopTitle": "Selected pickup stop",
+      "pickupHint": "This is the stop you selected in the table. Update collector or stop times, then start collecting when pickup begins.",
+      "stopsAria": "Scheduled collection stops",
+      "updateSchedule": "Update schedule",
+      "startCollecting": "Start collecting",
+      "updating": "Updating…",
+      "selectedForStart": "Selected for collection start",
+      "summaryStop": "Stop {{stop}} of {{total}} · {{patient}} · {{collector}} · {{when}}",
+      "summaryMany": "{{count}} stop{{suffix}} · {{collectors}} · last pickup {{finish}}",
+      "patientFallback": "Patient",
+      "collectorNotAssigned": "Collector not assigned",
+      "collectorNotAssignedYet": "Collector not assigned yet",
+      "collectorsCount": "{{count}} collectors",
+      "noAddress": "No address on file"
+    },
+    "routePlan": {
+      "titleOne": "Planned collection route",
+      "titleMany": "Planned routes",
+      "metaMany": "{{routes}} routes · {{stops}} stops total",
+      "metaOne": "{{count}} stop{{suffix}}",
+      "estFinish": "est. finish {{time}}",
+      "routeBadge": "Route {{index}}",
+      "stopsCount": "{{count}} stop{{suffix}}",
+      "estFinishLabel": "Est. finish",
+      "noCollectors": "No staff with role Collector yet. Add one under Staff, then assign routes.",
+      "hintMany": "Pick a collector for each route, adjust stop times if needed, then assign all routes.",
+      "hintOne": "Pick a collector, adjust stop times if needed, then assign the route.",
+      "collectorForRoute": "Collector for route {{index}}",
+      "assignedCollector": "Assigned collector",
+      "stopsForRoute": "Stops for route {{index}}",
+      "stopsInOrder": "Collection stops in route order",
+      "stopSchedule": "Stop schedule",
+      "arrive": "Arrive",
+      "from": "From",
+      "until": "Until",
+      "start": "Start",
+      "end": "End",
+      "noTests": "No tests assigned on this order",
+      "assignRoute": "Assign route",
+      "assignAllRoutes": "Assign all routes",
+      "assigning": "Assigning…",
+      "assignRoutes": "Assign routes",
+      "assignToRoute": "Assign to route"
+    },
+    "assignModal": {
+      "titleOne": "Assign collector to route",
+      "titleMany": "Assign collectors to routes",
+      "bodyMany": "Confirm assignment for {{routes}} routes ({{stops}} stops total). Pending orders move to scheduled.",
+      "bodyOne": "Confirm assignment for all {{stops}} stops using the edited per-stop times above. Pending orders move to scheduled.",
+      "noCollectors": "No collectors available. Go to Staff → add or edit a staff member and set role to Collector, then try again.",
+      "summaryAria": "Selected collectors",
+      "routeSummary": "Route {{index}} ({{count}} stop{{suffix}}):",
+      "collectorNotSelected": "Collector not selected"
+    },
+    "editModal": {
+      "title": "Update schedule",
+      "body": "Update collector and pickup times for {{patient}}{{addressPart}}.",
+      "thisPatient": "this patient",
+      "atAddress": " at {{address}}",
+      "selectCollector": "Select collector…",
+      "pickupDate": "Pickup date",
+      "stopTimes": "Stop times",
+      "collectFrom": "Collect from",
+      "collectUntil": "Collect until",
+      "saveHint": "Saved pickup time uses Collect from, or Arrive if empty",
+      "save": "Save schedule",
+      "saving": "Saving…"
+    },
+    "toasts": {
+      "routeGenerated": "Collection route generated.",
+      "routesGenerated": "{{count}} collection routes generated.",
+      "routePlanFailed": "Route planning failed.",
+      "routeAssignFailed": "Route assignment failed",
+      "selectOrdersToPlan": "Select at least one order to plan a collection route.",
+      "configureLabLocation": "Configure the lab location in System settings before planning a route.",
+      "invalidStartTime": "Enter a valid route start time.",
+      "durationRequired": "Enter collection duration per stop (minutes).",
+      "selectCollectorEach": "Select a collector for each route before assigning.",
+      "invalidStartTimeAssign": "Set a valid start time in Route setup before assigning a collector.",
+      "invalidRouteStart": "Route start time from Route setup is invalid.",
+      "signInStaffAssign": "Sign in with a staff account to assign collectors.",
+      "signInStaffStatus": "Sign in with a staff account to update order status.",
+      "scheduleUpdated": "Collector and stop time updated.",
+      "scheduleUpdateFailed": "Schedule update failed",
+      "selectCollectorStaff": "Select a collector staff member.",
+      "pickupDateRequired": "Pick a pickup date.",
+      "collectionTimeRequired": "Set a collection time for this stop.",
+      "invalidPickupDateTime": "Pickup date or time is invalid.",
+      "selectScheduledOne": "Select one scheduled order to start collection.",
+      "selectOneToStart": "Select at least one order to start collection.",
+      "statusUpdatedOne": "Order status updated to collecting.",
+      "statusUpdatedMany": "{{count}} orders updated to collecting.",
+      "statusUpdateFailed": "Status update failed",
+      "collectionNote": "Sample collection started"
+    }
+  },
+  "orders": {
+    "softCopy": "Soft copy",
+    "hardCopy": "Hard copy",
+    "softAndHardCopy": "Soft & hard copy",
+    "both": "Both",
+    "email": "Email",
+    "currency": "MMK",
+    "status": {
+      "pending": "Pending",
+      "scheduled": "Scheduled",
+      "collecting": "Collecting",
+      "running": "Running",
+      "completed": "Completed",
+      "delivered": "Delivered"
+    },
+    "priority": {
+      "urgent": "Urgent",
+      "elective": "Elective"
+    },
+    "payment": {
+      "unpaid": "Unpaid",
+      "failed": "Failed",
+      "received": "Received",
+      "pending": "Pending",
+      "verified": "Verified",
+      "partialReceived": "Partial received"
+    },
+    "filters": {
+      "ariaLabel": "Order filters",
+      "tests": "Tests",
+      "assigned": "Assigned",
+      "missing": "Missing"
+    },
+    "table": {
+      "payment": "Payment",
+      "paid": "Paid",
+      "paidTitle": "Sum of payments recorded on this order",
+      "due": "Due",
+      "dueTitle": "Amount still owed on this order",
+      "rx": "Rx",
+      "rxTitle": "Prescription file uploaded",
+      "tests": "Tests",
+      "original": "Original",
+      "final": "Final",
+      "testCount": "{{count}} test",
+      "testCount_other": "{{count}} tests",
+      "percentPaid": "{{pct}}% paid",
+      "percentCollected": "{{pct}}% of total collected"
+    },
+    "empty": {
+      "title": "No orders yet",
+      "text": "When patients place orders they will appear here. Use filters above to narrow the list."
+    },
+    "actions": {
+      "createOrder": "Create order",
+      "detail": "Detail",
+      "updateOrder": "Update order",
+      "addPayment": "Add payment",
+      "addTest": "Add test",
+      "updatePayment": "Update payment"
+    },
+    "create": {
+      "title": "Create order",
+      "orderingUser": "Ordering user",
+      "noUsers": "No users available",
+      "discountHint": "Per-test discounts use this user's role (same rules as mobile / Assign tests).",
+      "testsOnOrder": "Tests on this order",
+      "catalogManyHint": "Many tests in the catalog. Open Test and use the search box — the list shows at most {{limit}} matches at a time.",
+      "testPickerHint": "Open Test for search and checkboxes (multi-select). Selected lines also appear in the table below — use Delete there if a test is not in the current search results.",
+      "noTestsAdded": "No tests added yet.",
+      "patientName": "Patient name",
+      "age": "Age",
+      "description": "Description",
+      "originalTotal": "Original total (MMK)",
+      "blendedDiscount": "Blended discount %",
+      "finalTotal": "Final total (MMK)",
+      "submit": "Create",
+      "noUsersOrTests": "No users and no lab tests found. Create users/tests first.",
+      "noUsersOnly": "No users found. Create at least one user first."
+    },
+    "edit": {
+      "title": "Update order",
+      "saveChanges": "Save changes",
+      "discountRoleHint": "Open Test for search and checkboxes (multi-select). Discounts follow the ordering user's role ({{role}})."
+    },
+    "detail": {
+      "title": "Order detail",
+      "loading": "Loading order…",
+      "loadFailed": "Failed to load order",
+      "notFound": "Order not found.",
+      "orderingUser": "Ordering user",
+      "patientName": "Patient name",
+      "patientAge": "Age",
+      "patientPhone": "Phone",
+      "priority": "Priority",
+      "status": "Status",
+      "address": "Address",
+      "description": "Description",
+      "reportDelivery": "Report delivery",
+      "originalPrice": "Original price",
+      "finalPrice": "Final price",
+      "paymentStatus": "Payment status",
+      "payments": "Payments",
+      "amount": "Amount (MMK)",
+      "method": "Method",
+      "reference": "Reference",
+      "paidAt": "Paid at",
+      "schedule": "Schedule",
+      "collectingPerson": "Collecting person",
+      "collectionTime": "Collection time",
+      "runningTime": "Running time",
+      "reportOut": "Report out",
+      "acceptedByUser": "Accepted by user: {{value}}",
+      "noSchedule": "No schedule yet. It is created when you set status to scheduled (with collector and times).",
+      "lineItems": "Line items (tests)",
+      "noLineItems": "No tests on this order yet.",
+      "test": "Test",
+      "qty": "Qty",
+      "unitPrice": "Unit (MMK)",
+      "subtotal": "Subtotal (MMK)"
+    },
+    "prescription": {
+      "title": "Prescription",
+      "preview": "Prescription preview",
+      "alt": "Prescription",
+      "pdfTitle": "Prescription PDF",
+      "openInNewTab": "Open in new tab",
+      "viewPdf": "View PDF",
+      "download": "Download",
+      "pdfHint": "PDF preview may not appear inline in all browsers."
+    },
+    "paymentModal": {
+      "summaryAria": "Order payment summary",
+      "paidInFull": "Paid in full",
+      "amountDue": "Amount due",
+      "balanceRemaining": "Balance remaining",
+      "orderTotal": "Order total",
+      "alreadyPaid": "Already paid",
+      "eyebrow": "Record payment",
+      "title": "Add payment",
+      "amount": "Payment amount",
+      "payRemaining": "Pay remaining balance",
+      "method": "Payment method",
+      "reference": "Reference no. (optional)",
+      "previewAfter": "After this payment",
+      "previewPaid": "Total paid",
+      "previewLeft": "Remaining",
+      "record": "Record payment",
+      "recording": "Recording…"
+    },
+    "assign": {
+      "title": "Add tests to order",
+      "ordering": "Ordering:",
+      "clinicalNotes": "Clinical notes",
+      "noClinicalNotes": "None provided for this order.",
+      "hint": "Choose tests from the catalog (multi-select). Open Test and use the search box there. Discounts follow the ordering user's role ({{role}}). Up to {{limit}} matches per search.",
+      "catalogWarn": "Large catalog: open Test and search — the list shows at most {{limit}} matches at a time.",
+      "submit": "Add selected tests",
+      "submitting": "Adding…"
+    },
+    "testPicker": {
+      "label": "Test",
+      "searchLabel": "Search tests",
+      "searchPlaceholder": "Name or code…",
+      "chooseTests": "Choose tests…",
+      "selected": "{{count}} test selected",
+      "selected_other": "{{count}} tests selected",
+      "showingMatches": "Showing {{shown}} of {{total}} matches — narrow your search.",
+      "noMatches": "No matches — try different keywords.",
+      "noDiscount": "No discount",
+      "percentOff": "{{pct}}% off",
+      "done": "Done",
+      "discount": "Discount",
+      "finalMmk": "Final (MMK)"
+    },
+    "delete": {
+      "title": "Delete order?",
+      "message": "Delete order \"{{id}}\" for {{patient}}?",
+      "confirm": "Delete order"
+    },
+    "toasts": {
+      "paymentRecorded": "Payment recorded.",
+      "orderUpdated": "Order updated.",
+      "orderDeleted": "Order deleted.",
+      "deleteFailed": "Delete failed"
+    }
+  },
+  "labTests": {
+    "loadFailed": "Failed to load catalog",
+    "filters": {
+      "ariaLabel": "Catalog filters",
+      "statusAll": "All statuses",
+      "statusActive": "Active only",
+      "statusInactive": "Inactive only",
+      "tests": "Tests"
+    },
+    "actions": {
+      "create": "Create lab test",
+      "edit": "Edit"
+    },
+    "table": {
+      "name": "Name",
+      "code": "Code",
+      "base": "Base (MMK)",
+      "discount": "Disc. %",
+      "discountTitle": "Highest discount_percent among this test's configured role discounts",
+      "after": "After (MMK)",
+      "afterTitle": "Base price after that discount",
+      "status": "Status",
+      "category": "Category",
+      "actions": "Actions"
+    },
+    "loading": "Loading catalog",
+    "empty": {
+      "noMatchTitle": "No matching tests",
+      "noMatchBody": "Try a different search term or clear the filter to see more results.",
+      "filterTitle": "Nothing in this filter",
+      "filterBody": "Change the status filter or set it to \"All statuses\".",
+      "noneTitle": "No tests in the catalog yet",
+      "noneBody": "Create a lab test to start building your catalog."
+    },
+    "delete": {
+      "title": "Delete lab test?",
+      "message": "Delete \"{{name}}\"?",
+      "confirm": "Delete"
+    },
+    "toasts": {
+      "deleted": "Deleted test \"{{name}}\".",
+      "deleteFailed": "Delete failed",
+      "updated": "Lab test updated.",
+      "created": "Lab test created."
+    },
+    "form": {
+      "createTitle": "Create lab test",
+      "editTitle": "Edit lab test",
+      "testDetails": "Test details",
+      "pricing": "Pricing (MMK)",
+      "testName": "Test name",
+      "testNamePlaceholder": "e.g. Liver function panel",
+      "description": "Description",
+      "descriptionPlaceholder": "What the panel includes, fasting notes, etc.",
+      "activeTitle": "Test is active",
+      "inactiveTitle": "Test is inactive",
+      "activeDesc": "Inactive tests stay in the catalog for admin but are hidden from published role pricing.",
+      "testCode": "Test code (optional)",
+      "testCodePlaceholder": "Auto from name if empty",
+      "category": "Category (optional)",
+      "categoryPlaceholder": "e.g. Chemistry",
+      "basePrice": "Base price",
+      "errorName": "Enter a test name.",
+      "errorPrice": "Enter a valid amount (MMK).",
+      "requestFailed": "Request failed",
+      "createSubmit": "Create test",
+      "saveChanges": "Save changes"
+    }
+  },
+  "staff": {
+    "loadFailed": "Failed to load staff",
+    "filters": {
+      "ariaLabel": "Staff filters"
+    },
+    "listTitle": "Staff list",
+    "actions": {
+      "add": "Add staff",
+      "edit": "Edit"
+    },
+    "table": {
+      "id": "ID",
+      "name": "Name",
+      "email": "Email",
+      "role": "Role",
+      "active": "Active",
+      "actions": "Actions"
+    },
+    "loading": "Loading staff",
+    "empty": "No staff yet.",
+    "delete": {
+      "title": "Delete staff?",
+      "message": "Delete \"{{name}}\"?",
+      "confirm": "Delete",
+      "cannotDeleteSelf": "You cannot delete your own account."
+    },
+    "toasts": {
+      "deleted": "Deleted staff member \"{{name}}\".",
+      "deleteFailed": "Delete failed",
+      "updated": "Staff member updated.",
+      "created": "Staff member created."
+    },
+    "form": {
+      "createTitle": "Add staff",
+      "editTitle": "Edit staff",
+      "name": "Name",
+      "namePlaceholder": "Full name",
+      "email": "Email",
+      "emailPlaceholder": "name@lab.example",
+      "role": "Role",
+      "activeTitle": "Account is active",
+      "inactiveTitle": "Account is inactive",
+      "activeDesc": "Inactive staff cannot sign in until this is turned on again.",
+      "initialPassword": "Initial password (min. {{count}} characters)",
+      "newPassword": "New password (optional, min. {{count}} characters)",
+      "passwordPlaceholder": "At least {{count}} characters",
+      "passwordKeepPlaceholder": "Leave empty to keep current password",
+      "createSubmit": "Create staff",
+      "saveChanges": "Save changes",
+      "errorName": "Enter a name.",
+      "errorEmail": "Enter a valid email.",
+      "errorEmailTaken": "That email is already on the list.",
+      "errorPasswordRequired": "Enter an initial password.",
+      "errorPasswordMin": "Password must be at least {{count}} characters.",
+      "errorNewPasswordMin": "New password must be at least {{count}} characters.",
+      "requestFailed": "Request failed"
+    },
+    "profileImage": {
+      "label": "Profile image",
+      "hint": "Optional photo for this staff member — shown in the staff list and wherever their name appears (e.g. route assignment for collectors).",
+      "choose": "Choose image",
+      "clear": "Clear",
+      "notSavedYet": "{{name}} (not saved yet)",
+      "saved": "Profile image saved",
+      "none": "No image selected",
+      "invalidType": "Choose a PNG, JPG, GIF, or WebP image."
+    }
+  },
+  "users": {
+    "loadFailed": "Failed to load users",
+    "filters": {
+      "ariaLabel": "User filters",
+      "approvalPending": "Pending approval",
+      "approvalApproved": "Approved"
+    },
+    "listTitle": "User directory",
+    "actions": {
+      "add": "Add user",
+      "edit": "Edit",
+      "approve": "Approve account"
+    },
+    "table": {
+      "name": "Name",
+      "email": "Email",
+      "phone": "Phone",
+      "role": "Role",
+      "status": "Status",
+      "address": "Address",
+      "coords": "Lat / Lng",
+      "points": "Points",
+      "actions": "Actions"
+    },
+    "status": {
+      "approved": "Approved",
+      "pending": "Pending"
+    },
+    "loading": "Loading users",
+    "empty": "No users yet.",
+    "delete": {
+      "title": "Delete user?",
+      "message": "Delete \"{{name}}\"?",
+      "confirm": "Delete"
+    },
+    "toasts": {
+      "deleted": "Deleted user \"{{name}}\".",
+      "deleteFailed": "Delete failed",
+      "updated": "User updated.",
+      "created": "User created.",
+      "approved": "Approved \"{{name}}\". They can sign in on the mobile app now.",
+      "approveFailed": "Approve failed"
+    },
+    "form": {
+      "createTitle": "Add user",
+      "editTitle": "Edit user",
+      "profile": "Profile",
+      "name": "Name",
+      "namePlaceholder": "Clinic, doctor, or patient name",
+      "email": "Email",
+      "emailPlaceholder": "user@example.com",
+      "phone": "Phone",
+      "phonePlaceholder": "+95 …",
+      "role": "Role",
+      "totalPoints": "Total points",
+      "address": "Address",
+      "addressPlaceholder": "Street, city, etc.",
+      "initialPassword": "Initial password (min. {{count}} characters)",
+      "newPassword": "New password (optional, min. {{count}} characters)",
+      "passwordPlaceholder": "At least {{count}} characters",
+      "passwordKeepPlaceholder": "Leave empty to keep current password",
+      "createSubmit": "Create user",
+      "saveChanges": "Save changes",
+      "errorName": "Enter a name.",
+      "errorEmail": "Enter a valid email.",
+      "errorPhone": "Enter a phone number.",
+      "errorEmailTaken": "That email is already registered.",
+      "errorPasswordRequired": "Enter an initial password.",
+      "errorPasswordMin": "Password must be at least {{count}} characters.",
+      "errorNewPasswordMin": "New password must be at least {{count}} characters.",
+      "requestFailed": "Request failed"
+    }
+  },
+  "labResults": {
+    "loadFailed": "Failed to load orders",
+    "detailLoadFailed": "Failed to load order",
+    "filters": {
+      "ariaLabel": "Filter orders",
+      "statusAll": "All statuses"
+    },
+    "selectOrderTitle": "Select order",
+    "selectOrderHint": "Select one order in the table, then upload PDFs and run AI review in the result panel below.",
+    "selectOrderAria": "Select order for {{name}}",
+    "loadingOrders": "Loading orders",
+    "loadingDetail": "Loading order detail",
+    "emptyPanel": "Select an order in the table to upload result PDFs and run AI review.",
+    "table": {
+      "patient": "Patient",
+      "status": "Status",
+      "priority": "Priority",
+      "reportDelivery": "Report delivery",
+      "collector": "Collector",
+      "collectTime": "Collect time",
+      "final": "Final (MMK)",
+      "created": "Created"
+    },
+    "empty": {
+      "noMatch": "No orders match these filters.",
+      "noServer": "No orders returned from the server."
+    }
+  },
+  "ratings": {
+    "loadFailed": "Failed to load ratings",
+    "filters": {
+      "ariaLabel": "Filter ratings",
+      "feedback": "Feedback",
+      "searchDetail": "patient, user, order, tests, status, stars, remark",
+      "rating": "Rating",
+      "all": "All ratings",
+      "stars": "{{count}} stars",
+      "oneStar": "1 star"
+    },
+    "table": {
+      "patient": "Patient",
+      "submittedBy": "Submitted by",
+      "contact": "Contact",
+      "order": "Order",
+      "tests": "Tests",
+      "amount": "Amount",
+      "rating": "Rating",
+      "remark": "Remark",
+      "ratedOn": "Rated on",
+      "age": "Age {{age}}"
+    },
+    "starsAria": "{{score}} out of 5 stars",
+    "loading": "Loading ratings",
+    "empty": {
+      "none": "No ratings yet.",
+      "noApi": "Configure the API to load ratings.",
+      "noMatch": "No ratings match this search."
+    }
+  },
+  "discounts": {
+    "loadFailed": "Failed to load discounts",
+    "filters": {
+      "ariaLabel": "Discount filters",
+      "searchDetail": "name or code"
+    },
+    "add": "Add discount",
+    "hint": "Rules apply to active catalog tests only. Optional start/end dates limit when a discount applies; leave empty for always-on.",
+    "table": {
+      "afterDiscount": "After discount",
+      "discountPercent": "Discount (%)"
+    },
+    "loading": "Loading discounts",
+    "empty": {
+      "title": "No discount rules yet",
+      "body": "Add a rule for each test and customer type. The Lab tests list shows base price and example prices when discounts apply."
+    },
+    "noMatch": "No discounts match these filters. Clear filters or try a different test or role.",
+    "delete": {
+      "title": "Delete discount?",
+      "message": "Delete this {{role}} discount for \"{{test}}\"?",
+      "success": "Discount rule deleted."
+    },
+    "toast": {
+      "created": "Discount rule created.",
+      "updated": "Discount rule updated."
+    },
+    "form": {
+      "createTitle": "Add test discount",
+      "editTitle": "Edit test discount",
+      "labTest": "Lab test",
+      "labTests": "Lab tests",
+      "labTestsHint": "Select one or more tests. The same roles, discount %, and active setting apply to each combination.",
+      "noTestsInCatalog": "No tests in catalog.",
+      "searchTests": "Search tests",
+      "searchPlaceholder": "Search by name or code…",
+      "selectedCount": "{{count}} selected",
+      "showingMatches": "Showing {{shown}} of {{total}} matches — narrow your search.",
+      "selectColumn": "Select",
+      "clearVisibleSelection": "Clear selection for visible tests",
+      "selectAllVisible": "Select all visible tests",
+      "noSearchMatch": "No tests match your search.",
+      "selectTestAria": "Select {{name}}",
+      "selectAll": "Select all",
+      "clear": "Clear",
+      "rolesHint": "Select one or more roles. \"All roles\" uses one rule for clinic, doctor, and patient.",
+      "roles": "Roles",
+      "chooseRoles": "Choose roles…",
+      "allRolesSamePercent": "All roles (same %)",
+      "oneRoleSelected": "1 role selected",
+      "clinicDoctorPatient": "Clinic, doctor, patient",
+      "rolesSelected": "{{count}} roles selected",
+      "allRolesOption": "All roles (same %)",
+      "discountPercent": "Discount %",
+      "previewInline": "Base {{base}} MMK → after discount {{after}} MMK",
+      "previewTitle": "After discount (preview)",
+      "previewRow": "{{base}} → {{after}} MMK",
+      "startOptional": "Start (optional)",
+      "endOptional": "End (optional)",
+      "startPlaceholder": "Start date & time",
+      "endPlaceholder": "End date & time",
+      "datesHint": "Leave both dates empty for an always-on discount. Outside the range the rule is kept but does not apply.",
+      "activeTitle": "Discount is active",
+      "inactiveTitle": "Discount is inactive",
+      "activeDesc": "Inactive rows are kept but do not apply to role-based pricing until turned on again.",
+      "errorSelectTest": "Select at least one lab test.",
+      "errorSelectRole": "Select at least one role.",
+      "errorDiscountRange": "Enter a discount between 0 and 100.",
+      "errorEndBeforeStart": "End date must be on or after the start date.",
+      "requestFailed": "Request failed",
+      "creating": "Creating discount…",
+      "saving": "Saving discount…",
+      "createDiscount": "Create discount",
+      "createDiscounts": "Create {{count}} discounts",
+      "saveDiscount": "Save discount"
+    }
+  },
+  "referralFees": {
+    "loadFailed": "Failed to load referral fees",
+    "filters": {
+      "ariaLabel": "Referral fee filters",
+      "searchDetail": "name or code"
+    },
+    "add": "Add referral fee",
+    "hint": "Rules apply to active catalog tests only. Referral fee (MMK) = base price × referral %.",
+    "table": {
+      "referralPercent": "Referral (%)",
+      "fee": "Fee (MMK)"
+    },
+    "loading": "Loading referral fees",
+    "empty": {
+      "title": "No referral fee rules yet",
+      "body": "Set a referral percentage for each test and referrer role. The fee amount is calculated from the test base price."
+    },
+    "noMatch": "No referral fees match these filters. Clear filters or try a different test or role.",
+    "delete": {
+      "title": "Delete referral fee?",
+      "message": "Delete this {{role}} referral fee for \"{{test}}\"?",
+      "success": "Referral fee rule deleted."
+    },
+    "toast": {
+      "created": "Referral fee created.",
+      "updated": "Referral fee updated."
+    },
+    "form": {
+      "createTitle": "Add referral fee",
+      "editTitle": "Edit referral fee",
+      "labTest": "Lab test",
+      "labTestsHint": "Select one or more tests. The same roles, referral %, and active setting apply to each combination.",
+      "referralPercent": "Referral fee %",
+      "rolesHint": "Select one or more roles. \"All roles\" applies the same % to clinic, doctor, patient, and phlebotomist.",
+      "previewInline": "Base {{base}} MMK → referral fee {{fee}} MMK",
+      "previewTitle": "Referral fee (preview)",
+      "previewRow": "{{base}} base → {{fee}} MMK",
+      "activeTitle": "Rule is active",
+      "inactiveTitle": "Rule is inactive",
+      "activeDesc": "Inactive rows are kept but do not apply until turned on again.",
+      "errorSelectTest": "Select at least one lab test.",
+      "errorSelectRole": "Select at least one role.",
+      "errorPercentRange": "Enter a referral fee between 0 and 100%.",
+      "requestFailed": "Request failed",
+      "creating": "Creating…",
+      "saving": "Saving…",
+      "createRule": "Create rule",
+      "createRules": "Create {{count}} rules",
+      "saveRule": "Save rule"
+    }
+  },
+  "advertisements": {
+    "loadFailed": "Failed to load advertisements",
+    "filters": {
+      "ariaLabel": "Advertisement filters",
+      "searchDetail": "title or description"
+    },
+    "add": "Add advertisement",
+    "hint": "Mobile clients fetch active ads within their schedule via GET /api/advertisements.",
+    "loading": "Loading advertisements",
+    "empty": {
+      "title": "No advertisements yet",
+      "body": "Create banners and promos for the mobile app. Set optional start and end dates to schedule when they appear."
+    },
+    "noMatch": "No advertisements match these filters.",
+    "delete": {
+      "title": "Delete advertisement?",
+      "message": "Delete \"{{title}}\"? This cannot be undone.",
+      "success": "Advertisement deleted."
+    },
+    "toast": {
+      "created": "Advertisement created.",
+      "updated": "Advertisement updated."
+    },
+    "form": {
+      "createTitle": "Add advertisement",
+      "editTitle": "Edit advertisement",
+      "descriptionPlaceholder": "Optional short copy for the banner or promo card",
+      "actionUrl": "Action URL",
+      "actionUrlPlaceholder": "https://… (optional link when tapped)",
+      "startOptional": "Start (optional)",
+      "endOptional": "End (optional)",
+      "startPlaceholder": "Start date & time",
+      "endPlaceholder": "End date & time",
+      "activeTitle": "Advertisement is active",
+      "inactiveTitle": "Advertisement is inactive",
+      "activeDesc": "Inactive ads stay in the list but are not shown in the mobile app.",
+      "errorTitleRequired": "Title is required.",
+      "errorEndBeforeStart": "End date must be on or after the start date.",
+      "requestFailed": "Request failed",
+      "uploadingSaving": "Uploading & saving…",
+      "saving": "Saving…",
+      "saveChanges": "Save changes",
+      "create": "Create advertisement"
+    },
+    "banner": {
+      "label": "Banner image",
+      "hint": "Upload a banner for the mobile app, or paste an image URL. Recommended: wide landscape image (e.g. 1200×400).",
+      "chooseImage": "Choose image",
+      "pasteUrl": "Or paste URL",
+      "urlPlaceholder": "https://… or /uploads/…",
+      "noBanner": "No banner selected",
+      "uploadOnSave": "{{name}} (uploads when you save)",
+      "savedOnServer": "Banner saved on server",
+      "urlSet": "URL set",
+      "errorImageType": "Choose a PNG, JPG, GIF, or WebP image."
+    }
+  },
+  "loyalty": {
+    "loadFailed": "Failed to load loyalty data",
+    "tabsAria": "Loyalty sections",
+    "tabRules": "Earn rules",
+    "tabUsers": "Points by user",
+    "rulesTitle": "Earn rules (MMK → points)",
+    "rulesHint": "Each rule defines how many points are granted when spend reaches the MMK threshold. Optional start and end dates limit seasonal campaigns. Inactive rules are listed here but do not award points until you turn them on again.",
+    "addRule": "Add rule",
+    "usersTitle": "Points by user",
+    "usersHint": "Live total_points from each account for support and reconciliation.",
+    "filters": {
+      "usersAria": "User points search",
+      "searchDetail": "name, email, role"
+    },
+    "table": {
+      "mmkPerBatch": "MMK per batch",
+      "points": "Points",
+      "userId": "User ID",
+      "pointsBalance": "Points balance"
+    },
+    "loadingRules": "Loading earn rules",
+    "loadingUsers": "Loading point balances",
+    "noApiRules": "Connect the API to manage earn rules.",
+    "noApiUsers": "Connect the API to load user point balances.",
+    "emptyRules": "No earn rules yet. Add one to start awarding points on paid orders.",
+    "emptyUsers": "No users in the system yet.",
+    "noUserMatch": "No users match your search.",
+    "schedule": {
+      "anyTime": "Any time",
+      "from": "From {{date}}",
+      "until": "Until {{date}}"
+    },
+    "delete": {
+      "title": "Delete earn rule?",
+      "message": "Delete \"{{name}}\"? Users will no longer earn points from this rule.",
+      "success": "Earn rule deleted.",
+      "failed": "Could not delete rule"
+    },
+    "toast": {
+      "created": "Earn rule created.",
+      "updated": "Earn rule updated."
+    },
+    "form": {
+      "createTitle": "Add earn rule",
+      "editTitle": "Edit earn rule",
+      "ruleName": "Rule name",
+      "spendMmk": "MMK spend per batch",
+      "pointsPerBatch": "Points earned per batch",
+      "startOptional": "Start (optional)",
+      "endOptional": "End (optional)",
+      "startPlaceholder": "Start date & time",
+      "endPlaceholder": "End date & time",
+      "activeTitle": "Rule is active",
+      "inactiveTitle": "Rule is inactive",
+      "activeDesc": "When inactive, the rule stays in the list but does not award points on orders.",
+      "errorName": "Enter a name for this rule (e.g. Base tier).",
+      "errorSpendMin": "MMK spend per batch must be at least 1.",
+      "errorPointsMin": "Points per batch must be a whole number of at least 1.",
+      "errorEndBeforeStart": "End date must be on or after the start date.",
+      "requestFailed": "Request failed",
+      "saving": "Saving…",
+      "saveChanges": "Save changes",
+      "createRule": "Create rule",
+      "defaultTierName": "Default tier"
+    }
+  },
+  "systemSettings": {
+    "loadFailed": "Failed to load system settings",
+    "loading": "Loading system settings",
+    "draftHint": "Changes are drafts until you click Save settings. Leaving this page without saving restores your last saved theme.",
+    "saveSettings": "Save settings",
+    "appearance": "Appearance",
+    "locationContact": "Location & contact",
+    "contactPhone": "Contact phone",
+    "contactEmail": "Contact email",
+    "coordinates": "Coordinates: {{coords}}",
+    "mapHint": "Type an address to move the map pin, or click the map / use my location to set coordinates.",
+    "unsavedChanges": "Unsaved changes",
+    "unsavedSub": "Save to apply theme across the app",
+    "allSaved": "All changes saved",
+    "resetDefaults": "Reset to defaults",
+    "reset": {
+      "title": "Reset to defaults?",
+      "message": "Theme and contact fields will be restored to the application defaults. This cannot be undone except by saving again.",
+      "confirm": "Reset to defaults",
+      "success": "Settings reset to defaults.",
+      "failed": "Reset failed"
+    },
+    "save": {
+      "success": "System settings saved.",
+      "failed": "Save failed"
+    },
+    "updatedAt": "Updated {{date}}"
+  },
+  "reports": {
+    "loadFailed": "Failed to load dashboard KPIs",
+    "loadingReport": "Loading report",
+    "loadingSnapshot": "Loading snapshot",
+    "loadingChart": "Loading chart",
+    "reportingPeriod": "Reporting period",
+    "rangeDays": "{{count}} days",
+    "snapshot": "Snapshot",
+    "noSnapshot": "No snapshot data available.",
+    "snapshotLine": "{{orders}} orders · delivered revenue: {{revenue}} MMK · {{urgent}} urgent · {{users}} users · AI checks: {{pass}} pass / {{issues}} issues · avg rating {{rating}} ({{reviews}} reviews)",
+    "discountImpact": "Discount impact",
+    "metrics": {
+      "originalValue": "Original value",
+      "finalRevenue": "Final revenue",
+      "discountGiven": "Discount given",
+      "effectiveDiscount": "Effective discount",
+      "totalSpent": "Total spent",
+      "orders": "Orders",
+      "completed": "Completed",
+      "pending": "Pending",
+      "loyaltyPoints": "Loyalty points"
+    },
+    "charts": {
+      "dailyOrders": "Daily orders (last {{days}} days)",
+      "monthlyRevenue": "Monthly revenue (MMK)",
+      "revenueByChannel": "Revenue by channel",
+      "testsByCategory": "Tests by category",
+      "ratingsBreakdown": "Customer ratings breakdown",
+      "revenue": "Revenue",
+      "tests": "Tests",
+      "orders": "orders"
+    },
+    "pendingQueue": {
+      "title": "Pending results queue",
+      "openOrders": "{{count}} open orders",
+      "empty": "No pending orders in the queue.",
+      "hoursWaiting": "Hours waiting"
+    },
+    "tat": {
+      "title": "Turnaround time (TAT)",
+      "completedReports": "{{count}} completed reports",
+      "avg": "avg {{time}}",
+      "empty": "No TAT data for orders with report-out times in this period.",
+      "collected": "Collected",
+      "reportOut": "Report out",
+      "column": "TAT",
+      "minutes": "{{count}} min",
+      "hoursMinutes": "{{hours}} hr {{minutes}} min",
+      "hoursOnly": "{{hours}} hr"
+    },
+    "staffActivity": {
+      "title": "Staff activity",
+      "tracked": "{{count}} staff tracked",
+      "empty": "No staff activity logged in this period.",
+      "staff": "Staff",
+      "actions": "Actions",
+      "lastAction": "Last action"
+    },
+    "collection": {
+      "title": "Sample collection performance",
+      "collectors": "{{count}} collectors",
+      "empty": "No collection activity in this period.",
+      "collections": "Collections",
+      "avgTime": "Avg time to collect"
+    },
+    "ratings": {
+      "positive": "Positive (4–5★)",
+      "neutral": "Neutral (3★)",
+      "negative": "Negative (1–2★)",
+      "latest": "Latest reviews",
+      "empty": "No reviews in this period.",
+      "anonymous": "Anonymous"
+    },
+    "userSummary": {
+      "title": "Your account summary",
+      "hint": "Personalized metrics for the signed-in account (from user-summary API).",
+      "topTests": "Top tests",
+      "category": "Category",
+      "spent": "Spent"
+    }
+  }
+}

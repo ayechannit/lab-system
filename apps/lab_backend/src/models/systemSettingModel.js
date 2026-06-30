@@ -24,6 +24,10 @@ const THEME_PRESETS = {
 };
 
 class SystemSetting {
+  static normalizeUiLocale(value) {
+    return value === 'my' ? 'my' : 'en';
+  }
+
   static normalizeThemeMode(mode) {
     if (mode === 'dark') return 'dark';
     if (mode === 'idhc') return 'idhc';
@@ -63,6 +67,7 @@ class SystemSetting {
       address: row.address,
       contact_phone: row.contact_phone,
       contact_email: row.contact_email,
+      ui_locale: this.normalizeUiLocale(row.ui_locale),
     };
   }
 
@@ -77,25 +82,38 @@ class SystemSetting {
       address: null,
       contact_phone: null,
       contact_email: null,
+      ui_locale: 'en',
       ...overrides,
     });
+  }
+
+  static formatSettingsRow(row) {
+    if (!row) return null;
+    return {
+      ...row,
+      ui_locale: this.normalizeUiLocale(row.ui_locale),
+    };
   }
 
   static async getSettings() {
     const pool = await poolPromise;
     const request = pool.request();
     const result = await request.query('SELECT TOP 1 * FROM theme_settings');
-    return result.recordset[0];
+    return this.formatSettingsRow(result.recordset[0]);
   }
 
   static async updateSettings(data, updatedBy = null) {
+    const existing = await this.getSettings();
     const themed = this.applyThemePreset(data);
+    const uiLocale =
+      data?.ui_locale != null
+        ? this.normalizeUiLocale(data.ui_locale)
+        : existing?.ui_locale
+          ? this.normalizeUiLocale(existing.ui_locale)
+          : 'en';
     const pool = await poolPromise;
     const request = pool.request();
     
-    // Get existing settings first to see if we need to insert or update
-    const existing = await this.getSettings();
-
     request.input('lab_name', sql.NVarChar(255), themed.lab_name);
     request.input('mode', sql.NVarChar(20), themed.mode);
     request.input('logo_url', sql.NVarChar(2048), themed.logo_url);
@@ -107,6 +125,7 @@ class SystemSetting {
     request.input('address', sql.NVarChar(sql.MAX), themed.address);
     request.input('contact_phone', sql.NVarChar(50), themed.contact_phone);
     request.input('contact_email', sql.NVarChar(255), themed.contact_email);
+    request.input('ui_locale', sql.NVarChar(5), uiLocale);
     request.input('updated_user', sql.UniqueIdentifier, updatedBy);
 
     if (existing) {
@@ -116,21 +135,31 @@ class SystemSetting {
         SET lab_name = @lab_name, mode = @mode, logo_url = @logo_url, primary_color = @primary_color,
             secondary_color = @secondary_color, custom_colors = @custom_colors, latitude = @latitude, longitude = @longitude,
             address = @address, contact_phone = @contact_phone, contact_email = @contact_email,
+            ui_locale = @ui_locale,
             updated_user = @updated_user, updated_at = GETDATE()
         OUTPUT INSERTED.*
         WHERE id = @id
       `;
       const result = await request.query(query);
-      return result.recordset[0];
+      return this.formatSettingsRow(result.recordset[0]);
     } else {
       const query = `
-        INSERT INTO theme_settings (lab_name, mode, logo_url, primary_color, secondary_color, custom_colors, latitude, longitude, address, contact_phone, contact_email, updated_user)
+        INSERT INTO theme_settings (lab_name, mode, logo_url, primary_color, secondary_color, custom_colors, latitude, longitude, address, contact_phone, contact_email, ui_locale, updated_user)
         OUTPUT INSERTED.*
-        VALUES (@lab_name, @mode, @logo_url, @primary_color, @secondary_color, @custom_colors, @latitude, @longitude, @address, @contact_phone, @contact_email, @updated_user)
+        VALUES (@lab_name, @mode, @logo_url, @primary_color, @secondary_color, @custom_colors, @latitude, @longitude, @address, @contact_phone, @contact_email, @ui_locale, @updated_user)
       `;
       const result = await request.query(query);
-      return result.recordset[0];
+      return this.formatSettingsRow(result.recordset[0]);
     }
+  }
+
+  static async updateUiLocale(locale, updatedBy = null) {
+    const existing = await this.getSettings();
+    const uiLocale = this.normalizeUiLocale(locale);
+    if (!existing) {
+      return this.updateSettings({ ...this.defaultUpdatePayload(), ui_locale: uiLocale }, updatedBy);
+    }
+    return this.updateSettings({ ...this.toUpdatePayload(existing), ui_locale: uiLocale }, updatedBy);
   }
 }
 

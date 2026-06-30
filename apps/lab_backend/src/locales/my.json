@@ -1,0 +1,17 @@
+{
+  "errors": {
+    "authRequired": "Authentication လိုအပ်ပါသည်",
+    "forbidden": "ခွင့်ပြုချက် မရှိပါ",
+    "notFound": "မတွေ့ပါ",
+    "userNotFound": "User မတွေ့ပါ",
+    "invalidCredentials": "Email သို့မဟုတ် password မမှန်ပါ",
+    "invalidToken": "Token မမှန်ပါ သို့မဟုတ် သက်တမ်းကုန်ပါပြီ",
+    "serverError": "တစ်ခုခု မှားယွင်းနေပါသည်"
+  },
+  "notifications": {
+    "orderPlacedTitle": "မှာယူမှု ပေးပို့ပြီး",
+    "orderPlacedBody": "Lab order အောင်မြင်စွာ ပေးပို့ပြီးပါပြီ။",
+    "resultsReadyTitle": "ဓာတ်ခွဲရလဒ် အဆင်သင့်",
+    "resultsReadyBody": "ဓာတ်ခွဲရလဒ်များကို app တွင် ကြည့်နိုင်ပါပြီ။"
+  }
+}

@@ -1,5 +1,8 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { useTranslation } from 'react-i18next'
+import { getIntlLocale } from '../../i18n'
+import { formatTimeDisplay } from '../../utils/dateIntl'
 
 function parseTimeValue(value: string): { h: number; min: number } | null {
   const trimmed = value.trim()
@@ -11,17 +14,6 @@ function parseTimeValue(value: string): { h: number; min: number } | null {
 
 function formatTimeValue(h: number, min: number): string {
   return `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`
-}
-
-function displayTimeLabel(value: string): string {
-  const parts = parseTimeValue(value)
-  if (!parts) return ''
-  const d = new Date(2000, 0, 1, parts.h, parts.min)
-  try {
-    return new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' }).format(d)
-  } catch {
-    return formatTimeValue(parts.h, parts.min)
-  }
 }
 
 type TimeFieldProps = {
@@ -37,17 +29,25 @@ export function TimeField({
   value,
   onChange,
   disabled = false,
-  placeholder = 'Select time',
+  placeholder,
 }: TimeFieldProps) {
+  const { t, i18n } = useTranslation()
+  const intlLocale = getIntlLocale()
   const [open, setOpen] = useState(false)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const popRef = useRef<HTMLDivElement>(null)
 
   const parts = parseTimeValue(value)
+  const resolvedPlaceholder = placeholder ?? t('datetime.defaultTimePlaceholder')
   const hourVal = parts?.h ?? new Date().getHours()
   const minuteVal = parts?.min ?? new Date().getMinutes()
   const hours = Array.from({ length: 24 }, (_, i) => i)
   const minutes = Array.from({ length: 60 }, (_, i) => i)
+
+  const displayLabel = useMemo(() => {
+    if (!parts) return ''
+    return formatTimeDisplay(parts.h, parts.min, intlLocale)
+  }, [parts, intlLocale, i18n.language])
 
   const closePopover = useCallback(() => setOpen(false), [])
 
@@ -117,8 +117,8 @@ export function TimeField({
   useEffect(() => {
     if (!open) return
     const onOutsidePointer = (e: Event) => {
-      const t = e.target as Node
-      if (popRef.current?.contains(t) || triggerRef.current?.contains(t)) return
+      const target = e.target as Node
+      if (popRef.current?.contains(target) || triggerRef.current?.contains(target)) return
       closePopover()
     }
     document.addEventListener('mousedown', onOutsidePointer)
@@ -136,14 +136,14 @@ export function TimeField({
           className="datetime-popover time-popover"
           role="dialog"
           aria-modal="true"
-          aria-label="Choose time"
+          aria-label={t('datetime.chooseTime')}
         >
           <div className="datetime-popover__time time-popover__time">
-            <span className="datetime-popover__time-label">Start time</span>
+            <span className="datetime-popover__time-label">{t('datetime.startTime')}</span>
             <div className="datetime-popover__time-controls">
               <select
                 className="datetime-popover__select"
-                aria-label="Hour"
+                aria-label={t('datetime.hour')}
                 value={hourVal}
                 onChange={(e) => setTime(Number.parseInt(e.target.value, 10), minuteVal)}
               >
@@ -156,7 +156,7 @@ export function TimeField({
               <span className="datetime-popover__time-sep">:</span>
               <select
                 className="datetime-popover__select"
-                aria-label="Minute"
+                aria-label={t('datetime.minute')}
                 value={minuteVal}
                 onChange={(e) => setTime(hourVal, Number.parseInt(e.target.value, 10))}
               >
@@ -170,10 +170,10 @@ export function TimeField({
           </div>
           <div className="datetime-popover__footer time-popover__footer">
             <button type="button" className="btn btn-secondary datetime-popover__btn" onClick={onNow}>
-              Now
+              {t('datetime.now')}
             </button>
             <button type="button" className="btn btn-primary datetime-popover__btn" onClick={closePopover}>
-              Done
+              {t('datetime.done')}
             </button>
           </div>
         </div>,
@@ -200,7 +200,7 @@ export function TimeField({
         onClick={() => (open ? closePopover() : openPopover())}
       >
         <span className="datetime-local-field__value">
-          {parts ? displayTimeLabel(value) : placeholder}
+          {parts ? displayLabel : resolvedPlaceholder}
         </span>
       </button>
       {popover}

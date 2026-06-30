@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { StaffListRow } from '../../model/types'
 import { StaffAvatar } from './StaffAvatar'
 
@@ -21,6 +22,7 @@ export function RouteCollectorPicker({
   disabled = false,
   locked = false,
 }: RouteCollectorPickerProps) {
+  const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
   const selected = collectors.find((s) => s.id === collectorId) ?? null
@@ -77,7 +79,7 @@ export function RouteCollectorPicker({
               </>
             ) : null}
           </span>
-          <span className="route-collector-picker__locked-badge">Customer selected</span>
+          <span className="route-collector-picker__locked-badge">{t('collections.customerSelected')}</span>
         </div>
       ) : (
       <button

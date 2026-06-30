@@ -1,4 +1,5 @@
 import { useId, useState, type ChangeEvent } from 'react'
+import { useTranslation } from 'react-i18next'
 import { isDisplayableProfileImageUrl, resolveStaffProfileImageUrl } from '../../utils/profileImage'
 
 type StaffProfileImageFieldProps = {
@@ -20,6 +21,7 @@ export function StaffProfileImageField({
   onClear,
   disabled = false,
 }: StaffProfileImageFieldProps) {
+  const { t } = useTranslation()
   const fileInputId = useId()
   const [localError, setLocalError] = useState<string | null>(null)
 
@@ -34,7 +36,7 @@ export function StaffProfileImageField({
     e.target.value = ''
     if (!file) return
     if (!file.type.startsWith('image/')) {
-      setLocalError('Choose a PNG, JPG, GIF, or WebP image.')
+      setLocalError(t('staff.profileImage.invalidType'))
       return
     }
     setLocalError(null)
@@ -47,21 +49,19 @@ export function StaffProfileImageField({
   }
 
   const statusLabel = pickedFileName
-    ? `${pickedFileName} (not saved yet)`
+    ? t('staff.profileImage.notSavedYet', { name: pickedFileName })
     : savedImageUrl
-      ? 'Profile image saved'
-      : 'No image selected'
+      ? t('staff.profileImage.saved')
+      : t('staff.profileImage.none')
 
   const showClear = Boolean(pickedFileName || savedImageUrl || displayPreview)
 
   return (
     <div className="field logo-url-field staff-profile-image-field">
       <label className="logo-url-field__heading" id={`${id}-label`} htmlFor={fileInputId}>
-        Profile image
+        {t('staff.profileImage.label')}
       </label>
-      <p className="staff-profile-image-field__hint">
-        Optional photo for this staff member — shown in the staff list and wherever their name appears (e.g. route assignment for collectors).
-      </p>
+      <p className="staff-profile-image-field__hint">{t('staff.profileImage.hint')}</p>
 
       {displayPreview ? (
         <div className="staff-profile-image-field__preview-wrap">
@@ -80,7 +80,7 @@ export function StaffProfileImageField({
             disabled={disabled}
           />
           <label htmlFor={fileInputId} className="file-upload-btn">
-            Choose image
+            {t('staff.profileImage.choose')}
           </label>
           {showClear ? (
             <button
@@ -89,7 +89,7 @@ export function StaffProfileImageField({
               onClick={clearImage}
               disabled={disabled}
             >
-              Clear
+              {t('staff.profileImage.clear')}
             </button>
           ) : null}
         </div>

@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEventHandler } from 'react'
+import { useTranslation } from 'react-i18next'
+import { ApiConfigBanner } from '../components/common/ApiConfigBanner'
 import { ListFilterSearchField } from '../components/common/ListFilterSearchField'
 import { ConfirmDialog } from '../components/common/ConfirmDialog'
 import { PageHeader } from '../components/common/PageHeader'
@@ -30,6 +32,7 @@ import {
   type FetchOrdersParams,
 } from '../services/orderService'
 import { formatReportDeliveryMethod, priorityBadgeClass } from '../utils/orderDisplay'
+import { orderPriorityLabel, orderStatusLabel } from '../utils/orderLabels'
 import '../components/common/ui.css'
 
 const ADMIN_CONTENT_BOTTOM_PADDING = 40
@@ -363,14 +366,6 @@ function labResultStatusBadgeClass(status: ApiOrderStatus): string {
   return map[status] ?? 'badge badge--neutral'
 }
 
-const LAB_RESULT_STATUS_OPTIONS: { value: '' | ApiOrderStatus; label: string }[] = [
-  { value: '', label: 'All statuses' },
-  { value: 'collecting', label: 'Collecting' },
-  { value: 'running', label: 'Running' },
-  { value: 'completed', label: 'Completed' },
-  { value: 'delivered', label: 'Delivered' },
-]
-
 const LAB_RESULT_RELEVANT_STATUSES: ApiOrderStatus[] = ['collecting', 'running', 'completed', 'delivered']
 
 function itemHasUploadedPdf(item: ApiOrderDetailItem): boolean {
@@ -497,6 +492,7 @@ function canUploadResultPdfs(status: ApiOrderStatus): boolean {
 }
 
 export function LabResultManagementPage() {
+  const { t } = useTranslation()
   const hasApi = isApiMode()
   const { account } = useAuth()
   const { showSuccess, showError } = useToast()
@@ -589,7 +585,7 @@ export function LabResultManagementPage() {
           setOrderId((prev) => (prev && visible.some((o) => o.id === prev) ? prev : ''))
         }
       } catch (e) {
-        if (!cancelled) setListError(e instanceof Error ? e.message : 'Failed to load orders')
+        if (!cancelled) setListError(e instanceof Error ? e.message : t('labResults.loadFailed'))
       } finally {
         if (!cancelled) setListLoading(false)
       }
@@ -633,7 +629,7 @@ export function LabResultManagementPage() {
           }
         }
       } catch (e) {
-        if (!cancelled) setDetailError(e instanceof Error ? e.message : 'Failed to load order')
+        if (!cancelled) setDetailError(e instanceof Error ? e.message : t('labResults.detailLoadFailed'))
       } finally {
         if (!cancelled) setDetailLoading(false)
       }
@@ -1378,31 +1374,22 @@ export function LabResultManagementPage() {
 
   return (
     <div className="stack">
-      <PageHeader
-        title="Lab result management"
-        description="Advance each order through lab processing, upload result PDFs when complete, run AI review, then release to the patient."
-      />
+      <PageHeader title={t('pages.results.title')} description={t('pages.results.description')} />
 
-      {!hasApi ? (
-        <div className="card card--muted">
-          <p style={{ margin: 0, fontSize: '0.9rem' }}>
-            Set <code>VITE_API_BASE_URL</code> and sign in to load orders.
-          </p>
-        </div>
-      ) : null}
+      {!hasApi ? <ApiConfigBanner variant="signInResults" /> : null}
 
       <div className="list-tools-row">
-        <div className="list-filters-bar" aria-label="Filter orders">
+        <div className="list-filters-bar" aria-label={t('labResults.filters.ariaLabel')}>
           <ListFilterSearchField
             id="lab-result-patient"
-            label="Patient"
+            label={t('common.patient')}
             value={patientInput}
             onChange={(e) => setPatientInput(e.target.value)}
             disabled={!hasApi || listLoading}
           />
           <div className="list-filters-bar__group">
             <label className="list-filters-bar__label" htmlFor="lab-result-status">
-              Status
+              {t('common.status')}
             </label>
             <select
               id="lab-result-status"
@@ -1411,9 +1398,10 @@ export function LabResultManagementPage() {
               onChange={(e) => setStatusFilter((e.target.value || '') as '' | ApiOrderStatus)}
               disabled={!hasApi || listLoading}
             >
-              {LAB_RESULT_STATUS_OPTIONS.map((o) => (
-                <option key={o.value || 'all'} value={o.value}>
-                  {o.label}
+              <option value="">{t('labResults.filters.statusAll')}</option>
+              {LAB_RESULT_RELEVANT_STATUSES.map((s) => (
+                <option key={s} value={s}>
+                  {orderStatusLabel(s)}
                 </option>
               ))}
             </select>
@@ -1429,7 +1417,7 @@ export function LabResultManagementPage() {
             }}
             disabled={!hasApi || listLoading}
           >
-            Clear filters
+            {t('filters.clearFilters')}
           </button>
         </div>
         <div className="list-tools-row__actions">
@@ -1439,43 +1427,41 @@ export function LabResultManagementPage() {
             onClick={() => setRefreshTick((t) => t + 1)}
             disabled={!hasApi || listLoading}
           >
-            Refresh
+            {listLoading ? t('common.refreshing') : t('common.refresh')}
           </button>
         </div>
       </div>
 
       <div className="card">
-        <h3 className="card-title">Select order</h3>
-        <p className="lab-result-page-hint">
-          Select one order in the table, then upload PDFs and run AI review in the result panel below.
-        </p>
+        <h3 className="card-title">{t('labResults.selectOrderTitle')}</h3>
+        <p className="lab-result-page-hint">{t('labResults.selectOrderHint')}</p>
         <div className="table-wrap">
           <table className="data-table data-table--catalog">
             <thead>
               <tr>
-                <th scope="col">Patient</th>
-                <th scope="col">Status</th>
-                <th scope="col">Priority</th>
-                <th scope="col">Report delivery</th>
-                <th scope="col">Collector</th>
-                <th scope="col">Collect time</th>
-                <th scope="col">Final (MMK)</th>
-                <th scope="col">Created</th>
+                <th scope="col">{t('labResults.table.patient')}</th>
+                <th scope="col">{t('labResults.table.status')}</th>
+                <th scope="col">{t('labResults.table.priority')}</th>
+                <th scope="col">{t('labResults.table.reportDelivery')}</th>
+                <th scope="col">{t('labResults.table.collector')}</th>
+                <th scope="col">{t('labResults.table.collectTime')}</th>
+                <th scope="col">{t('labResults.table.final')}</th>
+                <th scope="col">{t('labResults.table.created')}</th>
               </tr>
             </thead>
             <tbody>
               {listLoading ? (
                 <tr>
                   <td colSpan={8} className="data-table__state data-table__state--loading">
-                    <LoadingSpinner label="Loading orders" />
+                    <LoadingSpinner label={t('labResults.loadingOrders')} />
                   </td>
                 </tr>
               ) : orders.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="data-table__state">
                     {patientName || statusFilter
-                      ? 'No orders match these filters.'
-                      : 'No orders returned from the server.'}
+                      ? t('labResults.empty.noMatch')
+                      : t('labResults.empty.noServer')}
                   </td>
                 </tr>
               ) : (
@@ -1508,17 +1494,19 @@ export function LabResultManagementPage() {
                           checked={orderId === o.id}
                           onChange={() => selectOrderForResults(o.id)}
                           onClick={(e) => e.stopPropagation()}
-                          aria-label={`Select order for ${o.patient_name}`}
+                          aria-label={t('labResults.selectOrderAria', { name: o.patient_name })}
                         />
                         <span className="lab-result-order-pick__name">{o.patient_name}</span>
                       </label>
                     </td>
-                    <td>{o.status}</td>
+                    <td>{orderStatusLabel(o.status)}</td>
                     <td>
-                      <span className={priorityBadgeClass(o.priority)}>{o.priority}</span>
+                      <span className={priorityBadgeClass(o.priority)}>
+                        {orderPriorityLabel(o.priority)}
+                      </span>
                     </td>
                     <td>{formatReportDeliveryMethod(o.report_delivery_method)}</td>
-                    <td>{o.schedule?.collecting_person?.trim() || '—'}</td>
+                    <td>{o.schedule?.collecting_person?.trim() || t('common.none')}</td>
                     <td>{formatMaybeIsoWhen(o.schedule?.collection_time)}</td>
                     <td className="col-num">{o.final_price_mmk.toLocaleString()}</td>
                     <td>
@@ -1561,16 +1549,14 @@ export function LabResultManagementPage() {
       {detailLoading ? (
         <div className="card">
           <div className="card-body-loading">
-            <LoadingSpinner label="Loading order detail" />
+            <LoadingSpinner label={t('labResults.loadingDetail')} />
           </div>
         </div>
       ) : null}
 
       {!detailLoading && !detail && !orderId ? (
         <div className="card lab-result-entry-empty">
-          <p className="lab-result-entry-empty__text">
-            Select an order in the table to upload result PDFs and run AI review.
-          </p>
+          <p className="lab-result-entry-empty__text">{t('labResults.emptyPanel')}</p>
         </div>
       ) : null}
 

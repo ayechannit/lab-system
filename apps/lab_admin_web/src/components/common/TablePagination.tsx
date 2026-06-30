@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next'
+
 export const DEFAULT_TABLE_PAGE_SIZE = 10
 
 export const TABLE_PAGE_SIZE_OPTIONS = [10, 25, 50] as const
@@ -31,6 +33,7 @@ export function TablePagination({
   hideWhenSinglePage = true,
   className,
 }: TablePaginationProps) {
+  const { t } = useTranslation()
   const hasPrev = page > 1
   let hasNext = false
 
@@ -56,23 +59,23 @@ export function TablePagination({
 
   const meta =
     mode === 'client' && totalItems != null
-      ? `Showing ${rangeStart}–${rangeEnd} of ${totalItems}`
+      ? t('pagination.showingRange', { start: rangeStart, end: rangeEnd, total: totalItems })
       : itemsOnPage > 0
-        ? `Showing ${rangeStart}–${rangeEnd}`
-        : `Page ${page}`
+        ? t('pagination.showingRangeShort', { start: rangeStart, end: rangeEnd })
+        : t('pagination.pageNumber', { page })
 
   return (
-    <div className={`table-pagination${className ? ` ${className}` : ''}`} role="navigation" aria-label="Table pagination">
+    <div className={`table-pagination${className ? ` ${className}` : ''}`} role="navigation" aria-label={t('pagination.navLabel')}>
       <div className="table-pagination__meta">{meta}</div>
       <div className="table-pagination__controls">
         {onPageSizeChange ? (
           <label className="table-pagination__page-size">
-            <span className="table-pagination__page-size-label">Rows per page</span>
+            <span className="table-pagination__page-size-label">{t('pagination.rowsPerPage')}</span>
             <select
               className="table-pagination__page-size-select"
               value={pageSize}
               disabled={disabled}
-              aria-label="Rows per page"
+              aria-label={t('pagination.rowsPerPage')}
               onChange={(e) => {
                 const n = Number.parseInt(e.target.value, 10)
                 if (Number.isFinite(n)) onPageSizeChange(n)
@@ -92,18 +95,18 @@ export function TablePagination({
             className="btn btn-ghost btn-sm"
             disabled={disabled || !hasPrev}
             onClick={() => onPageChange(page - 1)}
-            aria-label="Previous page"
+            aria-label={t('pagination.previousPage')}
           >
-            Previous
+            {t('pagination.previous')}
           </button>
           <button
             type="button"
             className="btn btn-ghost btn-sm"
             disabled={disabled || !hasNext}
             onClick={() => onPageChange(page + 1)}
-            aria-label="Next page"
+            aria-label={t('pagination.nextPage')}
           >
-            Next
+            {t('pagination.next')}
           </button>
         </div>
       </div>

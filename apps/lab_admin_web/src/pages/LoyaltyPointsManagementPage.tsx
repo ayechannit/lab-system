@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { ApiConfigBanner } from '../components/common/ApiConfigBanner'
 import { ConfirmDialog } from '../components/common/ConfirmDialog'
 import { LoadingSpinner } from '../components/common/LoadingSpinner'
 import {
@@ -11,7 +13,7 @@ import { useErrorToast } from '../hooks/usePageNotify'
 import { DEFAULT_TABLE_PAGE_SIZE, TablePagination } from '../components/common/TablePagination'
 import { TableActionMenu } from '../components/common/TableActionMenu'
 import { PointSettingFormModal } from '../components/loyalty/PointSettingFormModal'
-import type { EndUserRole, UserListRow } from '../model/types'
+import type { UserListRow } from '../model/types'
 import { isApiMode } from '../services/apiBase'
 import {
   deletePointSetting,
@@ -19,33 +21,35 @@ import {
   fetchPointSettings,
 } from '../services/pointSettingService'
 import { fetchUserList } from '../services/userService'
+import { getIntlLocale } from '../i18n'
+import { roleLabel } from '../utils/roleLabels'
+import { formatIsoDatetime } from '../utils/dateIntl'
 import '../components/common/ui.css'
 
-function roleLabel(r: EndUserRole): string {
-  const map: Record<EndUserRole, string> = {
-    clinic: 'Clinic',
-    doctor: 'Doctor',
-    patient: 'Patient',
-  }
-  return map[r]
+function formatRulePeriod(
+  start: string | null,
+  end: string | null,
+  t: (key: string, opts?: Record<string, unknown>) => string,
+  locale: string,
+): string {
+  if (!start && !end) return t('loyalty.schedule.anyTime')
+  const fmt = (iso: string) => formatIsoDatetime(iso, locale)
+  if (start && end) return `${fmt(start)} → ${fmt(end)}`
+  if (start) return t('loyalty.schedule.from', { date: fmt(start) })
+  return t('loyalty.schedule.until', { date: fmt(end!) })
 }
 
-function formatRulePeriod(start: string | null, end: string | null): string {
-  if (!start && !end) return 'Any time'
-  const fmt = (iso: string) =>
-    new Date(iso).toLocaleString(undefined, {
-      dateStyle: 'medium',
-      timeStyle: 'short',
-    })
-  if (start && end) return `${fmt(start)} → ${fmt(end)}`
-  if (start) return `From ${fmt(start)}`
-  return `Until ${fmt(end!)}`
+function ruleDisplayName(name: string, t: (key: string) => string): string {
+  if (name.trim().toLowerCase() === 'default tier') return t('loyalty.form.defaultTierName')
+  return name
 }
 
 const rulesColSpan = 6
 const usersColSpan = 4
 
 export function LoyaltyPointsManagementPage() {
+  const { t } = useTranslation()
+  const intlLocale = getIntlLocale()
   const hasApi = isApiMode()
   const { showSuccess, showError } = useToast()
   const [rules, setRules] = useState<PointSettingRow[]>([])
@@ -89,7 +93,7 @@ export function LoyaltyPointsManagementPage() {
           setUsers(u.filter((row) => !row.is_deleted))
         }
       } catch (e) {
-        if (!cancelled) setLoadError(e instanceof Error ? e.message : 'Failed to load loyalty data')
+        if (!cancelled) setLoadError(e instanceof Error ? e.message : t('loyalty.loadFailed'))
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -97,7 +101,7 @@ export function LoyaltyPointsManagementPage() {
     return () => {
       cancelled = true
     }
-  }, [hasApi, refreshTick])
+  }, [hasApi, refreshTick, t])
 
   const sortedRules = useMemo(
     () => [...rules].sort((a, b) => b.spend_amount_mmk - a.spend_amount_mmk),
@@ -155,10 +159,10 @@ export function LoyaltyPointsManagementPage() {
     setDeleting(true)
     try {
       await deletePointSetting(deleteRule.id)
-      showSuccess('Earn rule deleted.')
+      showSuccess(t('loyalty.delete.success'))
       setRefreshTick((x) => x + 1)
     } catch (e) {
-      showError(e instanceof Error ? e.message : 'Could not delete rule')
+      showError(e instanceof Error ? e.message : t('loyalty.delete.failed'))
     } finally {
       setDeleting(false)
       setDeleteRule(null)
@@ -167,20 +171,9 @@ export function LoyaltyPointsManagementPage() {
 
   return (
     <div className="stack">
-      <PageHeader
-        title="Loyalty points"
-        description="Control how members earn points from spending, manage active promotions, and check point balances for your customers."
-      />
+      <PageHeader title={t('pages.loyalty.title')} description={t('pages.loyalty.description')} />
 
-      {!hasApi ? (
-        <div className="card card--muted">
-          <p style={{ margin: 0, fontSize: '0.9rem' }}>
-            Set <code>VITE_API_BASE_URL</code> in <code>apps/lab_admin_web</code> (e.g.{' '}
-            <code>http://localhost:3000</code>) and restart the dev server. Loyalty rules and balances load
-            from the backend.
-          </p>
-        </div>
-      ) : null}
+      {!hasApi ? <ApiConfigBanner /> : null}
 
       <div
         className="card"
@@ -189,7 +182,7 @@ export function LoyaltyPointsManagementPage() {
           border: '1px solid var(--border, #e8ecf4)',
         }}
       >
-          <div className="segment-tabs" role="tablist" aria-label="Loyalty sections">
+          <div className="segment-tabs" role="tablist" aria-label={t('loyalty.tabsAria')}>
             <button
               type="button"
               className={`segment-tabs__tab${loyaltyTab === 'rules' ? ' segment-tabs__tab--active' : ''}`}
@@ -199,7 +192,7 @@ export function LoyaltyPointsManagementPage() {
               aria-controls="loyalty-panel-earn-rules"
               onClick={() => setLoyaltyTab('rules')}
             >
-              Earn rules
+              {t('loyalty.tabRules')}
             </button>
             <button
               type="button"
@@ -210,7 +203,7 @@ export function LoyaltyPointsManagementPage() {
               aria-controls="loyalty-panel-points-by-user"
               onClick={() => setLoyaltyTab('users')}
             >
-              Points by user
+              {t('loyalty.tabUsers')}
             </button>
           </div>
 
@@ -221,23 +214,21 @@ export function LoyaltyPointsManagementPage() {
             hidden={loyaltyTab !== 'rules'}
           >
             <h3 className="card-title" style={{ margin: '0 0 0.35rem' }}>
-              Earn rules (MMK → points)
+              {t('loyalty.rulesTitle')}
             </h3>
             <p style={{ margin: '0 0 0.75rem', color: 'var(--muted)', fontSize: '0.875rem', maxWidth: 520 }}>
-              Each rule defines how many points are granted when spend reaches the MMK threshold. Optional start and
-              end dates limit seasonal campaigns. Inactive rules are listed here but do not award points until you
-              turn them on again.
+              {t('loyalty.rulesHint')}
             </p>
             <div className="list-tools-row">
-              <div className="list-filters-bar" aria-label="Earn rules" />
+              <div className="list-filters-bar" aria-label={t('loyalty.tabRules')} />
               <div className="list-tools-row__actions">
                 <button
                   type="button"
                   className="btn btn-secondary"
-                  onClick={() => setRefreshTick((t) => t + 1)}
+                  onClick={() => setRefreshTick((tick) => tick + 1)}
                   disabled={loading || !hasApi}
                 >
-                  Refresh
+                  {loading ? t('common.refreshing') : t('common.refresh')}
                 </button>
                 <button
                   type="button"
@@ -245,7 +236,7 @@ export function LoyaltyPointsManagementPage() {
                   onClick={openCreateRule}
                   disabled={loading || !hasApi}
                 >
-                  Add rule
+                  {t('loyalty.addRule')}
                 </button>
               </div>
             </div>
@@ -253,59 +244,61 @@ export function LoyaltyPointsManagementPage() {
               <table className="data-table">
                 <thead>
                   <tr>
-                    <th>Name</th>
-                    <th>MMK per batch</th>
-                    <th>Points</th>
-                    <th>Active</th>
-                    <th>Schedule</th>
-                    <th className="action-col">Actions</th>
+                    <th>{t('common.name')}</th>
+                    <th>{t('loyalty.table.mmkPerBatch')}</th>
+                    <th>{t('loyalty.table.points')}</th>
+                    <th>{t('common.active')}</th>
+                    <th>{t('common.schedule')}</th>
+                    <th className="action-col">{t('common.actions')}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {loading ? (
                     <tr>
                       <td colSpan={rulesColSpan} className="data-table__state data-table__state--loading">
-                        <LoadingSpinner label="Loading earn rules" />
+                        <LoadingSpinner label={t('loyalty.loadingRules')} />
                       </td>
                     </tr>
                   ) : !hasApi ? (
                     <tr>
                       <td colSpan={rulesColSpan} className="data-table__state">
-                        Connect the API to manage earn rules.
+                        {t('loyalty.noApiRules')}
                       </td>
                     </tr>
                   ) : sortedRules.length === 0 ? (
                     <tr>
                       <td colSpan={rulesColSpan} className="data-table__state">
-                        No earn rules yet. Add one to start awarding points on paid orders.
+                        {t('loyalty.emptyRules')}
                       </td>
                     </tr>
                   ) : (
                     pagedRules.map((row) => (
                       <tr key={row.id}>
-                        <td style={{ fontWeight: 600 }}>{row.name}</td>
-                        <td>{row.spend_amount_mmk.toLocaleString()} MMK</td>
+                        <td style={{ fontWeight: 600 }}>{ruleDisplayName(row.name, t)}</td>
+                        <td>
+                          {row.spend_amount_mmk.toLocaleString()} {t('orders.currency')}
+                        </td>
                         <td>{row.points_reward.toLocaleString()}</td>
                         <td>
                           {row.is_active ? (
-                            <span className="badge badge--success">Active</span>
+                            <span className="badge badge--success">{t('common.active')}</span>
                           ) : (
                             <span className="badge" style={{ background: '#eef1f6', color: '#5c6478' }}>
-                              Off
+                              {t('common.off')}
                             </span>
                           )}
                         </td>
                         <td style={{ fontSize: '0.85rem', color: 'var(--muted)', maxWidth: 280 }}>
-                          {formatRulePeriod(row.start_date, row.end_date)}
+                          {formatRulePeriod(row.start_date, row.end_date, t, intlLocale)}
                         </td>
                         <td className="action-cell">
                           <TableActionMenu
                             open={ruleMenuId === row.id}
                             onOpenChange={(next) => setRuleMenuId(next ? row.id : null)}
                             items={[
-                              { label: 'Edit', onSelect: () => openEditRule(row) },
+                              { label: t('common.edit'), onSelect: () => openEditRule(row) },
                               {
-                                label: 'Delete',
+                                label: t('common.delete'),
                                 onSelect: () => {
                                   setDeleteRule(row)
                                   setRuleMenuId(null)
@@ -343,17 +336,20 @@ export function LoyaltyPointsManagementPage() {
             hidden={loyaltyTab !== 'users'}
           >
             <h3 className="card-title" style={{ margin: '0 0 0.35rem' }}>
-              Points by user
+              {t('loyalty.usersTitle')}
             </h3>
             <p style={{ margin: '0 0 0.75rem', color: 'var(--muted)', fontSize: '0.875rem' }}>
-              Live <code>total_points</code> from each account for support and reconciliation.
+              {t('loyalty.usersHint')}
             </p>
             <div className="list-tools-row">
-              <div className="list-filters-bar" aria-label="User points search">
+              <div className="list-filters-bar" aria-label={t('loyalty.filters.usersAria')}>
                 <ListFilterSearchField
                   id="user-search"
-                  label="User"
-                  placeholder={listFilterSearchPlaceholder('User', 'name, email, role')}
+                  label={t('common.user')}
+                  placeholder={listFilterSearchPlaceholder(
+                    t('common.user'),
+                    t('loyalty.filters.searchDetail'),
+                  )}
                   value={userSearch}
                   onChange={(e) => setUserSearch(e.target.value)}
                   disabled={!hasApi || loading}
@@ -367,7 +363,7 @@ export function LoyaltyPointsManagementPage() {
                   }}
                   disabled={!hasApi || loading || userSearch.trim() === ''}
                 >
-                  Clear filters
+                  {t('filters.clearFilters')}
                 </button>
               </div>
               <div className="list-tools-row__actions">
@@ -377,7 +373,7 @@ export function LoyaltyPointsManagementPage() {
                   onClick={() => setRefreshTick((t) => t + 1)}
                   disabled={!hasApi || loading}
                 >
-                  Refresh
+                  {loading ? t('common.refreshing') : t('common.refresh')}
                 </button>
               </div>
             </div>
@@ -385,31 +381,29 @@ export function LoyaltyPointsManagementPage() {
               <table className="data-table">
                 <thead>
                   <tr>
-                    <th>User ID</th>
-                    <th>Name</th>
-                    <th>Role</th>
-                    <th>Points balance</th>
+                    <th>{t('loyalty.table.userId')}</th>
+                    <th>{t('common.name')}</th>
+                    <th>{t('common.role')}</th>
+                    <th>{t('loyalty.table.pointsBalance')}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {loading ? (
                     <tr>
                       <td colSpan={usersColSpan} className="data-table__state data-table__state--loading">
-                        <LoadingSpinner label="Loading point balances" />
+                        <LoadingSpinner label={t('loyalty.loadingUsers')} />
                       </td>
                     </tr>
                   ) : !hasApi ? (
                     <tr>
                       <td colSpan={usersColSpan} className="data-table__state">
-                        Connect the API to load user point balances.
+                        {t('loyalty.noApiUsers')}
                       </td>
                     </tr>
                   ) : filteredUsers.length === 0 ? (
                     <tr>
                       <td colSpan={usersColSpan} className="data-table__state">
-                        {users.length === 0
-                          ? 'No users in the system yet.'
-                          : 'No users match your search.'}
+                        {users.length === 0 ? t('loyalty.emptyUsers') : t('loyalty.noUserMatch')}
                       </td>
                     </tr>
                   ) : (
@@ -456,20 +450,16 @@ export function LoyaltyPointsManagementPage() {
         onClose={() => setFormOpen(false)}
         onSuccess={() => {
           setLoyaltyTab('rules')
-          showSuccess(formMode === 'edit' ? 'Earn rule updated.' : 'Earn rule created.')
+          showSuccess(formMode === 'edit' ? t('loyalty.toast.updated') : t('loyalty.toast.created'))
           setRefreshTick((x) => x + 1)
         }}
       />
 
       <ConfirmDialog
         open={deleteRule != null}
-        title="Delete earn rule?"
-        message={
-          deleteRule
-            ? `Delete “${deleteRule.name}” (${deleteRule.spend_amount_mmk.toLocaleString()} MMK → ${deleteRule.points_reward} pts)? This cannot be undone.`
-            : ''
-        }
-        confirmLabel={deleting ? 'Deleting…' : 'Delete'}
+        title={t('loyalty.delete.title')}
+        message={deleteRule ? t('loyalty.delete.message', { name: deleteRule.name }) : ''}
+        confirmLabel={deleting ? t('common.saving') : t('common.delete')}
         danger
         onConfirm={() => void confirmDeleteRule()}
         onCancel={() => !deleting && setDeleteRule(null)}
