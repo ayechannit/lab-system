@@ -457,6 +457,8 @@ class Order {
         .input('discount_percent', sql.Decimal(5, 2), discountPercent)
         .input('final_price_mmk', sql.Decimal(18, 2), data.final_price_mmk || 0)
         .input('material_fee_mmk', sql.Decimal(18, 2), data.material_fee_mmk || 0)
+        .input('service_geofence_id', sql.UniqueIdentifier, data.service_geofence_id || null)
+        .input('service_fee_mmk', sql.Decimal(18, 2), data.service_fee_mmk || 0)
         .input('is_tests_assigned', sql.Bit, pricedItems.length > 0 ? 1 : 0)
         .input('updated_user', sql.UniqueIdentifier, updatedBy)
         .query(`
@@ -474,6 +476,8 @@ class Order {
               discount_percent = @discount_percent,
               final_price_mmk = @final_price_mmk,
               material_fee_mmk = @material_fee_mmk,
+              service_geofence_id = @service_geofence_id,
+              service_fee_mmk = @service_fee_mmk,
               is_tests_assigned = @is_tests_assigned,
               updated_user = @updated_user,
               updated_at = GETDATE()
@@ -616,6 +620,8 @@ class Order {
       .input('address', sql.Text, data.address)
       .input('latitude', sql.Float, data.latitude)
       .input('longitude', sql.Float, data.longitude)
+      .input('service_geofence_id', sql.UniqueIdentifier, data.service_geofence_id || null)
+      .input('service_fee_mmk', sql.Decimal(18, 2), data.service_fee_mmk || 0)
       .input('updated_user', sql.UniqueIdentifier, updatedBy)
       .query(`
         UPDATE lab_orders SET
@@ -628,6 +634,8 @@ class Order {
           address = @address,
           latitude = @latitude,
           longitude = @longitude,
+          service_geofence_id = @service_geofence_id,
+          service_fee_mmk = @service_fee_mmk,
           updated_user = @updated_user,
           updated_at = GETDATE()
         OUTPUT INSERTED.*

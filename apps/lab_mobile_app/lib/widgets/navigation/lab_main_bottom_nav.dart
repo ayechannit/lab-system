@@ -32,6 +32,7 @@ class LabMainBottomNav extends StatelessWidget {
       case LabMainTab.none:
         return;
       case LabMainTab.home:
+        unawaited(session.refreshHomeTab());
         context.go(session.homeRoute);
         break;
       case LabMainTab.orders:

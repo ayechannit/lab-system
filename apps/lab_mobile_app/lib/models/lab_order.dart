@@ -43,6 +43,19 @@ class LabAddress {
   final String? placeId;
 }
 
+/// Service zone fee from `GET /api/service-geofences/calculate-fee`.
+class ServiceFeeQuote {
+  const ServiceFeeQuote({
+    required this.serviceGeofenceId,
+    required this.zoneName,
+    required this.serviceFeeMmk,
+  });
+
+  final String serviceGeofenceId;
+  final String zoneName;
+  final double serviceFeeMmk;
+}
+
 /// One catalog line on the order (maps to `lab_order_items`).
 class CatalogOrderLine {
   const CatalogOrderLine({
@@ -212,6 +225,13 @@ class LabOrderSummary {
   final List<OrderLineSummary> lineItems;
 
   bool get isReportReady => reportOutAt != null;
+
+  /// True when the lab has proposed at least one schedule field.
+  bool get hasLabSchedule =>
+      collectorName != null ||
+      collectionAcceptedAt != null ||
+      runningAt != null ||
+      reportOutAt != null;
 
   bool get canConfirmSchedule =>
       !scheduleAcceptedByUser &&

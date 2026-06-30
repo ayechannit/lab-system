@@ -7,15 +7,14 @@ class Advertisement {
       .input('title', sql.NVarChar(255), data.title)
       .input('description', sql.NVarChar, data.description || null)
       .input('image_url', sql.NVarChar(2048), data.image_url || null)
-      .input('action_url', sql.NVarChar(2048), data.action_url || null)
       .input('start_date', sql.DateTime2, data.start_date || null)
       .input('end_date', sql.DateTime2, data.end_date || null)
       .input('is_active', sql.Bit, data.is_active !== undefined ? data.is_active : 1)
       .input('created_user', sql.UniqueIdentifier, createdBy)
       .query(`
-        INSERT INTO advertisements (id, title, description, image_url, action_url, start_date, end_date, is_active, created_user, updated_user, is_deleted)
+        INSERT INTO advertisements (id, title, description, image_url, start_date, end_date, is_active, created_user, updated_user, is_deleted)
         OUTPUT INSERTED.*
-        VALUES (NEWID(), @title, @description, @image_url, @action_url, @start_date, @end_date, @is_active, @created_user, @created_user, 0)
+        VALUES (NEWID(), @title, @description, @image_url, @start_date, @end_date, @is_active, @created_user, @created_user, 0)
       `);
     return result.recordset[0];
   }
@@ -85,7 +84,6 @@ class Advertisement {
       .input('title', sql.NVarChar(255), data.title)
       .input('description', sql.NVarChar, data.description || null)
       .input('image_url', sql.NVarChar(2048), data.image_url || null)
-      .input('action_url', sql.NVarChar(2048), data.action_url || null)
       .input('start_date', sql.DateTime2, data.start_date || null)
       .input('end_date', sql.DateTime2, data.end_date || null)
       .input('is_active', sql.Bit, data.is_active !== undefined ? data.is_active : 1)
@@ -95,7 +93,6 @@ class Advertisement {
         SET title = @title,
             description = @description,
             image_url = @image_url,
-            action_url = @action_url,
             start_date = @start_date,
             end_date = @end_date,
             is_active = @is_active,

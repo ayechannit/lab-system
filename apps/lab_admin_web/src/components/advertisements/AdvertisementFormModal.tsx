@@ -38,7 +38,6 @@ export function AdvertisementFormModal({
   const [imageDisplayUrl, setImageDisplayUrl] = useState<string | null>(null)
   const [bannerFile, setBannerFile] = useState<File | null>(null)
   const [bannerPreviewUrl, setBannerPreviewUrl] = useState<string | null>(null)
-  const [actionUrl, setActionUrl] = useState('')
   const [startLocal, setStartLocal] = useState('')
   const [endLocal, setEndLocal] = useState('')
   const [isActive, setIsActive] = useState(true)
@@ -59,7 +58,6 @@ export function AdvertisementFormModal({
       setDescription(initial.description ?? '')
       setImageUrl(initial.image_url ?? '')
       setImageDisplayUrl(initial.image_display_url ?? null)
-      setActionUrl(initial.action_url ?? '')
       setStartLocal(toDatetimeLocalValue(initial.start_date))
       setEndLocal(toDatetimeLocalValue(initial.end_date))
       setIsActive(initial.is_active)
@@ -68,7 +66,6 @@ export function AdvertisementFormModal({
       setDescription('')
       setImageUrl('')
       setImageDisplayUrl(null)
-      setActionUrl('')
       setStartLocal('')
       setEndLocal('')
       setIsActive(true)
@@ -160,7 +157,6 @@ export function AdvertisementFormModal({
         title: titleTrim,
         description: description.trim() || null,
         image_url: resolvedImageUrl,
-        action_url: actionUrl.trim() || null,
         start_date: startIso,
         end_date: endIso,
         is_active: isActive,
@@ -249,17 +245,6 @@ export function AdvertisementFormModal({
                 onClear={clearBanner}
                 disabled={submitting}
               />
-              <div className="field">
-                <label htmlFor="ad-action">{t('advertisements.form.actionUrl')}</label>
-                <input
-                  id="ad-action"
-                  value={actionUrl}
-                  onChange={(e) => setActionUrl(e.target.value)}
-                  disabled={submitting}
-                  placeholder={t('advertisements.form.actionUrlPlaceholder')}
-                  autoComplete="off"
-                />
-              </div>
               <div className="discount-form-modal__pair">
                 <div className="field">
                   <label htmlFor="ad-start">{t('advertisements.form.startOptional')}</label>

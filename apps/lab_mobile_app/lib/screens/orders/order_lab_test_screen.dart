@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
@@ -14,6 +15,7 @@ import '../../models/user_role.dart';
 import '../../config/map_defaults.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/theme_extensions.dart';
+import '../../services/rest_lab_user_api.dart';
 import '../../widgets/common/app_branding_row.dart';
 import '../../widgets/common/app_toast.dart';
 import '../../widgets/common/app_dropdown_form_field.dart';
@@ -68,6 +70,13 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
   DateTime _preferredDate = DateTime.now().add(const Duration(days: 1));
   String _reportDelivery = 'soft_copy';
 
+  ServiceFeeQuote? _serviceFeeQuote;
+  bool _serviceFeeLoading = false;
+  String? _serviceFeeError;
+  bool _serviceFeeOutOfCoverage = false;
+  Timer? _serviceFeeDebounce;
+  int _serviceFeeRequestId = 0;
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -84,6 +93,9 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
         }
       }
       _prefilledProfileAddress = true;
+      if (_collectionCoordsInit) {
+        _scheduleServiceFeeLookup(_collectionLat, _collectionLng);
+      }
     }
     if (_catalogInit) return;
     _catalogInit = true;
@@ -99,6 +111,7 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
 
   @override
   void dispose() {
+    _serviceFeeDebounce?.cancel();
     _description.dispose();
     _patientName.dispose();
     _age.dispose();
@@ -168,6 +181,134 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
 
   void _revalidateProcessOrder() {
     _processOrderKey.currentState?.validate();
+  }
+
+  void _clearServiceFeeState() {
+    _serviceFeeQuote = null;
+    _serviceFeeLoading = false;
+    _serviceFeeError = null;
+    _serviceFeeOutOfCoverage = false;
+  }
+
+  void _scheduleServiceFeeLookup(double lat, double lng) {
+    _serviceFeeDebounce?.cancel();
+    if (!hasMeaningfulCoordinates(lat, lng)) {
+      setState(_clearServiceFeeState);
+      return;
+    }
+    setState(() {
+      _serviceFeeLoading = true;
+      _serviceFeeError = null;
+      _serviceFeeOutOfCoverage = false;
+      _serviceFeeQuote = null;
+    });
+    _serviceFeeDebounce = Timer(const Duration(milliseconds: 450), () {
+      unawaited(_fetchServiceFee(lat, lng));
+    });
+  }
+
+  Future<void> _fetchServiceFee(double lat, double lng) async {
+    final requestId = ++_serviceFeeRequestId;
+    try {
+      final quote = await SessionScope.of(context).calculateServiceFee(
+        latitude: lat,
+        longitude: lng,
+      );
+      if (!mounted || requestId != _serviceFeeRequestId) return;
+      setState(() {
+        _serviceFeeQuote = quote;
+        _serviceFeeLoading = false;
+        _serviceFeeError = null;
+        _serviceFeeOutOfCoverage = false;
+      });
+    } on LabApiException catch (e) {
+      if (!mounted || requestId != _serviceFeeRequestId) return;
+      setState(() {
+        _serviceFeeQuote = null;
+        _serviceFeeLoading = false;
+        _serviceFeeError = e.message;
+        _serviceFeeOutOfCoverage = e.isOutOfCoverage;
+      });
+    } catch (e) {
+      if (!mounted || requestId != _serviceFeeRequestId) return;
+      setState(() {
+        _serviceFeeQuote = null;
+        _serviceFeeLoading = false;
+        _serviceFeeError = '$e';
+        _serviceFeeOutOfCoverage = false;
+      });
+    }
+  }
+
+  Widget _serviceFeeSummaryRow(BuildContext context) {
+    if (_serviceFeeLoading) {
+      return Padding(
+        padding: const EdgeInsets.only(top: 8),
+        child: Row(
+          children: [
+            const SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Checking service zone…',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+    if (_serviceFeeOutOfCoverage) {
+      return Padding(
+        padding: const EdgeInsets.only(top: 8),
+        child: Text(
+          _serviceFeeError ?? 'This address is outside our service coverage areas.',
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.error),
+        ),
+      );
+    }
+    if (_serviceFeeError != null) {
+      return Padding(
+        padding: const EdgeInsets.only(top: 8),
+        child: Text(
+          _serviceFeeError!,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.error),
+        ),
+      );
+    }
+    final quote = _serviceFeeQuote;
+    if (quote == null) return const SizedBox.shrink();
+    return Column(
+      children: [
+        const SizedBox(height: 8),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Text(
+                'Service fee (${quote.zoneName})',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ),
+            Text(
+              '${quote.serviceFeeMmk.toStringAsFixed(0)} MMK',
+              style: Theme.of(context).textTheme.bodySmall,
+              textAlign: TextAlign.right,
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  double _estimatedGrandTotal(List<CatalogOrderLine> lines) {
+    final tests = _sumFinal(lines);
+    final service = _serviceFeeQuote?.serviceFeeMmk ?? 0;
+    return tests + service;
   }
 
   Widget _fieldErrorText(BuildContext context, String message) {
@@ -703,6 +844,7 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
                           _collectionLat = lat;
                           _collectionLng = lng;
                         });
+                        _scheduleServiceFeeLookup(lat, lng);
                         state.didChange(line);
                       },
                     ),
@@ -912,14 +1054,44 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
                               ),
                             ],
                           ),
+                          _serviceFeeSummaryRow(context),
+                          if (_serviceFeeQuote != null && !_serviceFeeOutOfCoverage) ...[
+                            const SizedBox(height: 8),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    'Estimated amount due',
+                                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                  ),
+                                ),
+                                Text(
+                                  '${_estimatedGrandTotal(lines).toStringAsFixed(0)} MMK',
+                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                  textAlign: TextAlign.right,
+                                ),
+                              ],
+                            ),
+                          ],
                         ],
                       ],
                     )
-                  : Text(
-                      _prescriptionBytes == null
-                          ? 'Add a prescription file to submit.'
-                          : 'Prescription attached. Totals will be set when the lab assigns tests.',
-                      style: Theme.of(context).textTheme.bodyMedium,
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _prescriptionBytes == null
+                              ? 'Add a prescription file to submit.'
+                              : 'Prescription attached. Totals will be set when the lab assigns tests.',
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                        _serviceFeeSummaryRow(context),
+                      ],
                     ),
             ),
             const SizedBox(height: 20),
@@ -935,6 +1107,22 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
                             context,
                             'Set collection coordinates — type the address or choose on the map.',
                           );
+                          return;
+                        }
+                        if (_serviceFeeLoading) {
+                          AppToast.warning(context, 'Still checking service coverage for this address.');
+                          return;
+                        }
+                        if (_serviceFeeOutOfCoverage) {
+                          AppToast.warning(
+                            context,
+                            _serviceFeeError ??
+                                'This address is outside our service coverage areas.',
+                          );
+                          return;
+                        }
+                        if (_serviceFeeQuote == null && _serviceFeeError != null) {
+                          AppToast.warning(context, _serviceFeeError!);
                           return;
                         }
 
@@ -988,7 +1176,10 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
                           context.go('/order-success');
                         } catch (e) {
                           if (!context.mounted) return;
-                          AppToast.errorInShell(context, '$e', title: 'Order failed');
+                          final msg = e is LabApiException
+                              ? e.message
+                              : '$e';
+                          AppToast.errorInShell(context, msg, title: 'Order failed');
                         }
                       },
                 icon: const Icon(Icons.save_outlined),

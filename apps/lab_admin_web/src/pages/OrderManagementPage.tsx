@@ -37,6 +37,10 @@ import {
 } from '../services/orderService'
 import { useAddressGeocode } from '../hooks/useAddressGeocode'
 import { fetchUserList } from '../services/userService'
+import {
+  calculateServiceFee,
+  type CalculateServiceFeeResult,
+} from '../services/serviceGeofenceService'
 import '../components/common/ui.css'
 import i18n from '../i18n'
 import { formatReportDeliveryMethod } from '../utils/orderDisplay'
@@ -667,6 +671,9 @@ export function OrderManagementPage() {
   const [createTestPickerOpen, setCreateTestPickerOpen] = useState(false)
   const [createLatitude, setCreateLatitude] = useState<number | ''>('')
   const [createLongitude, setCreateLongitude] = useState<number | ''>('')
+  const [createServiceFee, setCreateServiceFee] = useState<CalculateServiceFeeResult | null>(null)
+  const [createServiceFeeLoading, setCreateServiceFeeLoading] = useState(false)
+  const [createServiceFeeError, setCreateServiceFeeError] = useState<string | null>(null)
 
   const [editOpen, setEditOpen] = useState(false)
   const [editOrderId, setEditOrderId] = useState<string | null>(null)
@@ -706,6 +713,42 @@ export function OrderManagementPage() {
     address: editAddress,
     onCoords: onEditGeocodeCoords,
   })
+
+  useEffect(() => {
+    if (!createOpen) {
+      setCreateServiceFee(null)
+      setCreateServiceFeeError(null)
+      setCreateServiceFeeLoading(false)
+      return
+    }
+    if (!hasUsableCoords(createLatitude, createLongitude)) {
+      setCreateServiceFee(null)
+      setCreateServiceFeeError(null)
+      setCreateServiceFeeLoading(false)
+      return
+    }
+    const { latitude: lat, longitude: lng } = coordsForOrderApi(createLatitude, createLongitude)
+    if (lat == null || lng == null) return
+    let cancelled = false
+    setCreateServiceFeeLoading(true)
+    calculateServiceFee(lat, lng)
+      .then((result) => {
+        if (cancelled) return
+        setCreateServiceFee(result)
+        setCreateServiceFeeError(null)
+      })
+      .catch((err) => {
+        if (cancelled) return
+        setCreateServiceFee(null)
+        setCreateServiceFeeError(err instanceof Error ? err.message : t('orders.create.serviceFeeFailed'))
+      })
+      .finally(() => {
+        if (!cancelled) setCreateServiceFeeLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [createOpen, createLatitude, createLongitude, t])
 
   const [assignOpen, setAssignOpen] = useState(false)
   /** Order loaded for the assign-tests modal (from detail or from row “Add test”). */
@@ -1030,6 +1073,15 @@ export function OrderManagementPage() {
     if (!createAddress.trim()) return setCreateError(t('common.address'))
     if (!hasUsableCoords(createLatitude, createLongitude)) {
       return setCreateError(t('orders.detail.address'))
+    }
+    if (createServiceFeeLoading) {
+      return setCreateError(t('orders.create.serviceFeeChecking'))
+    }
+    if (createServiceFeeError) {
+      return setCreateError(createServiceFeeError)
+    }
+    if (!createServiceFee) {
+      return setCreateError(t('orders.create.serviceFeeRequired'))
     }
     const age = typeof createPatientAge === 'number' ? createPatientAge : Number.parseInt(String(createPatientAge), 10)
     if (!Number.isFinite(age) || age < 0) return setCreateError(t('orders.create.age'))
@@ -1819,6 +1871,56 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
                   <input readOnly disabled value={createSelection.finalSum.toLocaleString()} className="lab-test-modal__input-computed" />
                 </div>
               </div>
+              <div className="order-create-modal__grid-three">
+                <div className="field">
+                  <label>{t('orders.create.serviceFee')}</label>
+                  <input
+                    readOnly
+                    disabled
+                    value={
+                      createServiceFeeLoading
+                        ? t('orders.create.serviceFeeChecking')
+                        : createServiceFeeError
+                          ? '—'
+                          : createServiceFee
+                            ? createServiceFee.service_fee_mmk.toLocaleString()
+                            : '—'
+                    }
+                    className="lab-test-modal__input-computed"
+                  />
+                </div>
+                <div className="field">
+                  <label>{t('orders.create.serviceZone')}</label>
+                  <input
+                    readOnly
+                    disabled
+                    value={
+                      createServiceFeeLoading
+                        ? '…'
+                        : createServiceFee?.zone_name ?? (createServiceFeeError ? '—' : '—')
+                    }
+                    className="lab-test-modal__input-computed"
+                  />
+                </div>
+                <div className="field">
+                  <label>{t('orders.create.amountDue')}</label>
+                  <input
+                    readOnly
+                    disabled
+                    value={
+                      createServiceFee
+                        ? Math.round((createSelection.finalSum + createServiceFee.service_fee_mmk) * 100) / 100
+                        : createSelection.finalSum
+                    }
+                    className="lab-test-modal__input-computed"
+                  />
+                </div>
+              </div>
+              {createServiceFeeError ? (
+                <p className="form-alert form-alert--error" role="alert">
+                  {createServiceFeeError}
+                </p>
+              ) : null}
                 </div>
               </div>
               <div className="order-create-modal__footer">

@@ -139,9 +139,6 @@
                   "image_url": {
                     "type": "string"
                   },
-                  "action_url": {
-                    "type": "string"
-                  },
                   "start_date": {
                     "type": "string",
                     "format": "date-time",
@@ -245,9 +242,6 @@
                     "type": "string"
                   },
                   "image_url": {
-                    "type": "string"
-                  },
-                  "action_url": {
                     "type": "string"
                   },
                   "start_date": {
@@ -5793,9 +5787,6 @@
             "type": "string"
           },
           "image_url": {
-            "type": "string"
-          },
-          "action_url": {
             "type": "string"
           },
           "start_date": {

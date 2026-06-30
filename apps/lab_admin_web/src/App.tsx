@@ -10,6 +10,7 @@ import { ForgotPasswordPage } from './pages/auth/ForgotPasswordPage'
 import { AdvertisementsManagementPage } from './pages/AdvertisementsManagementPage'
 import { DiscountManagementPage } from './pages/DiscountManagementPage'
 import { ReferralFeesManagementPage } from './pages/ReferralFeesManagementPage'
+import { ServiceGeofencesManagementPage } from './pages/ServiceGeofencesManagementPage'
 import { LabTestCatalogPage } from './pages/LabTestCatalogPage'
 import { LabResultManagementPage } from './pages/LabResultManagementPage'
 import { LoyaltyPointsManagementPage } from './pages/LoyaltyPointsManagementPage'
@@ -66,6 +67,7 @@ export default function App() {
             <Route path="ratings" element={<RatingsFeedbackPage />} />
             <Route path="discounts" element={<DiscountManagementPage />} />
             <Route path="referral-fees" element={<ReferralFeesManagementPage />} />
+            <Route path="service-geofences" element={<ServiceGeofencesManagementPage />} />
             <Route path="advertisements" element={<AdvertisementsManagementPage />} />
             <Route path="loyalty" element={<LoyaltyPointsManagementPage />} />
             <Route path="system-settings" element={<SystemSettingsPage />} />

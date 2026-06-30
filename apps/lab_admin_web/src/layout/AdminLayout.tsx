@@ -47,6 +47,7 @@ const nav: NavItem[] = [
   { to: '/ratings', labelKey: 'nav.ratings', icon: 'reviews' },
   { to: '/discounts', labelKey: 'nav.discounts', icon: 'sell' },
   { to: '/referral-fees', labelKey: 'nav.referralFees', icon: 'payments' },
+  { to: '/service-geofences', labelKey: 'nav.serviceGeofences', icon: 'map' },
   { to: '/advertisements', labelKey: 'nav.advertisements', icon: 'campaign' },
   { to: '/loyalty', labelKey: 'nav.loyalty', icon: 'card_giftcard' },
   { to: '/system-settings', labelKey: 'nav.systemSettings', icon: 'settings' },

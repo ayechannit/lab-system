@@ -2168,6 +2168,46 @@ a.btn {
   padding: 0;
 }
 
+/* Home article card — matches mobile / Flutter web advertisement hero */
+.ad-article-preview {
+  margin: 0.5rem 0 0.85rem;
+  max-width: 320px;
+  border-radius: 20px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  box-shadow:
+    0 6px 22px color-mix(in srgb, var(--shadow, #000) 7%, transparent),
+    0 1px 4px color-mix(in srgb, var(--shadow, #000) 3%, transparent);
+  background: var(--surface, #fff);
+}
+
+.ad-article-preview__media {
+  aspect-ratio: 4 / 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface, #fff);
+}
+
+.ad-article-preview__media img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+}
+
+.ad-table-thumb {
+  width: 72px;
+  height: 54px;
+  object-fit: contain;
+  object-position: center;
+  border-radius: 6px;
+  display: block;
+  background: var(--surface, #fff);
+  border: 1px solid color-mix(in srgb, var(--border) 55%, transparent);
+}
+
 .logo-url-field__url-label {
   display: block;
   margin: 1rem 0 0.35rem;
@@ -2251,7 +2291,7 @@ a.btn {
 .system-settings-form {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1.35rem;
   width: 100%;
   max-width: 100%;
   min-width: 0;
@@ -2262,14 +2302,40 @@ a.btn {
   box-shadow: none;
 }
 
+.system-settings-topbar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.system-settings-topbar .system-settings-callout {
+  width: 100%;
+}
+
+.system-settings-last-saved {
+  margin: 0;
+  padding: 0.45rem 0.85rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  text-align: center;
+}
+
 .system-settings-callout {
   display: flex;
   align-items: flex-start;
   gap: 0.65rem;
-  padding: 0.85rem 1rem;
-  border-radius: 12px;
-  border: 1px solid color-mix(in srgb, var(--primary) 22%, var(--border));
-  background: color-mix(in srgb, var(--primary) 6%, var(--card-bg));
+  flex: 1 1 auto;
+  padding: 0.75rem 0.9rem;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--primary) 18%, var(--border));
+  background: color-mix(in srgb, var(--primary) 4%, var(--card-bg));
 }
 
 .system-settings-callout__icon {
@@ -2282,32 +2348,9 @@ a.btn {
 
 .system-settings-callout__text {
   margin: 0;
-  font-size: 0.875rem;
-  line-height: 1.5;
-  color: var(--text);
-}
-
-.system-settings-meta {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.35rem 1rem;
-  padding: 0.55rem 0.85rem;
-  border-radius: 10px;
-  background: var(--subtle-fill);
-  border: 1px solid var(--border);
-  font-size: 0.78rem;
+  font-size: 0.8125rem;
+  line-height: 1.45;
   color: var(--muted);
-}
-
-.system-settings-meta code {
-  font-size: 0.76rem;
-  color: var(--heading);
-}
-
-.system-settings-meta__updated {
-  font-variant-numeric: tabular-nums;
 }
 
 .system-settings-panel__grid {
@@ -2320,27 +2363,867 @@ a.btn {
 
 @media (min-width: 1024px) {
   .system-settings-panel__grid {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
     gap: 1.25rem 1.5rem;
-    align-items: start;
+    align-items: stretch;
   }
+}
+
+.system-settings-subsection {
+  padding: 1rem;
+  margin-top: 0.15rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--subtle-fill);
+}
+
+.system-settings-subsection__head {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  margin-bottom: 0.85rem;
+}
+
+.system-settings-subsection__icon {
+  flex-shrink: 0;
+  font-size: 1.15rem;
+  line-height: 1;
+  color: var(--primary);
+  margin-top: 0.1rem;
+}
+
+.system-settings-subsection__title {
+  margin: 0 0 0.2rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--heading);
+}
+
+.system-settings-subsection__hint {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+.system-settings-subsection__hint--warn {
+  margin-top: 0.65rem;
+  color: color-mix(in srgb, var(--primary) 55%, var(--muted));
+}
+
+.system-settings-currency-field {
+  margin-bottom: 0;
+}
+
+.system-settings-currency-input {
+  display: flex;
+  align-items: stretch;
+  max-width: 220px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--input-bg, var(--card-bg));
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.system-settings-currency-input:focus-within {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+.system-settings-currency-field .system-settings-currency-input input {
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 0;
+  margin: 0;
+  padding: 0.55rem 0.65rem;
+  border: none;
+  border-radius: 0;
+  outline: none;
+  box-shadow: none;
+  background: transparent;
+  font-variant-numeric: tabular-nums;
+}
+
+.system-settings-currency-field .system-settings-currency-input input:focus,
+.system-settings-currency-field .system-settings-currency-input input:focus-visible {
+  outline: none;
+  border: none;
+  box-shadow: none;
+}
+
+.system-settings-currency-field .system-settings-currency-input input[type='number'] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.system-settings-currency-field .system-settings-currency-input input[type='number']::-webkit-inner-spin-button,
+.system-settings-currency-field .system-settings-currency-input input[type='number']::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.system-settings-currency-input__suffix {
+  display: flex;
+  align-items: center;
+  padding: 0 0.75rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--muted);
+  background: var(--card-bg);
+  border-left: 1px solid var(--border);
 }
 
 .system-settings-section {
   min-width: 0;
-  padding: 1.25rem 1.2rem;
+  display: flex;
+  flex-direction: column;
+  padding: 1.15rem 1.2rem 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--card-bg);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--heading) 4%, transparent);
+}
+
+.system-settings-section__head {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-bottom: 1.1rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.system-settings-section__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--primary) 10%, var(--card-bg));
+  color: var(--primary);
+}
+
+.system-settings-section__icon .material-symbols-outlined {
+  font-size: 1.2rem;
+}
+
+.system-settings-section__copy {
+  min-width: 0;
+}
+
+.system-settings-section__title {
+  margin: 0 0 0.2rem;
+  padding: 0;
+  border: none;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--heading);
+  line-height: 1.25;
+}
+
+.system-settings-section__desc {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+.system-settings-address {
+  min-height: 4.5rem;
+  resize: vertical;
+}
+
+.system-settings-map-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: -0.35rem;
+}
+
+.system-settings-coord-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--subtle-fill);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.system-settings-coord-chip .material-symbols-outlined {
+  font-size: 0.95rem;
+  color: var(--primary);
+}
+
+.system-settings-geocode-hint {
+  margin: -0.15rem 0 0;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: color-mix(in srgb, var(--primary) 50%, var(--muted));
+}
+
+.system-settings-field-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.system-settings-field-label .material-symbols-outlined {
+  font-size: 1rem;
+  color: var(--muted);
+}
+
+/* —— Service geofences management —— */
+.service-geofences-page .card {
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--heading) 4%, transparent);
+}
+
+.service-geofence-tester {
+  padding: 1.25rem 1.35rem 1.35rem;
+}
+
+.service-geofence-tester__head {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-bottom: 1.1rem;
+  padding-bottom: 0.9rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.service-geofence-tester__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--primary) 10%, var(--card-bg));
+  color: var(--primary);
+}
+
+.service-geofence-tester__icon .material-symbols-outlined {
+  font-size: 1.2rem;
+}
+
+.service-geofence-tester__title {
+  margin: 0 0 0.2rem;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--heading);
+  line-height: 1.25;
+}
+
+.service-geofence-tester__hint {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--muted);
+  max-width: 52rem;
+}
+
+.service-geofence-tester__body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1rem;
+  align-items: stretch;
+}
+
+@media (min-width: 900px) {
+  .service-geofence-tester__body {
+    grid-template-columns: minmax(0, 1.55fr) minmax(260px, 0.85fr);
+    gap: 1.15rem 1.25rem;
+  }
+}
+
+.service-geofence-tester__map-wrap {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 100%;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: linear-gradient(180deg, var(--panel-muted) 0%, var(--card-bg) 100%);
+}
+
+.service-geofence-tester__map-wrap .location-map-picker {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.service-geofence-tester__map-wrap .location-map-picker__viewport {
+  flex: 1 1 0;
+  min-height: 240px;
+  height: auto !important;
+  border-radius: 12px;
+}
+
+.service-geofence-tester__panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  min-width: 0;
+  min-height: 100%;
+  padding: 1rem 1.05rem;
   border: 1px solid var(--border);
   border-radius: 14px;
   background: var(--subtle-fill);
 }
 
-.system-settings-section__title {
-  margin: 0 0 1rem;
-  padding-bottom: 0.65rem;
+.service-geofence-tester__steps {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.service-geofence-tester__step {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.service-geofence-tester__step-index {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 1.45rem;
+  height: 1.45rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.service-geofence-tester__step--active {
+  color: var(--heading);
+}
+
+.service-geofence-tester__step--active .service-geofence-tester__step-index {
+  border-color: color-mix(in srgb, var(--primary) 35%, var(--border));
+  background: color-mix(in srgb, var(--primary) 10%, var(--card-bg));
+  color: var(--primary);
+}
+
+.service-geofence-tester__step--done {
+  color: var(--heading);
+}
+
+.service-geofence-tester__step--done .service-geofence-tester__step-index {
+  border-color: color-mix(in srgb, var(--accent-green) 35%, var(--border));
+  background: color-mix(in srgb, var(--accent-green) 12%, var(--card-bg));
+  color: var(--accent-green);
+}
+
+.service-geofence-tester__selection {
+  padding: 0.8rem 0.85rem;
+  border: 1px dashed color-mix(in srgb, var(--border) 88%, var(--muted));
+  border-radius: 12px;
+  background: var(--card-bg);
+}
+
+.service-geofence-tester__selection--ready {
+  border-style: solid;
+  border-color: color-mix(in srgb, var(--primary) 22%, var(--border));
+  background: color-mix(in srgb, var(--primary) 4%, var(--card-bg));
+}
+
+.service-geofence-tester__panel-label {
+  margin: 0 0 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.service-geofence-tester__selection-empty {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+.service-geofence-tester__coords {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0;
+}
+
+.service-geofence-tester__coord-row {
+  display: grid;
+  grid-template-columns: 4.5rem minmax(0, 1fr);
+  gap: 0.5rem;
+  align-items: baseline;
+}
+
+.service-geofence-tester__coord-row dt {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.service-geofence-tester__coord-row dd {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--heading);
+  word-break: break-all;
+}
+
+.service-geofence-tester__zones-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.55rem 0.65rem;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.service-geofence-tester__zones-meta .material-symbols-outlined {
+  font-size: 1rem;
+  color: var(--primary);
+}
+
+.service-geofence-tester__result-slot {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 6.5rem;
+  padding: 0.15rem;
+}
+
+.service-geofence-tester__result-idle {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  min-height: 6rem;
+  padding: 0.85rem 0.65rem;
+  border-radius: 12px;
+  border: 1px dashed var(--border);
+  background: color-mix(in srgb, var(--panel-muted) 55%, var(--card-bg));
+  text-align: center;
+}
+
+.service-geofence-tester__result-idle .material-symbols-outlined {
+  font-size: 1.5rem;
+  color: color-mix(in srgb, var(--muted) 80%, var(--primary));
+}
+
+.service-geofence-tester__result-idle p {
+  margin: 0;
+  max-width: 14rem;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+.service-geofence-tester__result-slot--success .service-geofence-tester__outcome,
+.service-geofence-tester__result-slot--error .service-geofence-tester__outcome {
+  width: 100%;
+}
+
+.service-geofence-tester__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: auto;
+  padding-top: 0.15rem;
+}
+
+.service-geofence-tester__btn {
+  width: 100%;
+}
+
+.service-geofence-tester__geo-message {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: #b42318;
+  text-align: center;
+}
+
+.service-geofence-tester__outcome {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  width: 100%;
+  padding: 0.85rem 0.9rem;
+  border-radius: 12px;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+
+.service-geofence-tester__outcome .material-symbols-outlined {
+  font-size: 1.25rem;
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+.service-geofence-tester__outcome p {
+  margin: 0;
+}
+
+.service-geofence-tester__outcome--success {
+  border: 1px solid color-mix(in srgb, var(--accent-green) 35%, var(--border));
+  background: color-mix(in srgb, var(--accent-green) 8%, var(--card-bg));
+  color: var(--heading);
+}
+
+.service-geofence-tester__outcome--success .material-symbols-outlined {
+  color: var(--accent-green);
+}
+
+.service-geofence-tester__outcome-title {
+  margin: 0 0 0.2rem;
+  font-weight: 700;
+  font-size: 0.9rem;
+  line-height: 1.3;
+}
+
+.service-geofence-tester__outcome-fee {
+  margin: 0 0 0.25rem;
+  font-size: 1.35rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--heading);
+  line-height: 1.15;
+}
+
+.service-geofence-tester__outcome-currency {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.service-geofence-tester__outcome-sub {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.service-geofence-tester__outcome--error {
+  border: 1px solid color-mix(in srgb, var(--primary) 28%, var(--border));
+  background: color-mix(in srgb, var(--primary) 6%, var(--card-bg));
+  color: var(--heading);
+}
+
+.service-geofence-tester__outcome--error .material-symbols-outlined {
+  color: var(--primary);
+}
+
+.service-geofences-zones {
+  padding: 1.25rem 1.35rem 1.35rem;
+}
+
+.service-geofences-zones__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.85rem 1.25rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.9rem;
   border-bottom: 1px solid var(--border);
+}
+
+.service-geofences-zones__title {
+  margin: 0 0 0.25rem;
   font-size: 1rem;
   font-weight: 700;
   color: var(--heading);
+}
+
+.service-geofences-zones__hint {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--muted);
+  max-width: 40rem;
+}
+
+.service-geofences-zones__head-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  flex-shrink: 0;
+}
+
+.service-geofences-zones__filters {
+  margin-bottom: 0.85rem;
+}
+
+.service-geofences-zones__filters .list-filters-bar {
+  flex: 1 1 auto;
+}
+
+.geofence-bounds-map-picker {
+  width: 100%;
+  min-width: 0;
+}
+
+.geofence-bounds-map-picker__hint {
+  margin: 0 0 0.55rem;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+.geofence-bounds-map-picker .map-location-search {
+  margin-bottom: 0.65rem;
+}
+
+.geofence-bounds-location-search {
+  margin-bottom: 0.65rem;
+}
+
+.geofence-bounds-location-search__fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem 0.75rem;
+}
+
+.geofence-bounds-location-search__field {
+  margin: 0;
+  min-width: 0;
+}
+
+.geofence-bounds-location-search__field label {
+  font-size: 0.8125rem;
+}
+
+.geofence-bounds-location-search__input {
+  width: 100%;
+  min-width: 0;
+  padding: 0.5rem 0.7rem;
+  font-size: 0.875rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+}
+
+.geofence-bounds-location-search__input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 22%, transparent);
+}
+
+.geofence-bounds-location-search__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem 0.75rem;
+  margin-top: 0.55rem;
+}
+
+.geofence-bounds-location-search__button {
+  flex: 0 0 auto;
+}
+
+.geofence-bounds-location-search__hint {
+  flex: 1 1 12rem;
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+.geofence-bounds-location-search__message {
+  margin: 0.4rem 0 0;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: #b42318;
+}
+
+@media (max-width: 560px) {
+  .geofence-bounds-location-search__fields {
+    grid-template-columns: 1fr;
+  }
+}
+
+.map-location-search__form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  align-items: stretch;
+}
+
+.map-location-search__input {
+  flex: 1 1 12rem;
+  min-width: 0;
+  padding: 0.5rem 0.7rem;
+  font-size: 0.875rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+}
+
+.map-location-search__input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 22%, transparent);
+}
+
+.map-location-search__button {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.map-location-search__message {
+  margin: 0.4rem 0 0;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: #b42318;
+}
+
+.geofence-bounds-map-picker__viewport {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  height: var(--location-map-height, 260px);
+  overflow: hidden;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  isolation: isolate;
+}
+
+.geofence-bounds-map-picker__viewport .leaflet-container {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.geofence-bounds-map-picker__corner-icon {
+  background: transparent;
+  border: none;
+}
+
+.geofence-bounds-map-picker__corner-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  line-height: 1;
+  color: #fff;
+  background: var(--primary);
+  border: 2px solid #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.28);
+}
+
+.geofence-bounds-map-picker__corner-badge--secondary {
+  background: color-mix(in srgb, var(--primary) 72%, #1f2937);
+}
+
+.geofence-bounds-map-picker__corner-tooltip {
+  padding: 0.28rem 0.45rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--heading);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+.geofence-bounds-map-picker__resize-handle {
+  background: transparent;
+  border: none;
+}
+
+.geofence-bounds-map-picker__resize-handle-dot {
+  display: block;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: #fff;
+  border: 2px solid var(--primary);
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.25);
+  cursor: grab;
+}
+
+.leaflet-dragging .geofence-bounds-map-picker__resize-handle-dot {
+  cursor: grabbing;
+}
+
+.geofence-bounds-map-picker__zone-rect {
+  cursor: move;
+}
+
+.geofence-bounds-map-picker__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 0.75rem;
+  margin-top: 0.55rem;
+}
+
+.geofence-bounds-map-picker__status {
+  flex: 1 1 12rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.geofence-bounds-map-picker__summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem 0.55rem;
+  margin: 0.65rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+
+.geofence-bounds-map-picker__summary-label {
+  font-weight: 600;
+  color: var(--heading);
+}
+
+.geofence-bounds-map-picker__summary code {
+  font-size: 0.78rem;
+  color: var(--heading);
+  word-break: break-all;
 }
 
 .settings-form__stack--relaxed {
@@ -2375,6 +3258,22 @@ a.btn {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.75rem;
+}
+
+.system-settings-section .theme-picker__legend {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.system-settings-section .theme-picker__option:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
 }
 
 .theme-picker__option {
@@ -2492,14 +3391,23 @@ a.btn {
   align-items: center;
   justify-content: space-between;
   gap: 1rem 1.25rem;
-  margin-top: 0.5rem;
-  padding: 1.35rem 0 0;
+  margin-top: 0.25rem;
+  padding: 1.15rem 0 0;
   border-top: 1px solid var(--border);
   background: transparent;
+  transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .system-settings-actions--dirty {
-  border-top-color: color-mix(in srgb, var(--primary) 30%, var(--border));
+  position: sticky;
+  bottom: 0;
+  z-index: 3;
+  margin: 0.5rem -1.65rem -1.35rem;
+  padding: 1rem 1.65rem 1.2rem;
+  border-top-color: color-mix(in srgb, var(--primary) 28%, var(--border));
+  background: color-mix(in srgb, var(--card-bg) 88%, transparent);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 -8px 24px color-mix(in srgb, var(--heading) 6%, transparent);
 }
 
 .system-settings-actions__status {
@@ -2536,7 +3444,26 @@ a.btn {
   font-size: 0.78rem;
   color: var(--muted);
   line-height: 1.35;
-  padding-left: calc(0.5rem + 0.55rem);
+  padding-left: 0;
+}
+
+@media (max-width: 640px) {
+  .system-settings-contact-pair {
+    grid-template-columns: 1fr;
+  }
+
+  .system-settings-actions--dirty {
+    margin-inline: -1rem;
+    padding-inline: 1rem;
+  }
+
+  .system-settings-actions__buttons {
+    width: 100%;
+  }
+
+  .system-settings-actions__buttons .btn {
+    flex: 1 1 auto;
+  }
 }
 
 .system-settings-actions__buttons {
@@ -2686,6 +3613,10 @@ a.btn {
   width: 100%;
   max-width: 100%;
   min-width: 0;
+}
+
+.location-map-picker .map-location-search {
+  margin-bottom: 0.65rem;
 }
 
 .location-map-picker__viewport {
@@ -4454,6 +5385,58 @@ a.btn {
   border-bottom: 1px solid var(--border);
 }
 
+.route-panel--collapsed .route-panel__slice-head {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.route-panel__collapse-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+
+.route-panel__collapse-toggle:hover .route-panel__collapse-icon {
+  color: var(--primary);
+}
+
+.route-panel__collapse-toggle:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--primary) 55%, transparent);
+  outline-offset: 3px;
+  border-radius: 8px;
+}
+
+.route-panel__slice-head-end {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-shrink: 0;
+}
+
+.route-panel__collapse-icon {
+  font-size: 1.35rem;
+  color: var(--muted);
+  transition: color 0.15s ease;
+}
+
+.route-panel__route-badge--solo {
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
 .route-panel__slice-title {
   display: flex;
   flex-wrap: wrap;
@@ -5004,6 +5987,75 @@ a.btn {
   border: 1px solid #e8edf5;
 }
 
+.route-stop-card:not(.route-stop-card--assigned) .route-stop-card__body {
+  padding: 0;
+  overflow: hidden;
+}
+
+.route-stop-card--collapsed:not(.route-stop-card--assigned) .route-stop-card__body {
+  background: color-mix(in srgb, var(--subtle-fill-2) 88%, var(--surface));
+}
+
+.route-stop-card__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.65rem;
+  width: 100%;
+  margin: 0;
+  padding: 0.8rem 0.9rem;
+  border: none;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+
+.route-stop-card__head:hover .route-stop-card__chevron {
+  color: var(--primary);
+}
+
+.route-stop-card__head:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--primary) 55%, transparent);
+  outline-offset: -2px;
+}
+
+.route-stop-card__chevron {
+  flex-shrink: 0;
+  font-size: 1.25rem;
+  color: var(--muted);
+  margin-top: 0.05rem;
+  transition: color 0.15s ease;
+}
+
+.route-stop-card__details {
+  padding: 0 0.9rem 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.route-stop-card__meta--head {
+  gap: 0.2rem;
+  margin-bottom: 0;
+}
+
+.route-stop-card__address--peek {
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.route-stop-card:not(.route-stop-card--assigned) .route-stop-card__meta {
+  margin-bottom: 0;
+}
+
+.route-stop-card:not(.route-stop-card--assigned) .route-stop-card__schedule-edit {
+  margin-top: 0;
+}
+
 .route-stop-card__meta {
   display: flex;
   flex-direction: column;
@@ -5045,13 +6097,24 @@ a.btn {
 
 .route-stop-card__schedule-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(5.5rem, 1fr));
-  gap: 0.55rem 0.65rem;
-  max-width: 22rem;
+  grid-template-columns: repeat(3, minmax(8.25rem, 1fr));
+  gap: 0.55rem 0.75rem;
+  width: 100%;
 }
 
 .route-stop-card__schedule-grid .field {
   margin: 0;
+  min-width: 0;
+}
+
+.route-stop-card__schedule-grid .datetime-local-field__trigger {
+  padding-right: 2.5rem;
+}
+
+.route-stop-card__schedule-grid .datetime-local-field__value {
+  overflow: visible;
+  text-overflow: clip;
+  white-space: nowrap;
 }
 
 .route-stop-card__schedule-grid .field label {

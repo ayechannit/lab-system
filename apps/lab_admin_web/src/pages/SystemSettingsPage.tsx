@@ -11,6 +11,11 @@ import { formatCoordPair, LocationMapPicker } from '../components/users/Location
 import { useAddressGeocode } from '../hooks/useAddressGeocode'
 import { isApiMode } from '../services/apiBase'
 import {
+  fetchActiveMaterialFees,
+  updateMaterialFee,
+  type MaterialFeeRow,
+} from '../services/materialFeeService'
+import {
   fetchSystemSettings,
   fixedBrandingFields,
   type SystemSettingsRow,
@@ -30,30 +35,6 @@ import {
 } from '../theme/appThemes'
 import '../components/common/ui.css'
 
-function applyRowToState(
-  row: SystemSettingsRow,
-  setters: {
-    setSettingsId: (id?: string) => void
-    setUpdatedAt: (v?: string) => void
-    setMode: (v: ThemeMode) => void
-    setAddress: (v: string) => void
-    setLatitude: (v: number | '') => void
-    setLongitude: (v: number | '') => void
-    setContactPhone: (v: string) => void
-    setContactEmail: (v: string) => void
-  },
-) {
-  const themeId = normalizeAppThemeId(row.mode)
-  setters.setSettingsId(row.id)
-  setters.setUpdatedAt(row.updated_at)
-  setters.setMode(themeId)
-  setters.setAddress(row.address ?? '')
-  setters.setLatitude(row.latitude ?? '')
-  setters.setLongitude(row.longitude ?? '')
-  setters.setContactPhone(row.contact_phone ?? '')
-  setters.setContactEmail(row.contact_email ?? '')
-}
-
 type FormSnapshotFields = {
   mode: ThemeMode
   address: string
@@ -61,6 +42,7 @@ type FormSnapshotFields = {
   longitude: number | ''
   contactPhone: string
   contactEmail: string
+  materialFeeAmount: number | ''
 }
 
 function formSnapshot(fields: FormSnapshotFields): string {
@@ -71,10 +53,14 @@ function formSnapshot(fields: FormSnapshotFields): string {
     longitude: fields.longitude,
     contactPhone: fields.contactPhone.trim(),
     contactEmail: fields.contactEmail.trim(),
+    materialFeeAmount: fields.materialFeeAmount,
   })
 }
 
-function snapshotFromRow(row: SystemSettingsRow): string {
+function snapshotFromState(
+  row: SystemSettingsRow,
+  materialFeeAmount: number | '',
+): string {
   return formSnapshot({
     mode: normalizeAppThemeId(row.mode),
     address: row.address ?? '',
@@ -82,6 +68,7 @@ function snapshotFromRow(row: SystemSettingsRow): string {
     longitude: row.longitude ?? '',
     contactPhone: row.contact_phone ?? '',
     contactEmail: row.contact_email ?? '',
+    materialFeeAmount,
   })
 }
 
@@ -95,7 +82,6 @@ export function SystemSettingsPage() {
   const [submitting, setSubmitting] = useState(false)
   const [resetting, setResetting] = useState(false)
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false)
-  const [settingsId, setSettingsId] = useState<string | undefined>()
   const [updatedAt, setUpdatedAt] = useState<string | undefined>()
 
   const [mode, setMode] = useState<ThemeMode>(() => getAppliedAppTheme())
@@ -104,23 +90,55 @@ export function SystemSettingsPage() {
   const [longitude, setLongitude] = useState<number | ''>('')
   const [contactPhone, setContactPhone] = useState('')
   const [contactEmail, setContactEmail] = useState('')
+  const [materialFeeId, setMaterialFeeId] = useState<string | null>(null)
+  const [materialFeeName, setMaterialFeeName] = useState('')
+  const [materialFeeAmount, setMaterialFeeAmount] = useState<number | ''>('')
   const [loadedAddressBaseline, setLoadedAddressBaseline] = useState<string | null>(null)
 
   const savedThemeRef = useRef<AppThemeId>(getAppliedAppTheme())
   const savedFormSnapshotRef = useRef('')
   const isDirtyRef = useRef(false)
 
-  const syncSavedFromRow = useCallback((row: SystemSettingsRow) => {
-    savedThemeRef.current = normalizeAppThemeId(row.mode)
-    savedFormSnapshotRef.current = snapshotFromRow(row)
+  const applyMaterialFeeToState = useCallback((fee: MaterialFeeRow | null) => {
+    if (fee) {
+      setMaterialFeeId(fee.id)
+      setMaterialFeeName(fee.name)
+      setMaterialFeeAmount(fee.amount_mmk)
+    } else {
+      setMaterialFeeId(null)
+      setMaterialFeeName('')
+      setMaterialFeeAmount('')
+    }
   }, [])
 
-  const commitSavedToApp = useCallback((row: SystemSettingsRow) => {
+  const applySettingsRowToState = useCallback((row: SystemSettingsRow) => {
     const themeId = normalizeAppThemeId(row.mode)
-    savedThemeRef.current = themeId
-    savedFormSnapshotRef.current = snapshotFromRow(row)
-    applyAppTheme(themeId)
+    setUpdatedAt(row.updated_at)
+    setMode(themeId)
+    setAddress(row.address ?? '')
+    setLatitude(row.latitude ?? '')
+    setLongitude(row.longitude ?? '')
+    setContactPhone(row.contact_phone ?? '')
+    setContactEmail(row.contact_email ?? '')
   }, [])
+
+  const syncSavedSnapshot = useCallback(
+    (row: SystemSettingsRow, feeAmount: number | '') => {
+      savedThemeRef.current = normalizeAppThemeId(row.mode)
+      savedFormSnapshotRef.current = snapshotFromState(row, feeAmount)
+    },
+    [],
+  )
+
+  const commitSavedToApp = useCallback(
+    (row: SystemSettingsRow, feeAmount: number | '') => {
+      const themeId = normalizeAppThemeId(row.mode)
+      savedThemeRef.current = themeId
+      savedFormSnapshotRef.current = snapshotFromState(row, feeAmount)
+      applyAppTheme(themeId)
+    },
+    [],
+  )
 
   const revertUnsavedTheme = useCallback(() => {
     applyAppTheme(savedThemeRef.current)
@@ -138,17 +156,6 @@ export function SystemSettingsPage() {
     baselineAddress: loadedAddressBaseline ?? undefined,
   })
 
-  const setters = {
-    setSettingsId,
-    setUpdatedAt,
-    setMode,
-    setAddress,
-    setLatitude,
-    setLongitude,
-    setContactPhone,
-    setContactEmail,
-  }
-
   const currentSnapshot = useMemo(
     () =>
       formSnapshot({
@@ -158,8 +165,9 @@ export function SystemSettingsPage() {
         longitude,
         contactPhone,
         contactEmail,
+        materialFeeAmount,
       }),
-    [mode, address, latitude, longitude, contactPhone, contactEmail],
+    [mode, address, latitude, longitude, contactPhone, contactEmail, materialFeeAmount],
   )
 
   const isDirty =
@@ -192,10 +200,12 @@ export function SystemSettingsPage() {
     setLoadError(null)
     void (async () => {
       try {
-        const row = await fetchSystemSettings()
+        const [row, fees] = await Promise.all([fetchSystemSettings(), fetchActiveMaterialFees()])
+        const fee = fees[0] ?? null
         if (!cancelled) {
-          applyRowToState(row, setters)
-          syncSavedFromRow(row)
+          applySettingsRowToState(row)
+          applyMaterialFeeToState(fee)
+          syncSavedSnapshot(row, fee?.amount_mmk ?? '')
           const addr = row.address?.trim() ?? ''
           const hasCoords =
             row.latitude != null &&
@@ -212,8 +222,7 @@ export function SystemSettingsPage() {
     return () => {
       cancelled = true
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- load once when API mode is on
-  }, [hasApi, syncSavedFromRow])
+  }, [hasApi, applyMaterialFeeToState, applySettingsRowToState, syncSavedSnapshot, t])
 
   async function confirmResetToDefaults() {
     if (!hasApi) return
@@ -221,8 +230,8 @@ export function SystemSettingsPage() {
     setResetting(true)
     try {
       const next = await resetSystemSettingsToDefaults()
-      applyRowToState(next, setters)
-      commitSavedToApp(next)
+      applySettingsRowToState(next)
+      commitSavedToApp(next, materialFeeAmount)
       setLoadedAddressBaseline('')
       showSuccess(t('systemSettings.reset.success'))
     } catch (err) {
@@ -235,6 +244,14 @@ export function SystemSettingsPage() {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     if (!hasApi) return
+
+    const amount =
+      typeof materialFeeAmount === 'number' ? materialFeeAmount : Number.parseFloat(String(materialFeeAmount))
+    if (materialFeeId != null && (!Number.isFinite(amount) || amount < 0)) {
+      showError(t('systemSettings.materialFees.errorAmount'))
+      return
+    }
+
     const lat = latitude === '' ? null : Number(latitude)
     const lng = longitude === '' ? null : Number(longitude)
     const body: SystemSettingsUpdateBody = {
@@ -249,8 +266,19 @@ export function SystemSettingsPage() {
     setSubmitting(true)
     try {
       const next = await updateSystemSettings(body)
-      applyRowToState(next, setters)
-      commitSavedToApp(next)
+      let savedAmount = materialFeeAmount
+      if (materialFeeId != null && Number.isFinite(amount)) {
+        const rounded = Math.round(amount * 100) / 100
+        const updatedFee = await updateMaterialFee(materialFeeId, {
+          name: materialFeeName.trim() || t('systemSettings.materialFees.defaultName'),
+          amount_mmk: rounded,
+          is_active: true,
+        })
+        savedAmount = updatedFee.amount_mmk
+        setMaterialFeeName(updatedFee.name)
+      }
+      applySettingsRowToState(next)
+      commitSavedToApp(next, savedAmount)
       showSuccess(t('systemSettings.save.success'))
     } catch (err) {
       showError(messageFromError(err, t('systemSettings.save.failed')))
@@ -270,53 +298,102 @@ export function SystemSettingsPage() {
           <LoadingSpinner layout="block" label={t('systemSettings.loading')} />
         ) : (
           <form className="system-settings-form" onSubmit={(e) => void handleSubmit(e)}>
-            <div className="system-settings-callout" role="note">
-              <span className="material-symbols-outlined system-settings-callout__icon" aria-hidden>
-                info
-              </span>
-              <p className="system-settings-callout__text">{t('systemSettings.draftHint')}</p>
-            </div>
-
-            {settingsId ? (
-              <div className="system-settings-meta">
-                <span>
-                  {t('common.record')} <code>{settingsId}</code>
+            <div className="system-settings-topbar">
+              <div className="system-settings-callout" role="note">
+                <span className="material-symbols-outlined system-settings-callout__icon" aria-hidden>
+                  info
                 </span>
-                {updatedAt ? (
-                  <span className="system-settings-meta__updated">
-                    {t('systemSettings.updatedAt', {
-                      date: formatIsoDatetime(updatedAt, intlLocale),
-                    })}
-                  </span>
-                ) : null}
+                <p className="system-settings-callout__text">{t('systemSettings.draftHint')}</p>
               </div>
-            ) : null}
+              {updatedAt ? (
+                <p className="system-settings-last-saved">
+                  {t('systemSettings.lastSaved', {
+                    date: formatIsoDatetime(updatedAt, intlLocale),
+                  })}
+                </p>
+              ) : null}
+            </div>
 
             <div className="system-settings-panel__grid">
               <section className="system-settings-section">
-                <h2 className="system-settings-section__title">{t('systemSettings.appearance')}</h2>
+                <header className="system-settings-section__head">
+                  <span className="system-settings-section__icon" aria-hidden>
+                    <span className="material-symbols-outlined">palette</span>
+                  </span>
+                  <div className="system-settings-section__copy">
+                    <h2 className="system-settings-section__title">{t('systemSettings.appearance')}</h2>
+                    <p className="system-settings-section__desc">{t('systemSettings.appearanceDesc')}</p>
+                  </div>
+                </header>
                 <div className="settings-form__stack settings-form__stack--relaxed">
                   <ThemePicker
                     value={mode}
                     onChange={handleThemeChange}
                     disabled={submitting || resetting || !hasApi}
                   />
+                  <div className="system-settings-subsection">
+                    <div className="system-settings-subsection__head">
+                      <span className="material-symbols-outlined system-settings-subsection__icon" aria-hidden>
+                        science
+                      </span>
+                      <div>
+                        <h3 className="system-settings-subsection__title">
+                          {t('systemSettings.materialFees.title')}
+                        </h3>
+                        <p className="system-settings-subsection__hint">{t('systemSettings.materialFees.hint')}</p>
+                      </div>
+                    </div>
+                    <div className="field system-settings-currency-field">
+                      <label htmlFor="sys-material-fee">{t('systemSettings.materialFees.amountLabel')}</label>
+                      <div className="system-settings-currency-input">
+                        <input
+                          id="sys-material-fee"
+                          type="number"
+                          min={0}
+                          step={0.01}
+                          inputMode="decimal"
+                          value={materialFeeAmount === '' ? '' : materialFeeAmount}
+                          onChange={(e) => {
+                            const v = e.target.value
+                            setMaterialFeeAmount(v === '' ? '' : Number.parseFloat(v))
+                          }}
+                          disabled={submitting || resetting || !hasApi || materialFeeId == null}
+                          aria-describedby={materialFeeId == null ? 'sys-material-fee-hint' : undefined}
+                        />
+                        <span className="system-settings-currency-input__suffix">{t('orders.currency')}</span>
+                      </div>
+                    </div>
+                    {materialFeeId == null ? (
+                      <p id="sys-material-fee-hint" className="system-settings-subsection__hint system-settings-subsection__hint--warn">
+                        {t('systemSettings.materialFees.unavailable')}
+                      </p>
+                    ) : null}
+                  </div>
                 </div>
               </section>
 
               <section className="system-settings-section">
-                <h2 className="system-settings-section__title">{t('systemSettings.locationContact')}</h2>
+                <header className="system-settings-section__head">
+                  <span className="system-settings-section__icon" aria-hidden>
+                    <span className="material-symbols-outlined">location_on</span>
+                  </span>
+                  <div className="system-settings-section__copy">
+                    <h2 className="system-settings-section__title">{t('systemSettings.locationContact')}</h2>
+                    <p className="system-settings-section__desc">{t('systemSettings.locationContactDesc')}</p>
+                  </div>
+                </header>
                 <div className="settings-form__stack settings-form__stack--relaxed">
                   <div className="field">
                     <label htmlFor="sys-address">{t('common.address')}</label>
                     <textarea
                       id="sys-address"
+                      className="system-settings-address"
                       value={address}
                       onChange={(e) => {
                         setAddress(e.target.value)
                         setLoadedAddressBaseline(null)
                       }}
-                      rows={2}
+                      rows={3}
                       disabled={submitting || resetting || !hasApi}
                     />
                   </div>
@@ -333,33 +410,56 @@ export function SystemSettingsPage() {
                         setAddress(line)
                         setLoadedAddressBaseline(null)
                       }}
-                      mapHeight={240}
+                      mapHeight={220}
                     />
                   </div>
-                  {geocodeHint ? <p className="user-form-modal__geocode-hint">{geocodeHint}</p> : null}
-                  <p className="catalog-mode-hint" style={{ margin: 0 }}>
-                    {t('systemSettings.coordinates', {
-                      coords: formatCoordPair(latitude, longitude),
-                    })}
-                  </p>
-                  <p className="catalog-mode-hint" style={{ margin: '0.35rem 0 0' }}>
-                    {t('systemSettings.mapHint')}
-                  </p>
-                  <div className="settings-form__pair">
+                  <div className="system-settings-map-meta">
+                    <span className="system-settings-coord-chip">
+                      <span className="material-symbols-outlined" aria-hidden>
+                        my_location
+                      </span>
+                      {t('systemSettings.coordinates', {
+                        coords: formatCoordPair(latitude, longitude),
+                      })}
+                    </span>
+                  </div>
+                  {geocodeHint ? (
+                    <p className="system-settings-geocode-hint" role="status">
+                      {geocodeHint}
+                    </p>
+                  ) : null}
+                  <div className="settings-form__pair system-settings-contact-pair">
                     <div className="field">
-                      <label htmlFor="sys-phone">{t('systemSettings.contactPhone')}</label>
+                      <label htmlFor="sys-phone">
+                        <span className="system-settings-field-label">
+                          <span className="material-symbols-outlined" aria-hidden>
+                            call
+                          </span>
+                          {t('systemSettings.contactPhone')}
+                        </span>
+                      </label>
                       <input
                         id="sys-phone"
+                        type="tel"
+                        autoComplete="tel"
                         value={contactPhone}
                         onChange={(e) => setContactPhone(e.target.value)}
                         disabled={submitting || resetting || !hasApi}
                       />
                     </div>
                     <div className="field">
-                      <label htmlFor="sys-email">{t('systemSettings.contactEmail')}</label>
+                      <label htmlFor="sys-email">
+                        <span className="system-settings-field-label">
+                          <span className="material-symbols-outlined" aria-hidden>
+                            mail
+                          </span>
+                          {t('systemSettings.contactEmail')}
+                        </span>
+                      </label>
                       <input
                         id="sys-email"
                         type="email"
+                        autoComplete="email"
                         value={contactEmail}
                         onChange={(e) => setContactEmail(e.target.value)}
                         disabled={submitting || resetting || !hasApi}
@@ -372,6 +472,8 @@ export function SystemSettingsPage() {
 
             <div
               className={`system-settings-actions${isDirty ? ' system-settings-actions--dirty' : ''}`}
+              role="region"
+              aria-label={t('systemSettings.saveSettings')}
             >
               <div className="system-settings-actions__status">
                 {isDirty ? (

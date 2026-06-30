@@ -254,6 +254,12 @@ class SessionController extends ChangeNotifier {
 
   Future<List<LabCollectorPick>> fetchActiveCollectors() => _api.listActiveCollectors();
 
+  Future<ServiceFeeQuote> calculateServiceFee({
+    required double latitude,
+    required double longitude,
+  }) =>
+      _api.calculateServiceFee(latitude: latitude, longitude: longitude);
+
   Future<void> acceptProposedSchedule() async {
     final u = _user;
     final o = _trackingOrder;
@@ -382,6 +388,15 @@ class SessionController extends ChangeNotifier {
     if (u == null) return;
     _loyalty = await _api.getLoyaltySnapshot(u.id);
     notifyListeners();
+  }
+
+  /// Reload dashboard metrics, ads, tracking, and notification count (home tab tap / pull-to-refresh).
+  Future<void> refreshHomeTab() async {
+    await Future.wait([
+      refreshHomeSummary(),
+      refreshTracking(),
+      refreshNotifications(quiet: true),
+    ]);
   }
 
   Future<void> refreshHomeSummary() async {

@@ -22,6 +22,35 @@ async function resolvePreferredCollectorId(collector_id) {
   return collector_id;
 }
 
+const OUT_OF_COVERAGE_MESSAGE =
+  'Your location is outside our service coverage areas. We cannot deliver services to this address.';
+
+async function resolveGeofenceForLocation(latitude, longitude) {
+  if (latitude == null || longitude == null) return null;
+  const latVal = parseFloat(latitude);
+  const lngVal = parseFloat(longitude);
+  if (Number.isNaN(latVal) || Number.isNaN(lngVal)) return null;
+
+  const matchedGeofence = await ServiceGeofence.matchCoordinates(latVal, lngVal);
+  if (!matchedGeofence) {
+    const error = new Error(OUT_OF_COVERAGE_MESSAGE);
+    error.code = 'OUT_OF_COVERAGE';
+    throw error;
+  }
+
+  return {
+    service_geofence_id: matchedGeofence.id,
+    service_fee_mmk: parseFloat(matchedGeofence.service_fee_mmk) || 0,
+  };
+}
+
+function respondOutOfCoverage(res, message = OUT_OF_COVERAGE_MESSAGE) {
+  return res.status(400).json({
+    code: 'OUT_OF_COVERAGE',
+    message,
+  });
+}
+
 const getAllOrders = async (req, res) => {
   const orders = await Order.getAll(req.query);
   res.json(orders);
@@ -51,20 +80,19 @@ const createOrder = async (req, res) => {
       original_price_mmk, discount_percent, final_price_mmk, material_fee_mmk, items 
     };
 
-    if (latitude != null && longitude != null) {
-      const latVal = parseFloat(latitude);
-      const lngVal = parseFloat(longitude);
-      if (!isNaN(latVal) && !isNaN(lngVal)) {
-        const matchedGeofence = await ServiceGeofence.matchCoordinates(latVal, lngVal);
-        if (!matchedGeofence) {
-          return res.status(400).json({
-            code: 'OUT_OF_COVERAGE',
-            message: 'Your location is outside our service coverage areas. We cannot deliver services to this address.'
-          });
-        }
+    try {
+      const geofence = await resolveGeofenceForLocation(latitude, longitude);
+      if (geofence) {
+        orderData.service_geofence_id = geofence.service_geofence_id;
+        orderData.service_fee_mmk = geofence.service_fee_mmk;
       }
+    } catch (error) {
+      if (error.code === 'OUT_OF_COVERAGE') {
+        return respondOutOfCoverage(res, error.message);
+      }
+      throw error;
     }
-    
+
     // Parse items if it's a string (from multipart/form-data)
     if (typeof orderData.items === 'string') {
       try {
@@ -211,38 +239,39 @@ const syncPendingOrder = async (req, res) => {
 
     const resolvedCollectorId = await resolvePreferredCollectorId(collector_id);
 
-    if (latitude != null && longitude != null) {
-      const latVal = parseFloat(latitude);
-      const lngVal = parseFloat(longitude);
-      if (!isNaN(latVal) && !isNaN(lngVal)) {
-        const matchedGeofence = await ServiceGeofence.matchCoordinates(latVal, lngVal);
-        if (!matchedGeofence) {
-          return res.status(400).json({
-            code: 'OUT_OF_COVERAGE',
-            message: 'Your location is outside our service coverage areas. We cannot deliver services to this address.'
-          });
-        }
+    const syncPayload = {
+      collector_id: resolvedCollectorId,
+      description,
+      priority,
+      patient_name,
+      patient_age,
+      patient_phone,
+      address,
+      latitude,
+      longitude,
+      original_price_mmk,
+      discount_percent,
+      final_price_mmk,
+      material_fee_mmk,
+      items,
+    };
+
+    try {
+      const geofence = await resolveGeofenceForLocation(latitude, longitude);
+      if (geofence) {
+        syncPayload.service_geofence_id = geofence.service_geofence_id;
+        syncPayload.service_fee_mmk = geofence.service_fee_mmk;
       }
+    } catch (error) {
+      if (error.code === 'OUT_OF_COVERAGE') {
+        return respondOutOfCoverage(res, error.message);
+      }
+      throw error;
     }
 
     const updatedOrder = await Order.syncPendingOrder(
       id,
-      {
-        collector_id: resolvedCollectorId,
-        description,
-        priority,
-        patient_name,
-        patient_age,
-        patient_phone,
-        address,
-        latitude,
-        longitude,
-        original_price_mmk,
-        discount_percent,
-        final_price_mmk,
-        material_fee_mmk,
-        items,
-      },
+      syncPayload,
       req.user?.id,
       {
         isStaff: req.user?.type === 'staff',
@@ -292,32 +321,33 @@ const updateOrder = async (req, res) => {
       });
     }
 
-    if (latitude != null && longitude != null) {
-      const latVal = parseFloat(latitude);
-      const lngVal = parseFloat(longitude);
-      if (!isNaN(latVal) && !isNaN(lngVal)) {
-        const matchedGeofence = await ServiceGeofence.matchCoordinates(latVal, lngVal);
-        if (!matchedGeofence) {
-          return res.status(400).json({
-            code: 'OUT_OF_COVERAGE',
-            message: 'Your location is outside our service coverage areas. We cannot deliver services to this address.'
-          });
-        }
+    const updatePayload = {
+      description,
+      priority,
+      patient_name,
+      patient_age,
+      patient_phone,
+      address,
+      latitude,
+      longitude,
+    };
+
+    try {
+      const geofence = await resolveGeofenceForLocation(latitude, longitude);
+      if (geofence) {
+        updatePayload.service_geofence_id = geofence.service_geofence_id;
+        updatePayload.service_fee_mmk = geofence.service_fee_mmk;
       }
+    } catch (error) {
+      if (error.code === 'OUT_OF_COVERAGE') {
+        return respondOutOfCoverage(res, error.message);
+      }
+      throw error;
     }
 
     const order = await Order.update(
       req.params.id,
-      {
-        description,
-        priority,
-        patient_name,
-        patient_age,
-        patient_phone,
-        address,
-        latitude,
-        longitude,
-      },
+      updatePayload,
       req.user?.id,
     );
 

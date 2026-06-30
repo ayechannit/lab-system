@@ -67,7 +67,7 @@ flutter_launcher_icons:
   ios: true
   remove_alpha_ios: true
   image_path: assets/idhc-emblem.png
-  adaptive_icon_background: '#000000'
+  adaptive_icon_background: '#FFFFFF'
   adaptive_icon_foreground: assets/idhc-emblem.png
   web:
     generate: true

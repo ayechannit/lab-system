@@ -104,6 +104,97 @@ class AppLocalizationsEn extends AppLocalizations {
   String get orderTracking => 'Order tracking';
 
   @override
+  String get trackingEmptyState => 'No active orders yet. Place an order to see collection times and status from the lab.';
+
+  @override
+  String trackingOrderId(String id) {
+    return 'Order ID: $id';
+  }
+
+  @override
+  String trackingPatientLine(String name, String tests) {
+    return '$name · $tests';
+  }
+
+  @override
+  String get trackingLabTestFallback => 'Lab test';
+
+  @override
+  String trackingTestCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count tests',
+      one: '1 test',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String trackingAddress(String address) {
+    return 'Address: $address';
+  }
+
+  @override
+  String get trackingLabSchedule => 'Lab schedule';
+
+  @override
+  String trackingCollector(String name) {
+    return 'Collector: $name';
+  }
+
+  @override
+  String trackingCollection(String when) {
+    return 'Collection: $when';
+  }
+
+  @override
+  String trackingRunning(String when) {
+    return 'Running: $when';
+  }
+
+  @override
+  String trackingReportOut(String when) {
+    return 'Report out: $when';
+  }
+
+  @override
+  String get trackingConfirmScheduleHint => 'The lab proposed a collection schedule. Confirm so the collector can proceed.';
+
+  @override
+  String get trackingConfirmScheduleButton => 'Confirm collection schedule';
+
+  @override
+  String get trackingSaving => 'Saving…';
+
+  @override
+  String get trackingScheduleConfirmedTitle => 'Schedule confirmed';
+
+  @override
+  String get trackingScheduleConfirmedMessage => 'The collector can proceed with your sample.';
+
+  @override
+  String get trackingStatusSection => 'Status';
+
+  @override
+  String get trackingStepSubmitted => 'Order submitted';
+
+  @override
+  String get trackingStepSubmittedSub => 'Received by lab';
+
+  @override
+  String get trackingStepCollection => 'Collection scheduled';
+
+  @override
+  String get trackingAwaitingSchedule => 'Awaiting lab schedule';
+
+  @override
+  String get trackingStepRunning => 'Sample running';
+
+  @override
+  String get trackingStepReportOut => 'Report out';
+
+  @override
   String get collectorPending => 'Pending';
 
   @override
@@ -135,12 +226,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get homeOffersUpdates => 'Offers & updates';
-
-  @override
-  String get homeLearnMore => 'Learn more';
-
-  @override
-  String get homeCouldNotOpenLink => 'Could not open link';
 
   @override
   String get homeTotalOrders => 'Total orders';

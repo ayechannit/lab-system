@@ -104,6 +104,97 @@ class AppLocalizationsMy extends AppLocalizations {
   String get orderTracking => 'မှာယူမှု ခြေရာခံ';
 
   @override
+  String get trackingEmptyState => 'လက်ရှိ မှာယူမှု မရှိသေးပါ။ ဓာတ်ခွဲခန်းမှ ကောက်ယူချိန်နှင့် အခြေအနေကို ကြည့်ရန် မှာယူမှု တစ်ခု ပြုလုပ်ပါ။';
+
+  @override
+  String trackingOrderId(String id) {
+    return 'မှာယူမှု ID: $id';
+  }
+
+  @override
+  String trackingPatientLine(String name, String tests) {
+    return '$name · $tests';
+  }
+
+  @override
+  String get trackingLabTestFallback => 'ဓာတ်ခွဲစစ်ဆေးမှု';
+
+  @override
+  String trackingTestCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'ဓာတ်ခွဲ $count ခု',
+      one: 'ဓာတ်ခွဲ ၁ ခု',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String trackingAddress(String address) {
+    return 'လိပ်စာ: $address';
+  }
+
+  @override
+  String get trackingLabSchedule => 'ဓာတ်ခွဲခန်း အချိန်ဇယား';
+
+  @override
+  String trackingCollector(String name) {
+    return 'ကောက်ယူသူ: $name';
+  }
+
+  @override
+  String trackingCollection(String when) {
+    return 'ကောက်ယူချိန်: $when';
+  }
+
+  @override
+  String trackingRunning(String when) {
+    return 'လုပ်ဆောင်ချိန်: $when';
+  }
+
+  @override
+  String trackingReportOut(String when) {
+    return 'အစီရင်ခံစာ ထွက်ရှိချိန်: $when';
+  }
+
+  @override
+  String get trackingConfirmScheduleHint => 'ဓာတ်ခွဲခန်းက ကောက်ယူချိန် အချိန်ဇယား တင်ပြထားပါသည်။ ကောက်ယူသူ ဆက်လက်လုပ်ဆောင်နိုင်ရန် အတည်ပြုပါ။';
+
+  @override
+  String get trackingConfirmScheduleButton => 'ကောက်ယူချိန် အချိန်ဇယား အတည်ပြုမည်';
+
+  @override
+  String get trackingSaving => 'သိမ်းဆည်းနေသည်…';
+
+  @override
+  String get trackingScheduleConfirmedTitle => 'အချိန်ဇယား အတည်ပြုပြီး';
+
+  @override
+  String get trackingScheduleConfirmedMessage => 'ကောက်ယူသူက သင့်နမူနာကို ဆက်လက် ကောက်ယူနိုင်ပါပြီ။';
+
+  @override
+  String get trackingStatusSection => 'အခြေအနေ';
+
+  @override
+  String get trackingStepSubmitted => 'မှာယူမှု တင်ပြီး';
+
+  @override
+  String get trackingStepSubmittedSub => 'ဓာတ်ခွဲခန်းသို့ ရောက်ရှိပြီး';
+
+  @override
+  String get trackingStepCollection => 'ကောက်ယူချိန် သတ်မှတ်ပြီး';
+
+  @override
+  String get trackingAwaitingSchedule => 'ဓာတ်ခွဲခန်း အချိန်ဇယား စောင့်ဆိုင်းနေသည်';
+
+  @override
+  String get trackingStepRunning => 'နမူနာ လုပ်ဆောင်နေသည်';
+
+  @override
+  String get trackingStepReportOut => 'အစီရင်ခံစာ ထွက်ရှိ';
+
+  @override
   String get collectorPending => 'ဆိုင်းငံ့';
 
   @override
@@ -135,12 +226,6 @@ class AppLocalizationsMy extends AppLocalizations {
 
   @override
   String get homeOffersUpdates => 'ကမ်းလှမ်းချက်များနှင့် အသစ်များ';
-
-  @override
-  String get homeLearnMore => 'ပိုမိုကြည့်ရှုရန်';
-
-  @override
-  String get homeCouldNotOpenLink => 'လင့်ခ်ကို ဖွင့်၍မရပါ';
 
   @override
   String get homeTotalOrders => 'စုစုပေါင်း မှာယူမှု';

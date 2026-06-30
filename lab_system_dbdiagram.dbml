@@ -398,7 +398,6 @@ Table advertisements {
   title varchar [not null]
   description text
   image_url varchar
-  action_url varchar
   start_date timestamp
   end_date timestamp
   is_active boolean [default: true]

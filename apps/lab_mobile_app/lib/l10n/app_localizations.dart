@@ -281,6 +281,144 @@ abstract class AppLocalizations {
   /// **'Order tracking'**
   String get orderTracking;
 
+  /// No description provided for @trackingEmptyState.
+  ///
+  /// In en, this message translates to:
+  /// **'No active orders yet. Place an order to see collection times and status from the lab.'**
+  String get trackingEmptyState;
+
+  /// No description provided for @trackingOrderId.
+  ///
+  /// In en, this message translates to:
+  /// **'Order ID: {id}'**
+  String trackingOrderId(String id);
+
+  /// No description provided for @trackingPatientLine.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} · {tests}'**
+  String trackingPatientLine(String name, String tests);
+
+  /// No description provided for @trackingLabTestFallback.
+  ///
+  /// In en, this message translates to:
+  /// **'Lab test'**
+  String get trackingLabTestFallback;
+
+  /// No description provided for @trackingTestCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 test}other{{count} tests}}'**
+  String trackingTestCount(int count);
+
+  /// No description provided for @trackingAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'Address: {address}'**
+  String trackingAddress(String address);
+
+  /// No description provided for @trackingLabSchedule.
+  ///
+  /// In en, this message translates to:
+  /// **'Lab schedule'**
+  String get trackingLabSchedule;
+
+  /// No description provided for @trackingCollector.
+  ///
+  /// In en, this message translates to:
+  /// **'Collector: {name}'**
+  String trackingCollector(String name);
+
+  /// No description provided for @trackingCollection.
+  ///
+  /// In en, this message translates to:
+  /// **'Collection: {when}'**
+  String trackingCollection(String when);
+
+  /// No description provided for @trackingRunning.
+  ///
+  /// In en, this message translates to:
+  /// **'Running: {when}'**
+  String trackingRunning(String when);
+
+  /// No description provided for @trackingReportOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Report out: {when}'**
+  String trackingReportOut(String when);
+
+  /// No description provided for @trackingConfirmScheduleHint.
+  ///
+  /// In en, this message translates to:
+  /// **'The lab proposed a collection schedule. Confirm so the collector can proceed.'**
+  String get trackingConfirmScheduleHint;
+
+  /// No description provided for @trackingConfirmScheduleButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm collection schedule'**
+  String get trackingConfirmScheduleButton;
+
+  /// No description provided for @trackingSaving.
+  ///
+  /// In en, this message translates to:
+  /// **'Saving…'**
+  String get trackingSaving;
+
+  /// No description provided for @trackingScheduleConfirmedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Schedule confirmed'**
+  String get trackingScheduleConfirmedTitle;
+
+  /// No description provided for @trackingScheduleConfirmedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'The collector can proceed with your sample.'**
+  String get trackingScheduleConfirmedMessage;
+
+  /// No description provided for @trackingStatusSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Status'**
+  String get trackingStatusSection;
+
+  /// No description provided for @trackingStepSubmitted.
+  ///
+  /// In en, this message translates to:
+  /// **'Order submitted'**
+  String get trackingStepSubmitted;
+
+  /// No description provided for @trackingStepSubmittedSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Received by lab'**
+  String get trackingStepSubmittedSub;
+
+  /// No description provided for @trackingStepCollection.
+  ///
+  /// In en, this message translates to:
+  /// **'Collection scheduled'**
+  String get trackingStepCollection;
+
+  /// No description provided for @trackingAwaitingSchedule.
+  ///
+  /// In en, this message translates to:
+  /// **'Awaiting lab schedule'**
+  String get trackingAwaitingSchedule;
+
+  /// No description provided for @trackingStepRunning.
+  ///
+  /// In en, this message translates to:
+  /// **'Sample running'**
+  String get trackingStepRunning;
+
+  /// No description provided for @trackingStepReportOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Report out'**
+  String get trackingStepReportOut;
+
   /// No description provided for @collectorPending.
   ///
   /// In en, this message translates to:
@@ -346,18 +484,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Offers & updates'**
   String get homeOffersUpdates;
-
-  /// No description provided for @homeLearnMore.
-  ///
-  /// In en, this message translates to:
-  /// **'Learn more'**
-  String get homeLearnMore;
-
-  /// No description provided for @homeCouldNotOpenLink.
-  ///
-  /// In en, this message translates to:
-  /// **'Could not open link'**
-  String get homeCouldNotOpenLink;
 
   /// No description provided for @homeTotalOrders.
   ///

@@ -278,14 +278,7 @@ export function AdvertisementsManagementPage() {
                           <img
                             src={imgSrc}
                             alt=""
-                            style={{
-                              width: 72,
-                              height: 40,
-                              objectFit: 'cover',
-                              borderRadius: 4,
-                              display: 'block',
-                              background: 'var(--surface-muted, #f3f4f6)',
-                            }}
+                            className="ad-table-thumb"
                           />
                         ) : (
                           <span className="badge badge--neutral">{t('common.noImage')}</span>

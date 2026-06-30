@@ -22,8 +22,6 @@ const advertisementController = require('../controllers/advertisementController'
  *           type: string
  *         image_url:
  *           type: string
- *         action_url:
- *           type: string
  *         start_date:
  *           type: string
  *           format: date-time
@@ -156,8 +154,6 @@ const advertisementController = require('../controllers/advertisementController'
  *                 type: string
  *               image_url:
  *                 type: string
- *               action_url:
- *                 type: string
  *               start_date:
  *                 type: string
  *                 format: date-time
@@ -206,8 +202,6 @@ const advertisementController = require('../controllers/advertisementController'
  *               description:
  *                 type: string
  *               image_url:
- *                 type: string
- *               action_url:
  *                 type: string
  *               start_date:
  *                 type: string

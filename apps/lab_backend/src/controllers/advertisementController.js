@@ -40,11 +40,11 @@ const getAdvertisementById = async (req, res) => {
 
 const createAdvertisement = async (req, res) => {
   try {
-    const { title, description, image_url, action_url, start_date, end_date, is_active } = req.body;
+    const { title, description, image_url, start_date, end_date, is_active } = req.body;
     if (!title) {
       return res.status(400).json({ message: 'Title is required' });
     }
-    const ad = await Advertisement.create({ title, description, image_url, action_url, start_date, end_date, is_active }, req.user?.id);
+    const ad = await Advertisement.create({ title, description, image_url, start_date, end_date, is_active }, req.user?.id);
     res.status(201).json(await enrichAdvertisementImage(ad));
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -53,11 +53,11 @@ const createAdvertisement = async (req, res) => {
 
 const updateAdvertisement = async (req, res) => {
   try {
-    const { title, description, image_url, action_url, start_date, end_date, is_active } = req.body;
+    const { title, description, image_url, start_date, end_date, is_active } = req.body;
     if (!title) {
       return res.status(400).json({ message: 'Title is required' });
     }
-    const ad = await Advertisement.update(req.params.id, { title, description, image_url, action_url, start_date, end_date, is_active }, req.user?.id);
+    const ad = await Advertisement.update(req.params.id, { title, description, image_url, start_date, end_date, is_active }, req.user?.id);
     if (!ad) return res.status(404).json({ message: 'Advertisement not found' });
     res.json(await enrichAdvertisementImage(ad));
   } catch (error) {

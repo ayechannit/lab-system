@@ -218,7 +218,6 @@ CREATE TABLE advertisements (
     title NVARCHAR(255) NOT NULL,
     description NVARCHAR(MAX),
     image_url NVARCHAR(2048),
-    action_url NVARCHAR(2048),
     start_date DATETIME2,
     end_date DATETIME2,
     is_active BIT DEFAULT 1,

@@ -107,6 +107,10 @@
     "useMyLocation": "Use my location",
     "gettingLocation": "Getting location…",
     "lookingUpAddress": "Looking up address…",
+    "search": "Search",
+    "searching": "Searching…",
+    "searchPlaceholder": "Search city, township, or address…",
+    "searchTooShort": "Enter at least 4 characters to search.",
     "noAddressMatch": "No match for that address. Try a fuller line or set the pin on the map.",
     "geocodeFailed": "Could not look up address. Set the pin on the map or try again.",
     "geolocationNotSupported": "This browser does not support geolocation.",
@@ -138,6 +142,7 @@
     "ratings": "Ratings & feedback",
     "discounts": "Discounts",
     "referralFees": "Referral fees",
+    "serviceGeofences": "Service geofences",
     "advertisements": "Advertisements",
     "loyalty": "Loyalty points",
     "systemSettings": "System settings",
@@ -280,6 +285,10 @@
       "title": "Referral fees",
       "description": "Configure referral commission percentages per lab test and referrer role (clinic, doctor, patient, phlebotomist)."
     },
+    "serviceGeofences": {
+      "title": "Service geofences",
+      "description": "Define coverage zones with bounding boxes and delivery fees applied when patients place orders."
+    },
     "advertisements": {
       "title": "Advertisements",
       "description": "Manage promotional banners shown in the patient mobile app. Each ad can include an image, description, optional link, and schedule."
@@ -290,7 +299,7 @@
     },
     "systemSettings": {
       "title": "System settings",
-      "description": "Appearance theme and contact details."
+      "description": "Appearance theme, contact details, and material fees."
     },
     "reports": {
       "title": "Reports & analytics",
@@ -528,6 +537,12 @@
       "originalTotal": "Original total (MMK)",
       "blendedDiscount": "Blended discount %",
       "finalTotal": "Final total (MMK)",
+      "serviceFee": "Service fee (MMK)",
+      "serviceZone": "Service zone",
+      "amountDue": "Estimated amount due (MMK)",
+      "serviceFeeChecking": "Checking service zone…",
+      "serviceFeeRequired": "Set a valid collection location inside a service zone.",
+      "serviceFeeFailed": "Could not calculate service fee for this location.",
       "submit": "Create",
       "noUsersOrTests": "No users and no lab tests found. Create users/tests first.",
       "noUsersOnly": "No users found. Create at least one user first."
@@ -1036,6 +1051,95 @@
       "saveRule": "Save rule"
     }
   },
+  "serviceGeofences": {
+    "loadFailed": "Failed to load service geofences",
+    "filters": {
+      "ariaLabel": "Service geofence filters",
+      "searchDetail": "zone name"
+    },
+    "add": "Add geofence",
+    "listTitle": "Coverage zones",
+    "hint": "Patients inside a zone pay that zone's service fee on new orders. Higher priority wins when zones overlap.",
+    "loading": "Loading service geofences",
+    "noApi": "Connect to the lab API to manage service geofences.",
+    "noMatch": "No geofences match these filters.",
+    "empty": {
+      "title": "No service geofences yet",
+      "body": "Add a bounding box zone with a service fee so collection addresses can be priced automatically."
+    },
+    "table": {
+      "bounds": "Bounding box",
+      "fee": "Service fee (MMK)"
+    },
+    "delete": {
+      "title": "Delete service geofence?",
+      "message": "Remove zone \"{{name}}\"? Existing orders are not changed.",
+      "success": "Service geofence deleted.",
+      "failed": "Could not delete geofence."
+    },
+    "toast": {
+      "created": "Service geofence created.",
+      "updated": "Service geofence updated."
+    },
+    "tester": {
+      "title": "Fee calculator",
+      "hint": "Search or click the map to pick a delivery point, then calculate the service fee.",
+      "stepSelect": "Select location",
+      "stepCalculate": "Calculate fee",
+      "selectedPoint": "Selected point",
+      "noPoint": "Click the map, search, or use your current location.",
+      "clearPoint": "Clear point",
+      "activeZones": "{{count}} active zones configured",
+      "resultIdle": "Fee result will appear here after you calculate.",
+      "feeLine": "Service fee: {{fee}} MMK",
+      "latitude": "Latitude",
+      "longitude": "Longitude",
+      "check": "Calculate fee",
+      "result": "{{zone}} — {{fee}} MMK",
+      "errorCoords": "Select a point on the map first.",
+      "failed": "Could not calculate fee."
+    },
+    "form": {
+      "createTitle": "Add service geofence",
+      "editTitle": "Edit service geofence",
+      "createButton": "Create geofence",
+      "mapHint": "Search from/to locations, click two opposite corners on the map, or drag the zone to move or resize it.",
+      "searchFrom": "From",
+      "searchTo": "To",
+      "searchFromPlaceholder": "South-west area, township…",
+      "searchToPlaceholder": "North-east area (optional)",
+      "searchApply": "Find on map",
+      "searchHint": "From only pans to the start corner. From + To draws the full zone.",
+      "searchNeedFromOrTo": "Enter a from or to location.",
+      "searchFromNotFound": "Could not find the from location.",
+      "searchToNotFound": "Could not find the to location.",
+      "searchSamePoint": "From and to must be different locations.",
+      "mapCornerTo": "To location",
+      "mapStep1": "Step 1 — click the first corner on the map.",
+      "mapStep2": "Step 2 — click the opposite corner to finish the zone.",
+      "mapCornerStart": "First corner",
+      "mapComplete": "Zone drawn. Drag the box to move it, drag corners to resize, or click Clear zone to redraw.",
+      "boundsSummary": "Zone bounds",
+      "clearBounds": "Clear zone",
+      "boundsHint": "South and west edges are inclusive; north and east edges are inclusive in the matching API.",
+      "southLatitude": "South latitude",
+      "northLatitude": "North latitude",
+      "westLongitude": "West longitude",
+      "eastLongitude": "East longitude",
+      "serviceFee": "Service fee (MMK)",
+      "priority": "Priority",
+      "activeTitle": "Zone is active",
+      "inactiveTitle": "Zone is inactive",
+      "activeDesc": "Inactive zones are ignored for fee calculation and new orders.",
+      "errorName": "Enter a zone name.",
+      "errorBounds": "Draw the zone on the map by clicking two opposite corners.",
+      "errorWestEast": "West longitude must be less than east longitude.",
+      "errorSouthNorth": "South latitude must be less than north latitude.",
+      "errorFee": "Enter a valid service fee (0 or more).",
+      "errorPriority": "Priority must be at least 1.",
+      "requestFailed": "Request failed"
+    }
+  },
   "advertisements": {
     "loadFailed": "Failed to load advertisements",
     "filters": {
@@ -1063,8 +1167,6 @@
       "createTitle": "Add advertisement",
       "editTitle": "Edit advertisement",
       "descriptionPlaceholder": "Optional short copy for the banner or promo card",
-      "actionUrl": "Action URL",
-      "actionUrlPlaceholder": "https://… (optional link when tapped)",
       "startOptional": "Start (optional)",
       "endOptional": "End (optional)",
       "startPlaceholder": "Start date & time",
@@ -1165,14 +1267,16 @@
     "draftHint": "Changes are drafts until you click Save settings. Leaving this page without saving restores your last saved theme.",
     "saveSettings": "Save settings",
     "appearance": "Appearance",
+    "appearanceDesc": "Theme used across the admin dashboard and patient apps.",
     "locationContact": "Location & contact",
+    "locationContactDesc": "Address and contact details shown to patients and used for collection.",
     "contactPhone": "Contact phone",
     "contactEmail": "Contact email",
     "coordinates": "Coordinates: {{coords}}",
-    "mapHint": "Type an address to move the map pin, or click the map / use my location to set coordinates.",
     "unsavedChanges": "Unsaved changes",
-    "unsavedSub": "Save to apply theme across the app",
+    "unsavedSub": "Save to apply changes across the lab.",
     "allSaved": "All changes saved",
+    "lastSaved": "Last saved {{date}}",
     "resetDefaults": "Reset to defaults",
     "reset": {
       "title": "Reset to defaults?",
@@ -1185,7 +1289,15 @@
       "success": "System settings saved.",
       "failed": "Save failed"
     },
-    "updatedAt": "Updated {{date}}"
+    "updatedAt": "Updated {{date}}",
+    "materialFees": {
+      "title": "Material fee",
+      "hint": "Default fee for lab materials (tubes, kits, etc.) applied to new orders.",
+      "amountLabel": "Amount (MMK)",
+      "defaultName": "Standard Material Fee",
+      "errorAmount": "Enter a valid amount in MMK (0 or more).",
+      "unavailable": "No active material fee on the server. Ask your administrator to seed one."
+    }
   },
   "reports": {
     "loadFailed": "Failed to load dashboard KPIs",

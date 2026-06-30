@@ -6,12 +6,14 @@ import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png'
 import markerIcon from 'leaflet/dist/images/marker-icon.png'
 import markerShadow from 'leaflet/dist/images/marker-shadow.png'
 import 'leaflet/dist/leaflet.css'
+import { MapLocationSearch } from '../common/MapLocationSearch'
 import { nominatimReverse } from '../../services/nominatimGeocode'
 
-/** Leaflet requires an initial view; world overview only — not a pickup default. */
-const MAP_INIT_CENTER: [number, number] = [20, 0]
-const MAP_INIT_ZOOM = 2
+/** Default view: Yangon area — most collection addresses are in Myanmar. */
+const MAP_INIT_CENTER: [number, number] = [16.8661, 96.1951]
+const MAP_INIT_ZOOM = 11
 const MAP_SELECTED_ZOOM = 15
+const MAP_SEARCH_ZOOM = 15
 
 delete (L.Icon.Default.prototype as unknown as { _getIconUrl?: unknown })._getIconUrl
 L.Icon.Default.mergeOptions({
@@ -83,6 +85,19 @@ function RecenterOnCoords({ latitude, longitude }: { latitude: number | ''; long
   return null
 }
 
+function FlyToSearchTarget({
+  target,
+}: {
+  target: { lat: number; lng: number; key: number } | null
+}) {
+  const map = useMap()
+  useEffect(() => {
+    if (!target) return
+    map.flyTo([target.lat, target.lng], MAP_SEARCH_ZOOM, { duration: 0.45 })
+  }, [map, target])
+  return null
+}
+
 type LocationMapPickerProps = {
   latitude: number | ''
   longitude: number | ''
@@ -91,6 +106,8 @@ type LocationMapPickerProps = {
   onAddressFromMap?: (address: string) => void
   /** Map height in CSS pixels (default 220). */
   mapHeight?: number
+  /** Hide the bottom toolbar (search hint, use my location). */
+  hideToolbar?: boolean
 }
 
 export function LocationMapPicker({
@@ -99,11 +116,15 @@ export function LocationMapPicker({
   onPick,
   onAddressFromMap,
   mapHeight = 220,
+  hideToolbar = false,
 }: LocationMapPickerProps) {
   const { t } = useTranslation()
   const [geoLoading, setGeoLoading] = useState(false)
   const [geoMessage, setGeoMessage] = useState<string | null>(null)
   const [reverseHint, setReverseHint] = useState<string | null>(null)
+  const [searchFlyTarget, setSearchFlyTarget] = useState<{ lat: number; lng: number; key: number } | null>(
+    null,
+  )
   const reverseAbortRef = useRef<AbortController | null>(null)
 
   const fillAddressFromCoords = useCallback(
@@ -176,11 +197,20 @@ export function LocationMapPicker({
     : MAP_INIT_CENTER
   const zoom = usable ? MAP_SELECTED_ZOOM : MAP_INIT_ZOOM
 
+  const handleSearchLocation = useCallback(
+    (lat: number, lng: number) => {
+      setSearchFlyTarget({ lat, lng, key: Date.now() })
+      handlePick(lat, lng)
+    },
+    [handlePick],
+  )
+
   return (
     <div
       className="location-map-picker"
       style={{ ['--location-map-height' as string]: `${mapHeight}px` }}
     >
+      <MapLocationSearch onLocationFound={handleSearchLocation} />
       <div className="location-map-picker__viewport">
         <MapContainer
           center={center}
@@ -195,11 +225,13 @@ export function LocationMapPicker({
         />
         <MapResizeFix />
           <MapResizeObserver />
+          <FlyToSearchTarget target={searchFlyTarget} />
           <RecenterOnCoords latitude={latitude} longitude={longitude} />
         <MapClickHandler onPick={handlePick} />
         {usable ? <Marker position={[parseCoord(latitude)!, parseCoord(longitude)!]} /> : null}
         </MapContainer>
       </div>
+      {!hideToolbar ? (
       <div className="location-map-picker__toolbar">
         {!usable ? (
           <span style={{ fontSize: '0.8rem', color: 'var(--muted)', flexBasis: '100%' }} aria-live="polite">
@@ -226,6 +258,7 @@ export function LocationMapPicker({
           </span>
         ) : null}
       </div>
+      ) : null}
     </div>
   )
 }

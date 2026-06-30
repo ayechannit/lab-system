@@ -41,6 +41,56 @@
   "phone": "Phone",
   "signOut": "Sign out",
   "orderTracking": "Order tracking",
+  "trackingEmptyState": "No active orders yet. Place an order to see collection times and status from the lab.",
+  "trackingOrderId": "Order ID: {id}",
+  "@trackingOrderId": {
+    "placeholders": { "id": { "type": "String" } }
+  },
+  "trackingPatientLine": "{name} · {tests}",
+  "@trackingPatientLine": {
+    "placeholders": {
+      "name": { "type": "String" },
+      "tests": { "type": "String" }
+    }
+  },
+  "trackingLabTestFallback": "Lab test",
+  "trackingTestCount": "{count, plural, =1{1 test}other{{count} tests}}",
+  "@trackingTestCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "trackingAddress": "Address: {address}",
+  "@trackingAddress": {
+    "placeholders": { "address": { "type": "String" } }
+  },
+  "trackingLabSchedule": "Lab schedule",
+  "trackingCollector": "Collector: {name}",
+  "@trackingCollector": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "trackingCollection": "Collection: {when}",
+  "@trackingCollection": {
+    "placeholders": { "when": { "type": "String" } }
+  },
+  "trackingRunning": "Running: {when}",
+  "@trackingRunning": {
+    "placeholders": { "when": { "type": "String" } }
+  },
+  "trackingReportOut": "Report out: {when}",
+  "@trackingReportOut": {
+    "placeholders": { "when": { "type": "String" } }
+  },
+  "trackingConfirmScheduleHint": "The lab proposed a collection schedule. Confirm so the collector can proceed.",
+  "trackingConfirmScheduleButton": "Confirm collection schedule",
+  "trackingSaving": "Saving…",
+  "trackingScheduleConfirmedTitle": "Schedule confirmed",
+  "trackingScheduleConfirmedMessage": "The collector can proceed with your sample.",
+  "trackingStatusSection": "Status",
+  "trackingStepSubmitted": "Order submitted",
+  "trackingStepSubmittedSub": "Received by lab",
+  "trackingStepCollection": "Collection scheduled",
+  "trackingAwaitingSchedule": "Awaiting lab schedule",
+  "trackingStepRunning": "Sample running",
+  "trackingStepReportOut": "Report out",
   "collectorPending": "Pending",
   "preferredCollector": "Preferred collector",
   "noCollectorPreference": "No preference — lab assigns",
@@ -52,8 +102,6 @@
   "homeLiveMetrics": "Live metrics from your lab account",
   "homePromotionsLabel": "PROMOTIONS",
   "homeOffersUpdates": "Offers & updates",
-  "homeLearnMore": "Learn more",
-  "homeCouldNotOpenLink": "Could not open link",
   "homeTotalOrders": "Total orders",
   "homeCompletedOrdersCount": "{count} completed",
   "@homeCompletedOrdersCount": {

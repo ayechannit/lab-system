@@ -17,9 +17,12 @@ import '../models/user_role.dart';
 import 'lab_user_api.dart';
 
 class LabApiException implements Exception {
-  LabApiException(this.message, [this.statusCode]);
+  LabApiException(this.message, [this.statusCode, this.code]);
   final String message;
   final int? statusCode;
+  final String? code;
+
+  bool get isOutOfCoverage => code == 'OUT_OF_COVERAGE';
 
   @override
   String toString() => message;
@@ -175,14 +178,17 @@ class RestLabUserApi implements LabUserApi {
 
   Never _throwFromResponse(http.Response r) {
     String msg = 'Request failed (${r.statusCode})';
+    String? code;
     try {
       final j = jsonDecode(r.body);
       if (j is Map) {
         final m = j['message'] ?? j['error'];
         if (m != null) msg = '$m';
+        final c = j['code'];
+        if (c != null) code = '$c';
       }
     } catch (_) {}
-    throw LabApiException(msg, r.statusCode);
+    throw LabApiException(msg, r.statusCode, code);
   }
 
   dynamic _gv(Map<String, dynamic>? m, String a, [String? b]) {
@@ -445,6 +451,29 @@ class RestLabUserApi implements LabUserApi {
 
   double _roundMoney(double v) => (v * 100).round() / 100.0;
 
+  @override
+  Future<ServiceFeeQuote> calculateServiceFee({
+    required double latitude,
+    required double longitude,
+  }) async {
+    final r = await http.get(
+      Uri.parse('$_base/api/service-geofences/calculate-fee').replace(
+        queryParameters: {
+          'lat': '$latitude',
+          'lng': '$longitude',
+        },
+      ),
+      headers: _jsonHeaders(),
+    );
+    if (r.statusCode >= 400) _throwFromResponse(r);
+    final data = _asObj(jsonDecode(r.body));
+    return ServiceFeeQuote(
+      serviceGeofenceId: '${_gv(data, 'service_geofence_id')}',
+      zoneName: '${_gv(data, 'zone_name') ?? ''}',
+      serviceFeeMmk: _asDouble(_gv(data, 'service_fee_mmk')),
+    );
+  }
+
   /// Body for `POST /api/orders` — matches `orderController.createOrder` / admin web `createOrder`.
   Map<String, dynamic> _orderCreateBody({
     required String userId,
@@ -587,12 +616,50 @@ class RestLabUserApi implements LabUserApi {
     return _asObj(jsonDecode(r.body));
   }
 
+  Future<Map<String, dynamic>?> _fetchOrderTracking(String orderId) async {
+    final r = await http.get(
+      Uri.parse('$_base/api/orders/$orderId/tracking'),
+      headers: _jsonHeaders(),
+    );
+    if (r.statusCode == 404) return null;
+    if (r.statusCode >= 400) _throwFromResponse(r);
+    return _asObj(jsonDecode(r.body));
+  }
+
+  Map<String, dynamic>? _scheduleFromTracking(Map<String, dynamic>? tracking) {
+    if (tracking == null) return null;
+    final raw = tracking['schedule'];
+    if (raw == null) return null;
+    return _asObj(raw);
+  }
+
   Future<LabOrderSummary> _hydrateOrderSummary(String orderId) async {
     await _ensureCollectorDirectory();
-    final r = await http.get(Uri.parse('$_base/api/orders/$orderId'), headers: _jsonHeaders());
-    if (r.statusCode >= 400) _throwFromResponse(r);
-    final o = _asObj(jsonDecode(r.body));
-    final sched = o['schedule'] != null ? _asObj(o['schedule']) : await _fetchSchedule(orderId);
+    final orderResponse = await http.get(
+      Uri.parse('$_base/api/orders/$orderId'),
+      headers: _jsonHeaders(),
+    );
+    if (orderResponse.statusCode >= 400) _throwFromResponse(orderResponse);
+    final o = _asObj(jsonDecode(orderResponse.body));
+
+    Map<String, dynamic>? tracking;
+    try {
+      tracking = await _fetchOrderTracking(orderId);
+    } catch (_) {
+      tracking = null;
+    }
+
+    final trackingStatus = '${_gv(tracking, 'current_status') ?? ''}'.trim().toLowerCase();
+    if (trackingStatus.isNotEmpty) {
+      o['status'] = trackingStatus;
+    }
+
+    Map<String, dynamic>? sched;
+    if (o['schedule'] != null) {
+      sched = _asObj(o['schedule']);
+    } else {
+      sched = _scheduleFromTracking(tracking) ?? await _fetchSchedule(orderId);
+    }
     final summary = _mapOrderToSummary(o, sched);
     final collectorImageUrl = summary.collectorProfileImageUrl ??
         await _resolveCollectorProfileImageUrl(summary.collectorName, sched);
@@ -1434,7 +1501,6 @@ class RestLabUserApi implements LabUserApi {
       }
     }
 
-    final actionRaw = '${_gv(json, 'action_url') ?? ''}'.trim();
     final descRaw = '${_gv(json, 'description') ?? ''}'.trim();
 
     return LabAdvertisement(
@@ -1442,7 +1508,6 @@ class RestLabUserApi implements LabUserApi {
       title: '${json['title'] ?? ''}'.trim(),
       description: descRaw.isEmpty ? null : descRaw,
       bannerImageUrl: bannerUrl,
-      actionUrl: actionRaw.isEmpty ? null : actionRaw,
     );
   }
 

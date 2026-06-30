@@ -84,44 +84,76 @@ function parseRouteCollectorCount(value: number | '', max: number): number | nul
   return count
 }
 
-function splitOrdersAcrossCollectors(orders: ApiOrderListRow[], count: number): ApiOrderListRow[][] {
-  const n = Math.max(1, count)
-  const preferredBuckets = new Map<string, ApiOrderListRow[]>()
-  const unassigned: ApiOrderListRow[] = []
-
-  for (const order of orders) {
-    const collectorId = order.collector_id?.trim()
-    if (collectorId) {
-      const bucket = preferredBuckets.get(collectorId) ?? []
-      bucket.push(order)
-      preferredBuckets.set(collectorId, bucket)
-    } else {
-      unassigned.push(order)
-    }
-  }
-
+function splitOrdersEvenlyAlongRoute(orders: ApiOrderListRow[], count: number): ApiOrderListRow[][] {
+  if (orders.length === 0) return []
+  const routeCount = Math.min(Math.max(1, count), orders.length)
   const chunks: ApiOrderListRow[][] = []
-  for (const bucket of preferredBuckets.values()) {
-    if (chunks.length < n) {
-      chunks.push([...bucket])
-    } else {
-      const smallest = chunks.reduce(
-        (minIdx, chunk, idx, all) => (chunk.length < all[minIdx].length ? idx : minIdx),
-        0,
-      )
-      chunks[smallest].push(...bucket)
+  const baseSize = Math.floor(orders.length / routeCount)
+  const remainder = orders.length % routeCount
+  let cursor = 0
+  for (let i = 0; i < routeCount; i++) {
+    const size = baseSize + (i < remainder ? 1 : 0)
+    chunks.push(orders.slice(cursor, cursor + size))
+    cursor += size
+  }
+  return chunks
+}
+
+function resolveRoutePlanOrders(
+  picked: ApiOrderListRow[],
+  routePlan: { result: CollectionRouteResult },
+): ApiOrderListRow[] {
+  const fromDetails = orderStopsFromRouteDetails(picked, routePlan.result.routeStops)
+  if (fromDetails.length > 0) return fromDetails
+  return orderStopsInRouteOrder(picked, routePlan.result.orderedStops)
+}
+
+function mergePlanRouteOrders(
+  picked: ApiOrderListRow[],
+  plan: Awaited<ReturnType<typeof planCollectionRouteWithAi>>,
+): ApiOrderListRow[] {
+  const merged: ApiOrderListRow[] = []
+  const sortedRoutes = [...plan.routes].sort((a, b) => a.collectorIndex - b.collectorIndex)
+  for (const routePlan of sortedRoutes) {
+    for (const order of resolveRoutePlanOrders(picked, routePlan)) {
+      if (!merged.some((x) => x.id === order.id)) merged.push(order)
     }
   }
+  return merged.length > 0 ? merged : picked
+}
 
-  while (chunks.length < n) {
-    chunks.push([])
+function mergePlanBaseResult(
+  plan: Awaited<ReturnType<typeof planCollectionRouteWithAi>>,
+): CollectionRouteResult {
+  const primary = plan.routes[0]?.result
+  if (!primary) {
+    return {
+      orderedStops: [],
+      summary: '',
+      estimatedFinishTime: null,
+      estimatedMinutes: null,
+      routeStops: [],
+    }
   }
+  return {
+    ...primary,
+    routeStops: plan.routes.flatMap((routePlan) => routePlan.result.routeStops),
+  }
+}
 
-  unassigned.forEach((order, index) => {
-    chunks[index % n].push(order)
-  })
-
-  return chunks.filter((chunk) => chunk.length > 0)
+function aiRoutesMatchRequestedSplit(
+  picked: ApiOrderListRow[],
+  plan: Awaited<ReturnType<typeof planCollectionRouteWithAi>>,
+): boolean {
+  if (plan.collectorCount <= 1) return plan.routes.length === 1
+  if (plan.routes.length !== plan.collectorCount) return false
+  const seen = new Set<string>()
+  for (const routePlan of plan.routes) {
+    const orders = resolveRoutePlanOrders(picked, routePlan)
+    if (orders.length === 0) return false
+    for (const order of orders) seen.add(order.id.toLowerCase())
+  }
+  return seen.size === picked.length
 }
 
 type RoutePlanSlice = {
@@ -195,52 +227,51 @@ function buildRoutePlanSlicesFromPlan(
   startTime: string,
   minutesPerStop: number,
 ): RoutePlanSlice[] {
-  if (plan.routes.length > 1) {
-    return plan.routes.map((routePlan) => {
-      const orders = orderStopsFromRouteDetails(picked, routePlan.result.routeStops)
-      const resolvedOrders =
-        orders.length > 0
-          ? orders
-          : orderStopsInRouteOrder(picked, routePlan.result.orderedStops)
-      return {
-        collectorIndex: routePlan.collectorIndex,
-        result: routePlan.result,
-        orders: resolvedOrders,
-        editableStops: buildEditableRouteStops(routePlan.result, resolvedOrders, startTime, minutesPerStop),
-      }
-    })
-  }
+  const collectorCount = Math.max(1, plan.collectorCount)
+  if (plan.routes.length === 0) return []
 
-  const single = plan.routes[0]?.result
-  if (!single) return []
-
-  const allOrders = orderStopsFromRouteDetails(picked, single.routeStops)
-  const resolvedAll =
-    allOrders.length > 0 ? allOrders : orderStopsInRouteOrder(picked, single.orderedStops)
-
-  if (plan.collectorCount <= 1) {
+  if (collectorCount <= 1) {
+    const routePlan = plan.routes[0]
+    const orders = resolveRoutePlanOrders(picked, routePlan)
     return [
       {
         collectorIndex: 1,
-        result: single,
-        orders: resolvedAll,
-        editableStops: buildEditableRouteStops(single, resolvedAll, startTime, minutesPerStop),
+        result: routePlan.result,
+        orders,
+        editableStops: buildEditableRouteStops(routePlan.result, orders, startTime, minutesPerStop),
       },
     ]
   }
 
-  const chunks = splitOrdersAcrossCollectors(resolvedAll, plan.collectorCount)
+  if (aiRoutesMatchRequestedSplit(picked, plan)) {
+    return [...plan.routes]
+      .sort((a, b) => a.collectorIndex - b.collectorIndex)
+      .map((routePlan, index) => {
+        const orders = resolveRoutePlanOrders(picked, routePlan)
+        return {
+          collectorIndex: routePlan.collectorIndex || index + 1,
+          result: routePlan.result,
+          orders,
+          editableStops: buildEditableRouteStops(routePlan.result, orders, startTime, minutesPerStop),
+        }
+      })
+  }
+
+  const resolvedAll = mergePlanRouteOrders(picked, plan)
+  const baseResult = mergePlanBaseResult(plan)
+  const chunks = splitOrdersEvenlyAlongRoute(resolvedAll, collectorCount)
+
   return chunks.map((orders, index) => ({
     collectorIndex: index + 1,
     result: {
-      ...single,
-      summary: `${orders.length} stop(s) · collector ${index + 1} of ${plan.collectorCount}`,
-      routeStops: single.routeStops.filter((stop) =>
+      ...baseResult,
+      summary: `${orders.length} stop(s) · collector ${index + 1} of ${collectorCount}`,
+      routeStops: baseResult.routeStops.filter((stop) =>
         orders.some((order) => order.id.toLowerCase() === stop.orderId.toLowerCase()),
       ),
     },
     orders,
-    editableStops: buildEditableRouteStops(single, orders, startTime, minutesPerStop),
+    editableStops: buildEditableRouteStops(baseResult, orders, startTime, minutesPerStop),
   }))
 }
 
@@ -517,6 +548,8 @@ export function SampleCollectionPage() {
   const [routeAssignments, setRouteAssignments] = useState<
     Record<string, { collectorName: string; collectionTime: string }>
   >({})
+  const [collapsedRouteSlices, setCollapsedRouteSlices] = useState<Set<number>>(() => new Set())
+  const [collapsedRouteStops, setCollapsedRouteStops] = useState<Set<string>>(() => new Set())
 
   const [scheduledEditOpen, setScheduledEditOpen] = useState(false)
   const [scheduledEditOrderId, setScheduledEditOrderId] = useState<string | null>(null)
@@ -769,12 +802,42 @@ export function SampleCollectionPage() {
     setRouteAssignCollectors({})
     setRouteAssignments({})
     setSelectedIds(new Set())
+    setCollapsedRouteSlices(new Set())
+    setCollapsedRouteStops(new Set())
   }
 
   function initializeRoutePlan(slices: RoutePlanSlice[]) {
     setRoutePlanSlices(slices)
     setRouteAssignCollectors(buildInitialRouteAssignCollectors(slices, routeCollectorOptions))
     setRouteAssignments({})
+    setCollapsedRouteSlices(new Set())
+    setCollapsedRouteStops(new Set())
+  }
+
+  function isRouteSliceExpanded(collectorIndex: number) {
+    return !collapsedRouteSlices.has(collectorIndex)
+  }
+
+  function toggleRouteSlice(collectorIndex: number) {
+    setCollapsedRouteSlices((prev) => {
+      const next = new Set(prev)
+      if (next.has(collectorIndex)) next.delete(collectorIndex)
+      else next.add(collectorIndex)
+      return next
+    })
+  }
+
+  function isRouteStopExpanded(orderId: string) {
+    return !collapsedRouteStops.has(orderId)
+  }
+
+  function toggleRouteStop(orderId: string) {
+    setCollapsedRouteStops((prev) => {
+      const next = new Set(prev)
+      if (next.has(orderId)) next.delete(orderId)
+      else next.add(orderId)
+      return next
+    })
   }
 
   const toggle = (id: string) => {
@@ -1483,27 +1546,51 @@ export function SampleCollectionPage() {
               })()
               const multiCollectorPlan = routePlanSlices.length > 1
               const sliceCollectorId = routeAssignCollectors[slice.collectorIndex] ?? ''
+              const sliceExpanded = isRouteSliceExpanded(slice.collectorIndex)
 
               return (
                 <article
                   key={`route-${slice.collectorIndex}`}
-                  className="route-panel route-panel--plan-slice"
+                  className={`route-panel route-panel--plan-slice${sliceExpanded ? '' : ' route-panel--collapsed'}`}
                 >
-                  {multiCollectorPlan ? (
-                    <div className="route-panel__slice-head">
+                  <div className="route-panel__slice-head">
+                    <button
+                      type="button"
+                      className="route-panel__collapse-toggle"
+                      aria-expanded={sliceExpanded}
+                      onClick={() => toggleRouteSlice(slice.collectorIndex)}
+                    >
                       <div className="route-panel__slice-title">
-                        <span className="route-panel__route-badge">Route {slice.collectorIndex}</span>
+                        {multiCollectorPlan ? (
+                          <span className="route-panel__route-badge">
+                            {t('collections.routePlan.routeBadge', { index: slice.collectorIndex })}
+                          </span>
+                        ) : (
+                          <span className="route-panel__route-badge route-panel__route-badge--solo">
+                            {t('collections.routePlan.titleOne')}
+                          </span>
+                        )}
                         <span className="route-panel__slice-stops">
-                          {slice.orders.length} stop{slice.orders.length === 1 ? '' : 's'}
+                          {t('collections.routePlan.stopsCount', {
+                            count: slice.orders.length,
+                            suffix: slice.orders.length === 1 ? '' : 's',
+                          })}
                         </span>
                       </div>
-                      <div className="route-panel__eta-chip">
-                        <span>Est. finish</span>
-                        <strong>{sliceFinish}</strong>
+                      <div className="route-panel__slice-head-end">
+                        <div className="route-panel__eta-chip">
+                          <span>{t('collections.routePlan.estFinishLabel')}</span>
+                          <strong>{sliceFinish}</strong>
+                        </div>
+                        <span className="material-symbols-outlined route-panel__collapse-icon" aria-hidden>
+                          {sliceExpanded ? 'expand_less' : 'expand_more'}
+                        </span>
                       </div>
-                    </div>
-                  ) : null}
+                    </button>
+                  </div>
 
+                  {sliceExpanded ? (
+                    <>
                   {routeCollectorOptions.length > 0 ? (
                     <RouteCollectorPicker
                       id={
@@ -1541,8 +1628,13 @@ export function SampleCollectionPage() {
                       const items: ApiOrderDetailItem[] = order.items ?? []
                       const stop = stopIndex + 1
                       const stopTimes = slice.editableStops[order.id]
+                      const stopExpanded = isRouteStopExpanded(order.id)
+                      const address = order.address?.trim() || t('collections.scheduled.noAddress')
                       return (
-                        <li key={order.id} className="route-stop-card">
+                        <li
+                          key={order.id}
+                          className={`route-stop-card${stopExpanded ? '' : ' route-stop-card--collapsed'}`}
+                        >
                           <div className="route-stop-card__marker" aria-hidden>
                             <span className="route-stop-card__badge">{stop}</span>
                             {stopIndex < slice.orders.length - 1 ? (
@@ -1550,18 +1642,41 @@ export function SampleCollectionPage() {
                             ) : null}
                           </div>
                           <div className="route-stop-card__body">
-                            <div className="route-stop-card__meta">
-                              <span className="route-stop-card__patient">{order.patient_name}</span>
-                              <span className="route-stop-card__address">
-                                {order.address?.trim() || t('collections.scheduled.noAddress')}
+                            <button
+                              type="button"
+                              className="route-stop-card__head"
+                              aria-expanded={stopExpanded}
+                              aria-controls={`route-stop-details-${order.id}`}
+                              onClick={() => toggleRouteStop(order.id)}
+                            >
+                              <div className="route-stop-card__meta route-stop-card__meta--head">
+                                <span className="route-stop-card__patient">{order.patient_name}</span>
+                                {!stopExpanded ? (
+                                  <span className="route-stop-card__address route-stop-card__address--peek">
+                                    {address}
+                                  </span>
+                                ) : null}
+                              </div>
+                              <span className="material-symbols-outlined route-stop-card__chevron" aria-hidden>
+                                {stopExpanded ? 'expand_less' : 'expand_more'}
                               </span>
-                            </div>
+                            </button>
+                            {stopExpanded ? (
+                              <div
+                                id={`route-stop-details-${order.id}`}
+                                className="route-stop-card__details"
+                              >
+                                <span className="route-stop-card__address">{address}</span>
                             {stopTimes ? (
                               <div className="route-stop-card__schedule-edit">
-                                <p className="route-stop-card__schedule-label">Stop schedule</p>
+                                <p className="route-stop-card__schedule-label">
+                                  {t('collections.routePlan.stopSchedule')}
+                                </p>
                                 <div className="route-stop-card__schedule-grid">
                                   <div className="field">
-                                    <label htmlFor={`stop-${order.id}-arrive`}>Arrive</label>
+                                    <label htmlFor={`stop-${order.id}-arrive`}>
+                                      {t('collections.routePlan.arrive')}
+                                    </label>
                                     <TimeField
                                       id={`stop-${order.id}-arrive`}
                                       value={stopTimes.arrivalTime}
@@ -1569,11 +1684,13 @@ export function SampleCollectionPage() {
                                         updateRouteStopTime(order.id, 'arrivalTime', value)
                                       }
                                       disabled={routeAssignSubmitting}
-                                      placeholder="Arrive"
+                                      placeholder={t('collections.routePlan.arrive')}
                                     />
                                   </div>
                                   <div className="field">
-                                    <label htmlFor={`stop-${order.id}-collect-start`}>From</label>
+                                    <label htmlFor={`stop-${order.id}-collect-start`}>
+                                      {t('collections.routePlan.from')}
+                                    </label>
                                     <TimeField
                                       id={`stop-${order.id}-collect-start`}
                                       value={stopTimes.collectionStart}
@@ -1581,11 +1698,13 @@ export function SampleCollectionPage() {
                                         updateRouteStopTime(order.id, 'collectionStart', value)
                                       }
                                       disabled={routeAssignSubmitting}
-                                      placeholder="Start"
+                                      placeholder={t('collections.routePlan.start')}
                                     />
                                   </div>
                                   <div className="field">
-                                    <label htmlFor={`stop-${order.id}-collect-end`}>Until</label>
+                                    <label htmlFor={`stop-${order.id}-collect-end`}>
+                                      {t('collections.routePlan.until')}
+                                    </label>
                                     <TimeField
                                       id={`stop-${order.id}-collect-end`}
                                       value={stopTimes.collectionEnd}
@@ -1593,14 +1712,16 @@ export function SampleCollectionPage() {
                                         updateRouteStopTime(order.id, 'collectionEnd', value)
                                       }
                                       disabled={routeAssignSubmitting}
-                                      placeholder="End"
+                                      placeholder={t('collections.routePlan.end')}
                                     />
                                   </div>
                                 </div>
                               </div>
                             ) : null}
                             {items.length === 0 ? (
-                              <p className="route-stop-card__empty">No tests assigned on this order</p>
+                              <p className="route-stop-card__empty">
+                                {t('collections.routePlan.noTests')}
+                              </p>
                             ) : (
                               <ul className="route-stop-card__tests">
                                 {items.map((it, idx) => (
@@ -1619,11 +1740,15 @@ export function SampleCollectionPage() {
                                 ))}
                               </ul>
                             )}
+                              </div>
+                            ) : null}
                           </div>
                         </li>
                       )
                     })}
                   </ol>
+                    </>
+                  ) : null}
                 </article>
               )
             })}

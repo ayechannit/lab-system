@@ -5,7 +5,6 @@ class LabAdvertisement {
     required this.title,
     this.description,
     this.bannerImageUrl,
-    this.actionUrl,
   });
 
   final String id;
@@ -14,8 +13,6 @@ class LabAdvertisement {
 
   /// Resolved URL suitable for [Image.network].
   final String? bannerImageUrl;
-  final String? actionUrl;
 
   bool get hasBanner => bannerImageUrl != null && bannerImageUrl!.trim().isNotEmpty;
-  bool get hasAction => actionUrl != null && actionUrl!.trim().isNotEmpty;
 }

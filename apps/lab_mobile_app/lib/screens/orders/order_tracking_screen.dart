@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/session_scope.dart';
+import '../../l10n/app_localizations.dart';
+import '../../l10n/order_l10n.dart';
 import '../../theme/theme_extensions.dart';
 import '../../widgets/common/app_toast.dart';
 import '../../widgets/common/order_status_chip.dart';
@@ -22,6 +24,7 @@ class OrderTrackingScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final session = SessionScope.of(context);
+    final l10n = AppLocalizations.of(context)!;
     return ListenableBuilder(
       listenable: session,
       builder: (context, _) {
@@ -31,10 +34,10 @@ class OrderTrackingScreen extends StatelessWidget {
             appBar: AppBar(
               leading: IconButton(
                 icon: const Icon(Icons.arrow_back),
-                tooltip: 'Back',
+                tooltip: l10n.profileBack,
                 onPressed: () => _goBack(context),
               ),
-              title: const Text('Order tracking'),
+              title: Text(l10n.orderTracking),
             ),
             body: RefreshIndicator(
               onRefresh: () => session.refreshTracking(),
@@ -44,7 +47,7 @@ class OrderTrackingScreen extends StatelessWidget {
                 children: [
                   SizedBox(height: MediaQuery.sizeOf(context).height * 0.25),
                   Text(
-                    'No active orders yet. Place an order to see collection times and status from the lab.',
+                    l10n.trackingEmptyState,
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: context.cs.onSurfaceVariant),
                   ),
@@ -53,14 +56,28 @@ class OrderTrackingScreen extends StatelessWidget {
             ),
           );
         }
+
+        final testsLabel = localizedTrackingTestLabel(order, l10n);
+        final timeline = localizedTrackingTimeline(order, l10n);
+        final scheduleLines = <String>[
+          if (order.collectorName != null && order.collectorName!.trim().isNotEmpty)
+            l10n.trackingCollector(order.collectorName!.trim()),
+          if (order.collectionAcceptedAt != null)
+            l10n.trackingCollection(formatTrackingDateTime(order.collectionAcceptedAt, l10n)),
+          if (order.runningAt != null)
+            l10n.trackingRunning(formatTrackingDateTime(order.runningAt, l10n)),
+          if (order.reportOutAt != null)
+            l10n.trackingReportOut(formatTrackingDateTime(order.reportOutAt, l10n)),
+        ];
+
         return Scaffold(
           appBar: AppBar(
             leading: IconButton(
               icon: const Icon(Icons.arrow_back),
-              tooltip: 'Back',
+              tooltip: l10n.profileBack,
               onPressed: () => _goBack(context),
             ),
-            title: const Text('Order tracking'),
+            title: Text(l10n.orderTracking),
           ),
           body: RefreshIndicator(
             onRefresh: () => session.refreshTracking(),
@@ -68,14 +85,19 @@ class OrderTrackingScreen extends StatelessWidget {
               padding: const EdgeInsets.all(20),
               children: [
                 SectionCard(
-                  title: 'Order ID: ${order.id}',
+                  title: l10n.trackingOrderId(order.id),
                   subtitle: order.createdAtLabel,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('${order.patientName} · ${order.testType}', style: Theme.of(context).textTheme.bodyLarge),
-                      const SizedBox(height: 6),
-                      Text('Address: ${order.address.line}'),
+                      Text(
+                        l10n.trackingPatientLine(order.patientName, testsLabel),
+                        style: Theme.of(context).textTheme.bodyLarge,
+                      ),
+                      if (order.address.line.trim().isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        Text(l10n.trackingAddress(order.address.line.trim())),
+                      ],
                       if (order.backendStatus != null) ...[
                         const SizedBox(height: 8),
                         OrderStatusChip(status: order.backendStatus, compact: false),
@@ -83,34 +105,35 @@ class OrderTrackingScreen extends StatelessWidget {
                     ],
                   ),
                 ),
-                const SizedBox(height: 16),
-                Card(
-                  child: ListTile(
-                    leading: _CollectorAvatar(
-                      name: order.collectorName,
-                      imageUrl: order.collectorProfileImageUrl,
-                    ),
-                    title: const Text('Lab schedule'),
-                    subtitle: Text(
-                      'Collector: ${order.collectorName ?? 'Pending'}\n'
-                      'Collection: ${_dt(order.collectionAcceptedAt)}\n'
-                      'Running: ${_dt(order.runningAt)}\n'
-                      'Report out: ${_dt(order.reportOutAt)}',
-                    ),
-                    trailing: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: context.cs.primary.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(999),
+                if (order.hasLabSchedule) ...[
+                  const SizedBox(height: 16),
+                  Card(
+                    child: ListTile(
+                      leading: (order.collectorName != null || order.collectorProfileImageUrl != null)
+                          ? _CollectorAvatar(
+                              name: order.collectorName,
+                              imageUrl: order.collectorProfileImageUrl,
+                            )
+                          : null,
+                      title: Text(l10n.trackingLabSchedule),
+                      subtitle: scheduleLines.isEmpty
+                          ? null
+                          : Text(scheduleLines.join('\n')),
+                      trailing: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: context.cs.primary.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Text(order.isReportReady ? l10n.orderStatusCompleted : l10n.homeInProgress),
                       ),
-                      child: Text(order.isReportReady ? 'Completed' : 'In progress'),
                     ),
                   ),
-                ),
+                ],
                 if (order.canConfirmSchedule) ...[
                   const SizedBox(height: 12),
                   Text(
-                    'The lab proposed a collection schedule. Confirm so the collector can proceed.',
+                    l10n.trackingConfirmScheduleHint,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: context.cs.onSurfaceVariant),
                   ),
                   const SizedBox(height: 8),
@@ -123,20 +146,20 @@ class OrderTrackingScreen extends StatelessWidget {
                               if (!context.mounted) return;
                               AppToast.successInShell(
                                 context,
-                                'The collector can proceed with your sample.',
-                                title: 'Schedule confirmed',
+                                l10n.trackingScheduleConfirmedMessage,
+                                title: l10n.trackingScheduleConfirmedTitle,
                               );
                             } catch (e) {
                               if (!context.mounted) return;
                               AppToast.errorInShell(context, '$e');
                             }
                           },
-                    child: Text(session.busy ? 'Saving…' : 'Confirm collection schedule'),
+                    child: Text(session.busy ? l10n.trackingSaving : l10n.trackingConfirmScheduleButton),
                   ),
                 ],
                 const SizedBox(height: 12),
                 Text(
-                  'Status',
+                  l10n.trackingStatusSection,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w700,
                         color: context.cs.primary,
@@ -146,7 +169,7 @@ class OrderTrackingScreen extends StatelessWidget {
                 Card(
                   child: Padding(
                     padding: const EdgeInsets.all(16),
-                    child: StatusTimeline(steps: order.timeline),
+                    child: StatusTimeline(steps: timeline),
                   ),
                 ),
               ],
@@ -155,12 +178,6 @@ class OrderTrackingScreen extends StatelessWidget {
         );
       },
     );
-  }
-
-  String _dt(DateTime? dt) {
-    if (dt == null) return 'Pending';
-    return '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')} '
-        '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
   }
 }
 

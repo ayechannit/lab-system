@@ -18,7 +18,6 @@ export type AdvertisementRow = {
   image_url: string | null
   /** Resolved URL for display (from API); storage key stays in image_url. */
   image_display_url?: string | null
-  action_url: string | null
   start_date: string | null
   end_date: string | null
   is_active: boolean
@@ -31,7 +30,6 @@ export type AdvertisementUpsertBody = {
   title: string
   description: string | null
   image_url: string | null
-  action_url: string | null
   start_date: string | null
   end_date: string | null
   is_active: boolean
@@ -60,7 +58,6 @@ function normalizeRow(raw: Record<string, unknown>): AdvertisementRow {
       raw.image_display_url != null && String(raw.image_display_url).trim()
         ? String(raw.image_display_url)
         : undefined,
-    action_url: raw.action_url != null ? String(raw.action_url) : null,
     start_date: raw.start_date != null ? String(raw.start_date) : null,
     end_date: raw.end_date != null ? String(raw.end_date) : null,
     is_active: Boolean(raw.is_active),

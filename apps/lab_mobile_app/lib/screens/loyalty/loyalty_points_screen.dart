@@ -104,8 +104,9 @@ class _LoyaltyPointsScreenState extends State<LoyaltyPointsScreen> {
                         color: context.cs.primary,
                       ),
                 ),
-                const SizedBox(height: 10),
-                _FilterChips(
+                const SizedBox(height: 12),
+                _ActivityFilterBar(
+                  loyalty: loyalty,
                   selected: _filter,
                   onSelected: (next) => setState(() => _filter = next),
                 ),
@@ -394,47 +395,170 @@ class _StatTile extends StatelessWidget {
   }
 }
 
-class _FilterChips extends StatelessWidget {
-  const _FilterChips({
+class _ActivityFilterBar extends StatelessWidget {
+  const _ActivityFilterBar({
+    required this.loyalty,
     required this.selected,
     required this.onSelected,
   });
 
+  final LoyaltySnapshot loyalty;
   final PointTransactionType? selected;
   final ValueChanged<PointTransactionType?> onSelected;
+
+  int _countFor(PointTransactionType? type) {
+    if (type == null) return loyalty.entries.length;
+    return loyalty.entries.where((e) => e.transactionType == type).length;
+  }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
+    final options = <_ActivityFilterOption>[
+      _ActivityFilterOption(
+        value: null,
+        label: l10n.loyaltyFilterAll,
+        icon: Icons.grid_view_rounded,
+        count: _countFor(null),
+      ),
+      _ActivityFilterOption(
+        value: PointTransactionType.earn,
+        label: l10n.loyaltyEarned,
+        icon: Icons.trending_up_rounded,
+        count: _countFor(PointTransactionType.earn),
+        accent: AppColors.accentGreen,
+      ),
+      _ActivityFilterOption(
+        value: PointTransactionType.redeem,
+        label: l10n.loyaltyRedeemed,
+        icon: Icons.redeem_rounded,
+        count: _countFor(PointTransactionType.redeem),
+      ),
+      _ActivityFilterOption(
+        value: PointTransactionType.adjustment,
+        label: l10n.loyaltyFilterAdjustments,
+        icon: Icons.tune_rounded,
+        count: _countFor(PointTransactionType.adjustment),
+        accent: AppColors.warningLow,
+      ),
+    ];
+
+    return Container(
+      padding: const EdgeInsets.all(5),
+      decoration: BoxDecoration(
+        color: context.cardFill,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: context.cs.outline.withValues(alpha: 0.28)),
+        boxShadow: [
+          BoxShadow(
+            color: context.cs.shadow.withValues(alpha: 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
       child: Row(
         children: [
-          _chip(context, label: l10n.loyaltyFilterAll, value: null),
-          _chip(context, label: l10n.loyaltyEarned, value: PointTransactionType.earn),
-          _chip(context, label: l10n.loyaltyRedeemed, value: PointTransactionType.redeem),
-          _chip(context, label: l10n.loyaltyFilterAdjustments, value: PointTransactionType.adjustment),
+          for (var i = 0; i < options.length; i++) ...[
+            if (i > 0) const SizedBox(width: 4),
+            Expanded(
+              child: _ActivityFilterSegment(
+                option: options[i],
+                active: selected == options[i].value,
+                onTap: () => onSelected(options[i].value),
+              ),
+            ),
+          ],
         ],
       ),
     );
   }
+}
 
-  Widget _chip(BuildContext context, {required String label, required PointTransactionType? value}) {
-    final active = selected == value;
-    return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: FilterChip(
-        label: Text(label),
-        selected: active,
-        showCheckmark: false,
-        onSelected: (_) => onSelected(value),
-        selectedColor: context.cs.primary.withValues(alpha: 0.14),
-        labelStyle: TextStyle(
-          color: active ? context.cs.primary : context.cs.onSurfaceVariant,
-          fontWeight: active ? FontWeight.w700 : FontWeight.w500,
-        ),
-        side: BorderSide(
-          color: active ? context.cs.primary.withValues(alpha: 0.45) : context.cs.outline.withValues(alpha: 0.5),
+class _ActivityFilterOption {
+  const _ActivityFilterOption({
+    required this.value,
+    required this.label,
+    required this.icon,
+    required this.count,
+    this.accent,
+  });
+
+  final PointTransactionType? value;
+  final String label;
+  final IconData icon;
+  final int count;
+  final Color? accent;
+}
+
+class _ActivityFilterSegment extends StatelessWidget {
+  const _ActivityFilterSegment({
+    required this.option,
+    required this.active,
+    required this.onTap,
+  });
+
+  final _ActivityFilterOption option;
+  final bool active;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = context.cs;
+    final accent = option.accent ?? cs.primary;
+    final fg = active ? accent : cs.onSurfaceVariant;
+
+    return Semantics(
+      button: true,
+      selected: active,
+      label: option.label,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOutCubic,
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
+            decoration: BoxDecoration(
+              color: active ? accent.withValues(alpha: 0.1) : Colors.transparent,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: active ? accent.withValues(alpha: 0.35) : Colors.transparent,
+              ),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(option.icon, size: 18, color: fg),
+                const SizedBox(height: 5),
+                Text(
+                  option.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: fg,
+                        fontWeight: active ? FontWeight.w800 : FontWeight.w600,
+                        fontSize: 10.5,
+                        letterSpacing: 0.1,
+                        height: 1.1,
+                      ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${option.count}',
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: active ? accent : cs.onSurfaceVariant.withValues(alpha: 0.75),
+                        fontWeight: FontWeight.w700,
+                        fontSize: 11,
+                        height: 1,
+                      ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );

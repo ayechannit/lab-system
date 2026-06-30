@@ -20,64 +20,25 @@ class OrderRatingBar extends StatelessWidget {
 
   Future<void> _submit(BuildContext context, int stars) async {
     final l10n = AppLocalizations.of(context)!;
-    final remark = TextEditingController();
     try {
       final session = SessionScope.of(context);
-      final submitted = await showModalBottomSheet<bool>(
+      final remarkText = await showModalBottomSheet<String>(
         context: context,
         showDragHandle: true,
         isScrollControlled: true,
-        builder: (sheetContext) {
-          return Padding(
-            padding: EdgeInsets.only(
-              left: 20,
-              right: 20,
-              top: 8,
-              bottom: 20 + MediaQuery.viewInsetsOf(sheetContext).bottom,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  l10n.ordersRateThisOrder,
-                  style: Theme.of(sheetContext).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: 6),
-                Row(
-                  children: List.generate(5, (i) {
-                    final filled = i < stars;
-                    return Icon(
-                      Icons.star_rounded,
-                      color: filled ? sheetContext.cs.primary : sheetContext.appExtras.ratingInactive,
-                      size: 28,
-                    );
-                  }),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: remark,
-                  maxLines: 3,
-                  decoration: InputDecoration(
-                    labelText: l10n.ordersCommentOptional,
-                    hintText: l10n.ordersCommentHint,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                FilledButton(
-                  onPressed: () => Navigator.pop(sheetContext, true),
-                  child: Text(l10n.ordersSubmitRating),
-                ),
-              ],
-            ),
-          );
-        },
+        builder: (sheetContext) => _OrderRatingRemarkSheet(
+          stars: stars,
+          title: l10n.ordersRateThisOrder,
+          commentLabel: l10n.ordersCommentOptional,
+          commentHint: l10n.ordersCommentHint,
+          submitLabel: l10n.ordersSubmitRating,
+        ),
       );
-      if (submitted != true || !context.mounted) return;
+      if (remarkText == null || !context.mounted) return;
       await session.submitOrderRating(
         orderId: orderId,
         stars: stars,
-        remark: remark.text.trim(),
+        remark: remarkText,
       );
       if (!context.mounted) return;
       AppToast.successInShell(
@@ -88,8 +49,6 @@ class OrderRatingBar extends StatelessWidget {
     } catch (e) {
       if (!context.mounted) return;
       AppToast.errorInShell(context, '$e', title: l10n.ordersRatingFailed);
-    } finally {
-      remark.dispose();
     }
   }
 
@@ -258,6 +217,88 @@ class OrderRatingBar extends StatelessWidget {
           ),
         ],
       ],
+    );
+  }
+}
+
+class _OrderRatingRemarkSheet extends StatefulWidget {
+  const _OrderRatingRemarkSheet({
+    required this.stars,
+    required this.title,
+    required this.commentLabel,
+    required this.commentHint,
+    required this.submitLabel,
+  });
+
+  final int stars;
+  final String title;
+  final String commentLabel;
+  final String commentHint;
+  final String submitLabel;
+
+  @override
+  State<_OrderRatingRemarkSheet> createState() => _OrderRatingRemarkSheetState();
+}
+
+class _OrderRatingRemarkSheetState extends State<_OrderRatingRemarkSheet> {
+  late final TextEditingController _remark;
+
+  @override
+  void initState() {
+    super.initState();
+    _remark = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _remark.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(
+        left: 20,
+        right: 20,
+        top: 8,
+        bottom: 20 + MediaQuery.viewInsetsOf(context).bottom,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            widget.title,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 6),
+          Row(
+            children: List.generate(5, (i) {
+              final filled = i < widget.stars;
+              return Icon(
+                Icons.star_rounded,
+                color: filled ? context.cs.primary : context.appExtras.ratingInactive,
+                size: 28,
+              );
+            }),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _remark,
+            maxLines: 3,
+            decoration: InputDecoration(
+              labelText: widget.commentLabel,
+              hintText: widget.commentHint,
+            ),
+          ),
+          const SizedBox(height: 16),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, _remark.text.trim()),
+            child: Text(widget.submitLabel),
+          ),
+        ],
+      ),
     );
   }
 }

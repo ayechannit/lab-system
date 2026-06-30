@@ -23,12 +23,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
   static const double _maxContentWidth = 720;
 
   Future<void> _onRefresh(BuildContext context) async {
-    final session = SessionScope.of(context);
-    await Future.wait([
-      session.refreshHomeSummary(),
-      session.refreshTracking(),
-      session.refreshNotifications(quiet: true),
-    ]);
+    await SessionScope.of(context).refreshHomeTab();
   }
 
   @override

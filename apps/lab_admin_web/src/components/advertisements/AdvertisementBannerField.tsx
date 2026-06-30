@@ -70,8 +70,10 @@ export function AdvertisementBannerField({
       </p>
 
       {displayPreview ? (
-        <div className="logo-url-field__preview-wrap">
-          <img src={displayPreview} alt="" className="logo-url-field__preview" />
+        <div className="ad-article-preview" aria-hidden>
+          <div className="ad-article-preview__media">
+            <img src={displayPreview} alt="" />
+          </div>
         </div>
       ) : null}
 
