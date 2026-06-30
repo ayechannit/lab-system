@@ -67,6 +67,27 @@ CREATE TABLE lab_test_catalog (
     updated_at DATETIME2 DEFAULT GETDATE()
 );
 
+-- SERVICE GEOFENCES
+CREATE TABLE service_geofences (
+    id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+    name NVARCHAR(255) NOT NULL,
+    west_longitude DECIMAL(18, 15) NOT NULL,
+    east_longitude DECIMAL(18, 15) NOT NULL,
+    north_latitude DECIMAL(18, 15) NOT NULL,
+    south_latitude DECIMAL(18, 15) NOT NULL,
+    service_fee_mmk DECIMAL(18, 2) NOT NULL DEFAULT 0,
+    priority INT NOT NULL DEFAULT 1,
+    is_active BIT DEFAULT 1,
+    created_user UNIQUEIDENTIFIER,
+    updated_user UNIQUEIDENTIFIER,
+    is_deleted BIT DEFAULT 0,
+    created_at DATETIME2 DEFAULT GETDATE(),
+    updated_at DATETIME2 DEFAULT GETDATE()
+);
+
+-- Index Service Geofences
+CREATE INDEX IX_ServiceGeofences_Active ON service_geofences(is_active, is_deleted);
+
 -- LAB ORDERS
 CREATE TABLE lab_orders (
     id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
@@ -84,6 +105,9 @@ CREATE TABLE lab_orders (
     original_price_mmk DECIMAL(18, 2) NOT NULL,
     discount_percent DECIMAL(5, 2) DEFAULT 0,
     final_price_mmk DECIMAL(18, 2) NOT NULL,
+    material_fee_mmk DECIMAL(18, 2) DEFAULT 0,
+    service_geofence_id UNIQUEIDENTIFIER NULL FOREIGN KEY REFERENCES service_geofences(id),
+    service_fee_mmk DECIMAL(18, 2) DEFAULT 0,
     report_delivery_method VARCHAR(20) NOT NULL,
     prescription_url NVARCHAR(2048),
     is_tests_assigned BIT DEFAULT 0,
@@ -282,6 +306,27 @@ VALUES
 ('Standard Loyalty', 100000.00, 10, 1),
 ('Gold Member Promo', 50000.00, 15, 1);
 
+-- MATERIAL FEES
+CREATE TABLE material_fees (
+    id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+    name NVARCHAR(255) NOT NULL,
+    amount_mmk DECIMAL(18, 2) NOT NULL,
+    is_active BIT DEFAULT 1,
+    created_user UNIQUEIDENTIFIER,
+    updated_user UNIQUEIDENTIFIER,
+    is_deleted BIT DEFAULT 0,
+    created_at DATETIME2 DEFAULT GETDATE(),
+    updated_at DATETIME2 DEFAULT GETDATE()
+);
+
+-- Index Material Fees
+CREATE INDEX IX_MaterialFees_Active ON material_fees(is_active, is_deleted);
+
+-- SEED DATA FOR MATERIAL FEES
+INSERT INTO material_fees (name, amount_mmk, is_active)
+VALUES 
+('Standard Material Fee', 1000.00, 1);
+
 -- AI CONFIGURATIONS
 CREATE TABLE ai_configs (
     id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
@@ -328,3 +373,9 @@ CREATE TABLE theme_settings (
 -- SEED INITIAL DATA
 INSERT INTO theme_settings (lab_name, mode, primary_color, secondary_color, latitude, longitude, address)
 VALUES ('MedLab Smart', 'light', '#0055ff', '#00cc66', 16.8661, 96.1951, 'Yangon, Myanmar');
+
+-- SEED DATA FOR SERVICE GEOFENCES
+INSERT INTO service_geofences (name, west_longitude, east_longitude, north_latitude, south_latitude, service_fee_mmk, priority)
+VALUES 
+('Downtown Zone', 96.140000000000000, 96.180000000000000, 16.800000000000000, 16.760000000000000, 1500.00, 2),
+('Extended City Zone', 96.100000000000000, 96.220000000000000, 16.880000000000000, 16.700000000000000, 3000.00, 1);

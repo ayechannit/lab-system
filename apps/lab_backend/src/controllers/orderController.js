@@ -5,6 +5,7 @@ const Staff = require('../models/staffModel');
 const QRCode = require('qrcode');
 const StorageService = require('../utils/storageService');
 const NotificationService = require('../services/notificationService');
+const ServiceGeofence = require('../models/serviceGeofenceModel');
 
 async function resolvePreferredCollectorId(collector_id) {
   if (collector_id == null || collector_id === '') return null;
@@ -37,7 +38,7 @@ const createOrder = async (req, res) => {
     const { 
       user_id, collector_id, description, priority, patient_name, patient_age, patient_phone, 
       address, latitude, longitude, status, report_delivery_method, 
-      original_price_mmk, discount_percent, final_price_mmk, items 
+      original_price_mmk, discount_percent, final_price_mmk, material_fee_mmk, items 
     } = req.body;
 
     if (!user_id || !priority || !patient_name || !patient_age || !patient_phone || !address || !report_delivery_method) {
@@ -47,8 +48,22 @@ const createOrder = async (req, res) => {
     const orderData = { 
       user_id, collector_id, description, priority, patient_name, patient_age, patient_phone, 
       address, latitude, longitude, status, report_delivery_method, 
-      original_price_mmk, discount_percent, final_price_mmk, items 
+      original_price_mmk, discount_percent, final_price_mmk, material_fee_mmk, items 
     };
+
+    if (latitude != null && longitude != null) {
+      const latVal = parseFloat(latitude);
+      const lngVal = parseFloat(longitude);
+      if (!isNaN(latVal) && !isNaN(lngVal)) {
+        const matchedGeofence = await ServiceGeofence.matchCoordinates(latVal, lngVal);
+        if (!matchedGeofence) {
+          return res.status(400).json({
+            code: 'OUT_OF_COVERAGE',
+            message: 'Your location is outside our service coverage areas. We cannot deliver services to this address.'
+          });
+        }
+      }
+    }
     
     // Parse items if it's a string (from multipart/form-data)
     if (typeof orderData.items === 'string') {
@@ -112,7 +127,7 @@ const createOrder = async (req, res) => {
 const addOrderItems = async (req, res) => {
   try {
     const { id } = req.params;
-    const { items, original_price_mmk, discount_percent, final_price_mmk } = req.body;
+    const { items, original_price_mmk, discount_percent, final_price_mmk, material_fee_mmk } = req.body;
 
     if (!items || items.length === 0) {
       return res.status(400).json({ message: 'Items array is required' });
@@ -121,7 +136,8 @@ const addOrderItems = async (req, res) => {
     const totals = {
       original_price_mmk: original_price_mmk || 0,
       discount_percent: discount_percent || 0,
-      final_price_mmk: final_price_mmk || 0
+      final_price_mmk: final_price_mmk || 0,
+      material_fee_mmk: material_fee_mmk || 0
     };
 
     const updatedOrder = await Order.addItemsAndUpdateTotals(id, items, totals, req.user?.id);
@@ -138,7 +154,7 @@ const addOrderItems = async (req, res) => {
 const replaceOrderItems = async (req, res) => {
   try {
     const { id } = req.params;
-    const { items, original_price_mmk, discount_percent, final_price_mmk } = req.body;
+    const { items, original_price_mmk, discount_percent, final_price_mmk, material_fee_mmk } = req.body;
 
     if (!Array.isArray(items)) {
       return res.status(400).json({ message: 'Items array is required' });
@@ -148,6 +164,7 @@ const replaceOrderItems = async (req, res) => {
       original_price_mmk: original_price_mmk || 0,
       discount_percent: discount_percent || 0,
       final_price_mmk: final_price_mmk || 0,
+      material_fee_mmk: material_fee_mmk || 0,
     };
 
     const updatedOrder = await Order.replaceItemsAndUpdateTotals(id, items, totals, req.user?.id);
@@ -178,6 +195,7 @@ const syncPendingOrder = async (req, res) => {
       original_price_mmk,
       discount_percent,
       final_price_mmk,
+      material_fee_mmk,
       items,
     } = req.body;
 
@@ -192,6 +210,20 @@ const syncPendingOrder = async (req, res) => {
     }
 
     const resolvedCollectorId = await resolvePreferredCollectorId(collector_id);
+
+    if (latitude != null && longitude != null) {
+      const latVal = parseFloat(latitude);
+      const lngVal = parseFloat(longitude);
+      if (!isNaN(latVal) && !isNaN(lngVal)) {
+        const matchedGeofence = await ServiceGeofence.matchCoordinates(latVal, lngVal);
+        if (!matchedGeofence) {
+          return res.status(400).json({
+            code: 'OUT_OF_COVERAGE',
+            message: 'Your location is outside our service coverage areas. We cannot deliver services to this address.'
+          });
+        }
+      }
+    }
 
     const updatedOrder = await Order.syncPendingOrder(
       id,
@@ -208,6 +240,7 @@ const syncPendingOrder = async (req, res) => {
         original_price_mmk,
         discount_percent,
         final_price_mmk,
+        material_fee_mmk,
         items,
       },
       req.user?.id,
@@ -257,6 +290,20 @@ const updateOrder = async (req, res) => {
       return res.status(400).json({
         message: 'priority, patient_name, patient_age, patient_phone, and address are required',
       });
+    }
+
+    if (latitude != null && longitude != null) {
+      const latVal = parseFloat(latitude);
+      const lngVal = parseFloat(longitude);
+      if (!isNaN(latVal) && !isNaN(lngVal)) {
+        const matchedGeofence = await ServiceGeofence.matchCoordinates(latVal, lngVal);
+        if (!matchedGeofence) {
+          return res.status(400).json({
+            code: 'OUT_OF_COVERAGE',
+            message: 'Your location is outside our service coverage areas. We cannot deliver services to this address.'
+          });
+        }
+      }
     }
 
     const order = await Order.update(

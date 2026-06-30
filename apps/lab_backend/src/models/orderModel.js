@@ -209,13 +209,15 @@ class Order {
   static async create(data, createdBy = null) {
     const pool = await poolPromise;
     const transaction = new sql.Transaction(pool);
-    
+
     try {
       await transaction.begin();
-      
+
       const originalPrice = data.original_price_mmk || 0;
       const discountPercent = data.discount_percent || 0;
       const finalPrice = data.final_price_mmk || 0;
+      const materialFee = data.material_fee_mmk || 0;
+      const serviceFee = data.service_fee_mmk || 0;
       const isTestsAssigned = (data.items && data.items.length > 0) ? 1 : 0;
 
       const orderRequest = new sql.Request(transaction);
@@ -235,17 +237,20 @@ class Order {
         .input('original_price_mmk', sql.Decimal(18, 2), originalPrice)
         .input('discount_percent', sql.Decimal(5, 2), discountPercent)
         .input('final_price_mmk', sql.Decimal(18, 2), finalPrice)
+        .input('material_fee_mmk', sql.Decimal(18, 2), materialFee)
+        .input('service_geofence_id', sql.UniqueIdentifier, data.service_geofence_id || null)
+        .input('service_fee_mmk', sql.Decimal(18, 2), serviceFee)
         .input('prescription_url', sql.NVarChar(2048), data.prescription_url)
         .input('is_tests_assigned', sql.Bit, isTestsAssigned)
         .input('created_user', sql.UniqueIdentifier, createdBy)
         .query(`
-          INSERT INTO lab_orders (id, user_id, collector_id, description, priority, patient_name, patient_age, patient_phone, 
-                                 address, latitude, longitude, status, report_delivery_method, original_price_mmk, 
-                                 discount_percent, final_price_mmk, prescription_url, is_tests_assigned, created_user, updated_user, is_deleted)
+          INSERT INTO lab_orders (id, user_id, collector_id, description, priority, patient_name, patient_age, patient_phone,
+                                 address, latitude, longitude, status, report_delivery_method, original_price_mmk,
+                                 discount_percent, final_price_mmk, material_fee_mmk, service_geofence_id, service_fee_mmk, prescription_url, is_tests_assigned, created_user, updated_user, is_deleted)
           OUTPUT INSERTED.*
-          VALUES (NEWID(), @user_id, @collector_id, @description, @priority, @patient_name, @patient_age, @patient_phone, 
-                  @address, @latitude, @longitude, @status, @report_delivery_method, @original_price_mmk, 
-                  @discount_percent, @final_price_mmk, @prescription_url, @is_tests_assigned, @created_user, @created_user, 0)
+          VALUES (NEWID(), @user_id, @collector_id, @description, @priority, @patient_name, @patient_age, @patient_phone,
+                  @address, @latitude, @longitude, @status, @report_delivery_method, @original_price_mmk,
+                  @discount_percent, @final_price_mmk, @material_fee_mmk, @service_geofence_id, @service_fee_mmk, @prescription_url, @is_tests_assigned, @created_user, @created_user, 0)
         `);
 
       const newOrder = orderResult.recordset[0];
@@ -291,12 +296,16 @@ class Order {
         .input('original_price_mmk', sql.Decimal(18, 2), totals.original_price_mmk)
         .input('discount_percent', sql.Decimal(5, 2), totals.discount_percent || 0)
         .input('final_price_mmk', sql.Decimal(18, 2), totals.final_price_mmk)
+        .input('material_fee_mmk', sql.Decimal(18, 2), totals.material_fee_mmk || 0)
+        .input('service_fee_mmk', sql.Decimal(18, 2), totals.service_fee_mmk || 0)
         .input('updated_user', sql.UniqueIdentifier, updatedBy)
         .query(`
           UPDATE lab_orders 
           SET original_price_mmk = @original_price_mmk, 
               discount_percent = @discount_percent, 
               final_price_mmk = @final_price_mmk, 
+              material_fee_mmk = @material_fee_mmk,
+              service_fee_mmk = @service_fee_mmk,
               is_tests_assigned = 1,
               updated_user = @updated_user, 
               updated_at = GETDATE()
@@ -447,6 +456,7 @@ class Order {
         .input('original_price_mmk', sql.Decimal(18, 2), data.original_price_mmk || 0)
         .input('discount_percent', sql.Decimal(5, 2), discountPercent)
         .input('final_price_mmk', sql.Decimal(18, 2), data.final_price_mmk || 0)
+        .input('material_fee_mmk', sql.Decimal(18, 2), data.material_fee_mmk || 0)
         .input('is_tests_assigned', sql.Bit, pricedItems.length > 0 ? 1 : 0)
         .input('updated_user', sql.UniqueIdentifier, updatedBy)
         .query(`
@@ -463,6 +473,7 @@ class Order {
               original_price_mmk = @original_price_mmk,
               discount_percent = @discount_percent,
               final_price_mmk = @final_price_mmk,
+              material_fee_mmk = @material_fee_mmk,
               is_tests_assigned = @is_tests_assigned,
               updated_user = @updated_user,
               updated_at = GETDATE()
@@ -544,6 +555,7 @@ class Order {
         .input('original_price_mmk', sql.Decimal(18, 2), totals.original_price_mmk)
         .input('discount_percent', sql.Decimal(5, 2), totals.discount_percent || 0)
         .input('final_price_mmk', sql.Decimal(18, 2), totals.final_price_mmk)
+        .input('material_fee_mmk', sql.Decimal(18, 2), totals.material_fee_mmk || 0)
         .input('is_tests_assigned', sql.Bit, items && items.length > 0 ? 1 : 0)
         .input('updated_user', sql.UniqueIdentifier, updatedBy)
         .query(`
@@ -551,6 +563,7 @@ class Order {
           SET original_price_mmk = @original_price_mmk,
               discount_percent = @discount_percent,
               final_price_mmk = @final_price_mmk,
+              material_fee_mmk = @material_fee_mmk,
               is_tests_assigned = @is_tests_assigned,
               updated_user = @updated_user,
               updated_at = GETDATE()

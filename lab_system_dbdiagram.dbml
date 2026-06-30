@@ -87,6 +87,9 @@ Table lab_orders {
   original_price_mmk decimal [not null]
   discount_percent decimal [default: 0]
   final_price_mmk decimal [not null]
+  material_fee_mmk decimal [default: 0]
+  service_geofence_id uuid [ref: > service_geofences.id]
+  service_fee_mmk decimal [default: 0]
   is_deleted boolean [default: false]
   created_at timestamp [default: `now()`]
   updated_at timestamp [default: `now()`]
@@ -256,6 +259,31 @@ Table point_settings {
   points_reward int [not null, note: 'e.g. 10']
   start_date timestamp
   end_date timestamp
+  is_active boolean [default: true]
+  is_deleted boolean [default: false]
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+}
+
+Table material_fees {
+  id uuid [pk]
+  name varchar [not null]
+  amount_mmk decimal [not null, note: 'e.g. 1000']
+  is_active boolean [default: true]
+  is_deleted boolean [default: false]
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+}
+
+Table service_geofences {
+  id uuid [pk]
+  name varchar [not null]
+  west_longitude float [not null]
+  east_longitude float [not null]
+  north_latitude float [not null]
+  south_latitude float [not null]
+  service_fee_mmk decimal [not null, default: 0]
+  priority int [not null, default: 1]
   is_active boolean [default: true]
   is_deleted boolean [default: false]
   created_at timestamp [default: `now()`]
