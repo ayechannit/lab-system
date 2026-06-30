@@ -158,6 +158,7 @@ export type ApiOrderCreateBody = {
   original_price_mmk: number
   discount_percent: number
   final_price_mmk: number
+  material_fee_mmk?: number
   items: ApiOrderCreateItem[]
 }
 

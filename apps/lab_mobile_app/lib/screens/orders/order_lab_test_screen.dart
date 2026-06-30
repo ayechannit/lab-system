@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../app/session_scope.dart';
 import '../../models/lab_order.dart';
 import '../../models/lab_test_pick.dart';
@@ -77,6 +78,10 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
   Timer? _serviceFeeDebounce;
   int _serviceFeeRequestId = 0;
 
+  MaterialFeeQuote? _materialFeeQuote;
+  bool _materialFeeLoading = false;
+  bool _materialFeeInit = false;
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -107,6 +112,28 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
       if (mounted) setState(() => _collectors = list);
       return list;
     });
+    if (!_materialFeeInit) {
+      _materialFeeInit = true;
+      unawaited(_loadMaterialFee());
+    }
+  }
+
+  Future<void> _loadMaterialFee() async {
+    setState(() => _materialFeeLoading = true);
+    try {
+      final quote = await SessionScope.of(context).fetchActiveMaterialFee();
+      if (!mounted) return;
+      setState(() {
+        _materialFeeQuote = quote;
+        _materialFeeLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _materialFeeQuote = null;
+        _materialFeeLoading = false;
+      });
+    }
   }
 
   @override
@@ -240,75 +267,186 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
     }
   }
 
-  Widget _serviceFeeSummaryRow(BuildContext context) {
-    if (_serviceFeeLoading) {
-      return Padding(
-        padding: const EdgeInsets.only(top: 8),
-        child: Row(
-          children: [
-            const SizedBox(
-              width: 16,
-              height: 16,
-              child: CircularProgressIndicator(strokeWidth: 2),
+  String _formatMmk(double amount) => '${amount.toStringAsFixed(0)} MMK';
+
+  int _blendedDiscountPercent(List<CatalogOrderLine> lines) {
+    final original = _sumOriginal(lines);
+    final finalSum = _sumFinal(lines);
+    if (original <= 0) return 0;
+    return ((1 - finalSum / original) * 100).round();
+  }
+
+  Widget _buildPricingLine(
+    BuildContext context, {
+    required String label,
+    required String amount,
+    String? caption,
+    bool captionLoading = false,
+    bool captionError = false,
+  }) {
+    final theme = Theme.of(context);
+    final captionStyle = theme.textTheme.bodySmall?.copyWith(
+      color: captionError ? AppColors.error : context.cs.onSurfaceVariant,
+      fontStyle: captionLoading ? FontStyle.italic : null,
+    );
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                ),
+                if (caption != null && caption.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(caption, style: captionStyle),
+                ],
+              ],
             ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                'Checking service zone…',
-                style: Theme.of(context).textTheme.bodySmall,
+          ),
+          const SizedBox(width: 12),
+          Text(
+            amount,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
+            textAlign: TextAlign.right,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOrderPricingCard(
+    BuildContext context,
+    List<CatalogOrderLine> lines, {
+    bool includeTestsLine = true,
+  }) {
+    final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+    final cs = context.cs;
+    final discountPct = _blendedDiscountPercent(lines);
+    final testsTotal = _sumFinal(lines);
+    final showTotal = !_serviceFeeOutOfCoverage && _serviceFeeQuote != null;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerHighest.withValues(alpha: 0.35),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: context.subtleBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.receipt_long_outlined, size: 18, color: cs.primary),
+              const SizedBox(width: 6),
+              Text(
+                l10n.orderCreatePricingSummary.toUpperCase(),
+                style: theme.textTheme.labelSmall?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.6,
+                  color: cs.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (includeTestsLine && lines.isNotEmpty)
+            _buildPricingLine(
+              context,
+              label: l10n.orderCreateTestsSubtotal,
+              amount: _formatMmk(testsTotal),
+              caption: discountPct > 0
+                  ? l10n.orderCreateTestsDiscountHint(
+                      _sumOriginal(lines).toStringAsFixed(0),
+                      '$discountPct',
+                    )
+                  : null,
+            ),
+          if (_materialFeeLoading || (_materialFeeQuote != null && _materialFeeQuote!.amountMmk > 0))
+            _buildPricingLine(
+              context,
+              label: l10n.orderCreateMaterialFee,
+              amount: _materialFeeLoading
+                  ? '…'
+                  : _formatMmk(_materialFeeQuote?.amountMmk ?? 0),
+              caption: _materialFeeLoading
+                  ? l10n.orderCreateMaterialFeeLoading
+                  : (_materialFeeQuote?.name.trim().isNotEmpty == true
+                      ? _materialFeeQuote!.name.trim()
+                      : null),
+              captionLoading: _materialFeeLoading,
+            ),
+          _buildPricingLine(
+            context,
+            label: l10n.orderCreateServiceFee,
+            amount: _serviceFeeLoading
+                ? '…'
+                : _serviceFeeOutOfCoverage || _serviceFeeError != null
+                    ? '—'
+                    : _serviceFeeQuote != null
+                        ? _formatMmk(_serviceFeeQuote!.serviceFeeMmk)
+                        : '—',
+            caption: _serviceFeeLoading
+                ? l10n.orderCreateServiceFeeChecking
+                : _serviceFeeOutOfCoverage
+                    ? (_serviceFeeError ?? l10n.orderCreateServiceFeeOutOfCoverage)
+                    : _serviceFeeError ??
+                        (_serviceFeeQuote?.zoneName.isNotEmpty == true
+                            ? _serviceFeeQuote!.zoneName
+                            : null),
+            captionLoading: _serviceFeeLoading,
+            captionError: _serviceFeeOutOfCoverage || _serviceFeeError != null,
+          ),
+          if (showTotal) ...[
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Divider(
+                height: 1,
+                color: cs.outlineVariant.withValues(alpha: 0.7),
               ),
             ),
-          ],
-        ),
-      );
-    }
-    if (_serviceFeeOutOfCoverage) {
-      return Padding(
-        padding: const EdgeInsets.only(top: 8),
-        child: Text(
-          _serviceFeeError ?? 'This address is outside our service coverage areas.',
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.error),
-        ),
-      );
-    }
-    if (_serviceFeeError != null) {
-      return Padding(
-        padding: const EdgeInsets.only(top: 8),
-        child: Text(
-          _serviceFeeError!,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.error),
-        ),
-      );
-    }
-    final quote = _serviceFeeQuote;
-    if (quote == null) return const SizedBox.shrink();
-    return Column(
-      children: [
-        const SizedBox(height: 8),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Text(
-                'Service fee (${quote.zoneName})',
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-            ),
-            Text(
-              '${quote.serviceFeeMmk.toStringAsFixed(0)} MMK',
-              style: Theme.of(context).textTheme.bodySmall,
-              textAlign: TextAlign.right,
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Text(
+                    l10n.orderCreateEstimatedAmountDue,
+                    style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+                  ),
+                ),
+                Text(
+                  _formatMmk(_estimatedGrandTotal(lines)),
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: cs.primary,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
+                  textAlign: TextAlign.right,
+                ),
+              ],
             ),
           ],
-        ),
-      ],
+        ],
+      ),
     );
   }
 
   double _estimatedGrandTotal(List<CatalogOrderLine> lines) {
     final tests = _sumFinal(lines);
     final service = _serviceFeeQuote?.serviceFeeMmk ?? 0;
-    return tests + service;
+    final material = _materialFeeQuote?.amountMmk ?? 0;
+    return tests + service + material;
   }
 
   Widget _fieldErrorText(BuildContext context, String message) {
@@ -989,13 +1127,16 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
             const SizedBox(height: 12),
             _SectionCard(
               icon: Icons.receipt_long_outlined,
-              title: 'Summary',
+              title: AppLocalizations.of(context)!.orderCreateSummary,
               child: _mode == _OrderMode.catalogTests
                   ? Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         if (lines.isEmpty)
-                          Text('No tests selected yet.', style: Theme.of(context).textTheme.bodyMedium)
+                          Text(
+                            AppLocalizations.of(context)!.orderCreateNoTestsSelected,
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          )
                         else ...[
                           for (final line in lines)
                             Padding(
@@ -1010,74 +1151,14 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
                                     ),
                                   ),
                                   Text(
-                                    '${line.subtotalMmk.toStringAsFixed(0)} MMK',
+                                    _formatMmk(line.subtotalMmk),
                                     style: Theme.of(context).textTheme.bodyMedium,
                                   ),
                                 ],
                               ),
                             ),
-                          const Divider(height: 20),
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  'Original subtotal',
-                                  style: Theme.of(context).textTheme.bodySmall,
-                                ),
-                              ),
-                              Text(
-                                '${_sumOriginal(lines).toStringAsFixed(0)} MMK',
-                                style: Theme.of(context).textTheme.bodySmall,
-                                textAlign: TextAlign.right,
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 4),
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  'Estimated total (after discounts)',
-                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                        color: Theme.of(context).colorScheme.onSurface,
-                                      ),
-                                  softWrap: true,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                '${_sumFinal(lines).toStringAsFixed(0)} MMK',
-                                style: Theme.of(context).textTheme.bodyMedium,
-                                textAlign: TextAlign.right,
-                              ),
-                            ],
-                          ),
-                          _serviceFeeSummaryRow(context),
-                          if (_serviceFeeQuote != null && !_serviceFeeOutOfCoverage) ...[
-                            const SizedBox(height: 8),
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    'Estimated amount due',
-                                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                  ),
-                                ),
-                                Text(
-                                  '${_estimatedGrandTotal(lines).toStringAsFixed(0)} MMK',
-                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                  textAlign: TextAlign.right,
-                                ),
-                              ],
-                            ),
-                          ],
+                          const SizedBox(height: 12),
+                          _buildOrderPricingCard(context, lines),
                         ],
                       ],
                     )
@@ -1086,11 +1167,12 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
                       children: [
                         Text(
                           _prescriptionBytes == null
-                              ? 'Add a prescription file to submit.'
-                              : 'Prescription attached. Totals will be set when the lab assigns tests.',
+                              ? AppLocalizations.of(context)!.orderCreatePrescriptionEmpty
+                              : AppLocalizations.of(context)!.orderCreatePrescriptionAttached,
                           style: Theme.of(context).textTheme.bodyMedium,
                         ),
-                        _serviceFeeSummaryRow(context),
+                        const SizedBox(height: 12),
+                        _buildOrderPricingCard(context, const [], includeTestsLine: false),
                       ],
                     ),
             ),
@@ -1164,6 +1246,7 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
                           prescriptionBytes: _mode == _OrderMode.prescriptionOnly ? _prescriptionBytes : null,
                           prescriptionFilename: _mode == _OrderMode.prescriptionOnly ? _prescriptionName : null,
                           collectorId: _selectedCollectorId,
+                          materialFeeMmk: _materialFeeQuote?.amountMmk ?? 0,
                         );
                         try {
                           await session.submitLabOrder(order);

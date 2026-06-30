@@ -899,6 +899,84 @@ abstract class AppLocalizations {
   /// **'No comment was added with this rating.'**
   String get ordersNoComment;
 
+  /// No description provided for @orderCreateSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Summary'**
+  String get orderCreateSummary;
+
+  /// No description provided for @orderCreateNoTestsSelected.
+  ///
+  /// In en, this message translates to:
+  /// **'No tests selected yet.'**
+  String get orderCreateNoTestsSelected;
+
+  /// No description provided for @orderCreatePricingSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Order pricing'**
+  String get orderCreatePricingSummary;
+
+  /// No description provided for @orderCreateTestsSubtotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Tests'**
+  String get orderCreateTestsSubtotal;
+
+  /// No description provided for @orderCreateTestsDiscountHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Original {original} · {percent}% off'**
+  String orderCreateTestsDiscountHint(String original, String percent);
+
+  /// No description provided for @orderCreateMaterialFee.
+  ///
+  /// In en, this message translates to:
+  /// **'Material fee'**
+  String get orderCreateMaterialFee;
+
+  /// No description provided for @orderCreateMaterialFeeLoading.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading material fee…'**
+  String get orderCreateMaterialFeeLoading;
+
+  /// No description provided for @orderCreateServiceFee.
+  ///
+  /// In en, this message translates to:
+  /// **'Service fee'**
+  String get orderCreateServiceFee;
+
+  /// No description provided for @orderCreateServiceFeeChecking.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking service zone…'**
+  String get orderCreateServiceFeeChecking;
+
+  /// No description provided for @orderCreateServiceFeeOutOfCoverage.
+  ///
+  /// In en, this message translates to:
+  /// **'This address is outside our service coverage areas.'**
+  String get orderCreateServiceFeeOutOfCoverage;
+
+  /// No description provided for @orderCreateEstimatedAmountDue.
+  ///
+  /// In en, this message translates to:
+  /// **'Estimated amount due'**
+  String get orderCreateEstimatedAmountDue;
+
+  /// No description provided for @orderCreatePrescriptionEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a prescription file to submit.'**
+  String get orderCreatePrescriptionEmpty;
+
+  /// No description provided for @orderCreatePrescriptionAttached.
+  ///
+  /// In en, this message translates to:
+  /// **'Prescription attached. Totals will be set when the lab assigns tests.'**
+  String get orderCreatePrescriptionAttached;
+
   /// No description provided for @resultsTitle.
   ///
   /// In en, this message translates to:

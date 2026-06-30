@@ -93,6 +93,7 @@ abstract class LabUserApi {
     required double latitude,
     required double longitude,
   });
+  Future<MaterialFeeQuote?> fetchActiveMaterialFee();
   Future<LabOrderSummary> createOrder({
     required String userId,
     required LabOrderRequest request,

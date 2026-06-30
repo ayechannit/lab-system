@@ -451,6 +451,47 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ordersNoComment => 'No comment was added with this rating.';
 
   @override
+  String get orderCreateSummary => 'Summary';
+
+  @override
+  String get orderCreateNoTestsSelected => 'No tests selected yet.';
+
+  @override
+  String get orderCreatePricingSummary => 'Order pricing';
+
+  @override
+  String get orderCreateTestsSubtotal => 'Tests';
+
+  @override
+  String orderCreateTestsDiscountHint(String original, String percent) {
+    return 'Original $original · $percent% off';
+  }
+
+  @override
+  String get orderCreateMaterialFee => 'Material fee';
+
+  @override
+  String get orderCreateMaterialFeeLoading => 'Loading material fee…';
+
+  @override
+  String get orderCreateServiceFee => 'Service fee';
+
+  @override
+  String get orderCreateServiceFeeChecking => 'Checking service zone…';
+
+  @override
+  String get orderCreateServiceFeeOutOfCoverage => 'This address is outside our service coverage areas.';
+
+  @override
+  String get orderCreateEstimatedAmountDue => 'Estimated amount due';
+
+  @override
+  String get orderCreatePrescriptionEmpty => 'Add a prescription file to submit.';
+
+  @override
+  String get orderCreatePrescriptionAttached => 'Prescription attached. Totals will be set when the lab assigns tests.';
+
+  @override
   String get resultsTitle => 'Your results';
 
   @override

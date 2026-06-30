@@ -474,6 +474,26 @@ class RestLabUserApi implements LabUserApi {
     );
   }
 
+  @override
+  Future<MaterialFeeQuote?> fetchActiveMaterialFee() async {
+    final r = await http.get(
+      Uri.parse('$_base/api/material-fees/active'),
+      headers: _jsonHeaders(),
+    );
+    if (r.statusCode >= 400) _throwFromResponse(r);
+    final decoded = jsonDecode(r.body);
+    if (decoded is! List || decoded.isEmpty) return null;
+    final first = decoded.first;
+    if (first is! Map) return null;
+    final data = Map<String, dynamic>.from(first);
+    final amount = _asDouble(_gv(data, 'amount_mmk'));
+    if (amount <= 0) return null;
+    return MaterialFeeQuote(
+      name: '${_gv(data, 'name') ?? 'Material fee'}',
+      amountMmk: amount,
+    );
+  }
+
   /// Body for `POST /api/orders` — matches `orderController.createOrder` / admin web `createOrder`.
   Map<String, dynamic> _orderCreateBody({
     required String userId,
@@ -506,6 +526,7 @@ class RestLabUserApi implements LabUserApi {
       'original_price_mmk': original,
       'final_price_mmk': finalSum,
       'discount_percent': blended,
+      if (request.materialFeeMmk > 0) 'material_fee_mmk': _roundMoney(request.materialFeeMmk),
       'items': lines.map((e) => e.toItemJson()).toList(),
     };
   }

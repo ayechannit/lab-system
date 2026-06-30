@@ -205,6 +205,25 @@
   "ordersYourRating": "Your rating",
   "ordersYourComment": "Your comment",
   "ordersNoComment": "No comment was added with this rating.",
+  "orderCreateSummary": "Summary",
+  "orderCreateNoTestsSelected": "No tests selected yet.",
+  "orderCreatePricingSummary": "Order pricing",
+  "orderCreateTestsSubtotal": "Tests",
+  "orderCreateTestsDiscountHint": "Original {original} · {percent}% off",
+  "@orderCreateTestsDiscountHint": {
+    "placeholders": {
+      "original": { "type": "String" },
+      "percent": { "type": "String" }
+    }
+  },
+  "orderCreateMaterialFee": "Material fee",
+  "orderCreateMaterialFeeLoading": "Loading material fee…",
+  "orderCreateServiceFee": "Service fee",
+  "orderCreateServiceFeeChecking": "Checking service zone…",
+  "orderCreateServiceFeeOutOfCoverage": "This address is outside our service coverage areas.",
+  "orderCreateEstimatedAmountDue": "Estimated amount due",
+  "orderCreatePrescriptionEmpty": "Add a prescription file to submit.",
+  "orderCreatePrescriptionAttached": "Prescription attached. Totals will be set when the lab assigns tests.",
   "resultsTitle": "Your results",
   "resultsSubtitle": "Lab reports the team has released to you.",
   "resultsNoReleasedYet": "No released results yet",

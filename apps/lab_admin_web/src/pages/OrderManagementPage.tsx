@@ -41,6 +41,7 @@ import {
   calculateServiceFee,
   type CalculateServiceFeeResult,
 } from '../services/serviceGeofenceService'
+import { fetchActiveMaterialFees, type MaterialFeeRow } from '../services/materialFeeService'
 import '../components/common/ui.css'
 import i18n from '../i18n'
 import { formatReportDeliveryMethod } from '../utils/orderDisplay'
@@ -674,6 +675,8 @@ export function OrderManagementPage() {
   const [createServiceFee, setCreateServiceFee] = useState<CalculateServiceFeeResult | null>(null)
   const [createServiceFeeLoading, setCreateServiceFeeLoading] = useState(false)
   const [createServiceFeeError, setCreateServiceFeeError] = useState<string | null>(null)
+  const [createMaterialFee, setCreateMaterialFee] = useState<MaterialFeeRow | null>(null)
+  const [createMaterialFeeLoading, setCreateMaterialFeeLoading] = useState(false)
 
   const [editOpen, setEditOpen] = useState(false)
   const [editOrderId, setEditOrderId] = useState<string | null>(null)
@@ -749,6 +752,32 @@ export function OrderManagementPage() {
       cancelled = true
     }
   }, [createOpen, createLatitude, createLongitude, t])
+
+  useEffect(() => {
+    if (!createOpen) {
+      setCreateMaterialFee(null)
+      setCreateMaterialFeeLoading(false)
+      return
+    }
+    let cancelled = false
+    setCreateMaterialFeeLoading(true)
+    fetchActiveMaterialFees()
+      .then((fees) => {
+        if (cancelled) return
+        const fee = fees.find((f) => f.amount_mmk > 0) ?? null
+        setCreateMaterialFee(fee)
+      })
+      .catch(() => {
+        if (cancelled) return
+        setCreateMaterialFee(null)
+      })
+      .finally(() => {
+        if (!cancelled) setCreateMaterialFeeLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [createOpen])
 
   const [assignOpen, setAssignOpen] = useState(false)
   /** Order loaded for the assign-tests modal (from detail or from row “Add test”). */
@@ -923,6 +952,15 @@ export function OrderManagementPage() {
     const blendedDisc = originalSum > 0 ? Math.round((1 - finalSum / originalSum) * 10000) / 100 : 0
     return { lines, originalSum, finalSum, blendedDisc }
   }, [createSelectedTestIds, testMap, testDiscounts, createOrderUser?.role])
+
+  const createMaterialFeeMmk = createMaterialFee?.amount_mmk ?? 0
+
+  const createEstimatedAmountDue = useMemo(() => {
+    const testsTotal = createSelection.finalSum
+    const serviceFee = createServiceFee?.service_fee_mmk ?? 0
+    if (!createServiceFee) return Math.round((testsTotal + createMaterialFeeMmk) * 100) / 100
+    return Math.round((testsTotal + serviceFee + createMaterialFeeMmk) * 100) / 100
+  }, [createSelection.finalSum, createServiceFee, createMaterialFeeMmk])
 
   const assignPickerPanel = useMemo(
     () => filterTestsForOrderDropdown(tests, assignTestSearch, new Set(), ORDER_TEST_PICKER_LIMIT),
@@ -1109,6 +1147,7 @@ export function OrderManagementPage() {
         original_price_mmk: Math.round(originalSum * 100) / 100,
         discount_percent: blendedDisc,
         final_price_mmk: Math.round(finalSum * 100) / 100,
+        material_fee_mmk: createMaterialFeeMmk > 0 ? createMaterialFeeMmk : undefined,
         items,
       })
       setCreateOpen(false)
@@ -1857,70 +1896,88 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
                 <label htmlFor="om-desc">{t('orders.create.description')}</label>
                 <textarea id="om-desc" value={createDescription} onChange={(e) => setCreateDescription(e.target.value)} disabled={createSubmitting} />
               </div>
-              <div className="order-create-modal__grid-three">
-                <div className="field">
-                  <label>{t('orders.create.originalTotal')}</label>
-                  <input readOnly disabled value={createSelection.originalSum.toLocaleString()} className="lab-test-modal__input-computed" />
-                </div>
-                <div className="field">
-                  <label>{t('orders.create.blendedDiscount')}</label>
-                  <input readOnly disabled value={String(createSelection.blendedDisc)} className="lab-test-modal__input-computed" />
-                </div>
-                <div className="field">
-                  <label>{t('orders.create.finalTotal')}</label>
-                  <input readOnly disabled value={createSelection.finalSum.toLocaleString()} className="lab-test-modal__input-computed" />
-                </div>
-              </div>
-              <div className="order-create-modal__grid-three">
-                <div className="field">
-                  <label>{t('orders.create.serviceFee')}</label>
-                  <input
-                    readOnly
-                    disabled
-                    value={
-                      createServiceFeeLoading
-                        ? t('orders.create.serviceFeeChecking')
+              <section className="order-create-pricing" aria-labelledby="order-create-pricing-title">
+                <h3 id="order-create-pricing-title" className="order-create-pricing__title">
+                  <span className="material-symbols-outlined" aria-hidden>
+                    receipt_long
+                  </span>
+                  {t('orders.create.pricingSummary')}
+                </h3>
+                <div className="order-create-pricing__lines">
+                  <div className="order-create-pricing__line">
+                    <div className="order-create-pricing__line-main">
+                      <span className="order-create-pricing__label">{t('orders.create.testsSubtotal')}</span>
+                      {createSelection.blendedDisc > 0 ? (
+                        <span className="order-create-pricing__caption">
+                          {t('orders.create.testsDiscountHint', {
+                            original: createSelection.originalSum.toLocaleString(),
+                            percent: createSelection.blendedDisc,
+                          })}
+                        </span>
+                      ) : null}
+                    </div>
+                    <span className="order-create-pricing__value">
+                      {createSelection.finalSum.toLocaleString()} {t('orders.currency')}
+                    </span>
+                  </div>
+                  {createMaterialFeeLoading || createMaterialFee ? (
+                    <div className="order-create-pricing__line">
+                      <div className="order-create-pricing__line-main">
+                        <span className="order-create-pricing__label">{t('orders.create.materialFeeShort')}</span>
+                        {createMaterialFeeLoading ? (
+                          <span className="order-create-pricing__caption order-create-pricing__caption--loading">
+                            {t('orders.create.materialFeeLoading')}
+                          </span>
+                        ) : createMaterialFee?.name?.trim() ? (
+                          <span className="order-create-pricing__caption">{createMaterialFee.name.trim()}</span>
+                        ) : null}
+                      </div>
+                      <span className="order-create-pricing__value">
+                        {createMaterialFeeLoading
+                          ? '…'
+                          : createMaterialFee
+                            ? `${createMaterialFee.amount_mmk.toLocaleString()} ${t('orders.currency')}`
+                            : '—'}
+                      </span>
+                    </div>
+                  ) : null}
+                  <div
+                    className={`order-create-pricing__line${
+                      createServiceFeeError ? ' order-create-pricing__line--error' : ''
+                    }`}
+                  >
+                    <div className="order-create-pricing__line-main">
+                      <span className="order-create-pricing__label">{t('orders.create.serviceFeeShort')}</span>
+                      {createServiceFeeLoading ? (
+                        <span className="order-create-pricing__caption order-create-pricing__caption--loading">
+                          {t('orders.create.serviceFeeChecking')}
+                        </span>
+                      ) : createServiceFee?.zone_name ? (
+                        <span className="order-create-pricing__caption">{createServiceFee.zone_name}</span>
+                      ) : createServiceFeeError ? (
+                        <span className="order-create-pricing__caption order-create-pricing__caption--error">
+                          {createServiceFeeError}
+                        </span>
+                      ) : null}
+                    </div>
+                    <span className="order-create-pricing__value">
+                      {createServiceFeeLoading
+                        ? '…'
                         : createServiceFeeError
                           ? '—'
                           : createServiceFee
-                            ? createServiceFee.service_fee_mmk.toLocaleString()
-                            : '—'
-                    }
-                    className="lab-test-modal__input-computed"
-                  />
+                            ? `${createServiceFee.service_fee_mmk.toLocaleString()} ${t('orders.currency')}`
+                            : '—'}
+                    </span>
+                  </div>
                 </div>
-                <div className="field">
-                  <label>{t('orders.create.serviceZone')}</label>
-                  <input
-                    readOnly
-                    disabled
-                    value={
-                      createServiceFeeLoading
-                        ? '…'
-                        : createServiceFee?.zone_name ?? (createServiceFeeError ? '—' : '—')
-                    }
-                    className="lab-test-modal__input-computed"
-                  />
+                <div className="order-create-pricing__total">
+                  <span className="order-create-pricing__total-label">{t('orders.create.amountDue')}</span>
+                  <span className="order-create-pricing__total-value">
+                    {createEstimatedAmountDue.toLocaleString()} {t('orders.currency')}
+                  </span>
                 </div>
-                <div className="field">
-                  <label>{t('orders.create.amountDue')}</label>
-                  <input
-                    readOnly
-                    disabled
-                    value={
-                      createServiceFee
-                        ? Math.round((createSelection.finalSum + createServiceFee.service_fee_mmk) * 100) / 100
-                        : createSelection.finalSum
-                    }
-                    className="lab-test-modal__input-computed"
-                  />
-                </div>
-              </div>
-              {createServiceFeeError ? (
-                <p className="form-alert form-alert--error" role="alert">
-                  {createServiceFeeError}
-                </p>
-              ) : null}
+              </section>
                 </div>
               </div>
               <div className="order-create-modal__footer">

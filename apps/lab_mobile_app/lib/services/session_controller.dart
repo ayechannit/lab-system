@@ -260,6 +260,8 @@ class SessionController extends ChangeNotifier {
   }) =>
       _api.calculateServiceFee(latitude: latitude, longitude: longitude);
 
+  Future<MaterialFeeQuote?> fetchActiveMaterialFee() => _api.fetchActiveMaterialFee();
+
   Future<void> acceptProposedSchedule() async {
     final u = _user;
     final o = _trackingOrder;

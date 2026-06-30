@@ -56,6 +56,17 @@ class ServiceFeeQuote {
   final double serviceFeeMmk;
 }
 
+/// Standard collection material fee from `GET /api/material-fees/active`.
+class MaterialFeeQuote {
+  const MaterialFeeQuote({
+    required this.name,
+    required this.amountMmk,
+  });
+
+  final String name;
+  final double amountMmk;
+}
+
 /// One catalog line on the order (maps to `lab_order_items`).
 class CatalogOrderLine {
   const CatalogOrderLine({
@@ -114,6 +125,7 @@ class LabOrderRequest {
     this.prescriptionBytes,
     this.prescriptionFilename,
     this.collectorId,
+    this.materialFeeMmk = 0,
   });
 
   /// Local summary for UI only (not a separate API column).
@@ -141,6 +153,9 @@ class LabOrderRequest {
 
   /// Optional preferred sample collector (`lab_orders.collector_id`).
   final String? collectorId;
+
+  /// Collection material fee (`lab_orders.material_fee_mmk`).
+  final double materialFeeMmk;
 
   /// Optional prescription image/PDF (`multipart` field `prescription`).
   final Uint8List? prescriptionBytes;

@@ -451,6 +451,47 @@ class AppLocalizationsMy extends AppLocalizations {
   String get ordersNoComment => 'မှတ်ချက် မပါဝင်ပါ။';
 
   @override
+  String get orderCreateSummary => 'အကျဉ်းချုပ်';
+
+  @override
+  String get orderCreateNoTestsSelected => 'ဓာတ်ခွဲစစ်ဆေးမှု မရွေးချယ်ရသေးပါ။';
+
+  @override
+  String get orderCreatePricingSummary => 'မှာယူမှု စျေးနှုန်း';
+
+  @override
+  String get orderCreateTestsSubtotal => 'ဓာတ်ခွဲများ';
+
+  @override
+  String orderCreateTestsDiscountHint(String original, String percent) {
+    return 'မူလ $original · $percent% လျှော့';
+  }
+
+  @override
+  String get orderCreateMaterialFee => 'ပစ္စည်းခ';
+
+  @override
+  String get orderCreateMaterialFeeLoading => 'ပစ္စည်းခ load လုပ်နေသည်…';
+
+  @override
+  String get orderCreateServiceFee => 'ဝန်ဆောင်ခ';
+
+  @override
+  String get orderCreateServiceFeeChecking => 'ဝန်ဆောင်မှု ဧရိယာ စစ်ဆေးနေသည်…';
+
+  @override
+  String get orderCreateServiceFeeOutOfCoverage => 'ဤလိပ်စာသည် ဝန်ဆောင်မှု ဧရိယာပြင်ပတွင် ရှိနေပါသည်။';
+
+  @override
+  String get orderCreateEstimatedAmountDue => 'ခန့်မှန်းပေးချေရမည့် ပမာဏ';
+
+  @override
+  String get orderCreatePrescriptionEmpty => 'တင်သွင်းရန် ဆေးညွှန်းဖိုင် ထည့်ပါ။';
+
+  @override
+  String get orderCreatePrescriptionAttached => 'ဆေးညွှန်းဖိုင် ပူးတွဲထားပါသည်။ ဓာတ်ခွဲခန်းမှ စစ်ဆေးမှုများ သတ်မှတ်ပြီးနောက် စုစုပေါင်းကို ပြင်ဆင်ပါမည်။';
+
+  @override
   String get resultsTitle => 'သင့်ရလဒ်များ';
 
   @override
