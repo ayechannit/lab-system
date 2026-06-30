@@ -9,7 +9,7 @@ class AppLocalizationsMy extends AppLocalizations {
   AppLocalizationsMy([String locale = 'my']) : super(locale);
 
   @override
-  String get appTitle => 'Lab Patient App';
+  String get appTitle => 'ဆေးခန်းဓာတ်ခွဲစနစ်';
 
   @override
   String get navHome => 'ပင်မစာမျက်နှာ';
@@ -36,10 +36,10 @@ class AppLocalizationsMy extends AppLocalizations {
   String get languageMyanmar => 'မြန်မာ';
 
   @override
-  String get signIn => 'ဝင်မည်';
+  String get signIn => 'အကောင့်ဝင်မည်';
 
   @override
-  String get signingIn => 'ဝင်နေသည်…';
+  String get signingIn => 'အကောင့်ဝင်နေသည်…';
 
   @override
   String get email => 'အီးမေးလ်';
@@ -60,75 +60,75 @@ class AppLocalizationsMy extends AppLocalizations {
   String get createNewAccount => 'အကောင့်သစ် ဖန်တီးမည်';
 
   @override
-  String get emailRequired => 'အီးမေးလ် ထည့်ပါ';
+  String get emailRequired => 'အီးမေးလ် ထည့်သွင်းပါ';
 
   @override
-  String get emailInvalid => 'မှန်ကန်သော အီးမေးလ် ထည့်ပါ';
+  String get emailInvalid => 'မှန်ကန်သော အီးမေးလ် ထည့်သွင်းပါ';
 
   @override
-  String get passwordRequired => 'စကားဝှက် ထည့်ပါ';
+  String get passwordRequired => 'စကားဝှက် ထည့်သွင်းပါ';
 
   @override
   String get accountSettings => 'အကောင့်ဆက်တင်များ';
 
   @override
-  String get editProfile => 'ပရိုဖိုင်ပြင်မည်';
+  String get editProfile => 'ပရိုဖိုင် ပြင်ဆင်မည်';
 
   @override
-  String get editProfileSubtitle => 'ကိုယ်ရေးအချက်အလက်၊ medical history';
+  String get editProfileSubtitle => 'ကိုယ်ရေးအချက်အလက်၊ ကျန်းမာရေးရာဇဝင်';
 
   @override
-  String get labAppearance => 'Lab & appearance';
+  String get labAppearance => 'အသွင်အပြင်';
 
   @override
-  String get labAppearanceSubtitle => 'Theme, logo နှင့် lab ဆက်သွယ်ရန်';
+  String get labAppearanceSubtitle => 'Theme၊ လိုဂို နှင့် ဆက်သွယ်ရန်အချက်အလက်များ';
 
   @override
-  String get loyaltyStatus => 'LOYALTY STATUS';
+  String get loyaltyStatus => 'သစ္စာရှိ အမှတ်များ';
 
   @override
-  String get viewLoyaltyPoints => 'Loyalty points ကြည့်မည်';
+  String get viewLoyaltyPoints => 'အမှတ်များ ကြည့်ရှုမည်';
 
   @override
   String pointsCount(int count) {
-    return '$count points';
+    return '$count မှတ်';
   }
 
   @override
-  String get phone => 'Phone';
+  String get phone => 'ဖုန်း';
 
   @override
   String get signOut => 'ထွက်မည်';
 
   @override
-  String get orderTracking => 'မှာယူမှုခြေရာခံ';
+  String get orderTracking => 'မှာယူမှု ခြေရာခံ';
 
   @override
   String get collectorPending => 'ဆိုင်းငံ့';
 
   @override
-  String get preferredCollector => 'Preferred collector';
+  String get preferredCollector => 'ဦးစားပေး ကောက်ယူသူ';
 
   @override
-  String get noCollectorPreference => 'No preference — lab assigns';
+  String get noCollectorPreference => 'မရွေးချယ်ထားပါ — ဓာတ်ခွဲခန်းမှ သတ်မှတ်ပေးမည်';
 
   @override
-  String get collectorOptionalHint => 'Optional — same collector when planning routes';
+  String get collectorOptionalHint => 'ရွေးချယ်နိုင်သည် — သွားရောက်ကောက်ယူမည့်သူကို ရွေးချယ်နိုင်သည်';
 
   @override
   String get welcomeBack => 'ပြန်လည်ကြိုဆိုပါတယ်';
 
   @override
-  String get homeRefreshHint => 'အနှစ်ချုပ် card များနှင့် chart များကို lab server မှ ရယူသည်။ refresh လုပ်ရန် အောက်သို့ ဆွဲပါ။';
+  String get homeRefreshHint => 'အချက်အလက်များကို ဆာဗာမှ ရယူပါသည်။ ပြန်လည်ရယူရန် အောက်သို့ ဆွဲပါ။';
 
   @override
-  String get homeOverviewLabel => 'သင့်အကျဉ်း';
+  String get homeOverviewLabel => 'သင့်အကျဉ်းချုပ်';
 
   @override
   String get homeAccountSummary => 'အကောင့် အနှစ်ချုပ်';
 
   @override
-  String get homeLiveMetrics => 'သင့် lab အကောင့်မှ live metrics';
+  String get homeLiveMetrics => 'လက်ရှိ အချက်အလက်များ';
 
   @override
   String get homePromotionsLabel => 'ကြော်ငြာများ';
@@ -143,63 +143,63 @@ class AppLocalizationsMy extends AppLocalizations {
   String get homeCouldNotOpenLink => 'လင့်ခ်ကို ဖွင့်၍မရပါ';
 
   @override
-  String get homeTotalOrders => 'မှာယူမှုစုစုပေါင်း';
+  String get homeTotalOrders => 'စုစုပေါင်း မှာယူမှု';
 
   @override
   String homeCompletedOrdersCount(int count) {
-    return '$count ပြီးစီး';
+    return '$count ခု ပြီးစီး';
   }
 
   @override
-  String get homeTotalSpent => 'စုစုပေါင်း ကုန်ကျ';
+  String get homeTotalSpent => 'စုစုပေါင်း အသုံးပြုမှု';
 
   @override
-  String get homeDeliveredOrders => 'ပို့ပြီးသော မှာယူမှုများ';
+  String get homeDeliveredOrders => 'ပေးပို့ပြီးသော မှာယူမှုများ';
 
   @override
-  String get homeLoyaltyPoints => 'Loyalty points';
+  String get homeLoyaltyPoints => 'သစ္စာရှိ အမှတ်များ';
 
   @override
   String get homeTapForHistory => 'မှတ်တမ်းကြည့်ရန် နှိပ်ပါ';
 
   @override
-  String get homeInProgress => 'လုပ်ဆောင်နေသည်';
+  String get homeInProgress => 'လုပ်ဆောင်နေဆဲ';
 
   @override
-  String get homeOpenOrders => 'ဖွင့်ထားသော မှာယူမှုများ';
+  String get homeOpenOrders => 'ဆိုင်းငံ့ မှာယူမှုများ';
 
   @override
   String get homeActiveOrder => 'လက်ရှိ မှာယူမှု';
 
   @override
-  String get homeReportOut => 'ရလဒ် ထွက်ပြီ';
+  String get homeReportOut => 'အစီရင်ခံစာ ထွက်ရှိ';
 
   @override
-  String get homeDailySpend => 'နေ့စဉ် ကုန်ကျ';
+  String get homeDailySpend => 'နေ့စဉ် အသုံးပြုမှု';
 
   @override
-  String get homeOrderActivityByDay => 'နေ့အလိုက် မှာယူမှု လှုပ်ရှားမှု';
+  String get homeOrderActivityByDay => 'နေ့အလိုက် မှာယူမှု မှတ်တမ်း';
 
   @override
-  String get homeNoOrdersYet => 'မှာယူမှုမရှိသေးပါ။ ပထမမှာယူမှုပြီးနောက် ကုန်ကျ trend ဤနေရာတွင် ပေါ်လာမည်။';
+  String get homeNoOrdersYet => 'မှာယူမှုမရှိသေးပါ။ မှာယူမှုပြုလုပ်ပြီးပါက ဤနေရာတွင် ပေါ်လာပါမည်။';
 
   @override
   String homeSpendTooltip(String amount, int count) {
-    return '$amount MMK · $count order(s)';
+    return '$amount MMK · $count မှာယူမှု';
   }
 
   @override
-  String get homeTopOrderedTests => 'အများဆုံး မှာယူသော စမ်းသပ်ချက်များ';
+  String get homeTopOrderedTests => 'အများဆုံးမှာယူသော ဓာတ်ခွဲများ';
 
   @override
-  String get homeMostRequestedTests => 'သင် အများဆုံး တောင်းဆိုသော lab test များ';
+  String get homeMostRequestedTests => 'သင်အများဆုံး တောင်းဆိုသော ဓာတ်ခွဲစစ်ဆေးမှုများ';
 
   @override
-  String get homeNoTopTestsYet => 'မှာယူမှုများ လုပ်ပြီးနောက် သင်နှစ်သက်သော test များ ဤနေရာတွင် ပေါ်လာမည်။';
+  String get homeNoTopTestsYet => 'မှာယူမှုများပြုလုပ်ပြီးနောက် သင်အများဆုံးမှာယူသော ဓာတ်ခွဲများ ဤနေရာတွင် ပေါ်လာပါမည်။';
 
   @override
   String homeOrdersCount(int count) {
-    return '$count မှာယူမှု';
+    return 'မှာယူမှု $count ခု';
   }
 
   @override
@@ -209,19 +209,19 @@ class AppLocalizationsMy extends AppLocalizations {
   String get homeMmkSuffix => 'MMK';
 
   @override
-  String get ordersNewOrder => 'မှာယူမှုအသစ်';
+  String get ordersNewOrder => 'အသစ်မှာယူမည်';
 
   @override
   String get ordersTitle => 'သင့်မှာယူမှုများ';
 
   @override
-  String get ordersSubtitle => 'မပို့ရသေးသော လက်ရှိတောင်းဆိုမှုများ။';
+  String get ordersSubtitle => 'ပေးပို့ရန် ကျန်ရှိနေသေးသော မှာယူမှုများ';
 
   @override
-  String get ordersNoActiveYet => 'လက်ရှိ မှာယူမှုမရှိသေးပါ';
+  String get ordersNoActiveYet => 'လက်ရှိ မှာယူမှု မရှိသေးပါ';
 
   @override
-  String get ordersNoActiveHint => 'ပထမ lab test မှာယူရန် အပေါ်က card ကို သုံးပါ။ ပို့မပေးမချင်း မှာယူမှုများ ဤနေရာတွင် ရှိနေမည်။';
+  String get ordersNoActiveHint => 'အထက်ပါနေရာမှ မှာယူမှု အသစ်ပြုလုပ်နိုင်ပါသည်။ ပေးပို့ပြီးသည်အထိ ဤနေရာတွင် ကြည့်ရှုနိုင်ပါသည်။';
 
   @override
   String ordersActiveCount(int count) {
@@ -244,24 +244,24 @@ class AppLocalizationsMy extends AppLocalizations {
   String get ordersFilterByStatus => 'အခြေအနေဖြင့် စစ်ထုတ်ရန်';
 
   @override
-  String get ordersActiveOnlyHint => 'မပို့ရသေးသော လက်ရှိ မှာယူမှုများသာ ဤနေရာတွင် ပေါ်သည်။';
+  String get ordersActiveOnlyHint => 'ဆိုင်းငံ့နေသော မှာယူမှုများသာ ပြသမည်။';
 
   @override
-  String get ordersSortBy => 'စီရန်နည်းလမ်း';
+  String get ordersSortBy => 'စီစဉ်ရန်ပုံစံ';
 
   @override
   String ordersNoStatusOrders(String status) {
-    return '$status မှာယူမှုမရှိပါ';
+    return 'ဤအခြေအနေဖြင့် မှာယူမှု မရှိပါ';
   }
 
   @override
-  String get ordersTryAnotherFilter => 'အခြား status tab ကို စမ်းကြည့်ပါ သို့မဟုတ် မှာယူမှုအသစ် လုပ်ပါ။';
+  String get ordersTryAnotherFilter => 'အခြားစစ်ထုတ်မှုတစ်ခုကို ရွေးချယ်ပါ သို့မဟုတ် အသစ်မှာယူပါ။';
 
   @override
-  String get ordersOrderLabTest => 'Lab test မှာယူမည်';
+  String get ordersOrderLabTest => 'ဓာတ်ခွဲစစ်ဆေးမှု မှာယူမည်';
 
   @override
-  String get ordersOrderLabTestHint => 'လူနာအချက်အလက် ထည့်ပါ၊ test ရွေးပါ၊ sample ယူချိန် သတ်မှတ်ပါ';
+  String get ordersOrderLabTestHint => 'လူနာအချက်အလက် ထည့်သွင်းပါ၊ ဓာတ်ခွဲစစ်ဆေးမှု ရွေးချယ်ပါ၊ နမူနာကောက်ယူမည့်အချိန်ကို သတ်မှတ်ပါ';
 
   @override
   String ordersPlaced(String date) {
@@ -280,22 +280,22 @@ class AppLocalizationsMy extends AppLocalizations {
   String get orderStatusPending => 'ဆိုင်းငံ့';
 
   @override
-  String get orderStatusScheduled => 'Schedule လုပ်ပြီး';
+  String get orderStatusScheduled => 'အချိန်ဇယားဆွဲပြီး';
 
   @override
-  String get orderStatusCollecting => 'Sample ယူနေသည်';
+  String get orderStatusCollecting => 'နမူနာ ကောက်ယူနေသည်';
 
   @override
-  String get orderStatusRunning => 'စမ်းသပ်နေသည်';
+  String get orderStatusRunning => 'လုပ်ဆောင်နေသည်';
 
   @override
   String get orderStatusCompleted => 'ပြီးစီး';
 
   @override
-  String get orderStatusDelivered => 'ပို့ပြီး';
+  String get orderStatusDelivered => 'ပေးပို့ပြီး';
 
   @override
-  String get orderStatusUnknown => 'မသိ';
+  String get orderStatusUnknown => 'အခြေအနေ မသိရပါ';
 
   @override
   String get ordersSortNewestFirst => 'အသစ်ဆုံး';
@@ -304,16 +304,16 @@ class AppLocalizationsMy extends AppLocalizations {
   String get ordersSortOldestFirst => 'အဟောင်းဆုံး';
 
   @override
-  String get ordersSortRecentlyUpdated => 'မကြာသေးမီ update';
+  String get ordersSortRecentlyUpdated => 'နောက်ဆုံး ပြင်ဆင်ထားသော';
 
   @override
   String get ordersSortByStatus => 'အခြေအနေ';
 
   @override
-  String get ordersSortPriority => 'ဦးစားပေး (အရေးကြီးဆုံး)';
+  String get ordersSortPriority => 'အရေးကြီးဆုံး ဦးစားပေး';
 
   @override
-  String get ordersSortRecentlyReleased => 'မကြာသေးမီ ထုတ်ပြန်ချက်';
+  String get ordersSortRecentlyReleased => 'နောက်ဆုံး ထုတ်ပြန်ချက်';
 
   @override
   String get ordersSortOldestReleased => 'အဟောင်းဆုံး ထုတ်ပြန်ချက်';
@@ -322,111 +322,111 @@ class AppLocalizationsMy extends AppLocalizations {
   String get ordersSortNewestPlaced => 'နောက်ဆုံး မှာယူမှု';
 
   @override
-  String get ordersSortOldestPlaced => 'ပထမဆုံး မှာယူမှု';
+  String get ordersSortOldestPlaced => 'အဟောင်းဆုံး မှာယူမှု';
 
   @override
-  String get ordersRate => 'အမှတ်ပေး';
+  String get ordersRate => 'အကဲဖြတ်ရန်';
 
   @override
-  String get ordersRated => 'အမှတ်ပေးပြီး';
+  String get ordersRated => 'အကဲဖြတ်ပြီးပါပြီ';
 
   @override
-  String get ordersRateThisOrder => 'ဤမှာယူမှုကို အမှတ်ပေးပါ';
+  String get ordersRateThisOrder => 'ဤမှာယူမှုကို အကဲဖြတ်ပါ';
 
   @override
-  String get ordersCommentOptional => 'Comment (optional)';
+  String get ordersCommentOptional => 'မှတ်ချက် (ရွေးချယ်နိုင်သည်)';
 
   @override
-  String get ordersCommentHint => 'Lab team အတွက် feedback မျှဝေပါ';
+  String get ordersCommentHint => 'ကျွန်ုပ်တို့အတွက် အကြံပြုချက်များ ရေးသားနိုင်ပါသည်';
 
   @override
-  String get ordersSubmitRating => 'အမှတ်ပေးမည်';
+  String get ordersSubmitRating => 'အတည်ပြုမည်';
 
   @override
-  String get ordersThanksFeedback => 'Feedback အတွက် ကျေးဇူးတင်ပါတယ်';
+  String get ordersThanksFeedback => 'အကြံပြုချက်အတွက် ကျေးဇူးတင်ပါသည်';
 
   @override
   String ordersRatedToast(int stars) {
-    return 'ဤမှာယူမှုကို $stars ကြယ် ပေးထားသည်။';
+    return 'ဤမှာယူမှုအတွက် ကြယ် $stars ပွင့် ပေးထားပါသည်။';
   }
 
   @override
-  String get ordersRatedToastSingular => 'ဤမှာယူမှုကို ၁ ကြယ် ပေးထားသည်။';
+  String get ordersRatedToastSingular => 'ဤမှာယူမှုအတွက် ကြယ် ၁ ပွင့် ပေးထားပါသည်။';
 
   @override
-  String get ordersRatingFailed => 'အမှတ်ပေး၍မရပါ';
+  String get ordersRatingFailed => 'အကဲဖြတ်ခြင်း မအောင်မြင်ပါ';
 
   @override
-  String get ordersYourRating => 'သင့်အမှတ်ပေးချက်';
+  String get ordersYourRating => 'သင့်အကဲဖြတ်ချက်';
 
   @override
-  String get ordersYourComment => 'သင့် comment';
+  String get ordersYourComment => 'သင့်မှတ်ချက်';
 
   @override
-  String get ordersNoComment => 'ဤအမှတ်ပေးချက်နှင့် comment မပါဝင်ပါ။';
+  String get ordersNoComment => 'မှတ်ချက် မပါဝင်ပါ။';
 
   @override
   String get resultsTitle => 'သင့်ရလဒ်များ';
 
   @override
-  String get resultsSubtitle => 'Lab team က ထုတ်ပြန်ပေးသော report များ။';
+  String get resultsSubtitle => 'ဓာတ်ခွဲခန်းမှ ပေးပို့ထားသော အစီရင်ခံစာများ။';
 
   @override
-  String get resultsNoReleasedYet => 'ထုတ်ပြန်ပြီး ရလဒ်မရှိသေးပါ';
+  String get resultsNoReleasedYet => 'ပေးပို့ထားသော ရလဒ်များ မရှိသေးပါ';
 
   @override
-  String get resultsNoReleasedHint => 'Lab က report ထုတ်ပြန်ပေးသောအခါ PDF download နှင့် AI Check အတွက် ဤနေရာတွင် ပေါ်လာမည်။';
+  String get resultsNoReleasedHint => 'ဓာတ်ခွဲခန်းမှ အစီရင်ခံစာများ ပေးပို့သောအခါ ဤနေရာတွင် PDF ရယူခြင်းနှင့် AI စစ်ဆေးခြင်း ပြုလုပ်နိုင်ပါမည်။';
 
   @override
   String resultsReleasedReportsCount(int count) {
-    return 'ထုတ်ပြန်ပြီး report များ ($count)';
+    return 'ပေးပို့ထားသော အစီရင်ခံစာများ ($count)';
   }
 
   @override
   String resultsReleasedDate(String date) {
-    return 'ထုတ်ပြန်သည့်ရက် $date';
+    return 'ပေးပို့သည့်ရက် $date';
   }
 
   @override
-  String get resultsReleasedBadge => 'ထုတ်ပြန်ပြီး';
+  String get resultsReleasedBadge => 'ပေးပို့ပြီး';
 
   @override
-  String get labReportTitle => 'Lab report';
+  String get labReportTitle => 'ဓာတ်ခွဲခန်း အစီရင်ခံစာ';
 
   @override
-  String get labReportTestsSection => 'ဤ order ရှိ test များ';
+  String get labReportTestsSection => 'ဤမှာယူမှုရှိ ဓာတ်ခွဲစစ်ဆေးမှုများ';
 
   @override
   String labReportTestCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: 'test $count ခု',
-      one: 'test 1 ခု',
+      other: 'ဓာတ်ခွဲစစ်ဆေးမှု $count ခု',
+      one: 'ဓာတ်ခွဲစစ်ဆေးမှု ၁ ခု',
     );
     return '$_temp0';
   }
 
   @override
-  String get labReportCombinedHint => 'Test တချို့ကို ပေါင်းစပ် report အဖြစ် ခွဲထားသည်။ PDF တွဲမှ ဒေါင်းလုတ်လုပ်ပါ သို့မဟုတ် AI Check ကို group တစ်ခုချင်းစီမှ run လုပ်ပါ။';
+  String get labReportCombinedHint => 'အချို့စစ်ဆေးမှုများကို ပေါင်းစပ်အစီရင်ခံစာအဖြစ် ခွဲခြားထားပါသည်။ ပူးဲတွဲ PDF ကို ရယူပါ သို့မဟုတ် အုပ်စုတစ်ခုချင်းစီအတွက် AI စစ်ဆေးခြင်းကို ပြုလုပ်ပါ။';
 
   @override
-  String get labReportSeparateHint => 'တရားဝင် PDF ကို ဒေါင်းလုတ်လုပ်ပါ သို့မဟုတ် test တစ်ခုချင်းစီအတွက် AI Check run လုပ်ပါ။';
+  String get labReportSeparateHint => 'တရားဝင် PDF ကို ရယူပါ သို့မဟုတ် စစ်ဆေးမှုတစ်ခုချင်းစီအတွက် AI စစ်ဆေးခြင်း ပြုလုပ်ပါ။';
 
   @override
-  String get labReportNoTestLines => 'ဤ order အတွက် test line item မတွေ့ပါ။';
+  String get labReportNoTestLines => 'ဤမှာယူမှုအတွက် ဓာတ်ခွဲစစ်ဆေးမှုများ မတွေ့ရှိပါ။';
 
   @override
-  String get labReportPdfsNotUploadedYet => 'Lab က order ထုတ်ပြန်ပြီးသော်လည်း PDF များ upload မလုပ်ရသေးပါ။ ခဏနေ ပြန်စစ်ပါ သို့မဟုတ် lab ကို ဆက်သွယ်ပါ။';
+  String get labReportPdfsNotUploadedYet => 'မှာယူမှုကို ပေးပို့ပြီးသော်လည်း PDF ဖိုင်များ မတင်ရသေးပါ။ အနည်းငယ်စောင့်ပြီး ထပ်မံစစ်ဆေးပါ သို့မဟုတ် ဓာတ်ခွဲခန်းသို့ ဆက်သွယ်ပါ။';
 
   @override
-  String get labReportSummaryValues => 'Summary values';
+  String get labReportSummaryValues => 'အကျဉ်းချုပ် ရလဒ်များ';
 
   @override
-  String get labReportNoReportLoaded => 'Report load မလုပ်ရသေးပါ';
+  String get labReportNoReportLoaded => 'အစီရင်ခံစာ မရရှိနိုင်ပါ';
 
   @override
-  String get labReportSelectFromResults => 'Results မှ ထုတ်ပြန်ပြီး order တစ်ခု ရွေးချယ်ပါ။';
+  String get labReportSelectFromResults => 'ရလဒ်များမှ ပေးပို့ပြီးသော မှာယူမှုတစ်ခုကို ရွေးချယ်ပါ။';
 
   @override
   String get labReportPatient => 'လူနာ';
@@ -438,7 +438,7 @@ class AppLocalizationsMy extends AppLocalizations {
 
   @override
   String labReportOrderLine(String ref, String date) {
-    return 'Order $ref · $date';
+    return 'မှာယူမှု $ref · $date';
   }
 
   @override
@@ -452,42 +452,42 @@ class AppLocalizationsMy extends AppLocalizations {
   }
 
   @override
-  String get labReportCombinedReport => 'ပေါင်းစပ် report';
+  String get labReportCombinedReport => 'ပေါင်းစပ် အစီရင်ခံစာ';
 
   @override
   String labReportTestsSharePdf(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: 'test $count ခု PDF တစ်ခု တွဲသုံးသည်',
-      one: 'test 1 ခု PDF တစ်ခု တွဲသုံးသည်',
+      other: 'စစ်ဆေးမှု $count ခု PDF တစ်ခု အသုံးပြုသည်',
+      one: 'စစ်ဆေးမှု ၁ ခု PDF တစ်ခု အသုံးပြုသည်',
     );
     return '$_temp0';
   }
 
   @override
-  String get labReportPdfNotUploadedCombined => 'ဤပေါင်းစပ် report အတွက် PDF upload မလုပ်ရသေးပါ။';
+  String get labReportPdfNotUploadedCombined => 'ဤပေါင်းစပ်အစီရင်ခံစာအတွက် PDF ဖိုင် မတင်ရသေးပါ။';
 
   @override
-  String get labReportPdfNotUploadedTest => 'ဤ test အတွက် PDF upload မလုပ်ရသေးပါ။';
+  String get labReportPdfNotUploadedTest => 'ဤစစ်ဆေးမှုအတွက် PDF ဖိုင် မတင်ရသေးပါ။';
 
   @override
-  String get labReportDownloadCombinedPdf => 'ပေါင်းစပ် PDF ဒေါင်းလုတ်';
+  String get labReportDownloadCombinedPdf => 'ပေါင်းစပ် PDF ကို ရယူမည်';
 
   @override
-  String get labReportDownloadPdf => 'PDF ဒေါင်းလုတ်';
+  String get labReportDownloadPdf => 'PDF ကို ရယူမည်';
 
   @override
-  String get labReportDownloading => 'ဒေါင်းလုတ်လုပ်နေသည်…';
+  String get labReportDownloading => 'ရယူနေသည်…';
 
   @override
-  String get labReportRunAiCheck => 'AI Check လုပ်မည်';
+  String get labReportRunAiCheck => 'AI စစ်ဆေးမည်';
 
   @override
-  String get labReportRunningAiCheck => 'AI Check run လုပ်နေသည်…';
+  String get labReportRunningAiCheck => 'AI စစ်ဆေးနေသည်…';
 
   @override
-  String get labReportViewAiSummary => 'AI summary ကြည့်မည်';
+  String get labReportViewAiSummary => 'AI အကျဉ်းချုပ် ကြည့်ရှုမည်';
 
   @override
   String get labReportPdfReady => 'PDF အသင့်';
@@ -496,131 +496,131 @@ class AppLocalizationsMy extends AppLocalizations {
   String get labReportPdfPending => 'ဆိုင်းငံ့';
 
   @override
-  String get labReportDownloadStarted => 'ဒေါင်းလုတ် စတင်ပြီ';
+  String get labReportDownloadStarted => 'စတင်ရယူနေပြီ';
 
   @override
-  String get labReportReportSaved => 'Report သိမ်းပြီး';
+  String get labReportReportSaved => 'အစီရင်ခံစာ သိမ်းဆည်းပြီးပါပြီ';
 
   @override
-  String get labReportDownloadFailed => 'Report ဒေါင်းလုတ်၍မရပါ။ ထပ်ကြိုးစားပါ။';
+  String get labReportDownloadFailed => 'အစီရင်ခံစာ ရယူ၍မရပါ။ ထပ်မံကြိုးစားပါ။';
 
   @override
-  String get labReportAiCheckFailed => 'AI Check run လုပ်မရပါ။ ထပ်ကြိုးစားပါ။';
+  String get labReportAiCheckFailed => 'AI စစ်ဆေး၍မရပါ။ ထပ်မံကြိုးစားပါ။';
 
   @override
-  String get loyaltyLoadError => 'Point history ကို load လုပ်မရပါ။ retry လုပ်ရန် အောက်သို့ ဆွဲပါ။';
+  String get loyaltyLoadError => 'မှတ်တမ်းကို ရယူ၍မရပါ။ ပြန်လည်စမ်းသပ်ရန် အောက်သို့ ဆွဲပါ။';
 
   @override
-  String get loyaltyAvailableBalance => 'လက်ရှိ balance';
+  String get loyaltyAvailableBalance => 'လက်ရှိ လက်ကျန်';
 
   @override
-  String get loyaltyPointsUnit => 'pts';
+  String get loyaltyPointsUnit => 'မှတ်';
 
   @override
-  String get loyaltyBalanceHint => 'Balance သည် account total_points မှ ရသည်။ Lab က payment verify လုပ်သောအခါ အောက်ပါ rule များအရ points ရရှိသည်။';
+  String get loyaltyBalanceHint => 'လက်ကျန်သည် သင့်အကောင့်ရှိ စုစုပေါင်းအမှတ်မှ ဖြစ်သည်။ ငွေပေးချေမှု အတည်ပြုပြီးပါက အောက်ပါစည်းမျဉ်းများအရ အမှတ်များ ရရှိပါမည်။';
 
   @override
-  String get loyaltyHowToEarn => 'Points ရယူနည်း';
+  String get loyaltyHowToEarn => 'အမှတ်ရယူနည်း';
 
   @override
-  String get loyaltyEarnRulesHint => 'Lab ၏ active rule များ (point_settings)။';
+  String get loyaltyEarnRulesHint => 'ဓာတ်ခွဲခန်း၏ လက်ရှိ အမှတ်ပေးစည်းမျဉ်းများ။';
 
   @override
   String loyaltySpendRule(String amount, int points) {
-    return '$amount MMK သုံးပါ → +$points pts';
+    return '$amount MMK သုံးပါက → +$points မှတ် ရမည်';
   }
 
   @override
   String get loyaltyEarned => 'ရရှိ';
 
   @override
-  String get loyaltyRedeemed => 'သုံးစွဲ';
+  String get loyaltyRedeemed => 'အသုံးပြုပြီး';
 
   @override
-  String get loyaltyTransactions => 'လုပ်ဆောင်ချက်များ';
+  String get loyaltyTransactions => 'မှတ်တမ်းများ';
 
   @override
-  String get loyaltyTxnsShort => 'Txn';
+  String get loyaltyTxnsShort => 'မှတ်တမ်း';
 
   @override
-  String get loyaltyActivity => 'လုပ်ဆောင်မှု';
+  String get loyaltyActivity => 'လှုပ်ရှားမှုများ';
 
   @override
   String get loyaltyFilterAll => 'အားလုံး';
 
   @override
-  String get loyaltyFilterAdjustments => 'Adjustments';
+  String get loyaltyFilterAdjustments => 'ပြင်ဆင်ချက်များ';
 
   @override
-  String get loyaltyPaymentOrderRef => 'Payment / order ref.';
+  String get loyaltyPaymentOrderRef => 'ငွေပေးချေမှု / မှာယူမှု အမှတ်စဉ်';
 
   @override
-  String get loyaltyNothingToShow => 'ပြရန် မရှိပါ';
+  String get loyaltyNothingToShow => 'ပြသရန် မရှိပါ';
 
   @override
   String get loyaltyNoActivityYet => 'လုပ်ဆောင်မှု မရှိသေးပါ';
 
   @override
   String loyaltyNoFilteredTransactions(String type) {
-    return 'ဤ filter တွင် $type transaction မရှိပါ။';
+    return 'ဤစစ်ထုတ်မှုတွင် $type မှတ်တမ်း မရှိပါ။';
   }
 
   @override
-  String get loyaltyNoActivityHint => 'Lab visit, rating သို့မဟုတ် lab reward ပြီးနောက် point activity ဤနေရာတွင် ပေါ်လာမည်။';
+  String get loyaltyNoActivityHint => 'ဓာတ်ခွဲခန်းသို့ လာရောက်ခြင်း၊ အကဲဖြတ်ခြင်း သို့မဟုတ် ဆုချီးမြှင့်မှုများ အပြီးတွင် သင့်အမှတ် မှတ်တမ်းများ ဤနေရာတွင် ပေါ်လာပါမည်။';
 
   @override
-  String get loyaltyTypeAdjustment => 'Adjustment';
+  String get loyaltyTypeAdjustment => 'ပြင်ဆင်ချက်';
 
   @override
-  String get loyaltyTypePoints => 'Points';
+  String get loyaltyTypePoints => 'အမှတ်များ';
 
   @override
-  String get profileEditTitle => 'ပရိုဖိုင်ပြင်မည်';
+  String get profileEditTitle => 'ပရိုဖိုင် ပြင်ဆင်မည်';
 
   @override
   String get profileBack => 'နောက်သို့';
 
   @override
-  String get profileEditIntro => 'Lab က သင့်ကို ဆက်သွယ်ရန် အချက်အလက်များ update လုပ်ပါ။ ပြောင်းလဲမှုများသည် signed-in account တွင် apply ဖြစ်သည်။';
+  String get profileEditIntro => 'ဓာတ်ခွဲခန်းမှ သင့်ကို ဆက်သွယ်နိုင်မည့် အချက်အလက်များကို ပြင်ဆင်ပါ။';
 
   @override
   String get profileContactDetails => 'ဆက်သွယ်ရန် အချက်အလက်';
 
   @override
-  String get profileContactHint => 'Orders, results နှင့် account recovery အတွက် သုံးသည်။';
+  String get profileContactHint => 'မှာယူမှုများ၊ ရလဒ်များနှင့် အကောင့်ပြန်လည်ရယူရန်အတွက် အသုံးပြုပါသည်။';
 
   @override
   String get profileFullName => 'အမည်အပြည့်အစုံ';
 
   @override
-  String get profileNameRequired => 'အမည် ထည့်ပါ';
+  String get profileNameRequired => 'အမည် ထည့်သွင်းပါ';
 
   @override
-  String get profileNameTooShort => 'အမည် တိုလွန်းနေသည်';
+  String get profileNameTooShort => 'အမည်မှာ တိုလွန်းနေပါသည်';
 
   @override
-  String get profilePhoneRequired => 'ဖုန်းနံပါတ် ထည့်ပါ';
+  String get profilePhoneRequired => 'ဖုန်းနံပါတ် ထည့်သွင်းပါ';
 
   @override
-  String get profilePhoneInvalid => 'မှန်ကန်သော ဖုန်းနံပါတ် ထည့်ပါ';
+  String get profilePhoneInvalid => 'မှန်ကန်သော ဖုန်းနံပါတ် ထည့်သွင်းပါ';
 
   @override
   String get profileSaveChanges => 'ပြောင်းလဲမှုများ သိမ်းမည်';
 
   @override
-  String get profileCancel => 'ပယ်ဖျက်မည်';
+  String get profileCancel => 'မလုပ်တော့ပါ';
 
   @override
-  String get profileSaved => 'Profile သိမ်းပြီး';
+  String get profileSaved => 'ပရိုဖိုင်ကို သိမ်းဆည်းပြီးပါပြီ';
 
   @override
-  String get profileSaveFailed => 'ပြောင်းလဲမှုများ သိမ်း၍မရပါ';
+  String get profileSaveFailed => 'ပြောင်းလဲမှုများကို သိမ်းဆည်း၍မရပါ';
 
   @override
-  String get profileSavedHint => 'သင့်အချက်အလက်များ lab account တွင် update လုပ်ပြီးပါပြီ။ Profile သို့ ပြန်သွားနေသည်…';
+  String get profileSavedHint => 'သင့်အချက်အလက်များကို ဓာတ်ခွဲခန်းအကောင့်တွင် သိမ်းဆည်းပြီးပါပြီ။ ပရိုဖိုင်သို့ ပြန်သွားနေသည်…';
 
   @override
-  String get profileSaveErrorHint => 'Connection စစ်ပြီး ထပ်မံကြိုးစားပါ။';
+  String get profileSaveErrorHint => 'အင်တာနက်ချိတ်ဆက်မှုကို စစ်ဆေးပြီး ထပ်မံကြိုးစားပါ။';
 
   @override
   String get profileDismiss => 'ပိတ်မည်';
@@ -632,29 +632,29 @@ class AppLocalizationsMy extends AppLocalizations {
   String get profileAddressHint => 'လမ်း၊ မြို့၊ စသည်';
 
   @override
-  String get profileChooseOnMap => 'Map မှ ရွေးချယ်မည်';
+  String get profileChooseOnMap => 'မြေပုံမှ ရွေးချယ်မည်';
 
   @override
-  String get profileLatLong => 'Latitude–Longitude';
+  String get profileLatLong => 'လတ္တီကျု–လောင်ဂျီကျု';
 
   @override
-  String get profileLookingUpAddress => 'လိပ်စာ ရှာဖွေနေသည်…';
+  String get profileLookingUpAddress => 'လိပ်စာကို ရှာဖွေနေသည်…';
 
   @override
-  String get profileNoAddressMatch => 'မကိုက်ညီပါ — လိပ်စာအပြည့်အစုံ ထည့်ပါ သို့မဟုတ် map မှ ရွေးပါ။';
+  String get profileNoAddressMatch => 'မကိုက်ညီပါ။ လိပ်စာအပြည့်အစုံ ထည့်ပါ သို့မဟုတ် မြေပုံမှ ရွေးချယ်ပါ။';
 
   @override
-  String get profileAddressLookupFailed => 'လိပ်စာ ရှာ၍မရပါ။ ထပ်ကြိုးစားပါ သို့မဟုတ် map မှ ရွေးပါ။';
+  String get profileAddressLookupFailed => 'လိပ်စာ ရှာ၍မရပါ။ ထပ်မံကြိုးစားပါ သို့မဟုတ် မြေပုံမှ ရွေးချယ်ပါ။';
 
   @override
-  String get profilePhotoTitle => 'Profile photo';
+  String get profilePhotoTitle => 'ပရိုဖိုင်ပုံ';
 
   @override
   String get profileTakePhoto => 'ဓာတ်ပုံရိုက်မည်';
 
   @override
-  String get profileChooseFromGallery => 'Gallery မှ ရွေးမည်';
+  String get profileChooseFromGallery => 'ဓာတ်ပုံပြခန်းမှ ရွေးမည်';
 
   @override
-  String get profilePhotoPickFailed => 'ဓာတ်ပုံ ရွေး၍မရပါ။ ထပ်ကြိုးစားပါ။';
+  String get profilePhotoPickFailed => 'ဓာတ်ပုံကို ရယူ၍မရပါ။ ထပ်မံကြိုးစားပါ။';
 }
