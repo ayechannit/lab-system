@@ -52,7 +52,12 @@ function ToastViewport({
         <PageBanner
           key={t.id}
           kind={t.kind}
-          className={t.exiting ? 'page-banner--toast-exit' : 'page-banner--toast-enter'}
+          className={[
+            'page-banner--toast',
+            t.exiting ? 'page-banner--toast-exit' : 'page-banner--toast-enter',
+          ]
+            .filter(Boolean)
+            .join(' ')}
           onDismiss={() => onDismiss(t.id)}
         >
           {t.message}
