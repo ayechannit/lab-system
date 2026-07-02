@@ -811,6 +811,19 @@ class Order {
       schedule.profile_image_url = await StorageService.getFileUrl(schedule.profile_image_url);
     }
 
+    const logs = logsResult.recordset;
+    const timeline = [
+      {
+        id: `created-${order.id}`,
+        old_status: null,
+        new_status: 'pending',
+        note: 'Order placed successfully',
+        created_at: order.created_at,
+        changed_by_name: 'Patient'
+      },
+      ...logs
+    ];
+
     return {
       order_id: order.id,
       patient_name: order.patient_name,
@@ -818,7 +831,7 @@ class Order {
       created_at: order.created_at,
       updated_at: order.updated_at,
       schedule,
-      timeline: logsResult.recordset
+      timeline
     };
   }
 
