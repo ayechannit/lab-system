@@ -22,7 +22,7 @@ function readInitialLocale(): AppLocale {
   if (typeof navigator !== 'undefined' && navigator.language.toLowerCase().startsWith('my')) {
     return 'my'
   }
-  return 'en'
+  return 'my'
 }
 
 function applyDocumentLang(locale: AppLocale) {

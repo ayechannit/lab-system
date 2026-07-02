@@ -1067,7 +1067,7 @@
     },
     "add": "Add geofence",
     "listTitle": "Coverage zones",
-    "hint": "Patients inside a zone pay that zone's service fee on new orders. Higher priority wins when zones overlap.",
+    "hint": "Patients inside a zone pay that zone's service fee on new orders. Higher priority wins when zones overlap. Click a bounding box to preview it on the map.",
     "loading": "Loading service geofences",
     "noApi": "Connect to the lab API to manage service geofences.",
     "noMatch": "No geofences match these filters.",
@@ -1077,7 +1077,8 @@
     },
     "table": {
       "bounds": "Bounding box",
-      "fee": "Service fee (MMK)"
+      "fee": "Service fee (MMK)",
+      "viewOnMap": "View {{name}} on map"
     },
     "delete": {
       "title": "Delete service geofence?",
@@ -1091,15 +1092,20 @@
     },
     "tester": {
       "title": "Fee calculator",
-      "hint": "Search or click the map to pick a delivery point, then calculate the service fee.",
+      "hint": "Click a zone's bounding box in the table, or pick a point on the map, then calculate the service fee.",
       "stepSelect": "Select location",
       "stepCalculate": "Calculate fee",
       "selectedPoint": "Selected point",
-      "noPoint": "Click the map, search, or use your current location.",
+      "noPoint": "Click the map, search, use your location, or pick a zone from the table.",
       "clearPoint": "Clear point",
+      "clearSelection": "Clear selection",
+      "clearPreview": "Clear zone preview",
       "activeZones": "{{count}} active zones configured",
+      "previewingZone": "Previewing: {{name}}",
+      "previewingZoneFee": "Previewing: {{name}} — {{fee}} MMK",
       "resultIdle": "Fee result will appear here after you calculate.",
       "feeLine": "Service fee: {{fee}} MMK",
+      "outOfCoverage": "This location is outside all service zones. No delivery fee applies.",
       "latitude": "Latitude",
       "longitude": "Longitude",
       "check": "Calculate fee",
@@ -1136,6 +1142,9 @@
       "eastLongitude": "East longitude",
       "serviceFee": "Service fee (MMK)",
       "priority": "Priority",
+      "priorityUrgent": "Urgent",
+      "priorityNormal": "Normal",
+      "priorityHint": "When zones overlap, an urgent zone is used instead of a normal zone.",
       "activeTitle": "Zone is active",
       "inactiveTitle": "Zone is inactive",
       "activeDesc": "Inactive zones are ignored for fee calculation and new orders.",
@@ -1144,7 +1153,7 @@
       "errorWestEast": "West longitude must be less than east longitude.",
       "errorSouthNorth": "South latitude must be less than north latitude.",
       "errorFee": "Enter a valid service fee (0 or more).",
-      "errorPriority": "Priority must be at least 1.",
+      "errorPriority": "Priority must be 0 or 1.",
       "requestFailed": "Request failed"
     }
   },

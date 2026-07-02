@@ -675,6 +675,7 @@ export function OrderManagementPage() {
   const [createServiceFee, setCreateServiceFee] = useState<CalculateServiceFeeResult | null>(null)
   const [createServiceFeeLoading, setCreateServiceFeeLoading] = useState(false)
   const [createServiceFeeError, setCreateServiceFeeError] = useState<string | null>(null)
+  const [createServiceFeeOutOfCoverage, setCreateServiceFeeOutOfCoverage] = useState(false)
   const [createMaterialFee, setCreateMaterialFee] = useState<MaterialFeeRow | null>(null)
   const [createMaterialFeeLoading, setCreateMaterialFeeLoading] = useState(false)
 
@@ -721,12 +722,14 @@ export function OrderManagementPage() {
     if (!createOpen) {
       setCreateServiceFee(null)
       setCreateServiceFeeError(null)
+      setCreateServiceFeeOutOfCoverage(false)
       setCreateServiceFeeLoading(false)
       return
     }
     if (!hasUsableCoords(createLatitude, createLongitude)) {
       setCreateServiceFee(null)
       setCreateServiceFeeError(null)
+      setCreateServiceFeeOutOfCoverage(false)
       setCreateServiceFeeLoading(false)
       return
     }
@@ -739,11 +742,15 @@ export function OrderManagementPage() {
         if (cancelled) return
         setCreateServiceFee(result)
         setCreateServiceFeeError(null)
+        setCreateServiceFeeOutOfCoverage(false)
       })
       .catch((err) => {
         if (cancelled) return
         setCreateServiceFee(null)
         setCreateServiceFeeError(err instanceof Error ? err.message : t('orders.create.serviceFeeFailed'))
+        setCreateServiceFeeOutOfCoverage(
+          Boolean(err && typeof err === 'object' && 'isOutOfCoverage' in err && (err as { isOutOfCoverage?: boolean }).isOutOfCoverage),
+        )
       })
       .finally(() => {
         if (!cancelled) setCreateServiceFeeLoading(false)
@@ -962,6 +969,19 @@ export function OrderManagementPage() {
     return Math.round((testsTotal + serviceFee + createMaterialFeeMmk) * 100) / 100
   }, [createSelection.finalSum, createServiceFee, createMaterialFeeMmk])
 
+  const createServiceFeeResolved =
+    Boolean(createServiceFee) &&
+    !createServiceFeeLoading &&
+    !createServiceFeeError &&
+    !createServiceFeeOutOfCoverage
+
+  const createSubmitBlocked =
+    !hasUsableCoords(createLatitude, createLongitude) ||
+    createServiceFeeLoading ||
+    createServiceFeeOutOfCoverage ||
+    createServiceFeeError != null ||
+    !createServiceFee
+
   const assignPickerPanel = useMemo(
     () => filterTestsForOrderDropdown(tests, assignTestSearch, new Set(), ORDER_TEST_PICKER_LIMIT),
     [tests, assignTestSearch],
@@ -1114,6 +1134,9 @@ export function OrderManagementPage() {
     }
     if (createServiceFeeLoading) {
       return setCreateError(t('orders.create.serviceFeeChecking'))
+    }
+    if (createServiceFeeOutOfCoverage) {
+      return setCreateError(createServiceFeeError ?? t('orders.create.serviceFeeRequired'))
     }
     if (createServiceFeeError) {
       return setCreateError(createServiceFeeError)
@@ -1971,12 +1994,14 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
                     </span>
                   </div>
                 </div>
-                <div className="order-create-pricing__total">
-                  <span className="order-create-pricing__total-label">{t('orders.create.amountDue')}</span>
-                  <span className="order-create-pricing__total-value">
-                    {createEstimatedAmountDue.toLocaleString()} {t('orders.currency')}
-                  </span>
-                </div>
+                {createServiceFeeResolved ? (
+                  <div className="order-create-pricing__total">
+                    <span className="order-create-pricing__total-label">{t('orders.create.amountDue')}</span>
+                    <span className="order-create-pricing__total-value">
+                      {createEstimatedAmountDue.toLocaleString()} {t('orders.currency')}
+                    </span>
+                  </div>
+                ) : null}
               </section>
                 </div>
               </div>
@@ -1994,7 +2019,13 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
                 <button
                   type="submit"
                   className="btn btn-primary"
-                  disabled={createSubmitting || users.length === 0 || tests.length === 0 || createSelection.lines.length === 0}
+                  disabled={
+                    createSubmitting ||
+                    users.length === 0 ||
+                    tests.length === 0 ||
+                    createSelection.lines.length === 0 ||
+                    createSubmitBlocked
+                  }
                 >
                   {createSubmitting ? t('common.saving') : t('orders.create.submit')}
                 </button>

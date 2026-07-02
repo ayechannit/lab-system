@@ -44,7 +44,7 @@ function normalizeRow(raw: Record<string, unknown>): ServiceGeofenceRow {
     north_latitude: Number(raw.north_latitude ?? 0),
     south_latitude: Number(raw.south_latitude ?? 0),
     service_fee_mmk: Number(raw.service_fee_mmk ?? 0),
-    priority: Number(raw.priority ?? 1),
+    priority: Number(raw.priority) === 0 ? 0 : 1,
     is_active: Boolean(raw.is_active),
     is_deleted: Boolean(raw.is_deleted),
     created_user: raw.created_user != null ? String(raw.created_user) : null,
@@ -98,7 +98,22 @@ export async function deleteServiceGeofence(id: string): Promise<void> {
 export async function calculateServiceFee(lat: number, lng: number): Promise<CalculateServiceFeeResult> {
   const qs = new URLSearchParams({ lat: String(lat), lng: String(lng) })
   const res = await apiFetch(`/api/service-geofences/calculate-fee?${qs}`)
-  if (!res.ok) throw new Error(await readApiErrorBody(res))
+  if (!res.ok) {
+    const text = await res.text()
+    let message = text || `${res.status} ${res.statusText}`
+    let code: string | undefined
+    try {
+      const j = JSON.parse(text) as { message?: string; error?: string; code?: string }
+      if (typeof j.message === 'string' && j.message) message = j.message
+      else if (typeof j.error === 'string' && j.error) message = j.error
+      code = j.code
+    } catch {
+      /* use raw text */
+    }
+    const err = new Error(message) as Error & { isOutOfCoverage?: boolean }
+    err.isOutOfCoverage = code === 'OUT_OF_COVERAGE'
+    throw err
+  }
   const data = (await res.json()) as Record<string, unknown>
   return {
     service_geofence_id: String(data.service_geofence_id),

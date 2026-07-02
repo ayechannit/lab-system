@@ -73,16 +73,16 @@ class SystemSetting {
 
   static defaultUpdatePayload(overrides = {}) {
     return this.lockBranding({
-      mode: 'light',
-      primary_color: '#003d9b',
-      secondary_color: '#0d8a5b',
+      mode: 'idhc',
+      primary_color: '#e03a2c',
+      secondary_color: '#f4b12a',
       custom_colors: null,
       latitude: null,
       longitude: null,
       address: null,
       contact_phone: null,
       contact_email: null,
-      ui_locale: 'en',
+      ui_locale: 'my',
       ...overrides,
     });
   }
@@ -110,7 +110,7 @@ class SystemSetting {
         ? this.normalizeUiLocale(data.ui_locale)
         : existing?.ui_locale
           ? this.normalizeUiLocale(existing.ui_locale)
-          : 'en';
+          : 'my';
     const pool = await poolPromise;
     const request = pool.request();
     

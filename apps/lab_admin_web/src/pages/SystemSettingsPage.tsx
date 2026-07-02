@@ -26,9 +26,10 @@ import {
 } from '../services/systemSettingService'
 import { getIntlLocale } from '../i18n'
 import { formatIsoDatetime } from '../utils/dateIntl'
+import { syncAppUiFromSettings } from '../utils/syncAppUiFromSettings'
 import {
-  applyAppTheme,
   type AppThemeId,
+  applyAppTheme,
   getAppliedAppTheme,
   normalizeAppThemeId,
   themeFieldsForApi,
@@ -135,7 +136,7 @@ export function SystemSettingsPage() {
       const themeId = normalizeAppThemeId(row.mode)
       savedThemeRef.current = themeId
       savedFormSnapshotRef.current = snapshotFromState(row, feeAmount)
-      applyAppTheme(themeId)
+      syncAppUiFromSettings(row)
     },
     [],
   )

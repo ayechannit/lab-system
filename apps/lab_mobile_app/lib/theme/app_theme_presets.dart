@@ -4,13 +4,13 @@ import 'package:flutter/material.dart';
 enum AppThemePresetId { light, dark, idhc }
 
 AppThemePresetId normalizeThemePresetId(String? mode) {
-  switch ((mode ?? 'light').toLowerCase()) {
+  switch ((mode ?? 'idhc').toLowerCase()) {
     case 'dark':
       return AppThemePresetId.dark;
     case 'idhc':
       return AppThemePresetId.idhc;
     default:
-      return AppThemePresetId.light;
+      return AppThemePresetId.idhc;
   }
 }
 

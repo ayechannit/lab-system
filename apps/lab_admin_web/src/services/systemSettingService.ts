@@ -54,16 +54,16 @@ export function fixedBrandingFields(): Pick<SystemSettingsUpdateBody, 'lab_name'
 
 export const DEFAULT_SYSTEM_SETTINGS: SystemSettingsUpdateBody = {
   ...fixedBrandingFields(),
-  mode: 'light',
-  primary_color: '#003d9b',
-  secondary_color: '#0d8a5b',
+  mode: 'idhc',
+  primary_color: '#e03a2c',
+  secondary_color: '#f4b12a',
   custom_colors: null,
   latitude: null,
   longitude: null,
   address: null,
   contact_phone: null,
   contact_email: null,
-  ui_locale: 'en',
+  ui_locale: 'my',
 }
 
 export function defaultSystemSettingsRow(): SystemSettingsRow {
@@ -155,7 +155,7 @@ function rowToUpdateBody(row: SystemSettingsRow): SystemSettingsUpdateBody {
     address: row.address,
     contact_phone: row.contact_phone,
     contact_email: row.contact_email,
-    ui_locale: row.ui_locale ?? 'en',
+    ui_locale: row.ui_locale ?? 'my',
   }
 }
 

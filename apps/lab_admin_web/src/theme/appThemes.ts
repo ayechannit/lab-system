@@ -236,13 +236,18 @@ export function applyAppTheme(themeId: AppThemeId): void {
   for (const [key, value] of Object.entries(preset.css)) {
     root.style.setProperty(key, value)
   }
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(
+      new CustomEvent('app-theme-changed', { detail: { themeId: preset.mode as AppThemeId } }),
+    )
+  }
 }
 
 /** Last theme applied to the document (survives route changes). */
 export function getAppliedAppTheme(): AppThemeId {
   const fromDom = document.documentElement.dataset.theme
   if (fromDom === 'dark' || fromDom === 'light' || fromDom === 'idhc') return fromDom
-  return 'light'
+  return 'idhc'
 }
 
 /** Chart stroke/fill colors for the active (or given) theme preset. */

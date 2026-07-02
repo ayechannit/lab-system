@@ -57,7 +57,7 @@ export function ServiceGeofenceFormModal({
   const [name, setName] = useState('')
   const [bounds, setBounds] = useState<GeofenceBounds>(EMPTY_BOUNDS)
   const [serviceFeeMmk, setServiceFeeMmk] = useState<number | ''>(0)
-  const [priority, setPriority] = useState<number | ''>(1)
+  const [priority, setPriority] = useState<0 | 1>(1)
   const [isActive, setIsActive] = useState(true)
   const [formError, setFormError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -70,7 +70,7 @@ export function ServiceGeofenceFormModal({
       setName(initial.name)
       setBounds(boundsFromRow(initial))
       setServiceFeeMmk(initial.service_fee_mmk)
-      setPriority(initial.priority)
+      setPriority(initial.priority === 0 ? 0 : 1)
       setIsActive(initial.is_active)
     } else {
       setName('')
@@ -120,8 +120,7 @@ export function ServiceGeofenceFormModal({
       setFormError(t('serviceGeofences.form.errorFee'))
       return
     }
-    const prio = typeof priority === 'number' ? priority : Number.parseInt(String(priority), 10)
-    if (!Number.isFinite(prio) || prio < 1) {
+    if (priority !== 0 && priority !== 1) {
       setFormError(t('serviceGeofences.form.errorPriority'))
       return
     }
@@ -132,7 +131,7 @@ export function ServiceGeofenceFormModal({
       north_latitude: north,
       south_latitude: south,
       service_fee_mmk: Math.round(fee * 100) / 100,
-      priority: prio,
+      priority,
       is_active: isActive,
     }
     setSubmitting(true)
@@ -166,7 +165,7 @@ export function ServiceGeofenceFormModal({
         if (e.target === e.currentTarget && !submitting) onClose()
       }}
     >
-      <div className="modal-card modal-card--discount-form" onMouseDown={(e) => e.stopPropagation()}>
+      <div className="modal-card modal-card--geofence-form" onMouseDown={(e) => e.stopPropagation()}>
         <div className="discount-form-modal__head">
           <div className="modal-head">
             <h2 id={titleId} className="modal-title">
@@ -213,7 +212,7 @@ export function ServiceGeofenceFormModal({
                 bounds={bounds}
                 onChange={setBounds}
                 disabled={submitting}
-                mapHeight={260}
+                mapHeight={580}
               />
 
               <div className="discount-form-modal__pair">
@@ -234,18 +233,17 @@ export function ServiceGeofenceFormModal({
                 </div>
                 <div className="field">
                   <label htmlFor="sgf-priority">{t('serviceGeofences.form.priority')}</label>
-                  <input
+                  <select
                     id="sgf-priority"
-                    type="number"
-                    min={1}
-                    step={1}
-                    value={priority === '' ? '' : priority}
-                    onChange={(e) => {
-                      const v = e.target.value
-                      setPriority(v === '' ? '' : Number.parseInt(v, 10))
-                    }}
+                    className="select-chevron-left"
+                    value={priority}
+                    onChange={(e) => setPriority(e.target.value === '0' ? 0 : 1)}
                     disabled={submitting}
-                  />
+                  >
+                    <option value={1}>{t('serviceGeofences.form.priorityUrgent')}</option>
+                    <option value={0}>{t('serviceGeofences.form.priorityNormal')}</option>
+                  </select>
+                  <p className="discount-form-modal__hint">{t('serviceGeofences.form.priorityHint')}</p>
                 </div>
               </div>
               <label htmlFor={activeFieldId} className="form-switch">

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { getAppLocale, LOCALE_OPTIONS, setAppLocale, type AppLocale } from '../../i18n'
+import { getAppLocale, LOCALE_OPTIONS, setAppLocale, type AppLocale, default as i18n } from '../../i18n'
 import './header-theme-menu.css'
 
 const LOCALE_ICONS: Record<AppLocale, string> = {
@@ -37,6 +37,12 @@ export function HeaderLanguageMenu() {
   useEffect(() => {
     if (open) setLocale(getAppLocale())
   }, [open])
+
+  useEffect(() => {
+    const onLanguageChanged = () => setLocale(getAppLocale())
+    i18n.on('languageChanged', onLanguageChanged)
+    return () => i18n.off('languageChanged', onLanguageChanged)
+  }, [])
 
   const selectLocale = (next: AppLocale) => {
     if (next === locale) {

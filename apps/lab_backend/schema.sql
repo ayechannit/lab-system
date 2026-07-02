@@ -190,7 +190,7 @@ END
 
 IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[theme_settings]') AND name = N'ui_locale')
 BEGIN
-    ALTER TABLE dbo.theme_settings ADD ui_locale NVARCHAR(5) NOT NULL CONSTRAINT DF_theme_settings_ui_locale DEFAULT 'en';
+    ALTER TABLE dbo.theme_settings ADD ui_locale NVARCHAR(5) NOT NULL CONSTRAINT DF_theme_settings_ui_locale DEFAULT 'my';
 END
 
 -- ==========================================================

@@ -62,7 +62,8 @@ class LabSystemSettings {
 
   factory LabSystemSettings.defaults() => const LabSystemSettings(
         labName: 'International Diagnostic & Healthcare Center',
-        themePreset: AppThemePresetId.light,
+        themePreset: AppThemePresetId.idhc,
+        uiLocale: 'my',
       );
 
   LabSystemSettings copyWith({

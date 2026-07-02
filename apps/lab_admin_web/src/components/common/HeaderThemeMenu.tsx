@@ -51,6 +51,16 @@ export function HeaderThemeMenu() {
     if (open) setTheme(getAppliedAppTheme())
   }, [open])
 
+  useEffect(() => {
+    const onThemeChanged = (event: Event) => {
+      const detail = (event as CustomEvent<{ themeId?: AppThemeId }>).detail
+      if (detail?.themeId) setTheme(detail.themeId)
+      else setTheme(getAppliedAppTheme())
+    }
+    window.addEventListener('app-theme-changed', onThemeChanged)
+    return () => window.removeEventListener('app-theme-changed', onThemeChanged)
+  }, [])
+
   const selectTheme = (next: AppThemeId) => {
     if (next === theme) {
       setOpen(false)

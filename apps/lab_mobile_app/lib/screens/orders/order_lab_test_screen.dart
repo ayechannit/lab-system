@@ -449,6 +449,14 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
     return tests + service + material;
   }
 
+  bool get _orderSubmitBlocked {
+    if (!hasMeaningfulCoordinates(_collectionLat, _collectionLng)) return false;
+    if (_serviceFeeLoading) return true;
+    if (_serviceFeeOutOfCoverage) return true;
+    if (_serviceFeeQuote == null) return true;
+    return false;
+  }
+
   Widget _fieldErrorText(BuildContext context, String message) {
     return Padding(
       padding: const EdgeInsets.only(top: 6, left: 2),
@@ -1180,7 +1188,7 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
             SizedBox(
               height: 56,
               child: FilledButton.icon(
-                onPressed: session.busy || user == null
+                onPressed: session.busy || user == null || _orderSubmitBlocked
                     ? null
                     : () async {
                         if (!_formKey.currentState!.validate()) return;

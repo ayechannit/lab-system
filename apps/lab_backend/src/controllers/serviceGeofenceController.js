@@ -1,5 +1,12 @@
 const ServiceGeofence = require('../models/serviceGeofenceModel');
 
+function parsePriority(priority, fallback = 1) {
+  if (priority === undefined || priority === null || priority === '') return fallback;
+  const n = parseInt(priority, 10);
+  if (n === 0 || n === 1) return n;
+  return null;
+}
+
 const getAllGeofences = async (req, res) => {
   try {
     const geofences = await ServiceGeofence.getAll();
@@ -38,6 +45,11 @@ const createGeofence = async (req, res) => {
       return res.status(400).json({ message: 'name, west_longitude, east_longitude, north_latitude, south_latitude, and service_fee_mmk are required' });
     }
 
+    const parsedPriority = parsePriority(priority);
+    if (parsedPriority === null) {
+      return res.status(400).json({ message: 'priority must be 0 or 1' });
+    }
+
     const geofenceData = {
       name,
       west_longitude: parseFloat(west_longitude),
@@ -45,7 +57,7 @@ const createGeofence = async (req, res) => {
       north_latitude: parseFloat(north_latitude),
       south_latitude: parseFloat(south_latitude),
       service_fee_mmk: parseFloat(service_fee_mmk),
-      priority: priority !== undefined ? parseInt(priority, 10) : 1,
+      priority: parsedPriority,
       is_active
     };
 
@@ -64,6 +76,11 @@ const updateGeofence = async (req, res) => {
       return res.status(400).json({ message: 'name, west_longitude, east_longitude, north_latitude, south_latitude, and service_fee_mmk are required' });
     }
 
+    const parsedPriority = parsePriority(priority);
+    if (parsedPriority === null) {
+      return res.status(400).json({ message: 'priority must be 0 or 1' });
+    }
+
     const geofenceData = {
       name,
       west_longitude: parseFloat(west_longitude),
@@ -71,7 +88,7 @@ const updateGeofence = async (req, res) => {
       north_latitude: parseFloat(north_latitude),
       south_latitude: parseFloat(south_latitude),
       service_fee_mmk: parseFloat(service_fee_mmk),
-      priority: priority !== undefined ? parseInt(priority, 10) : 1,
+      priority: parsedPriority,
       is_active
     };
 

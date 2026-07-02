@@ -65,8 +65,27 @@ export function ServiceGeofencesManagementPage() {
   const [geoLoading, setGeoLoading] = useState(false)
   const [geoMessage, setGeoMessage] = useState<string | null>(null)
 
+  const [previewZoneId, setPreviewZoneId] = useState<string | null>(null)
+
   const hasTestPoint = hasUsableCoords(testLat, testLng)
   const activeZoneCount = useMemo(() => rows.filter((r) => r.is_active).length, [rows])
+  const previewZone = useMemo(
+    () => (previewZoneId ? rows.find((r) => r.id === previewZoneId) ?? null : null),
+    [rows, previewZoneId],
+  )
+  const zoneOverlays = useMemo(
+    () =>
+      rows.map((r) => ({
+        id: r.id,
+        south_latitude: r.south_latitude,
+        north_latitude: r.north_latitude,
+        west_longitude: r.west_longitude,
+        east_longitude: r.east_longitude,
+        name: r.name,
+        highlighted: r.id === previewZoneId,
+      })),
+    [rows, previewZoneId],
+  )
 
   useErrorToast(loadError)
 
@@ -161,24 +180,33 @@ export function ServiceGeofencesManagementPage() {
     }
   }
 
-  async function runFeeTest() {
+  async function runFeeTestAt(lat: number, lng: number) {
     setTestError(null)
     setTestResult(null)
+    setTestLoading(true)
+    try {
+      const result = await calculateServiceFee(lat, lng)
+      setTestResult(result)
+    } catch (e) {
+      const err = e as Error & { isOutOfCoverage?: boolean }
+      if (err.isOutOfCoverage) {
+        setTestError(t('serviceGeofences.tester.outOfCoverage'))
+      } else {
+        setTestError(err instanceof Error ? err.message : t('serviceGeofences.tester.failed'))
+      }
+    } finally {
+      setTestLoading(false)
+    }
+  }
+
+  async function runFeeTest() {
     const lat = typeof testLat === 'number' ? testLat : Number.parseFloat(String(testLat))
     const lng = typeof testLng === 'number' ? testLng : Number.parseFloat(String(testLng))
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
       setTestError(t('serviceGeofences.tester.errorCoords'))
       return
     }
-    setTestLoading(true)
-    try {
-      const result = await calculateServiceFee(lat, lng)
-      setTestResult(result)
-    } catch (e) {
-      setTestError(e instanceof Error ? e.message : t('serviceGeofences.tester.failed'))
-    } finally {
-      setTestLoading(false)
-    }
+    await runFeeTestAt(lat, lng)
   }
 
   function clearTestPoint() {
@@ -187,6 +215,22 @@ export function ServiceGeofencesManagementPage() {
     setTestResult(null)
     setTestError(null)
     setGeoMessage(null)
+    setPreviewZoneId(null)
+  }
+
+  function previewZoneOnMap(row: ServiceGeofenceRow) {
+    if (previewZoneId === row.id) {
+      clearTestPoint()
+      return
+    }
+    setPreviewZoneId(row.id)
+    const lat = (row.south_latitude + row.north_latitude) / 2
+    const lng = (row.west_longitude + row.east_longitude) / 2
+    setTestLat(lat)
+    setTestLng(lng)
+    setGeoMessage(null)
+    document.getElementById('sg-fee-tester-title')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    void runFeeTestAt(lat, lng)
   }
 
   function requestBrowserLocation() {
@@ -253,6 +297,8 @@ export function ServiceGeofencesManagementPage() {
                 setGeoMessage(null)
               }}
               hideToolbar
+              zoneOverlays={zoneOverlays}
+              fitZoneId={previewZoneId}
             />
           </div>
 
@@ -303,10 +349,16 @@ export function ServiceGeofencesManagementPage() {
             </div>
 
             <div className="service-geofence-tester__zones-meta">
-              <span className="material-symbols-outlined" aria-hidden>
-                layers
-              </span>
-              <span>{t('serviceGeofences.tester.activeZones', { count: activeZoneCount })}</span>
+              <div className="service-geofence-tester__zones-meta-copy">
+                <span className="material-symbols-outlined" aria-hidden>
+                  layers
+                </span>
+                <span>
+                  {previewZone
+                    ? t('serviceGeofences.tester.previewingZone', { name: previewZone.name })
+                    : t('serviceGeofences.tester.activeZones', { count: activeZoneCount })}
+                </span>
+              </div>
             </div>
 
             <div
@@ -354,25 +406,27 @@ export function ServiceGeofencesManagementPage() {
             </div>
 
             <div className="service-geofence-tester__actions">
-              <button
-                type="button"
-                className="btn btn-secondary service-geofence-tester__btn"
-                onClick={requestBrowserLocation}
-                disabled={!hasApi || geoLoading}
-                aria-busy={geoLoading}
-              >
-                {geoLoading ? t('locationMap.gettingLocation') : t('locationMap.useMyLocation')}
-              </button>
-              {hasTestPoint ? (
+              <div className="service-geofence-tester__actions-row">
                 <button
                   type="button"
-                  className="btn btn-ghost service-geofence-tester__btn"
-                  onClick={clearTestPoint}
-                  disabled={testLoading}
+                  className="btn btn-secondary service-geofence-tester__btn service-geofence-tester__btn-half"
+                  onClick={requestBrowserLocation}
+                  disabled={!hasApi || geoLoading}
+                  aria-busy={geoLoading}
                 >
-                  {t('serviceGeofences.tester.clearPoint')}
+                  {geoLoading ? t('locationMap.gettingLocation') : t('locationMap.useMyLocation')}
                 </button>
-              ) : null}
+                {hasTestPoint || previewZone ? (
+                  <button
+                    type="button"
+                    className="btn btn-ghost service-geofence-tester__btn service-geofence-tester__btn-half service-geofence-tester__btn-clear"
+                    onClick={clearTestPoint}
+                    disabled={testLoading}
+                  >
+                    {t('serviceGeofences.tester.clearSelection')}
+                  </button>
+                ) : null}
+              </div>
               <button
                 type="button"
                 className="btn btn-primary service-geofence-tester__btn"
@@ -504,15 +558,30 @@ export function ServiceGeofencesManagementPage() {
                 </tr>
               ) : (
                 paged.map((r) => (
-                  <tr key={r.id}>
+                  <tr
+                    key={r.id}
+                    className={r.id === previewZoneId ? 'service-geofences-zones__row--preview' : undefined}
+                  >
                     <td style={{ fontWeight: 600 }}>{r.name}</td>
-                    <td style={{ fontSize: '0.85rem', color: 'var(--muted)', maxWidth: 280 }}>
-                      {formatBounds(r)}
+                    <td className="service-geofences-zones__bounds-cell">
+                      <button
+                        type="button"
+                        className="service-geofences-zones__bounds-btn"
+                        onClick={() => previewZoneOnMap(r)}
+                        aria-label={t('serviceGeofences.table.viewOnMap', { name: r.name })}
+                        aria-pressed={r.id === previewZoneId}
+                      >
+                        {formatBounds(r)}
+                      </button>
                     </td>
                     <td>
                       {r.service_fee_mmk.toLocaleString()} {t('orders.currency')}
                     </td>
-                    <td>{r.priority}</td>
+                    <td>
+                      {r.priority === 1
+                        ? t('serviceGeofences.form.priorityUrgent')
+                        : t('serviceGeofences.form.priorityNormal')}
+                    </td>
                     <td>
                       {r.is_active ? (
                         <span className="badge badge--success">{t('common.active')}</span>

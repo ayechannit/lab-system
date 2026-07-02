@@ -10,7 +10,7 @@ class LocaleController extends ChangeNotifier {
     _load();
   }
 
-  Locale _locale = const Locale('en');
+  Locale _locale = const Locale('my');
   bool _ready = false;
 
   Locale get locale => _locale;
@@ -24,7 +24,7 @@ class LocaleController extends ChangeNotifier {
         _locale = const Locale('my');
       } else if (saved == 'en') {
         _locale = const Locale('en');
-      } else if (!kIsWeb && WidgetsBinding.instance.platformDispatcher.locale.languageCode == 'my') {
+      } else {
         _locale = const Locale('my');
       }
     } catch (_) {

@@ -2,7 +2,6 @@ import { BrowserRouter, HashRouter, Navigate, Outlet, Route, Routes } from 'reac
 import { useTranslation } from 'react-i18next'
 import { LoadingSpinner } from './components/common/LoadingSpinner'
 import { useAuth } from './hooks/AuthContext'
-import { useAppThemeSync } from './hooks/useAppTheme'
 import { useAppLocaleSync } from './hooks/useAppLocaleSync'
 import { AdminLayout } from './layout/AdminLayout'
 import { LoginPage } from './pages/auth/LoginPage'
@@ -36,10 +35,6 @@ function RequireAuth() {
   return <Outlet />
 }
 
-function AppThemeSync() {
-  useAppThemeSync(true)
-  return null
-}
 function AppLocaleSync() {
   useAppLocaleSync(true)
   return null
@@ -50,7 +45,6 @@ export default function App() {
 
   return (
     <Router>
-      <AppThemeSync />
       <AppLocaleSync />
       <Routes>
         <Route path="/login" element={<LoginPage />} />

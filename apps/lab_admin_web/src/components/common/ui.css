@@ -2881,8 +2881,10 @@ a.btn {
 
 .service-geofence-tester__zones-meta {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 0.45rem;
+  justify-content: flex-start;
+  gap: 0.45rem 0.65rem;
   padding: 0.55rem 0.65rem;
   border-radius: 10px;
   border: 1px solid var(--border);
@@ -2890,6 +2892,18 @@ a.btn {
   font-size: 0.78rem;
   font-weight: 600;
   color: var(--muted);
+}
+
+.service-geofence-tester__zones-meta-copy {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.service-geofence-tester__clear-preview {
+  flex-shrink: 0;
+  margin-left: auto;
 }
 
 .service-geofence-tester__zones-meta .material-symbols-outlined {
@@ -2946,8 +2960,24 @@ a.btn {
   padding-top: 0.15rem;
 }
 
+.service-geofence-tester__actions-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: stretch;
+}
+
 .service-geofence-tester__btn {
   width: 100%;
+}
+
+.service-geofence-tester__btn-half {
+  flex: 1 1 0;
+  min-width: 0;
+  width: 100%;
+}
+
+.service-geofence-tester__btn-clear {
+  border: 1px solid var(--border);
 }
 
 .service-geofence-tester__geo-message {
@@ -3071,6 +3101,50 @@ a.btn {
 
 .service-geofences-zones__filters .list-filters-bar {
   flex: 1 1 auto;
+}
+
+.service-geofences-zones__bounds-cell {
+  max-width: 280px;
+}
+
+.service-geofences-zones__bounds-btn {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 0.15rem 0.35rem;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.service-geofences-zones__bounds-btn:hover {
+  background: var(--subtle-fill);
+  color: var(--text);
+}
+
+.service-geofences-zones__bounds-btn:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.service-geofences-zones__bounds-btn[aria-pressed='true'] {
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  color: var(--primary);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--primary) 35%, transparent);
+}
+
+.service-geofences-zones__row--preview td {
+  background: color-mix(in srgb, var(--primary) 5%, var(--card-bg));
 }
 
 .geofence-bounds-map-picker {
@@ -3722,6 +3796,18 @@ a.btn {
   align-items: center;
   gap: 0.5rem;
   margin-top: 0.55rem;
+}
+
+.location-map-picker__zone-label {
+  padding: 0.2rem 0.45rem;
+  border: 0;
+  border-radius: 6px;
+  background: var(--card-bg);
+  color: var(--text);
+  font-size: 0.75rem;
+  font-weight: 600;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.12);
+  white-space: nowrap;
 }
 
 .chart-card {
@@ -4732,6 +4818,41 @@ a.btn {
   flex-direction: column;
   padding: 0;
   overflow: hidden;
+}
+
+/* Service geofence create/edit — wider/taller for map drawing */
+.modal-card--geofence-form {
+  max-width: min(calc(100vw - 2.5rem), 1240px);
+  width: 100%;
+  max-height: min(96vh, 1000px);
+  min-height: min(96vh, 800px);
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+}
+
+.modal-card--geofence-form .discount-form-modal__body {
+  flex: 1;
+  min-height: 0;
+}
+
+.modal-card--geofence-form .geofence-bounds-map-picker__viewport {
+  min-height: 580px;
+  height: min(54vh, 620px);
+}
+
+@media (max-width: 760px) {
+  .modal-card--geofence-form {
+    max-width: calc(100vw - 1.25rem);
+    max-height: min(96vh, 1000px);
+    min-height: 0;
+  }
+
+  .modal-card--geofence-form .geofence-bounds-map-picker__viewport {
+    min-height: 320px;
+    height: min(42vh, 420px);
+  }
 }
 
 /* Discount create/edit modal */

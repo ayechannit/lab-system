@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import L from 'leaflet'
-import { MapContainer, Marker, TileLayer, useMap, useMapEvents } from 'react-leaflet'
+import { MapContainer, Marker, Rectangle, TileLayer, Tooltip, useMap, useMapEvents } from 'react-leaflet'
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png'
 import markerIcon from 'leaflet/dist/images/marker-icon.png'
 import markerShadow from 'leaflet/dist/images/marker-shadow.png'
@@ -98,6 +98,69 @@ function FlyToSearchTarget({
   return null
 }
 
+export type MapZoneOverlay = {
+  id: string
+  south_latitude: number
+  north_latitude: number
+  west_longitude: number
+  east_longitude: number
+  name?: string
+  highlighted?: boolean
+}
+
+function zoneToLatLngBounds(zone: MapZoneOverlay): L.LatLngBoundsExpression {
+  return [
+    [zone.south_latitude, zone.west_longitude],
+    [zone.north_latitude, zone.east_longitude],
+  ]
+}
+
+function FitZoneOverlay({
+  zones,
+  fitZoneId,
+}: {
+  zones: MapZoneOverlay[]
+  fitZoneId: string | null | undefined
+}) {
+  const map = useMap()
+  useEffect(() => {
+    if (!fitZoneId) return
+    const zone = zones.find((z) => z.id === fitZoneId)
+    if (!zone) return
+    map.fitBounds(zoneToLatLngBounds(zone), { padding: [28, 28], maxZoom: 14, animate: true })
+  }, [map, zones, fitZoneId])
+  return null
+}
+
+function ZoneOverlays({ zones }: { zones: MapZoneOverlay[] }) {
+  return (
+    <>
+      {zones.map((zone) => {
+        const highlighted = Boolean(zone.highlighted)
+        return (
+          <Rectangle
+            key={zone.id}
+            bounds={zoneToLatLngBounds(zone)}
+            pathOptions={{
+              color: highlighted ? 'var(--primary)' : '#64748b',
+              weight: highlighted ? 3 : 2,
+              fillColor: highlighted ? 'var(--primary)' : '#64748b',
+              fillOpacity: highlighted ? 0.14 : 0.05,
+              dashArray: highlighted ? undefined : '6 4',
+            }}
+          >
+            {highlighted && zone.name ? (
+              <Tooltip permanent direction="center" className="location-map-picker__zone-label">
+                {zone.name}
+              </Tooltip>
+            ) : null}
+          </Rectangle>
+        )
+      })}
+    </>
+  )
+}
+
 type LocationMapPickerProps = {
   latitude: number | ''
   longitude: number | ''
@@ -108,6 +171,10 @@ type LocationMapPickerProps = {
   mapHeight?: number
   /** Hide the bottom toolbar (search hint, use my location). */
   hideToolbar?: boolean
+  /** Optional geofence rectangles to draw on the map (e.g. coverage zone preview). */
+  zoneOverlays?: MapZoneOverlay[]
+  /** When set, the map fits bounds to this zone id. */
+  fitZoneId?: string | null
 }
 
 export function LocationMapPicker({
@@ -117,6 +184,8 @@ export function LocationMapPicker({
   onAddressFromMap,
   mapHeight = 220,
   hideToolbar = false,
+  zoneOverlays = [],
+  fitZoneId = null,
 }: LocationMapPickerProps) {
   const { t } = useTranslation()
   const [geoLoading, setGeoLoading] = useState(false)
@@ -227,6 +296,8 @@ export function LocationMapPicker({
           <MapResizeObserver />
           <FlyToSearchTarget target={searchFlyTarget} />
           <RecenterOnCoords latitude={latitude} longitude={longitude} />
+          <FitZoneOverlay zones={zoneOverlays} fitZoneId={fitZoneId} />
+          <ZoneOverlays zones={zoneOverlays} />
         <MapClickHandler onPick={handlePick} />
         {usable ? <Marker position={[parseCoord(latitude)!, parseCoord(longitude)!]} /> : null}
         </MapContainer>

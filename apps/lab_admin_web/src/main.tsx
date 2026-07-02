@@ -10,7 +10,7 @@ import { AuthProvider } from './hooks/AuthContext'
 import { SystemBrandingProvider } from './hooks/SystemBrandingContext'
 import { ToastProvider } from './hooks/ToastContext'
 
-applyAppTheme('light')
+applyAppTheme('idhc')
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
