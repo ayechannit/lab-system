@@ -17,30 +17,36 @@ Color? colorFromHex(String? hex, {Color? fallback}) {
 }
 
 /// Themes aligned with admin web `theme_settings` presets (light / dark / IDHC).
+/// Page backgrounds use a fixed light/dark layout palette; the selected preset
+/// only drives brand colors (primary, secondary, nav accents).
 ThemeData buildAppThemeForSettings(LabSystemSettings settings, {required Brightness brightness}) {
   final isDark = brightness == Brightness.dark;
-  final effectivePreset =
-      isDark ? AppThemePresetId.dark : settings.themePreset;
-  final palette = surfacePaletteFor(effectivePreset);
+  final brandPreset = isDark ? AppThemePresetId.dark : settings.themePreset;
+  final brandPalette = surfacePaletteFor(brandPreset);
+  final layoutPalette = isDark
+      ? surfacePaletteFor(AppThemePresetId.dark)
+      : surfacePaletteFor(AppThemePresetId.light);
 
-  final primary = colorFromHex(settings.primaryColorHex, fallback: palette.defaultPrimary)!;
-  final primaryLight = colorFromHex(settings.primaryColorHex, fallback: palette.primaryLight)!;
-  final accentGreen = colorFromHex(settings.secondaryColorHex, fallback: palette.defaultSecondary)!;
+  // Brand colors always follow the active preset — server hex values are ignored
+  // so user/server theme selection (Light / Dark / IDHC) updates buttons & links.
+  final primary = brandPalette.defaultPrimary;
+  final primaryLight = brandPalette.primaryLight;
+  final accentGreen = brandPalette.defaultSecondary;
 
-  final surface = palette.surface;
-  final onSurface = palette.onSurface;
-  final onSurfaceVariant = palette.onSurfaceVariant;
-  final outline = palette.outline;
-  final surfaceContainer = palette.surfaceContainer;
-  final cardColor = palette.cardColor;
+  final surface = layoutPalette.surface;
+  final onSurface = layoutPalette.onSurface;
+  final onSurfaceVariant = layoutPalette.onSurfaceVariant;
+  final outline = layoutPalette.outline;
+  final surfaceContainer = layoutPalette.surfaceContainer;
+  final cardColor = layoutPalette.cardColor;
   final iconTileBackground =
-      isDark ? primary.withValues(alpha: 0.18) : palette.iconTileBackground;
+      isDark ? primary.withValues(alpha: 0.18) : brandPalette.iconTileBackground;
   final navActiveBackground =
-      isDark ? primary.withValues(alpha: 0.22) : palette.navActiveBackground;
-  final errorPanelBg = palette.errorPanelBg;
-  final errorPanelBorder = palette.errorPanelBorder;
-  final errorPanelText = palette.errorPanelText;
-  final ratingInactive = palette.ratingInactive;
+      isDark ? primary.withValues(alpha: 0.22) : brandPalette.navActiveBackground;
+  final errorPanelBg = layoutPalette.errorPanelBg;
+  final errorPanelBorder = layoutPalette.errorPanelBorder;
+  final errorPanelText = layoutPalette.errorPanelText;
+  final ratingInactive = layoutPalette.ratingInactive;
 
   return ThemeData(
     useMaterial3: true,
@@ -134,6 +140,16 @@ ThemeData buildAppThemeForSettings(LabSystemSettings settings, {required Brightn
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
+    ),
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(foregroundColor: primary),
+    ),
+    checkboxTheme: CheckboxThemeData(
+      fillColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.selected)) return primary;
+        return null;
+      }),
+      checkColor: WidgetStateProperty.all(Colors.white),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(

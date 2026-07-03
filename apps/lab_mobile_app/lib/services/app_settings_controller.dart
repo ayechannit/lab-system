@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/lab_system_settings.dart';
 import 'system_settings_api.dart';
 
-/// Loads lab branding/theme from the backend (same source as admin System settings).
+/// Loads lab branding/theme from the backend (patient mobile app settings).
 class AppSettingsController extends ChangeNotifier {
   AppSettingsController({required String baseUrl})
       : _api = SystemSettingsApi(baseUrl: baseUrl);

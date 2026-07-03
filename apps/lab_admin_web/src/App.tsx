@@ -2,7 +2,6 @@ import { BrowserRouter, HashRouter, Navigate, Outlet, Route, Routes } from 'reac
 import { useTranslation } from 'react-i18next'
 import { LoadingSpinner } from './components/common/LoadingSpinner'
 import { useAuth } from './hooks/AuthContext'
-import { useAppLocaleSync } from './hooks/useAppLocaleSync'
 import { AdminLayout } from './layout/AdminLayout'
 import { LoginPage } from './pages/auth/LoginPage'
 import { ForgotPasswordPage } from './pages/auth/ForgotPasswordPage'
@@ -35,17 +34,11 @@ function RequireAuth() {
   return <Outlet />
 }
 
-function AppLocaleSync() {
-  useAppLocaleSync(true)
-  return null
-}
-
 export default function App() {
   const Router = window.location.protocol === 'file:' ? HashRouter : BrowserRouter
 
   return (
     <Router>
-      <AppLocaleSync />
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />

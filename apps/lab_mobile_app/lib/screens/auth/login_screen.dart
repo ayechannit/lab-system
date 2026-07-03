@@ -9,6 +9,7 @@ import '../../services/auth_session_storage.dart';
 import '../../services/rest_lab_user_api.dart';
 import '../../widgets/common/app_brand_mark.dart';
 import '../../widgets/common/app_toast.dart';
+import '../../widgets/auth/auth_preference_controls.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key, this.routeExtra});
@@ -69,19 +70,24 @@ class _LoginScreenState extends State<LoginScreen> {
     final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) => SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(20, 64, 20, 16),
-            child: ConstrainedBox(
-              constraints: BoxConstraints(minHeight: constraints.maxHeight - 72),
-              child: Column(
-                children: [
-                  const SizedBox(height: 16),
-                  AppBrandMark(
-                    maxWidth: constraints.maxWidth - 40,
-                  ),
-                  const SizedBox(height: 28),
-                  Container(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const AuthPreferenceControls(),
+            Expanded(
+              child: LayoutBuilder(
+                builder: (context, constraints) => SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(minHeight: constraints.maxHeight - 16),
+                    child: Column(
+                      children: [
+                        const SizedBox(height: 8),
+                        AppBrandMark(
+                          maxWidth: constraints.maxWidth - 40,
+                        ),
+                        const SizedBox(height: 28),
+                        Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
@@ -269,11 +275,14 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 18),
-                ],
+                        const SizedBox(height: 18),
+                      ],
+                    ),
+                  ),
+                ),
               ),
             ),
-          ),
+          ],
         ),
       ),
     );

@@ -299,7 +299,7 @@
     },
     "systemSettings": {
       "title": "System settings",
-      "description": "Appearance theme, contact details, and material fees."
+      "description": "Configure the patient mobile app, lab contact details, and fees. Your admin dashboard theme and language are personal and stay on this device."
     },
     "reports": {
       "title": "Reports & analytics",
@@ -1281,8 +1281,13 @@
   "systemSettings": {
     "loadFailed": "Failed to load system settings",
     "loading": "Loading system settings",
-    "draftHint": "Changes are drafts until you click Save settings. Leaving this page without saving restores your last saved theme.",
+    "draftHint": "These settings control the patient mobile app. Saving does not change your admin dashboard theme or language.",
     "saveSettings": "Save settings",
+    "mobileApp": "Mobile app",
+    "mobileAppDesc": "Theme and language shown to patients in the mobile app.",
+    "mobileThemeLegend": "Mobile app theme",
+    "mobileLanguage": "Mobile app language",
+    "mobileLanguageDesc": "Default language for new mobile app sessions.",
     "appearance": "Appearance",
     "appearanceDesc": "Theme used across the admin dashboard and patient apps.",
     "locationContact": "Location & contact",
@@ -1291,13 +1296,13 @@
     "contactEmail": "Contact email",
     "coordinates": "Coordinates: {{coords}}",
     "unsavedChanges": "Unsaved changes",
-    "unsavedSub": "Save to apply changes across the lab.",
+    "unsavedSub": "Save to apply changes to the mobile app and shared lab details.",
     "allSaved": "All changes saved",
     "lastSaved": "Last saved {{date}}",
     "resetDefaults": "Reset to defaults",
     "reset": {
       "title": "Reset to defaults?",
-      "message": "Theme and contact fields will be restored to the application defaults. This cannot be undone except by saving again.",
+      "message": "Mobile app theme, language, and contact fields will be restored to the application defaults. Your admin dashboard appearance is not changed.",
       "confirm": "Reset to defaults",
       "success": "Settings reset to defaults.",
       "failed": "Reset failed"

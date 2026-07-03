@@ -36,6 +36,21 @@ class AppLocalizationsMy extends AppLocalizations {
   String get languageMyanmar => 'မြန်မာ';
 
   @override
+  String get chooseLanguage => 'ဘာသာစကား ရွေးချယ်ပါ';
+
+  @override
+  String get chooseTheme => 'အသွင်အပြင် ရွေးချယ်ပါ';
+
+  @override
+  String get themeLight => 'အလင်း';
+
+  @override
+  String get themeDark => 'အမှောင်';
+
+  @override
+  String get themeIdhc => 'IDHC';
+
+  @override
   String get signIn => 'အကောင့်ဝင်မည်';
 
   @override

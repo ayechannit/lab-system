@@ -8,6 +8,7 @@ import '../../services/session_controller.dart';
 import '../../theme/theme_extensions.dart';
 import '../../widgets/common/app_brand_mark.dart';
 import '../../widgets/common/app_toast.dart';
+import '../../widgets/auth/auth_preference_controls.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key, this.initialEmail});
@@ -124,14 +125,19 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
     return Scaffold(
       body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) => SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
-            child: ConstrainedBox(
-              constraints: BoxConstraints(minHeight: constraints.maxHeight - 32),
-              child: Column(
-                children: [
-                  AppBrandMark(maxWidth: constraints.maxWidth - 40),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const AuthPreferenceControls(),
+            Expanded(
+              child: LayoutBuilder(
+                builder: (context, constraints) => SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(minHeight: constraints.maxHeight - 16),
+                    child: Column(
+                      children: [
+                        AppBrandMark(maxWidth: constraints.maxWidth - 40),
                   const SizedBox(height: 18),
                   Container(
                     width: double.infinity,
@@ -336,9 +342,12 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     ),
                   ),
                 ],
+                    ),
+                  ),
+                ),
               ),
             ),
-          ),
+          ],
         ),
       ),
     );

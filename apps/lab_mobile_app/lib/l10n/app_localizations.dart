@@ -149,6 +149,36 @@ abstract class AppLocalizations {
   /// **'Myanmar (Burmese)'**
   String get languageMyanmar;
 
+  /// No description provided for @chooseLanguage.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose language'**
+  String get chooseLanguage;
+
+  /// No description provided for @chooseTheme.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose theme'**
+  String get chooseTheme;
+
+  /// No description provided for @themeLight.
+  ///
+  /// In en, this message translates to:
+  /// **'Light'**
+  String get themeLight;
+
+  /// No description provided for @themeDark.
+  ///
+  /// In en, this message translates to:
+  /// **'Dark'**
+  String get themeDark;
+
+  /// No description provided for @themeIdhc.
+  ///
+  /// In en, this message translates to:
+  /// **'IDHC'**
+  String get themeIdhc;
+
   /// No description provided for @signIn.
   ///
   /// In en, this message translates to:

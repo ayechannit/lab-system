@@ -159,7 +159,7 @@ function rowToUpdateBody(row: SystemSettingsRow): SystemSettingsUpdateBody {
   }
 }
 
-/** Apply a preset theme and persist it to system settings. */
+/** @deprecated Admin theme is local-only. Kept for backwards compatibility. */
 export async function saveThemeMode(mode: ThemeMode): Promise<SystemSettingsRow> {
   const row = await fetchSystemSettings()
   return updateSystemSettings({
@@ -194,7 +194,7 @@ export async function uploadSystemSettingsLogo(file: File): Promise<SystemSettin
   return normalizeSystemSettings((await res.json()) as Record<string, unknown>)
 }
 
-/** Persist shared UI locale so the mobile app follows admin web language. */
+/** Update mobile app default locale in system settings (use System settings page). */
 export async function syncUiLocaleToServer(locale: 'en' | 'my'): Promise<void> {
   const res = await apiFetch('/api/system-settings/ui-locale', {
     method: 'PATCH',

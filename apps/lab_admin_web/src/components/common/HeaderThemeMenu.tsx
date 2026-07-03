@@ -1,9 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useAuth } from '../../hooks/AuthContext'
-import { useToast } from '../../hooks/ToastContext'
-import { isApiMode } from '../../services/apiBase'
-import { saveThemeMode } from '../../services/systemSettingService'
 import {
   THEME_OPTIONS,
   THEME_PRESETS,
@@ -21,12 +17,8 @@ const THEME_ICONS: Record<AppThemeId, string> = {
 
 export function HeaderThemeMenu() {
   const { t } = useTranslation()
-  const { signedIn } = useAuth()
-  const hasApi = isApiMode()
-  const { showError } = useToast()
   const [open, setOpen] = useState(false)
   const [theme, setTheme] = useState<AppThemeId>(() => getAppliedAppTheme())
-  const [saving, setSaving] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -66,26 +58,9 @@ export function HeaderThemeMenu() {
       setOpen(false)
       return
     }
-
-    const previous = theme
     setTheme(next)
     applyAppTheme(next)
     setOpen(false)
-
-    if (!hasApi || !signedIn) return
-
-    setSaving(true)
-    void (async () => {
-      try {
-        await saveThemeMode(next)
-      } catch {
-        applyAppTheme(previous)
-        setTheme(previous)
-        showError(t('theme.saveFailed'))
-      } finally {
-        setSaving(false)
-      }
-    })()
   }
 
   return (
@@ -96,7 +71,7 @@ export function HeaderThemeMenu() {
         aria-label={`${t('theme.label')}: ${t(`theme.${theme}`)}. ${t('theme.changeAppearance')}`}
         aria-haspopup="menu"
         aria-expanded={open}
-        disabled={saving}
+        disabled={false}
         onClick={() => setOpen((v) => !v)}
       >
         <span className="material-symbols-outlined header-theme-menu__icon" aria-hidden>

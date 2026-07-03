@@ -51,7 +51,7 @@ class LocaleController extends ChangeNotifier {
 
   Future<void> setMyanmar() => setLocale(const Locale('my'));
 
-  /// Apply org-wide locale from system settings (admin web + mobile stay in sync).
+  /// Apply org-wide locale from system settings (mobile app default language).
   Future<void> applyOrgLocale(String? code) async {
     if (code != 'en' && code != 'my') return;
     final next = Locale(code!);

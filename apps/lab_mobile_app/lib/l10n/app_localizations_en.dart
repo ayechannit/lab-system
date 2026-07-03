@@ -36,6 +36,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get languageMyanmar => 'Myanmar (Burmese)';
 
   @override
+  String get chooseLanguage => 'Choose language';
+
+  @override
+  String get chooseTheme => 'Choose theme';
+
+  @override
+  String get themeLight => 'Light';
+
+  @override
+  String get themeDark => 'Dark';
+
+  @override
+  String get themeIdhc => 'IDHC';
+
+  @override
   String get signIn => 'Sign in';
 
   @override

@@ -55,7 +55,7 @@ export function getIntlLocale(): string {
   return getAppLocale() === 'my' ? 'my-MM' : 'en'
 }
 
-export async function setAppLocale(locale: AppLocale, options?: { sync?: boolean }): Promise<void> {
+export async function setAppLocale(locale: AppLocale): Promise<void> {
   try {
     window.localStorage.setItem(LOCALE_KEY, locale)
   } catch {
@@ -63,22 +63,6 @@ export async function setAppLocale(locale: AppLocale, options?: { sync?: boolean
   }
   applyDocumentLang(locale)
   await i18n.changeLanguage(locale)
-  if (options?.sync !== false) {
-    try {
-      const { isApiMode } = await import('../services/apiBase')
-      if (isApiMode()) {
-        const { syncUiLocaleToServer } = await import('../services/systemSettingService')
-        await syncUiLocaleToServer(locale)
-      }
-    } catch {
-      /* offline or unauthenticated — local locale still applies */
-    }
-  }
-}
-
-/** Apply locale from server without writing back (bootstrap). */
-export async function applyAppLocaleFromServer(locale: AppLocale): Promise<void> {
-  await setAppLocale(locale, { sync: false })
 }
 
 export default i18n

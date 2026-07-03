@@ -9,6 +9,7 @@ import '../routing/app_router.dart';
 import '../services/app_settings_controller.dart';
 import '../services/notification_service.dart';
 import '../services/locale_controller.dart';
+import '../services/user_theme_controller.dart';
 import '../services/rest_lab_user_api.dart';
 import '../services/session_controller.dart';
 import '../theme/app_settings_theme.dart';
@@ -17,6 +18,7 @@ import '../widgets/common/app_toast.dart';
 import 'app_settings_scope.dart';
 import 'locale_scope.dart';
 import 'session_scope.dart';
+import 'user_theme_scope.dart';
 
 class LabPatientApp extends StatefulWidget {
   const LabPatientApp({super.key});
@@ -32,6 +34,7 @@ class _LabPatientAppState extends State<LabPatientApp> with WidgetsBindingObserv
     baseUrl: LabApiConfig.baseUrl,
   );
   late final LocaleController _locale = LocaleController();
+  late final UserThemeController _userTheme = UserThemeController();
   late final GoRouter _router = createAppRouter(_session);
 
   @override
@@ -66,6 +69,7 @@ class _LabPatientAppState extends State<LabPatientApp> with WidgetsBindingObserv
     _locale.removeListener(_syncApiLocale);
     _settings.removeListener(_syncOrgLocaleFromSettings);
     _locale.dispose();
+    _userTheme.dispose();
     super.dispose();
   }
 
@@ -79,33 +83,39 @@ class _LabPatientAppState extends State<LabPatientApp> with WidgetsBindingObserv
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: Listenable.merge([_session, _settings, _locale]),
+      listenable: Listenable.merge([_session, _settings, _locale, _userTheme]),
       builder: (context, _) {
         final s = _settings.settings;
+        final effectiveSettings = s.copyWith(
+          themePreset: _userTheme.effectivePreset(s.themePreset),
+        );
         return LocaleScope(
           controller: _locale,
-          child: AppSettingsScope(
-            controller: _settings,
-            child: SessionScope(
-              controller: _session,
-              child: MaterialApp.router(
-                title: _settings.labName,
-                locale: _locale.locale,
-                supportedLocales: AppLocalizations.supportedLocales,
-                localizationsDelegates: const [
-                  AppLocalizations.delegate,
-                  GlobalMaterialLocalizations.delegate,
-                  GlobalWidgetsLocalizations.delegate,
-                  GlobalCupertinoLocalizations.delegate,
-                ],
-                theme: buildAppThemeForSettings(s, brightness: Brightness.light),
-                darkTheme: buildAppThemeForSettings(s, brightness: Brightness.dark),
-                themeMode: _settings.themeMode,
-                routerConfig: _router,
-                debugShowCheckedModeBanner: false,
-                builder: (context, child) {
-                  return ForegroundNotificationListener(child: child!);
-                },
+          child: UserThemeScope(
+            controller: _userTheme,
+            child: AppSettingsScope(
+              controller: _settings,
+              child: SessionScope(
+                controller: _session,
+                child: MaterialApp.router(
+                  title: _settings.labName,
+                  locale: _locale.locale,
+                  supportedLocales: AppLocalizations.supportedLocales,
+                  localizationsDelegates: const [
+                    AppLocalizations.delegate,
+                    GlobalMaterialLocalizations.delegate,
+                    GlobalWidgetsLocalizations.delegate,
+                    GlobalCupertinoLocalizations.delegate,
+                  ],
+                  theme: buildAppThemeForSettings(effectiveSettings, brightness: Brightness.light),
+                  darkTheme: buildAppThemeForSettings(effectiveSettings, brightness: Brightness.dark),
+                  themeMode: effectiveSettings.isDarkTheme ? ThemeMode.dark : ThemeMode.light,
+                  routerConfig: _router,
+                  debugShowCheckedModeBanner: false,
+                  builder: (context, child) {
+                    return ForegroundNotificationListener(child: child!);
+                  },
+                ),
               ),
             ),
           ),

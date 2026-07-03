@@ -5,6 +5,7 @@ type ThemePickerProps = {
   value: AppThemeId
   onChange: (value: AppThemeId) => void
   disabled?: boolean
+  legendKey?: string
 }
 
 const THEME_DESC_KEYS: Record<AppThemeId, string> = {
@@ -13,11 +14,11 @@ const THEME_DESC_KEYS: Record<AppThemeId, string> = {
   idhc: 'theme.idhcDesc',
 }
 
-export function ThemePicker({ value, onChange, disabled }: ThemePickerProps) {
+export function ThemePicker({ value, onChange, disabled, legendKey = 'theme.appearanceLegend' }: ThemePickerProps) {
   const { t } = useTranslation()
   return (
     <fieldset className="theme-picker" disabled={disabled}>
-      <legend className="theme-picker__legend">{t('theme.appearanceLegend')}</legend>
+      <legend className="theme-picker__legend">{t(legendKey)}</legend>
       <div className="theme-picker__grid">
         {THEME_OPTIONS.map((opt) => {
           const preset = THEME_PRESETS[opt.id]

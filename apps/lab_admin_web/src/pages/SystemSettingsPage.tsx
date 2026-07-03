@@ -24,20 +24,14 @@ import {
   resetSystemSettingsToDefaults,
   updateSystemSettings,
 } from '../services/systemSettingService'
-import { getIntlLocale } from '../i18n'
+import { getIntlLocale, LOCALE_OPTIONS, type AppLocale } from '../i18n'
 import { formatIsoDatetime } from '../utils/dateIntl'
-import { syncAppUiFromSettings } from '../utils/syncAppUiFromSettings'
-import {
-  type AppThemeId,
-  applyAppTheme,
-  getAppliedAppTheme,
-  normalizeAppThemeId,
-  themeFieldsForApi,
-} from '../theme/appThemes'
+import { normalizeAppThemeId, themeFieldsForApi } from '../theme/appThemes'
 import '../components/common/ui.css'
 
 type FormSnapshotFields = {
   mode: ThemeMode
+  ui_locale: AppLocale
   address: string
   latitude: number | ''
   longitude: number | ''
@@ -49,6 +43,7 @@ type FormSnapshotFields = {
 function formSnapshot(fields: FormSnapshotFields): string {
   return JSON.stringify({
     mode: fields.mode,
+    ui_locale: fields.ui_locale,
     address: fields.address.trim(),
     latitude: fields.latitude,
     longitude: fields.longitude,
@@ -64,6 +59,7 @@ function snapshotFromState(
 ): string {
   return formSnapshot({
     mode: normalizeAppThemeId(row.mode),
+    ui_locale: row.ui_locale === 'my' ? 'my' : 'en',
     address: row.address ?? '',
     latitude: row.latitude ?? '',
     longitude: row.longitude ?? '',
@@ -85,7 +81,8 @@ export function SystemSettingsPage() {
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false)
   const [updatedAt, setUpdatedAt] = useState<string | undefined>()
 
-  const [mode, setMode] = useState<ThemeMode>(() => getAppliedAppTheme())
+  const [mode, setMode] = useState<ThemeMode>('idhc')
+  const [mobileLocale, setMobileLocale] = useState<AppLocale>('my')
   const [address, setAddress] = useState('')
   const [latitude, setLatitude] = useState<number | ''>('')
   const [longitude, setLongitude] = useState<number | ''>('')
@@ -96,7 +93,6 @@ export function SystemSettingsPage() {
   const [materialFeeAmount, setMaterialFeeAmount] = useState<number | ''>('')
   const [loadedAddressBaseline, setLoadedAddressBaseline] = useState<string | null>(null)
 
-  const savedThemeRef = useRef<AppThemeId>(getAppliedAppTheme())
   const savedFormSnapshotRef = useRef('')
   const isDirtyRef = useRef(false)
 
@@ -116,6 +112,7 @@ export function SystemSettingsPage() {
     const themeId = normalizeAppThemeId(row.mode)
     setUpdatedAt(row.updated_at)
     setMode(themeId)
+    setMobileLocale(row.ui_locale === 'my' ? 'my' : 'en')
     setAddress(row.address ?? '')
     setLatitude(row.latitude ?? '')
     setLongitude(row.longitude ?? '')
@@ -125,25 +122,10 @@ export function SystemSettingsPage() {
 
   const syncSavedSnapshot = useCallback(
     (row: SystemSettingsRow, feeAmount: number | '') => {
-      savedThemeRef.current = normalizeAppThemeId(row.mode)
       savedFormSnapshotRef.current = snapshotFromState(row, feeAmount)
     },
     [],
   )
-
-  const commitSavedToApp = useCallback(
-    (row: SystemSettingsRow, feeAmount: number | '') => {
-      const themeId = normalizeAppThemeId(row.mode)
-      savedThemeRef.current = themeId
-      savedFormSnapshotRef.current = snapshotFromState(row, feeAmount)
-      syncAppUiFromSettings(row)
-    },
-    [],
-  )
-
-  const revertUnsavedTheme = useCallback(() => {
-    applyAppTheme(savedThemeRef.current)
-  }, [])
 
   const handleGeocodeCoords = useCallback((lat: number, lng: number) => {
     setLatitude(lat)
@@ -161,6 +143,7 @@ export function SystemSettingsPage() {
     () =>
       formSnapshot({
         mode,
+        ui_locale: mobileLocale,
         address,
         latitude,
         longitude,
@@ -168,7 +151,7 @@ export function SystemSettingsPage() {
         contactEmail,
         materialFeeAmount,
       }),
-    [mode, address, latitude, longitude, contactPhone, contactEmail, materialFeeAmount],
+    [mode, mobileLocale, address, latitude, longitude, contactPhone, contactEmail, materialFeeAmount],
   )
 
   const isDirty =
@@ -178,16 +161,7 @@ export function SystemSettingsPage() {
 
   const handleThemeChange = useCallback((next: ThemeMode) => {
     setMode(next)
-    applyAppTheme(next)
   }, [])
-
-  useEffect(() => {
-    return () => {
-      if (isDirtyRef.current) {
-        revertUnsavedTheme()
-      }
-    }
-  }, [revertUnsavedTheme])
 
   useErrorToast(loadError)
 
@@ -232,7 +206,7 @@ export function SystemSettingsPage() {
     try {
       const next = await resetSystemSettingsToDefaults()
       applySettingsRowToState(next)
-      commitSavedToApp(next, materialFeeAmount)
+      syncSavedSnapshot(next, materialFeeAmount)
       setLoadedAddressBaseline('')
       showSuccess(t('systemSettings.reset.success'))
     } catch (err) {
@@ -258,6 +232,7 @@ export function SystemSettingsPage() {
     const body: SystemSettingsUpdateBody = {
       ...fixedBrandingFields(),
       ...themeFieldsForApi(mode),
+      ui_locale: mobileLocale,
       latitude: lat != null && Number.isFinite(lat) ? lat : null,
       longitude: lng != null && Number.isFinite(lng) ? lng : null,
       address: address.trim() || null,
@@ -279,7 +254,7 @@ export function SystemSettingsPage() {
         setMaterialFeeName(updatedFee.name)
       }
       applySettingsRowToState(next)
-      commitSavedToApp(next, savedAmount)
+      syncSavedSnapshot(next, savedAmount)
       showSuccess(t('systemSettings.save.success'))
     } catch (err) {
       showError(messageFromError(err, t('systemSettings.save.failed')))
@@ -322,8 +297,8 @@ export function SystemSettingsPage() {
                     <span className="material-symbols-outlined">palette</span>
                   </span>
                   <div className="system-settings-section__copy">
-                    <h2 className="system-settings-section__title">{t('systemSettings.appearance')}</h2>
-                    <p className="system-settings-section__desc">{t('systemSettings.appearanceDesc')}</p>
+                    <h2 className="system-settings-section__title">{t('systemSettings.mobileApp')}</h2>
+                    <p className="system-settings-section__desc">{t('systemSettings.mobileAppDesc')}</p>
                   </div>
                 </header>
                 <div className="settings-form__stack settings-form__stack--relaxed">
@@ -331,7 +306,36 @@ export function SystemSettingsPage() {
                     value={mode}
                     onChange={handleThemeChange}
                     disabled={submitting || resetting || !hasApi}
+                    legendKey="systemSettings.mobileThemeLegend"
                   />
+                  <fieldset className="mobile-locale-picker" disabled={submitting || resetting || !hasApi}>
+                    <legend className="mobile-locale-picker__legend">{t('systemSettings.mobileLanguage')}</legend>
+                    <p className="mobile-locale-picker__hint">{t('systemSettings.mobileLanguageDesc')}</p>
+                    <div className="mobile-locale-picker__options">
+                      {LOCALE_OPTIONS.map((opt) => {
+                        const active = mobileLocale === opt.id
+                        return (
+                          <label
+                            key={opt.id}
+                            className={`mobile-locale-picker__option${active ? ' mobile-locale-picker__option--active' : ''}`}
+                          >
+                            <input
+                              type="radio"
+                              name="mobile-ui-locale"
+                              value={opt.id}
+                              checked={active}
+                              onChange={() => setMobileLocale(opt.id)}
+                              disabled={submitting || resetting || !hasApi}
+                            />
+                            <span className="material-symbols-outlined" aria-hidden>
+                              {opt.id === 'en' ? 'language' : 'translate'}
+                            </span>
+                            <span>{t(opt.labelKey)}</span>
+                          </label>
+                        )
+                      })}
+                    </div>
+                  </fieldset>
                   <div className="system-settings-subsection">
                     <div className="system-settings-subsection__head">
                       <span className="material-symbols-outlined system-settings-subsection__icon" aria-hidden>

@@ -236,6 +236,7 @@ export function applyAppTheme(themeId: AppThemeId): void {
   for (const [key, value] of Object.entries(preset.css)) {
     root.style.setProperty(key, value)
   }
+  persistAdminTheme(preset.mode as AppThemeId)
   if (typeof window !== 'undefined') {
     window.dispatchEvent(
       new CustomEvent('app-theme-changed', { detail: { themeId: preset.mode as AppThemeId } }),
@@ -243,11 +244,32 @@ export function applyAppTheme(themeId: AppThemeId): void {
   }
 }
 
+const ADMIN_THEME_KEY = 'admin-theme'
+
+/** Admin dashboard theme preference (local only — not shared with mobile). */
+export function readStoredAdminTheme(): AppThemeId {
+  try {
+    const saved = window.localStorage.getItem(ADMIN_THEME_KEY)
+    if (saved === 'dark' || saved === 'light' || saved === 'idhc') return saved
+  } catch {
+    /* ignore */
+  }
+  return 'idhc'
+}
+
+export function persistAdminTheme(themeId: AppThemeId): void {
+  try {
+    window.localStorage.setItem(ADMIN_THEME_KEY, themeId)
+  } catch {
+    /* ignore */
+  }
+}
+
 /** Last theme applied to the document (survives route changes). */
 export function getAppliedAppTheme(): AppThemeId {
   const fromDom = document.documentElement.dataset.theme
   if (fromDom === 'dark' || fromDom === 'light' || fromDom === 'idhc') return fromDom
-  return 'idhc'
+  return readStoredAdminTheme()
 }
 
 /** Chart stroke/fill colors for the active (or given) theme preset. */

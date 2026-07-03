@@ -10,6 +10,7 @@ import '../../widgets/auth/signup_role_selector.dart';
 import '../../widgets/common/themed_input_shell.dart';
 import '../../widgets/common/app_brand_mark.dart';
 import '../../widgets/common/app_toast.dart';
+import '../../widgets/auth/auth_preference_controls.dart';
 import '../../widgets/location/address_location_fields.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -60,13 +61,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final logoWidth = MediaQuery.sizeOf(context).width - 40;
     return Scaffold(
       body: SafeArea(
-        child: Form(
-          key: _formKey,
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(20, 26, 20, 16),
-            child: Column(
-              children: [
-                AppBrandMark(maxWidth: logoWidth),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const AuthPreferenceControls(),
+            Expanded(
+              child: Form(
+                key: _formKey,
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+                  child: Column(
+                    children: [
+                      AppBrandMark(maxWidth: logoWidth),
                 const SizedBox(height: 16),
                 Container(
                   width: double.infinity,
@@ -320,6 +326,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ],
             ),
           ),
+        ),
+            ),
+          ],
         ),
       ),
     );
