@@ -19,7 +19,7 @@ import { SampleCollectionPage } from './pages/SampleCollectionPage'
 import { StaffManagementPage } from './pages/StaffManagementPage'
 import { UserManagementPage } from './pages/UserManagementPage'
 import { SystemSettingsPage } from './pages/SystemSettingsPage'
-
+//make deployment (2026-07-04)
 function RequireAuth() {
   const { t } = useTranslation()
   const { signedIn, initializing } = useAuth()
