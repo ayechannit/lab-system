@@ -7,9 +7,9 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:889715110090:android:28b797b976cf88e6314433",
+        "mobilesdk_app_id": "1:889715110090:android:efe33d2489e1299a314433",
         "android_client_info": {
-          "package_name": "com.healthlab.lab_patient_app"
+          "package_name": "com.healthlab.labPatientApp"
         }
       },
       "oauth_client": [],

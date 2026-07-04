@@ -1,4 +1,4 @@
-package com.healthlab.lab_patient_app
+package com.healthlab.labPatientApp
 
 import io.flutter.embedding.android.FlutterActivity
 
