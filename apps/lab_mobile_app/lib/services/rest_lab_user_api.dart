@@ -1501,32 +1501,41 @@ class RestLabUserApi implements LabUserApi {
     return _parseUserReportSummary(_asObj(raw));
   }
 
-  bool _isUsableBannerImageUrl(String raw) {
-    if (raw.isEmpty) return false;
-    final lower = raw.toLowerCase();
-    if (lower.contains('localhost') ||
-        lower.contains('127.0.0.1') ||
-        lower.startsWith('http://')) {
-      return false;
+  /// Banner image URL for [Image.network].
+  /// Uses the API media proxy from `image_url` so Flutter web avoids S3 CORS
+  /// (website `<img>` works with presigned S3; Flutter fetches via XHR).
+  String? _bannerImageUrlFrom(Map<String, dynamic> json) {
+    final storageKey = '${_gv(json, 'image_url', 'imageUrl') ?? ''}'.trim();
+    final display = '${_gv(json, 'image_display_url', 'imageDisplayUrl') ?? ''}'.trim();
+
+    String? mediaProxyFromKey() {
+      if (storageKey.isEmpty ||
+          storageKey.startsWith('http://') ||
+          storageKey.startsWith('https://') ||
+          storageKey.startsWith('/')) {
+        return null;
+      }
+      final segments = storageKey
+          .replaceFirst(RegExp(r'^/+'), '')
+          .split('/')
+          .map(Uri.encodeComponent)
+          .join('/');
+      return '$_base/api/media/$segments';
     }
-    // Private S3 objects must be loaded via presigned URLs.
-    if (lower.contains('.s3.') && !lower.contains('x-amz-signature=')) {
-      return false;
-    }
-    return raw.startsWith('https://') || raw.startsWith('/');
+
+    final proxy = mediaProxyFromKey();
+    if (proxy != null) return proxy;
+
+    if (display.isEmpty) return null;
+    final lower = display.toLowerCase();
+    if (lower.contains('localhost') || lower.contains('127.0.0.1')) return null;
+    if (display.startsWith('https://')) return display;
+    if (display.startsWith('/')) return _absoluteUrl(display);
+    return null;
   }
 
   LabAdvertisement _parseAdvertisement(Map<String, dynamic> json) {
-    final displayRaw = '${_gv(json, 'image_display_url') ?? ''}'.trim();
-    final imageRaw = '${_gv(json, 'image_url') ?? ''}'.trim();
-    String? bannerUrl;
-
-    if (_isUsableBannerImageUrl(displayRaw)) {
-      bannerUrl = _absoluteUrl(displayRaw);
-    } else if (_isUsableBannerImageUrl(imageRaw)) {
-      bannerUrl = _absoluteUrl(imageRaw);
-    }
-
+    final bannerUrl = _bannerImageUrlFrom(json);
     final descRaw = '${_gv(json, 'description') ?? ''}'.trim();
 
     return LabAdvertisement(

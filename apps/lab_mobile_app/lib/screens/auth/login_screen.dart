@@ -134,16 +134,23 @@ class _LoginScreenState extends State<LoginScreen> {
                             crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
                               Expanded(child: _FieldLabel(label: l10n.password)),
-                              TextButton(
-                                style: TextButton.styleFrom(
-                                  padding: EdgeInsets.zero,
-                                  minimumSize: Size.zero,
-                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              Flexible(
+                                child: TextButton(
+                                  style: TextButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                                    minimumSize: Size.zero,
+                                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                  ),
+                                  onPressed: () {
+                                    context.push('/forgot-password', extra: _email.text.trim());
+                                  },
+                                  child: Text(
+                                    l10n.forgotPassword,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    textAlign: TextAlign.end,
+                                  ),
                                 ),
-                                onPressed: () {
-                                  context.push('/forgot-password', extra: _email.text.trim());
-                                },
-                                child: Text(l10n.forgotPassword),
                               ),
                             ],
                           ),

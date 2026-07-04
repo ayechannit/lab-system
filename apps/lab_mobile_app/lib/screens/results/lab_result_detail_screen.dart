@@ -6,6 +6,9 @@ import '../../l10n/app_localizations.dart';
 import '../../models/lab_result.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/theme_extensions.dart';
+import '../../widgets/common/app_branding_row.dart';
+import '../../widgets/common/notification_bell_button.dart';
+import '../../widgets/navigation/lab_main_bottom_nav.dart';
 import '../../widgets/results/lab_result_combined_card.dart';
 import '../../widgets/results/lab_result_test_card.dart';
 
@@ -18,6 +21,45 @@ class LabResultDetailScreen extends StatelessWidget {
       return;
     }
     context.go('/lab-results');
+  }
+
+  Widget _pageHeader(BuildContext context, AppLocalizations l10n) {
+    return Row(
+      children: [
+        IconButton(
+          tooltip: l10n.profileBack,
+          onPressed: () => _goBack(context),
+          icon: Icon(Icons.arrow_back_rounded, color: context.cs.primary),
+        ),
+        Expanded(
+          child: Text(
+            l10n.labReportTitle,
+            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _shell({
+    required Widget child,
+    required Future<void> Function() onRefresh,
+  }) {
+    return Scaffold(
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        titleSpacing: 4,
+        title: const AppBrandingRow(),
+        actions: const [NotificationBellButton()],
+      ),
+      bottomNavigationBar: const LabMainBottomNav(current: LabMainTab.results),
+      body: RefreshIndicator(
+        onRefresh: onRefresh,
+        child: child,
+      ),
+    );
   }
 
   @override
@@ -34,27 +76,22 @@ class LabResultDetailScreen extends StatelessWidget {
         final hasCombinedReports = displayRows.any((row) => row is LabResultCombinedRow);
         final l10n = AppLocalizations.of(context)!;
 
-        return Scaffold(
-          appBar: AppBar(
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back),
-              tooltip: l10n.profileBack,
-              onPressed: () => _goBack(context),
-            ),
-            title: Text(l10n.labReportTitle),
-          ),
-          body: RefreshIndicator(
-            onRefresh: () async {
-              final orderId = report?.orderId;
-              if (orderId != null) {
-                await session.selectResult(orderId);
-              }
-            },
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
-              physics: const AlwaysScrollableScrollPhysics(),
-              children: [
-                if (report == null)
+        Future<void> refreshReport() async {
+          final orderId = report?.orderId;
+          if (orderId != null) {
+            await session.selectResult(orderId);
+          }
+        }
+
+        return _shell(
+          onRefresh: refreshReport,
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
+            physics: const AlwaysScrollableScrollPhysics(),
+            children: [
+              _pageHeader(context, l10n),
+              const SizedBox(height: 12),
+              if (report == null)
                   _EmptyState(borderColor: borderColor, l10n: l10n)
                 else ...[
                   _OrderHeroCard(
@@ -133,7 +170,6 @@ class LabResultDetailScreen extends StatelessWidget {
                 ],
               ],
             ),
-          ),
         );
       },
     );

@@ -27,6 +27,7 @@ const streamPublicFile = async (req, res) => {
 
     res.setHeader('Content-Type', opened.contentType);
     res.setHeader('Cache-Control', 'public, max-age=3600');
+    res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Content-Disposition', `inline; filename="${opened.filename}"`);
     opened.stream.pipe(res);
   } catch (error) {

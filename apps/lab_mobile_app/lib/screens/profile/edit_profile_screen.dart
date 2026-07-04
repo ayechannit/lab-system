@@ -8,8 +8,8 @@ import '../../l10n/app_localizations.dart';
 import '../../app/session_scope.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/theme_extensions.dart';
-import '../../constants/brand_assets.dart';
-import '../../widgets/common/app_brand_mark.dart';
+import '../../widgets/common/app_branding_row.dart';
+import '../../widgets/common/notification_bell_button.dart';
 import '../../widgets/common/user_profile_avatar.dart';
 import '../../widgets/location/address_location_fields.dart';
 import '../../widgets/navigation/lab_main_bottom_nav.dart';
@@ -228,34 +228,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
-        leading: IconButton(
-          tooltip: l10n.profileBack,
-          onPressed: () => context.pop(),
-          icon: Icon(Icons.arrow_back_rounded, color: context.cs.primary),
-        ),
-        titleSpacing: 8,
-        title: Row(
-          children: [
-            AppBrandMark(
-              style: AppBrandMarkStyle.lockup,
-              height: 28,
-              maxWidth: 118,
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                l10n.profileEditTitle,
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      color: context.cs.primary,
-                      fontWeight: FontWeight.w800,
-                    ),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
-        ),
+        titleSpacing: 4,
+        title: const AppBrandingRow(),
+        actions: const [NotificationBellButton()],
       ),
       body: LayoutBuilder(
         builder: (context, constraints) {
@@ -266,6 +244,24 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           return ListView(
             padding: EdgeInsets.fromLTRB(hPad, 8, hPad, 24),
             children: [
+              Row(
+                children: [
+                  IconButton(
+                    tooltip: l10n.profileBack,
+                    onPressed: () => context.pop(),
+                    icon: Icon(Icons.arrow_back_rounded, color: context.cs.primary),
+                  ),
+                  Expanded(
+                    child: Text(
+                      l10n.profileEditTitle,
+                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
               AnimatedSize(
                 duration: const Duration(milliseconds: 280),
                 curve: Curves.easeOutCubic,

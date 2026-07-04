@@ -4,11 +4,15 @@ import 'package:go_router/go_router.dart';
 import '../../app/session_scope.dart';
 import '../../l10n/app_localizations.dart';
 import '../../l10n/order_l10n.dart';
+import '../../services/session_controller.dart';
 import '../../theme/theme_extensions.dart';
+import '../../widgets/common/app_branding_row.dart';
 import '../../widgets/common/app_toast.dart';
+import '../../widgets/common/notification_bell_button.dart';
 import '../../widgets/common/order_status_chip.dart';
 import '../../widgets/common/section_card.dart';
 import '../../widgets/common/status_timeline.dart';
+import '../../widgets/navigation/lab_main_bottom_nav.dart';
 
 class OrderTrackingScreen extends StatelessWidget {
   const OrderTrackingScreen({super.key});
@@ -21,6 +25,47 @@ class OrderTrackingScreen extends StatelessWidget {
     context.go('/orders');
   }
 
+  Widget _pageHeader(BuildContext context, AppLocalizations l10n) {
+    return Row(
+      children: [
+        IconButton(
+          tooltip: l10n.profileBack,
+          onPressed: () => _goBack(context),
+          icon: Icon(Icons.arrow_back_rounded, color: context.cs.primary),
+        ),
+        Expanded(
+          child: Text(
+            l10n.orderTracking,
+            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _shell({
+    required BuildContext context,
+    required SessionController session,
+    required AppLocalizations l10n,
+    required Widget child,
+  }) {
+    return Scaffold(
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        titleSpacing: 4,
+        title: const AppBrandingRow(),
+        actions: const [NotificationBellButton()],
+      ),
+      bottomNavigationBar: const LabMainBottomNav(current: LabMainTab.orders),
+      body: RefreshIndicator(
+        onRefresh: () => session.refreshTracking(),
+        child: child,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final session = SessionScope.of(context);
@@ -30,29 +75,22 @@ class OrderTrackingScreen extends StatelessWidget {
       builder: (context, _) {
         final order = session.trackingOrder;
         if (order == null) {
-          return Scaffold(
-            appBar: AppBar(
-              leading: IconButton(
-                icon: const Icon(Icons.arrow_back),
-                tooltip: l10n.profileBack,
-                onPressed: () => _goBack(context),
-              ),
-              title: Text(l10n.orderTracking),
-            ),
-            body: RefreshIndicator(
-              onRefresh: () => session.refreshTracking(),
-              child: ListView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(24),
-                children: [
-                  SizedBox(height: MediaQuery.sizeOf(context).height * 0.25),
-                  Text(
-                    l10n.trackingEmptyState,
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: context.cs.onSurfaceVariant),
-                  ),
-                ],
-              ),
+          return _shell(
+            context: context,
+            session: session,
+            l10n: l10n,
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+              children: [
+                _pageHeader(context, l10n),
+                SizedBox(height: MediaQuery.sizeOf(context).height * 0.2),
+                Text(
+                  l10n.trackingEmptyState,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: context.cs.onSurfaceVariant),
+                ),
+              ],
             ),
           );
         }
@@ -70,21 +108,16 @@ class OrderTrackingScreen extends StatelessWidget {
             l10n.trackingReportOut(formatTrackingDateTime(order.reportOutAt, l10n)),
         ];
 
-        return Scaffold(
-          appBar: AppBar(
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back),
-              tooltip: l10n.profileBack,
-              onPressed: () => _goBack(context),
-            ),
-            title: Text(l10n.orderTracking),
-          ),
-          body: RefreshIndicator(
-            onRefresh: () => session.refreshTracking(),
-            child: ListView(
-              padding: const EdgeInsets.all(20),
-              children: [
-                SectionCard(
+        return _shell(
+          context: context,
+          session: session,
+          l10n: l10n,
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+            children: [
+              _pageHeader(context, l10n),
+              const SizedBox(height: 12),
+              SectionCard(
                   title: l10n.trackingOrderId(order.id),
                   subtitle: order.createdAtLabel,
                   child: Column(
@@ -174,7 +207,6 @@ class OrderTrackingScreen extends StatelessWidget {
                 ),
               ],
             ),
-          ),
         );
       },
     );
