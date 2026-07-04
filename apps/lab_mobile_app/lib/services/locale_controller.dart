@@ -1,10 +1,10 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 const _localeKey = 'app_locale';
+const _localeUserChosenKey = 'app_locale_user_chosen';
 
-/// Supported app locales (`en`, `my`).
+/// Supported app locales (`en`, `my`). Defaults to Myanmar unless the user picks English.
 class LocaleController extends ChangeNotifier {
   LocaleController() {
     _load();
@@ -19,13 +19,15 @@ class LocaleController extends ChangeNotifier {
   Future<void> _load() async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      final userChosen = prefs.getBool(_localeUserChosenKey) ?? false;
       final saved = prefs.getString(_localeKey);
-      if (saved == 'my') {
-        _locale = const Locale('my');
-      } else if (saved == 'en') {
-        _locale = const Locale('en');
+      if (userChosen && (saved == 'my' || saved == 'en')) {
+        _locale = Locale(saved!);
       } else {
         _locale = const Locale('my');
+        if (saved != null) {
+          await prefs.remove(_localeKey);
+        }
       }
     } catch (_) {
       /* keep default */
@@ -41,6 +43,7 @@ class LocaleController extends ChangeNotifier {
     notifyListeners();
     try {
       final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_localeUserChosenKey, true);
       await prefs.setString(_localeKey, next.languageCode);
     } catch (_) {
       /* ignore */
@@ -50,19 +53,4 @@ class LocaleController extends ChangeNotifier {
   Future<void> setEnglish() => setLocale(const Locale('en'));
 
   Future<void> setMyanmar() => setLocale(const Locale('my'));
-
-  /// Apply org-wide locale from system settings (mobile app default language).
-  Future<void> applyOrgLocale(String? code) async {
-    if (code != 'en' && code != 'my') return;
-    final next = Locale(code!);
-    if (_locale.languageCode == next.languageCode) return;
-    _locale = next;
-    notifyListeners();
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_localeKey, next.languageCode);
-    } catch (_) {
-      /* ignore */
-    }
-  }
 }

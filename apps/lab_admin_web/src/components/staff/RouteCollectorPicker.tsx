@@ -11,6 +11,11 @@ type RouteCollectorPickerProps = {
   onChange: (collectorId: string) => void
   disabled?: boolean
   locked?: boolean
+  /** When true, empty selection is allowed and shown as "no preference". */
+  allowNone?: boolean
+  noneLabel?: string
+  noneHint?: string
+  placeholderLabel?: string
 }
 
 export function RouteCollectorPicker({
@@ -21,12 +26,21 @@ export function RouteCollectorPicker({
   onChange,
   disabled = false,
   locked = false,
+  allowNone = false,
+  noneLabel,
+  noneHint,
+  placeholderLabel,
 }: RouteCollectorPickerProps) {
   const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
   const selected = collectors.find((s) => s.id === collectorId) ?? null
   const isDisabled = disabled || locked
+  const emptyLabel =
+    allowNone && !collectorId
+      ? (noneLabel ?? t('orders.create.preferredCollectorNone'))
+      : (placeholderLabel ?? t('collections.editModal.selectCollector'))
+  const emptyHint = allowNone && !collectorId ? (noneHint ?? routeLabel) : routeLabel
 
   useEffect(() => {
     if (locked) setOpen(false)
@@ -114,9 +128,9 @@ export function RouteCollectorPicker({
               </span>
               <span className="route-collector-picker__identity">
                 <span className="route-collector-picker__name route-collector-picker__name--placeholder">
-                  Select collector
+                  {emptyLabel}
                 </span>
-                <span className="route-collector-picker__email">{routeLabel}</span>
+                <span className="route-collector-picker__email">{emptyHint}</span>
               </span>
             </>
           )}
@@ -129,6 +143,38 @@ export function RouteCollectorPicker({
 
       {!locked && open ? (
         <ul className="route-collector-picker__menu" role="listbox" aria-labelledby={id}>
+          {allowNone ? (
+            <li role="presentation">
+              <button
+                type="button"
+                role="option"
+                aria-selected={!collectorId}
+                className={`route-collector-picker__option${
+                  !collectorId ? ' route-collector-picker__option--active' : ''
+                }`}
+                onClick={() => pick('')}
+              >
+                <span className="staff-avatar route-collector-picker__option-avatar route-collector-picker__avatar--empty">
+                  <span className="material-symbols-outlined" aria-hidden>
+                    person_off
+                  </span>
+                </span>
+                <span className="route-collector-picker__option-copy">
+                  <span className="route-collector-picker__option-name">
+                    {noneLabel ?? t('orders.create.preferredCollectorNone')}
+                  </span>
+                  <span className="route-collector-picker__option-email">
+                    {noneHint ?? t('orders.create.preferredCollectorNoneHint')}
+                  </span>
+                </span>
+                {!collectorId ? (
+                  <span className="material-symbols-outlined route-collector-picker__check" aria-hidden>
+                    check
+                  </span>
+                ) : null}
+              </button>
+            </li>
+          ) : null}
           {collectors.map((collector) => {
             const active = collector.id === collectorId
             return (

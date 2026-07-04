@@ -25,7 +25,7 @@ const THEME_PRESETS = {
 
 class SystemSetting {
   static normalizeUiLocale(value) {
-    return value === 'my' ? 'my' : 'en';
+    return value === 'en' ? 'en' : 'my';
   }
 
   static normalizeThemeMode(mode) {

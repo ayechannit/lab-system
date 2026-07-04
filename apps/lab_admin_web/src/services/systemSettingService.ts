@@ -102,7 +102,7 @@ export function normalizeHexColor(v: string | null | undefined, fallback: string
 }
 
 function normalizeUiLocale(v: unknown): 'en' | 'my' {
-  return String(v) === 'my' ? 'my' : 'en'
+  return String(v) === 'en' ? 'en' : 'my'
 }
 
 export function normalizeSystemSettings(raw: Record<string, unknown> | null | undefined): SystemSettingsRow {

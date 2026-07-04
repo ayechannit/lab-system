@@ -232,7 +232,7 @@ export function ServiceGeofenceFormModal({
                   />
                 </div>
                 <div className="field">
-                  <label htmlFor="sgf-priority">{t('serviceGeofences.form.priority')}</label>
+                  <label htmlFor="sgf-priority">{t('serviceGeofences.form.coverage')}</label>
                   <select
                     id="sgf-priority"
                     className="select-chevron-left"
@@ -240,8 +240,8 @@ export function ServiceGeofenceFormModal({
                     onChange={(e) => setPriority(e.target.value === '0' ? 0 : 1)}
                     disabled={submitting}
                   >
-                    <option value={1}>{t('serviceGeofences.form.priorityUrgent')}</option>
-                    <option value={0}>{t('serviceGeofences.form.priorityNormal')}</option>
+                    <option value={1}>{t('serviceGeofences.form.priorityInside')}</option>
+                    <option value={0}>{t('serviceGeofences.form.priorityOutside')}</option>
                   </select>
                   <p className="discount-form-modal__hint">{t('serviceGeofences.form.priorityHint')}</p>
                 </div>

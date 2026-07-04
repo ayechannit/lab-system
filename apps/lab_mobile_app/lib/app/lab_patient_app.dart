@@ -46,14 +46,6 @@ class _LabPatientAppState extends State<LabPatientApp> with WidgetsBindingObserv
     loadSettings();
     _locale.addListener(_syncApiLocale);
     _syncApiLocale();
-    _settings.addListener(_syncOrgLocaleFromSettings);
-  }
-
-  void _syncOrgLocaleFromSettings() {
-    final code = _settings.uiLocale;
-    if (code == 'en' || code == 'my') {
-      unawaited(_locale.applyOrgLocale(code));
-    }
   }
 
   void _syncApiLocale() {
@@ -67,7 +59,6 @@ class _LabPatientAppState extends State<LabPatientApp> with WidgetsBindingObserv
     _session.dispose();
     _settings.dispose();
     _locale.removeListener(_syncApiLocale);
-    _settings.removeListener(_syncOrgLocaleFromSettings);
     _locale.dispose();
     _userTheme.dispose();
     super.dispose();

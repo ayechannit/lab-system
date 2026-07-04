@@ -10,7 +10,7 @@ import { messageFromError, useErrorToast } from '../hooks/usePageNotify'
 import { TableActionMenu } from '../components/common/TableActionMenu'
 import { DEFAULT_TABLE_PAGE_SIZE, TablePagination } from '../components/common/TablePagination'
 import { formatCoordPair, hasUsableCoords, LocationMapPicker } from '../components/users/LocationMapPicker'
-import type { EndUserRole, LabTestCatalogRow, UserListRow } from '../model/types'
+import type { EndUserRole, LabTestCatalogRow, StaffListRow, UserListRow } from '../model/types'
 import { getApiBaseUrl, isApiMode } from '../services/apiBase'
 import { fetchAllDiscounts, type TestDiscountListRow } from '../services/discountService'
 import { fetchLabTestsList } from '../services/labTestCatalogService'
@@ -42,6 +42,9 @@ import {
   type CalculateServiceFeeResult,
 } from '../services/serviceGeofenceService'
 import { fetchActiveMaterialFees, type MaterialFeeRow } from '../services/materialFeeService'
+import { fetchStaffList } from '../services/staffService'
+import { RouteCollectorPicker } from '../components/staff/RouteCollectorPicker'
+import { collectorRoleStaffList } from '../utils/collectorStaff'
 import '../components/common/ui.css'
 import i18n from '../i18n'
 import { formatReportDeliveryMethod } from '../utils/orderDisplay'
@@ -678,6 +681,9 @@ export function OrderManagementPage() {
   const [createServiceFeeOutOfCoverage, setCreateServiceFeeOutOfCoverage] = useState(false)
   const [createMaterialFee, setCreateMaterialFee] = useState<MaterialFeeRow | null>(null)
   const [createMaterialFeeLoading, setCreateMaterialFeeLoading] = useState(false)
+  const [createCollectors, setCreateCollectors] = useState<StaffListRow[]>([])
+  const [createCollectorsLoading, setCreateCollectorsLoading] = useState(false)
+  const [createCollectorId, setCreateCollectorId] = useState('')
 
   const [editOpen, setEditOpen] = useState(false)
   const [editOrderId, setEditOrderId] = useState<string | null>(null)
@@ -785,6 +791,31 @@ export function OrderManagementPage() {
       cancelled = true
     }
   }, [createOpen])
+
+  useEffect(() => {
+    if (!createOpen || !hasApi) {
+      setCreateCollectors([])
+      setCreateCollectorsLoading(false)
+      return
+    }
+    let cancelled = false
+    setCreateCollectorsLoading(true)
+    fetchStaffList({ role: 'collector', is_active: true })
+      .then((rows) => {
+        if (cancelled) return
+        setCreateCollectors(collectorRoleStaffList(rows))
+      })
+      .catch(() => {
+        if (cancelled) return
+        setCreateCollectors([])
+      })
+      .finally(() => {
+        if (!cancelled) setCreateCollectorsLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [createOpen, hasApi])
 
   const [assignOpen, setAssignOpen] = useState(false)
   /** Order loaded for the assign-tests modal (from detail or from row “Add test”). */
@@ -1085,6 +1116,7 @@ export function OrderManagementPage() {
     setCreateTestPickerOpen(false)
     setCreateLatitude('')
     setCreateLongitude('')
+    setCreateCollectorId('')
     if (!firstUser && !firstTest) {
       setCreateError(t('orders.create.noUsersOrTests'))
     } else if (!firstUser) {
@@ -1158,6 +1190,7 @@ export function OrderManagementPage() {
     try {
       await createOrder({
         user_id: createUserId,
+        ...(createCollectorId.trim() ? { collector_id: createCollectorId.trim() } : {}),
         description: createDescription.trim() || null,
         priority: createPriority,
         patient_name: createPatientName.trim(),
@@ -1914,6 +1947,28 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
                   {formatCoordPair(createLatitude, createLongitude)}
                 </p>
                 {createGeocodeHint ? <p className="user-form-modal__geocode-hint">{createGeocodeHint}</p> : null}
+              </div>
+              <div className="field">
+                <label htmlFor="om-collector">{t('orders.create.preferredCollector')}</label>
+                {createCollectorsLoading ? (
+                  <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--muted)' }}>
+                    {t('orders.create.preferredCollectorLoading')}
+                  </p>
+                ) : createCollectors.length > 0 ? (
+                  <RouteCollectorPicker
+                    id="om-collector"
+                    routeLabel={t('orders.create.preferredCollectorHint')}
+                    collectorId={createCollectorId}
+                    collectors={createCollectors}
+                    allowNone
+                    onChange={setCreateCollectorId}
+                    disabled={createSubmitting}
+                  />
+                ) : (
+                  <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--muted)' }}>
+                    {t('orders.create.noCollectors')}
+                  </p>
+                )}
               </div>
               <div className="field">
                 <label htmlFor="om-desc">{t('orders.create.description')}</label>

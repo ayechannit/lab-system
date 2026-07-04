@@ -52,11 +52,11 @@ class RestLabUserApi implements LabUserApi {
 
   final String _base;
   String? _token;
-  String _localeCode = 'en';
+  String _localeCode = 'my';
 
   @override
   void setLocaleCode(String? localeCode) {
-    _localeCode = localeCode == 'my' ? 'my' : 'en';
+    _localeCode = localeCode == 'en' ? 'en' : 'my';
   }
 
   @override
@@ -1501,25 +1501,30 @@ class RestLabUserApi implements LabUserApi {
     return _parseUserReportSummary(_asObj(raw));
   }
 
+  bool _isUsableBannerImageUrl(String raw) {
+    if (raw.isEmpty) return false;
+    final lower = raw.toLowerCase();
+    if (lower.contains('localhost') ||
+        lower.contains('127.0.0.1') ||
+        lower.startsWith('http://')) {
+      return false;
+    }
+    // Private S3 objects must be loaded via presigned URLs.
+    if (lower.contains('.s3.') && !lower.contains('x-amz-signature=')) {
+      return false;
+    }
+    return raw.startsWith('https://') || raw.startsWith('/');
+  }
+
   LabAdvertisement _parseAdvertisement(Map<String, dynamic> json) {
     final displayRaw = '${_gv(json, 'image_display_url') ?? ''}'.trim();
     final imageRaw = '${_gv(json, 'image_url') ?? ''}'.trim();
     String? bannerUrl;
-    if (displayRaw.isNotEmpty) {
+
+    if (_isUsableBannerImageUrl(displayRaw)) {
       bannerUrl = _absoluteUrl(displayRaw);
-    } else if (imageRaw.isNotEmpty) {
-      if (imageRaw.startsWith('http://') ||
-          imageRaw.startsWith('https://') ||
-          imageRaw.startsWith('/')) {
-        bannerUrl = _absoluteUrl(imageRaw);
-      } else {
-        final segments = imageRaw
-            .replaceFirst(RegExp(r'^/+'), '')
-            .split('/')
-            .map(Uri.encodeComponent)
-            .join('/');
-        bannerUrl = '$_base/api/media/$segments';
-      }
+    } else if (_isUsableBannerImageUrl(imageRaw)) {
+      bannerUrl = _absoluteUrl(imageRaw);
     }
 
     final descRaw = '${_gv(json, 'description') ?? ''}'.trim();

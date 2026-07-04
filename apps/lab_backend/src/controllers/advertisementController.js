@@ -6,8 +6,7 @@ async function enrichAdvertisementImage(ad) {
   const row = { ...ad };
   if (!row.image_url) return row;
   try {
-    const resolved = StorageService.getPublicStreamUrl(row.image_url);
-    if (resolved) row.image_display_url = resolved;
+    row.image_display_url = await StorageService.getPublicDisplayUrl(row.image_url);
   } catch (err) {
     console.error('Failed to resolve advertisement image_url:', err.message);
   }
@@ -82,7 +81,10 @@ const uploadBannerImage = async (req, res) => {
     }
 
     const fileKey = await StorageService.uploadFile(req.file, 'advertisements');
-    const imageDisplayUrl = StorageService.getPublicStreamUrl(fileKey) || fileKey;
+    const imageDisplayUrl = await StorageService.getPublicDisplayUrl(fileKey);
+    if (!imageDisplayUrl) {
+      return res.status(500).json({ error: 'Failed to generate banner image URL' });
+    }
 
     res.json({
       message: 'Banner image uploaded successfully',

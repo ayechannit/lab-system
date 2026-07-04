@@ -55,9 +55,8 @@ class LabSystemSettings {
 
   static String? _normalizeUiLocale(dynamic v) {
     final code = v?.toString().trim().toLowerCase();
-    if (code == 'my') return 'my';
     if (code == 'en') return 'en';
-    return null;
+    return 'my';
   }
 
   factory LabSystemSettings.defaults() => const LabSystemSettings(

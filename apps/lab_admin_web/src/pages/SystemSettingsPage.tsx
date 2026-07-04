@@ -59,7 +59,7 @@ function snapshotFromState(
 ): string {
   return formSnapshot({
     mode: normalizeAppThemeId(row.mode),
-    ui_locale: row.ui_locale === 'my' ? 'my' : 'en',
+    ui_locale: row.ui_locale === 'en' ? 'en' : 'my',
     address: row.address ?? '',
     latitude: row.latitude ?? '',
     longitude: row.longitude ?? '',
@@ -112,7 +112,7 @@ export function SystemSettingsPage() {
     const themeId = normalizeAppThemeId(row.mode)
     setUpdatedAt(row.updated_at)
     setMode(themeId)
-    setMobileLocale(row.ui_locale === 'my' ? 'my' : 'en')
+    setMobileLocale(row.ui_locale === 'en' ? 'en' : 'my')
     setAddress(row.address ?? '')
     setLatitude(row.latitude ?? '')
     setLongitude(row.longitude ?? '')

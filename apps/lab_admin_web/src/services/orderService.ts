@@ -145,6 +145,7 @@ export type ApiOrderCreateItem = {
 
 export type ApiOrderCreateBody = {
   user_id: string
+  collector_id?: string | null
   description?: string | null
   priority: 'urgent' | 'elective'
   patient_name: string

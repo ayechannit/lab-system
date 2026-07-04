@@ -83,8 +83,18 @@ export function resolveAdvertisementImageUrl(
   imageUrl: string | null | undefined,
   imageDisplayUrl?: string | null,
 ): string | null {
+  const isUsable = (u: string) => {
+    const t = u.trim()
+    if (!t) return false
+    const lower = t.toLowerCase()
+    if (lower.includes('localhost') || lower.includes('127.0.0.1')) return false
+    if (lower.startsWith('http://')) return false
+    if (lower.includes('.s3.') && !lower.includes('x-amz-signature=')) return false
+    return true
+  }
+
   const display = (imageDisplayUrl ?? '').trim()
-  if (display) {
+  if (display && isUsable(display)) {
     if (display.startsWith('data:') || display.startsWith('http://') || display.startsWith('https://')) {
       return display
     }
@@ -95,19 +105,14 @@ export function resolveAdvertisementImageUrl(
   }
 
   const u = (imageUrl ?? '').trim()
-  if (!u) return null
-  if (u.startsWith('data:') || u.startsWith('http://') || u.startsWith('https://')) return u
+  if (!u || !isUsable(u)) return null
+  if (u.startsWith('data:') || u.startsWith('https://')) return u
+  if (u.startsWith('http://')) return null
   if (u.startsWith('/')) {
     const base = getApiBaseUrl()?.replace(/\/$/, '')
     if (base) return `${base}${u}`
   }
-  // Storage key (e.g. advertisements/ad-banner-123.jpeg) — proxy via API to avoid S3 CORS
-  const base = getApiBaseUrl()?.replace(/\/$/, '')
-  if (base) {
-    const segments = u.replace(/^\/+/, '').split('/').map(encodeURIComponent).join('/')
-    return `${base}/api/media/${segments}`
-  }
-  return u
+  return null
 }
 
 export function formatAdSchedulePeriod(start: string | null, end: string | null): string {

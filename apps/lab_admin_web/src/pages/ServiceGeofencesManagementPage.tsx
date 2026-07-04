@@ -515,7 +515,7 @@ export function ServiceGeofencesManagementPage() {
                 <th>{t('common.name')}</th>
                 <th>{t('serviceGeofences.table.bounds')}</th>
                 <th>{t('serviceGeofences.table.fee')}</th>
-                <th>{t('common.priority')}</th>
+                <th>{t('serviceGeofences.form.coverage')}</th>
                 <th>{t('common.active')}</th>
                 <th className="action-col">{t('common.actions')}</th>
               </tr>
@@ -579,8 +579,8 @@ export function ServiceGeofencesManagementPage() {
                     </td>
                     <td>
                       {r.priority === 1
-                        ? t('serviceGeofences.form.priorityUrgent')
-                        : t('serviceGeofences.form.priorityNormal')}
+                        ? t('serviceGeofences.form.priorityInside')
+                        : t('serviceGeofences.form.priorityOutside')}
                     </td>
                     <td>
                       {r.is_active ? (
