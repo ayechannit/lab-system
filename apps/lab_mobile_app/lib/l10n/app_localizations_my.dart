@@ -532,6 +532,14 @@ class AppLocalizationsMy extends AppLocalizations {
   String get resultsReleasedBadge => 'ပေးပို့ပြီး';
 
   @override
+  String get resultsHardCopyBadge => 'ပေးပို့ပြီး';
+
+  @override
+  String resultsHardCopyDate(String date) {
+    return 'ပေးပို့သည့်ရက် $date';
+  }
+
+  @override
   String get labReportTitle => 'ဓာတ်ခွဲခန်း အစီရင်ခံစာ';
 
   @override
@@ -559,6 +567,15 @@ class AppLocalizationsMy extends AppLocalizations {
 
   @override
   String get labReportPdfsNotUploadedYet => 'မှာယူမှုကို ပေးပို့ပြီးသော်လည်း PDF ဖိုင်များ မတင်ရသေးပါ။ အနည်းငယ်စောင့်ပြီး ထပ်မံစစ်ဆေးပါ သို့မဟုတ် ဓာတ်ခွဲခန်းသို့ ဆက်သွယ်ပါ။';
+
+  @override
+  String get labReportHardCopyHint => 'မိတ္တူပုံစံသာ — ဒစ်ဂျစ်တယ် PDF များကို ဤအက်ပ်တွင် မရရှိနိုင်ပါ။';
+
+  @override
+  String get labReportHardCopyDeliveredBanner => 'သင့်ရဲ့ မိတ္တူပုံစံ ဓာတ်ခွဲအစီရင်ခံစာကို ပေးပို့ပြီးပါပြီ။ နောက်ထပ်တစ်စောင် လိုအပ်ပါက ဓာတ်ခွဲခန်းသို့ ဆက်သွယ်ပါ။';
+
+  @override
+  String get labReportHardCopyTestDelivered => 'ဤစစ်ဆေးမှုအတွက် မိတ္တူပုံစံ အစီရင်ခံစာ ပေးပို့ပြီးပါပြီ။';
 
   @override
   String get labReportSummaryValues => 'အကျဉ်းချုပ် ရလဒ်များ';

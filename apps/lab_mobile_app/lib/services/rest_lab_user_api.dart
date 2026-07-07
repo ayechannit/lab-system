@@ -704,6 +704,7 @@ class RestLabUserApi implements LabUserApi {
       scheduleAcceptedByUser: summary.scheduleAcceptedByUser,
       backendStatus: summary.backendStatus,
       lineItems: summary.lineItems,
+      reportDeliveryMethod: summary.reportDeliveryMethod,
     );
   }
 
@@ -778,6 +779,10 @@ class RestLabUserApi implements LabUserApi {
 
     final status = '${_gv(o, 'status') ?? 'pending'}'.toLowerCase();
     final timeline = _buildTimeline(status, createdAt, collectionTime, runningTime, reportOutTime, collectorName);
+    final deliveryMethod =
+        '${_gv(o, 'report_delivery_method') ?? _gv(o, 'reportDeliveryMethod') ?? 'soft_copy'}'
+            .trim()
+            .toLowerCase();
 
     return LabOrderSummary(
       id: id,
@@ -798,6 +803,7 @@ class RestLabUserApi implements LabUserApi {
       scheduleAcceptedByUser: accepted,
       backendStatus: status,
       lineItems: lineItems,
+      reportDeliveryMethod: deliveryMethod,
     );
   }
 
@@ -952,6 +958,10 @@ class RestLabUserApi implements LabUserApi {
         '${createdAt.year}-${createdAt.month.toString().padLeft(2, '0')}-${createdAt.day.toString().padLeft(2, '0')}';
     final status = '${_gv(row, 'status') ?? 'pending'}'.toLowerCase();
     final timeline = _buildTimeline(status, createdAt, null, null, null, null);
+    final deliveryMethod =
+        '${_gv(row, 'report_delivery_method') ?? _gv(row, 'reportDeliveryMethod') ?? 'soft_copy'}'
+            .trim()
+            .toLowerCase();
     return LabOrderSummary(
       id: id,
       userId: userId,
@@ -964,6 +974,7 @@ class RestLabUserApi implements LabUserApi {
       timeline: timeline,
       createdAtLabel: createdLabel,
       backendStatus: status,
+      reportDeliveryMethod: deliveryMethod,
     );
   }
 
@@ -1001,7 +1012,11 @@ class RestLabUserApi implements LabUserApi {
     return out;
   }
 
-  LabResultReport _mapOrderDetailToResult(Map<String, dynamic> o, String orderId) {
+  LabResultReport _mapOrderDetailToResult(
+    Map<String, dynamic> o,
+    String orderId, {
+    bool includeDigitalPdfs = true,
+  }) {
     final items = o['items'];
     final tests = <LabResultTestItem>[];
     DateTime? latestReleased;
@@ -1010,6 +1025,10 @@ class RestLabUserApi implements LabUserApi {
     final patientAgeRaw = _gv(o, 'patient_age') ?? _gv(o, 'patientAge');
     final patientAge = patientAgeRaw == null ? null : int.tryParse('$patientAgeRaw');
     var sampleRef = patientName;
+    final deliveryMethod =
+        '${_gv(o, 'report_delivery_method') ?? _gv(o, 'reportDeliveryMethod') ?? 'soft_copy'}'
+            .trim()
+            .toLowerCase();
 
     if (items is List) {
       for (final it in items) {
@@ -1035,8 +1054,10 @@ class RestLabUserApi implements LabUserApi {
         }
         if (name.isEmpty) name = 'Lab test';
 
-        final url = _gv(m, 'download_url') ?? _gv(m, 'downloadUrl');
-        final fileKey = _gv(m, 'result_file_url') ?? _gv(m, 'resultFileUrl');
+        final url = includeDigitalPdfs ? _gv(m, 'download_url') ?? _gv(m, 'downloadUrl') : null;
+        final fileKey = includeDigitalPdfs
+            ? _gv(m, 'result_file_url') ?? _gv(m, 'resultFileUrl')
+            : null;
         final pdfGroupId =
             '${_gv(m, 'result_pdf_group_id') ?? _gv(m, 'resultPdfGroupId') ?? ''}'.trim();
         final pdfDisplaySoloRaw = _gv(m, 'result_pdf_display_solo') ?? _gv(m, 'resultPdfDisplaySolo');
@@ -1088,6 +1109,7 @@ class RestLabUserApi implements LabUserApi {
       lines: const [],
       resultPdfUrl: firstPdf?.pdfUrl,
       resultTestId: firstPdf?.testId,
+      reportDeliveryMethod: deliveryMethod,
     );
   }
 
@@ -1121,6 +1143,12 @@ class RestLabUserApi implements LabUserApi {
     }
     final status = '${_gv(o, 'status')}'.toLowerCase();
     if (status != 'delivered') return null;
+    final deliveryMethod = '${_gv(o, 'report_delivery_method') ?? _gv(o, 'reportDeliveryMethod') ?? ''}'
+        .trim()
+        .toLowerCase();
+    if (deliveryMethod == 'hard_copy') {
+      return _mapOrderDetailToResult(o, orderId, includeDigitalPdfs: false);
+    }
     return _mapOrderDetailToResult(o, orderId);
   }
 

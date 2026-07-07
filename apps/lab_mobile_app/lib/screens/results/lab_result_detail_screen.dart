@@ -74,6 +74,7 @@ class LabResultDetailScreen extends StatelessWidget {
         final displayRows = report?.displayRows ?? const <LabResultDisplayRow>[];
         final releasedCount = report?.releasedTestCount ?? 0;
         final hasCombinedReports = displayRows.any((row) => row is LabResultCombinedRow);
+        final isHardCopyOnly = report?.isHardCopyOnly ?? false;
         final l10n = AppLocalizations.of(context)!;
 
         Future<void> refreshReport() async {
@@ -100,6 +101,7 @@ class LabResultDetailScreen extends StatelessWidget {
                     releasedCount: releasedCount,
                     borderColor: borderColor,
                     l10n: l10n,
+                    isHardCopyOnly: isHardCopyOnly,
                   ),
                   const SizedBox(height: 20),
                   Text(
@@ -118,7 +120,11 @@ class LabResultDetailScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    hasCombinedReports ? l10n.labReportCombinedHint : l10n.labReportSeparateHint,
+                    isHardCopyOnly
+                        ? l10n.labReportHardCopyHint
+                        : hasCombinedReports
+                            ? l10n.labReportCombinedHint
+                            : l10n.labReportSeparateHint,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: context.cs.onSurfaceVariant,
                           height: 1.4,
@@ -129,6 +135,12 @@ class LabResultDetailScreen extends StatelessWidget {
                     _InfoBanner(
                       message: l10n.labReportNoTestLines,
                       borderColor: borderColor,
+                    )
+                  else if (isHardCopyOnly)
+                    _InfoBanner(
+                      message: l10n.labReportHardCopyDeliveredBanner,
+                      borderColor: borderColor,
+                      icon: Icons.local_shipping_outlined,
                     )
                   else if (releasedCount == 0)
                     _InfoBanner(
@@ -183,6 +195,7 @@ class _OrderHeroCard extends StatelessWidget {
     required this.releasedCount,
     required this.borderColor,
     required this.l10n,
+    required this.isHardCopyOnly,
   });
 
   final LabResultReport report;
@@ -190,6 +203,7 @@ class _OrderHeroCard extends StatelessWidget {
   final int releasedCount;
   final Color borderColor;
   final AppLocalizations l10n;
+  final bool isHardCopyOnly;
 
   @override
   Widget build(BuildContext context) {
@@ -233,7 +247,7 @@ class _OrderHeroCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(
-                  l10n.resultsReleasedBadge,
+                  isHardCopyOnly ? l10n.resultsHardCopyBadge : l10n.resultsReleasedBadge,
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
                         color: Colors.white,
                         fontWeight: FontWeight.w700,
@@ -241,7 +255,7 @@ class _OrderHeroCard extends StatelessWidget {
                 ),
               ),
               const Spacer(),
-              if (releasedCount > 0)
+              if (!isHardCopyOnly && releasedCount > 0)
                 Flexible(
                   child: Align(
                     alignment: Alignment.centerRight,
@@ -314,10 +328,15 @@ class _OrderHeroCard extends StatelessWidget {
 }
 
 class _InfoBanner extends StatelessWidget {
-  const _InfoBanner({required this.message, required this.borderColor});
+  const _InfoBanner({
+    required this.message,
+    required this.borderColor,
+    this.icon = Icons.info_outline,
+  });
 
   final String message;
   final Color borderColor;
+  final IconData icon;
 
   @override
   Widget build(BuildContext context) {
@@ -333,7 +352,7 @@ class _InfoBanner extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(Icons.info_outline, size: 20, color: context.cs.onSurfaceVariant),
+            Icon(icon, size: 20, color: context.cs.onSurfaceVariant),
             const SizedBox(width: 10),
             Expanded(
               child: Text(

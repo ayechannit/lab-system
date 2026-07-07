@@ -453,6 +453,7 @@ class Order {
         .input('address', sql.Text, data.address)
         .input('latitude', sql.Float, data.latitude)
         .input('longitude', sql.Float, data.longitude)
+        .input('report_delivery_method', sql.VarChar, data.report_delivery_method)
         .input('original_price_mmk', sql.Decimal(18, 2), data.original_price_mmk || 0)
         .input('discount_percent', sql.Decimal(5, 2), discountPercent)
         .input('final_price_mmk', sql.Decimal(18, 2), data.final_price_mmk || 0)
@@ -472,6 +473,7 @@ class Order {
               address = @address,
               latitude = @latitude,
               longitude = @longitude,
+              report_delivery_method = @report_delivery_method,
               original_price_mmk = @original_price_mmk,
               discount_percent = @discount_percent,
               final_price_mmk = @final_price_mmk,
@@ -620,6 +622,7 @@ class Order {
       .input('address', sql.Text, data.address)
       .input('latitude', sql.Float, data.latitude)
       .input('longitude', sql.Float, data.longitude)
+      .input('report_delivery_method', sql.VarChar, data.report_delivery_method)
       .input('service_geofence_id', sql.UniqueIdentifier, data.service_geofence_id || null)
       .input('service_fee_mmk', sql.Decimal(18, 2), data.service_fee_mmk || 0)
       .input('updated_user', sql.UniqueIdentifier, updatedBy)
@@ -634,6 +637,7 @@ class Order {
           address = @address,
           latitude = @latitude,
           longitude = @longitude,
+          report_delivery_method = @report_delivery_method,
           service_geofence_id = @service_geofence_id,
           service_fee_mmk = @service_fee_mmk,
           updated_user = @updated_user,

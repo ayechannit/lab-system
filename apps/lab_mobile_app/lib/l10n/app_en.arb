@@ -242,6 +242,11 @@
     "placeholders": { "date": { "type": "String" } }
   },
   "resultsReleasedBadge": "Released",
+  "resultsHardCopyBadge": "Delivered",
+  "resultsHardCopyDate": "Delivered {date}",
+  "@resultsHardCopyDate": {
+    "placeholders": { "date": { "type": "String" } }
+  },
   "labReportTitle": "Lab report",
   "labReportTestsSection": "TESTS IN THIS ORDER",
   "labReportTestCount": "{count, plural, =1{1 test}other{{count} tests}}",
@@ -252,6 +257,9 @@
   "labReportSeparateHint": "Download the official PDF or run AI Check for each test separately.",
   "labReportNoTestLines": "No test line items were found for this order.",
   "labReportPdfsNotUploadedYet": "The lab has released this order, but PDFs are not uploaded yet. Check back soon or contact the lab.",
+  "labReportHardCopyHint": "Physical copy only — digital PDFs are not available in the app.",
+  "labReportHardCopyDeliveredBanner": "Your physical lab report has been delivered. Contact the lab if you need another copy.",
+  "labReportHardCopyTestDelivered": "Physical report delivered for this test.",
   "labReportSummaryValues": "Summary values",
   "labReportNoReportLoaded": "No report loaded",
   "labReportSelectFromResults": "Select a released order from Results.",

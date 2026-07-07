@@ -34,6 +34,8 @@ import {
   type FetchOrdersParams,
   syncPendingOrder,
   updateOrder,
+  normalizeReportDeliveryMethod,
+  type ReportDeliveryMethod,
 } from '../services/orderService'
 import { useAddressGeocode } from '../hooks/useAddressGeocode'
 import { fetchUserList } from '../services/userService'
@@ -665,6 +667,7 @@ export function OrderManagementPage() {
   const [createError, setCreateError] = useState<string | null>(null)
   const [createUserId, setCreateUserId] = useState('')
   const [createPriority, setCreatePriority] = useState<'urgent' | 'elective'>('elective')
+  const [createReportDelivery, setCreateReportDelivery] = useState<ReportDeliveryMethod>('soft_copy')
   const [createPatientName, setCreatePatientName] = useState('')
   const [createPatientAge, setCreatePatientAge] = useState<number | ''>('')
   const [createPatientPhone, setCreatePatientPhone] = useState('')
@@ -690,6 +693,7 @@ export function OrderManagementPage() {
   const [editSubmitting, setEditSubmitting] = useState(false)
   const [editError, setEditError] = useState<string | null>(null)
   const [editPriority, setEditPriority] = useState<'urgent' | 'elective'>('elective')
+  const [editReportDelivery, setEditReportDelivery] = useState<ReportDeliveryMethod>('soft_copy')
   const [editPatientName, setEditPatientName] = useState('')
   const [editPatientAge, setEditPatientAge] = useState<number | ''>('')
   const [editPatientPhone, setEditPatientPhone] = useState('')
@@ -1106,6 +1110,7 @@ export function OrderManagementPage() {
     const firstTest = tests[0]
     setCreateUserId(firstUser?.id ?? '')
     setCreatePriority('elective')
+    setCreateReportDelivery('soft_copy')
     setCreatePatientName('')
     setCreatePatientAge('')
     setCreatePatientPhone(firstUser?.phone ?? '')
@@ -1193,6 +1198,7 @@ export function OrderManagementPage() {
         ...(createCollectorId.trim() ? { collector_id: createCollectorId.trim() } : {}),
         description: createDescription.trim() || null,
         priority: createPriority,
+        report_delivery_method: createReportDelivery,
         patient_name: createPatientName.trim(),
         patient_age: age,
         patient_phone: createPatientPhone.trim(),
@@ -1231,6 +1237,7 @@ export function OrderManagementPage() {
       setEditOrderDetail(order)
       setEditSelectedTestIds(order.items.map((it) => it.test_id))
       setEditPriority(order.priority)
+      setEditReportDelivery(normalizeReportDeliveryMethod(order.report_delivery_method))
       setEditPatientName(order.patient_name)
       setEditPatientAge(order.patient_age ?? '')
       setEditPatientPhone(order.patient_phone ?? '')
@@ -1273,6 +1280,7 @@ export function OrderManagementPage() {
       const basePayload = {
         description: editDescription.trim() || null,
         priority: editPriority,
+        report_delivery_method: editReportDelivery,
         patient_name: editPatientName.trim(),
         patient_age: age,
         patient_phone: editPatientPhone.trim(),
@@ -1929,6 +1937,20 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
                 </div>
               </div>
               <div className="field">
+                <label htmlFor="om-report-delivery">{t('orders.detail.reportDelivery')}</label>
+                <select
+                  id="om-report-delivery"
+                  className="select-chevron-left"
+                  value={createReportDelivery}
+                  onChange={(e) => setCreateReportDelivery(e.target.value as ReportDeliveryMethod)}
+                  disabled={createSubmitting}
+                >
+                  <option value="soft_copy">{t('orders.softCopy')}</option>
+                  <option value="hard_copy">{t('orders.hardCopy')}</option>
+                  <option value="both">{t('orders.softAndHardCopy')}</option>
+                </select>
+              </div>
+              <div className="field">
                 <label htmlFor="om-address">{t('common.address')}</label>
                 <textarea id="om-address" value={createAddress} onChange={(e) => setCreateAddress(e.target.value)} disabled={createSubmitting} />
               </div>
@@ -2290,6 +2312,20 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
                         <option value="urgent">{orderPriorityLabel('urgent')}</option>
                       </select>
                     </div>
+                  </div>
+                  <div className="field">
+                    <label htmlFor="om-edit-report-delivery">{t('orders.detail.reportDelivery')}</label>
+                    <select
+                      id="om-edit-report-delivery"
+                      className="select-chevron-left"
+                      value={editReportDelivery}
+                      onChange={(e) => setEditReportDelivery(e.target.value as ReportDeliveryMethod)}
+                      disabled={editSubmitting}
+                    >
+                      <option value="soft_copy">{t('orders.softCopy')}</option>
+                      <option value="hard_copy">{t('orders.hardCopy')}</option>
+                      <option value="both">{t('orders.softAndHardCopy')}</option>
+                    </select>
                   </div>
                   <div className="field">
                     <label htmlFor="om-edit-address">{t('common.address')}</label>

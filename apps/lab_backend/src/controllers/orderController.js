@@ -22,6 +22,31 @@ async function resolvePreferredCollectorId(collector_id) {
   return collector_id;
 }
 
+const REPORT_DELIVERY_METHODS = new Set(['soft_copy', 'hard_copy', 'both']);
+
+function parseReportDeliveryMethod(value) {
+  const key = String(value || '').trim().toLowerCase();
+  return REPORT_DELIVERY_METHODS.has(key) ? key : null;
+}
+
+function allowsDigitalResultDelivery(method) {
+  const key = String(method || '').trim().toLowerCase();
+  return key === 'soft_copy' || key === 'both';
+}
+
+function requiresHardCopyDelivery(method) {
+  const key = String(method || '').trim().toLowerCase();
+  return key === 'hard_copy' || key === 'both';
+}
+
+function stripDigitalResultAccess(order) {
+  if (!order?.items?.length) return;
+  for (const item of order.items) {
+    delete item.download_url;
+    delete item.result_file_url;
+  }
+}
+
 const OUT_OF_COVERAGE_MESSAGE =
   'Your location is outside our service coverage areas. We cannot deliver services to this address.';
 
@@ -59,6 +84,16 @@ const getAllOrders = async (req, res) => {
 const getOrderById = async (req, res) => {
   const order = await Order.getById(req.params.id);
   if (!order) return res.status(404).json({ message: 'Order not found' });
+
+  const isStaff = req.user?.type === 'staff';
+  const isOwner =
+    order.user_id &&
+    req.user?.id &&
+    String(order.user_id).toLowerCase() === String(req.user.id).toLowerCase();
+  if (!isStaff && isOwner && !allowsDigitalResultDelivery(order.report_delivery_method)) {
+    stripDigitalResultAccess(order);
+  }
+
   res.json(order);
 };
 
@@ -220,6 +255,7 @@ const syncPendingOrder = async (req, res) => {
       address,
       latitude,
       longitude,
+      report_delivery_method,
       original_price_mmk,
       discount_percent,
       final_price_mmk,
@@ -227,10 +263,15 @@ const syncPendingOrder = async (req, res) => {
       items,
     } = req.body;
 
-    if (!priority || !patient_name || patient_age == null || !patient_phone || !address) {
+    if (!priority || !patient_name || patient_age == null || !patient_phone || !address || !report_delivery_method) {
       return res.status(400).json({
-        message: 'priority, patient_name, patient_age, patient_phone, and address are required',
+        message: 'priority, patient_name, patient_age, patient_phone, address, and report_delivery_method are required',
       });
+    }
+
+    const parsedReportDeliveryMethod = parseReportDeliveryMethod(report_delivery_method);
+    if (!parsedReportDeliveryMethod) {
+      return res.status(400).json({ message: 'report_delivery_method must be soft_copy, hard_copy, or both' });
     }
 
     if (!Array.isArray(items)) {
@@ -249,6 +290,7 @@ const syncPendingOrder = async (req, res) => {
       address,
       latitude,
       longitude,
+      report_delivery_method: parsedReportDeliveryMethod,
       original_price_mmk,
       discount_percent,
       final_price_mmk,
@@ -313,12 +355,18 @@ const updateOrder = async (req, res) => {
       address,
       latitude,
       longitude,
+      report_delivery_method,
     } = req.body;
 
-    if (!priority || !patient_name || patient_age == null || !patient_phone || !address) {
+    if (!priority || !patient_name || patient_age == null || !patient_phone || !address || !report_delivery_method) {
       return res.status(400).json({
-        message: 'priority, patient_name, patient_age, patient_phone, and address are required',
+        message: 'priority, patient_name, patient_age, patient_phone, address, and report_delivery_method are required',
       });
+    }
+
+    const parsedReportDeliveryMethod = parseReportDeliveryMethod(report_delivery_method);
+    if (!parsedReportDeliveryMethod) {
+      return res.status(400).json({ message: 'report_delivery_method must be soft_copy, hard_copy, or both' });
     }
 
     const updatePayload = {
@@ -330,6 +378,7 @@ const updateOrder = async (req, res) => {
       address,
       latitude,
       longitude,
+      report_delivery_method: parsedReportDeliveryMethod,
     };
 
     try {
@@ -365,23 +414,36 @@ const updateOrderStatus = async (req, res) => {
   if (!order) return res.status(404).json({ message: 'Order not found' });
 
   if (status === 'delivered') {
+    const method = String(order.report_delivery_method || '').trim().toLowerCase();
     let title = 'Lab Results Ready';
     let body = `All lab test results for patient "${order.patient_name}" are ready and available for download.`;
     let event = 'results_ready';
 
-    // If report delivery was hard_copy or both, handle physical delivery scheduled notification
-    if (order.report_delivery_method === 'hard_copy' || order.report_delivery_method === 'both') {
+    if (method === 'hard_copy') {
       const fullOrder = await Order.getById(id);
       const schedule = fullOrder?.schedule;
       if (schedule && schedule.report_out_time) {
         const formattedDeliveryTime = new Date(schedule.report_out_time).toLocaleString();
-        title = 'Result Delivery Scheduled';
-        body = `Your physical lab report copy for patient "${order.patient_name}" has been released and is scheduled for physical delivery to your address on ${formattedDeliveryTime}.`;
-        event = 'delivery_scheduled';
+        title = 'Hard Copy Delivered';
+        body = `Your physical lab report for patient "${order.patient_name}" has been handed over and is scheduled for delivery to your address on ${formattedDeliveryTime}.`;
+        event = 'hard_copy_delivered';
       } else {
-        title = 'Results Released - Delivery Pending';
-        body = `Your lab results for patient "${order.patient_name}" have been released and are ready. A physical copy will be delivered to your address shortly.`;
-        event = 'delivery_pending';
+        title = 'Hard Copy Delivered';
+        body = `Your physical lab report for patient "${order.patient_name}" has been handed over in person. Digital PDFs are not available in the app for this order.`;
+        event = 'hard_copy_delivered';
+      }
+    } else if (method === 'both') {
+      const fullOrder = await Order.getById(id);
+      const schedule = fullOrder?.schedule;
+      if (schedule && schedule.report_out_time) {
+        const formattedDeliveryTime = new Date(schedule.report_out_time).toLocaleString();
+        title = 'Lab Results Ready';
+        body = `Digital results for patient "${order.patient_name}" are available in the app. A physical copy is scheduled for delivery on ${formattedDeliveryTime}.`;
+        event = 'results_ready_with_delivery';
+      } else {
+        title = 'Lab Results Ready';
+        body = `Digital results for patient "${order.patient_name}" are available in the app. A physical copy will be delivered to your address shortly.`;
+        event = 'results_ready_with_delivery';
       }
     }
 
@@ -600,6 +662,11 @@ const downloadTestResult = async (req, res) => {
     }
     if (!isStaff && order.status !== 'delivered') {
       return res.status(403).json({ message: 'Results not released yet' });
+    }
+    if (!isStaff && !allowsDigitalResultDelivery(order.report_delivery_method)) {
+      return res.status(403).json({
+        message: 'Digital results are not available for hard copy delivery orders.',
+      });
     }
 
     const item = (order.items || []).find(

@@ -1,3 +1,5 @@
+import '../utils/report_delivery.dart' as delivery;
+
 enum ResultFlag { low, normal, high }
 
 class LabResultLine {
@@ -64,6 +66,7 @@ class LabResultReport {
     this.lines = const [],
     this.resultPdfUrl,
     this.resultTestId,
+    this.reportDeliveryMethod = 'soft_copy',
   });
 
   final String orderId;
@@ -82,6 +85,13 @@ class LabResultReport {
   /// First test with a PDF — kept for older call sites.
   final String? resultPdfUrl;
   final String? resultTestId;
+
+  /// Backend `report_delivery_method`: `soft_copy` | `hard_copy` | `both`.
+  final String reportDeliveryMethod;
+
+  bool get allowsDigitalDelivery => delivery.allowsDigitalResultDelivery(reportDeliveryMethod);
+
+  bool get isHardCopyOnly => delivery.isHardCopyOnlyDelivery(reportDeliveryMethod);
 
   bool get hasPdfPayload {
     if (tests.any((t) => t.hasPdf)) return true;

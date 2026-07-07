@@ -98,7 +98,7 @@ abstract class AppLocalizations {
   /// Application title
   ///
   /// In en, this message translates to:
-  /// **'Lab Patient App'**
+  /// **'Shwe Health'**
   String get appTitle;
 
   /// No description provided for @navHome.
@@ -1049,6 +1049,18 @@ abstract class AppLocalizations {
   /// **'Released'**
   String get resultsReleasedBadge;
 
+  /// No description provided for @resultsHardCopyBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivered'**
+  String get resultsHardCopyBadge;
+
+  /// No description provided for @resultsHardCopyDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivered {date}'**
+  String resultsHardCopyDate(String date);
+
   /// No description provided for @labReportTitle.
   ///
   /// In en, this message translates to:
@@ -1090,6 +1102,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The lab has released this order, but PDFs are not uploaded yet. Check back soon or contact the lab.'**
   String get labReportPdfsNotUploadedYet;
+
+  /// No description provided for @labReportHardCopyHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Physical copy only — digital PDFs are not available in the app.'**
+  String get labReportHardCopyHint;
+
+  /// No description provided for @labReportHardCopyDeliveredBanner.
+  ///
+  /// In en, this message translates to:
+  /// **'Your physical lab report has been delivered. Contact the lab if you need another copy.'**
+  String get labReportHardCopyDeliveredBanner;
+
+  /// No description provided for @labReportHardCopyTestDelivered.
+  ///
+  /// In en, this message translates to:
+  /// **'Physical report delivered for this test.'**
+  String get labReportHardCopyTestDelivered;
 
   /// No description provided for @labReportSummaryValues.
   ///

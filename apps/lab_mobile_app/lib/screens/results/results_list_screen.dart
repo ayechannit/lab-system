@@ -8,6 +8,7 @@ import '../../models/order_list_sort.dart';
 import '../../models/rating.dart';
 import '../../services/session_controller.dart';
 import '../../theme/theme_extensions.dart';
+import '../../utils/report_delivery.dart';
 import '../../widgets/common/app_branding_row.dart';
 import '../../widgets/common/notification_bell_button.dart';
 import '../../widgets/common/order_list_sort_button.dart';
@@ -193,6 +194,7 @@ class _ReleasedOrderTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final accent = context.cs.secondary;
     final l10n = AppLocalizations.of(context)!;
+    final isHardCopyOnly = isHardCopyOnlyDelivery(order.reportDeliveryMethod);
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Material(
@@ -220,7 +222,10 @@ class _ReleasedOrderTile extends StatelessWidget {
                           color: accent.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: Icon(Icons.assignment_outlined, color: accent),
+                        child: Icon(
+                          isHardCopyOnly ? Icons.local_shipping_outlined : Icons.assignment_outlined,
+                          color: accent,
+                        ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -242,7 +247,9 @@ class _ReleasedOrderTile extends StatelessWidget {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              l10n.resultsReleasedDate(order.createdAtLabel),
+                              isHardCopyOnly
+                                  ? l10n.resultsHardCopyDate(order.createdAtLabel)
+                                  : l10n.resultsReleasedDate(order.createdAtLabel),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: Theme.of(context).textTheme.bodySmall?.copyWith(color: context.cs.onSurfaceVariant),
@@ -250,7 +257,10 @@ class _ReleasedOrderTile extends StatelessWidget {
                             const SizedBox(height: 8),
                             Align(
                               alignment: Alignment.centerLeft,
-                              child: _ReleasedChip(accent: accent, label: l10n.resultsReleasedBadge),
+                              child: _ReleasedChip(
+                                accent: accent,
+                                label: isHardCopyOnly ? l10n.resultsHardCopyBadge : l10n.resultsReleasedBadge,
+                              ),
                             ),
                           ],
                         ),

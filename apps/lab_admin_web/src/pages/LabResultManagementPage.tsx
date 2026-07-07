@@ -31,8 +31,11 @@ import {
   type ApiOrderStatus,
   type FetchOrdersParams,
 } from '../services/orderService'
-import { formatReportDeliveryMethod, priorityBadgeClass } from '../utils/orderDisplay'
+import { formatReportDeliveryMethod, priorityBadgeClass, allowsDigitalResultDelivery, requiresHardCopyDelivery } from '../utils/orderDisplay'
 import { orderPriorityLabel, orderStatusLabel } from '../utils/orderLabels'
+import { DatetimeLocalField } from '../components/common/DatetimeLocalField'
+import { upsertSchedule } from '../services/scheduleService'
+import { datetimeLocalToIso, toDatetimeLocalValue } from '../utils/datetimeLocal'
 import '../components/common/ui.css'
 
 const ADMIN_CONTENT_BOTTOM_PADDING = 40
@@ -530,6 +533,9 @@ export function LabResultManagementPage() {
   const [statusSubmitting, setStatusSubmitting] = useState(false)
   const [releaseSubmitting, setReleaseSubmitting] = useState(false)
   const [releaseConfirmOpen, setReleaseConfirmOpen] = useState(false)
+  const [deliveryHandoverLocal, setDeliveryHandoverLocal] = useState('')
+  const [deliveryHandoverSaving, setDeliveryHandoverSaving] = useState(false)
+  const [deliveryHandoverError, setDeliveryHandoverError] = useState<string | null>(null)
   const [pdfAction, setPdfAction] = useState<{ testId: string; mode: 'view' | 'download' } | null>(null)
 
   useEffect(() => {
@@ -705,6 +711,37 @@ export function LabResultManagementPage() {
     detail && detail.items.length > 0 && testsMissingPdf.length === 0,
   )
 
+  const deliveryAllowsDigital = allowsDigitalResultDelivery(detail?.report_delivery_method)
+  const deliveryRequiresHardCopy = requiresHardCopyDelivery(detail?.report_delivery_method)
+  const isHardCopyOnly = deliveryRequiresHardCopy && !deliveryAllowsDigital
+  const isBothDelivery = deliveryAllowsDigital && deliveryRequiresHardCopy
+
+  const savedDeliveryHandoverLocal = useMemo(
+    () => toDatetimeLocalValue(detail?.schedule?.report_out_time),
+    [detail?.schedule?.report_out_time],
+  )
+
+  const deliveryHandoverDirty = deliveryHandoverLocal !== savedDeliveryHandoverLocal
+
+  useEffect(() => {
+    setDeliveryHandoverLocal(savedDeliveryHandoverLocal)
+    setDeliveryHandoverError(null)
+  }, [detail?.id, savedDeliveryHandoverLocal])
+
+  const releaseActionLabel = isHardCopyOnly ? 'Mark delivered' : 'Release to patient'
+
+  const releaseConfirmTitle = isHardCopyOnly ? 'Mark as delivered?' : 'Release results to patient?'
+
+  const releaseStatusNote = isHardCopyOnly
+    ? 'Hard copy delivered to patient in person'
+    : isBothDelivery
+      ? 'Results released to patient (digital and hard copy)'
+      : 'Results released to patient after lab review'
+
+  const releaseSuccessMessage = isHardCopyOnly
+    ? 'Hard copy marked as delivered.'
+    : 'Results released to patient.'
+
   const aiReviewReleaseBlockers = useMemo(
     () =>
       collectAiReviewReleaseBlockers(
@@ -756,6 +793,50 @@ export function LabResultManagementPage() {
     uploadBusy,
     aiReviewLoadingTestIds.length,
   ])
+
+  const resultFooterMessage = useMemo(() => {
+    if (!detail) return ''
+    if (detail.status === 'delivered') {
+      if (isHardCopyOnly) return 'Hard copy delivered to the patient.'
+      if (isBothDelivery) return 'Digital results released. Physical copy can be handed over separately.'
+      return 'Results released to the patient.'
+    }
+    if (detail.status !== 'completed') {
+      return 'Complete the lab run before uploading results.'
+    }
+    if (uploadedItems.length === 0) {
+      return isHardCopyOnly
+        ? 'Upload lab PDFs for printing and internal records.'
+        : 'Upload result PDFs for all tests.'
+    }
+    if (!allTestsHavePdf) {
+      return `${uploadedItems.length} of ${detail.items.length} PDFs uploaded — finish uploads to continue.`
+    }
+    if (!aiReviewConfigured) return 'Configure AI review before continuing.'
+    const aiBlock = aiReviewReleaseBlockerMessage(aiReviewReleaseBlockers, aiReviewConfigured)
+    if (aiBlock) return aiBlock
+    if (isHardCopyOnly) return 'Ready — hand the printed report to the patient, then mark delivered.'
+    return 'Ready to release results to the patient.'
+  }, [
+    detail,
+    isHardCopyOnly,
+    isBothDelivery,
+    uploadedItems.length,
+    allTestsHavePdf,
+    aiReviewConfigured,
+    aiReviewReleaseBlockers,
+  ])
+
+  const resultStepStates = useMemo(() => {
+    const pdfDone = allTestsHavePdf
+    const aiDone = allTestsPassedAiReview && aiReviewConfigured
+    const deliverDone = detail?.status === 'delivered'
+    let current: 'pdf' | 'ai' | 'deliver' = 'pdf'
+    if (pdfDone && !aiDone) current = 'ai'
+    else if (pdfDone && aiDone && !deliverDone) current = 'deliver'
+    else if (deliverDone) current = 'deliver'
+    return { pdfDone, aiDone, deliverDone, current }
+  }, [allTestsHavePdf, allTestsPassedAiReview, aiReviewConfigured, detail?.status])
 
   const isReleased = detail?.status === 'delivered'
 
@@ -967,11 +1048,17 @@ export function LabResultManagementPage() {
       const allPdfsNow =
         next && next.items.length > 0 && next.items.every((item) => testResultFileUrl(item))
       const n = uploaded.length
+      const hardCopyOnly =
+        requiresHardCopyDelivery(detail.report_delivery_method) &&
+        !allowsDigitalResultDelivery(detail.report_delivery_method)
+      const nextStepHint = hardCopyOnly
+        ? 'review with AI, then mark delivered after handover.'
+        : 'review with AI, then release to the patient.'
       showSuccess(
         allPdfsNow
           ? n > 1
-            ? `PDF applied to ${n} tests. All tests have PDFs — review with AI, then use Release to patient.`
-            : 'Result uploaded. All tests have PDFs — review with AI, then use Release to patient.'
+            ? `PDF applied to ${n} tests. All lab PDFs uploaded — ${nextStepHint}`
+            : `Result uploaded. All lab PDFs uploaded — ${nextStepHint}`
           : n > 1
             ? `Same PDF applied to ${n} tests.`
             : 'Result file uploaded.',
@@ -1163,6 +1250,33 @@ export function LabResultManagementPage() {
     }
   }
 
+  async function saveDeliveryHandoverTime() {
+    if (!detail || deliveryHandoverSaving) return
+    const iso = datetimeLocalToIso(deliveryHandoverLocal)
+    if (!iso) {
+      setDeliveryHandoverError('Pick a valid handover date and time.')
+      return
+    }
+    setDeliveryHandoverSaving(true)
+    setDeliveryHandoverError(null)
+    try {
+      await upsertSchedule({
+        order_id: detail.id,
+        collecting_person: detail.schedule?.collecting_person ?? null,
+        collection_time: detail.schedule?.collection_time ?? null,
+        running_time: detail.schedule?.running_time ?? null,
+        report_out_time: iso,
+        accepted_by_user: detail.schedule?.accepted_by_user ?? false,
+      })
+      await refreshOrderDetail(detail.id)
+      showSuccess('Handover time saved.')
+    } catch (err) {
+      setDeliveryHandoverError(messageFromError(err, 'Could not save handover time.'))
+    } finally {
+      setDeliveryHandoverSaving(false)
+    }
+  }
+
   async function releaseToPatient() {
     if (!detail) return
     const staffId = account?.id
@@ -1176,6 +1290,14 @@ export function LabResultManagementPage() {
     }
     if (detail.status !== 'completed') {
       showError('Mark the order completed before releasing results to the patient.')
+      return
+    }
+    if (deliveryRequiresHardCopy && !detail.schedule?.report_out_time) {
+      if (deliveryHandoverDirty && deliveryHandoverLocal.trim()) {
+        showError('Save the handover time before marking as delivered.')
+        return
+      }
+      showError('Set and save a handover time before marking as delivered.')
       return
     }
     if (!allTestsHavePdf) {
@@ -1215,10 +1337,10 @@ export function LabResultManagementPage() {
       await updateOrderStatus(detail.id, {
         status: 'delivered',
         staff_id: staffId,
-        note: 'Results released to patient after lab review',
+        note: releaseStatusNote,
       })
       await refreshOrderDetail(detail.id)
-      showSuccess('Results released to patient.')
+      showSuccess(releaseSuccessMessage)
     } catch (err) {
       showError(messageFromError(err, 'Release failed'))
     } finally {
@@ -1593,9 +1715,70 @@ export function LabResultManagementPage() {
               </div>
               <div>
                 <dt>Report delivery</dt>
-                <dd>{formatReportDeliveryMethod(detail.report_delivery_method)}</dd>
+                <dd>
+                  <span className="lab-result-entry__delivery-badge">
+                    <span className="material-symbols-outlined" aria-hidden>
+                      {deliveryRequiresHardCopy ? 'local_shipping' : 'picture_as_pdf'}
+                    </span>
+                    {formatReportDeliveryMethod(detail.report_delivery_method)}
+                  </span>
+                </dd>
               </div>
             </dl>
+            {deliveryRequiresHardCopy && (detail.status === 'completed' || detail.status === 'delivered') ? (
+              <div className="lab-result-entry__delivery-callout" role="note">
+                <span className="material-symbols-outlined" aria-hidden>
+                  local_shipping
+                </span>
+                <div>
+                  <p className="lab-result-entry__delivery-callout-title">
+                    {isBothDelivery ? 'Digital + hard copy' : 'Hard copy only'}
+                  </p>
+                  <p className="lab-result-entry__delivery-callout-text">
+                    {isHardCopyOnly
+                      ? 'Print and hand the report to the patient in person. PDFs stay internal — not shared in the patient app.'
+                      : 'Release digital PDFs in the app and deliver a printed copy to the patient.'}
+                  </p>
+                  <div className="lab-result-entry__delivery-schedule">
+                    <label className="lab-result-entry__delivery-schedule-label" htmlFor="lab-result-handover-time">
+                      Handover time
+                    </label>
+                    <div className="lab-result-entry__delivery-schedule-row">
+                      <DatetimeLocalField
+                        id="lab-result-handover-time"
+                        value={deliveryHandoverLocal}
+                        onChange={setDeliveryHandoverLocal}
+                        disabled={deliveryHandoverSaving || !hasApi}
+                        schedule
+                        allowClear={false}
+                      />
+                      <button
+                        type="button"
+                        className="btn btn-primary btn-sm"
+                        disabled={
+                          deliveryHandoverSaving ||
+                          !hasApi ||
+                          !deliveryHandoverLocal.trim() ||
+                          !deliveryHandoverDirty
+                        }
+                        onClick={() => void saveDeliveryHandoverTime()}
+                      >
+                        {deliveryHandoverSaving ? 'Saving…' : 'Save time'}
+                      </button>
+                    </div>
+                    {deliveryHandoverError ? (
+                      <p className="lab-result-entry__delivery-schedule-error" role="alert">
+                        {deliveryHandoverError}
+                      </p>
+                    ) : savedDeliveryHandoverLocal && !deliveryHandoverDirty ? (
+                      <p className="lab-result-entry__delivery-callout-meta">
+                        Saved — patient will be notified when the handover time changes.
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+            ) : null}
             <div className="lab-result-entry__workflow" aria-label="Lab processing steps">
               {detail.status === 'collecting' ? (
                 <>
@@ -1626,22 +1809,48 @@ export function LabResultManagementPage() {
                   </button>
                 </>
               ) : detail.status === 'completed' ? (
-                <p className="lab-result-entry__workflow-text">
-                  Lab run complete. Upload result PDFs, run AI review, then use{' '}
-                  <strong>Release to patient</strong> when you are ready to deliver.
-                  {hasIncorrectAiReview
-                    ? ' One or more tests failed AI review — fix results before releasing.'
-                    : allTestsHavePdf
-                      ? allTestsPassedAiReview
-                        ? ' All tests have PDFs and passed AI review — you can release to the patient.'
-                        : aiReviewReleaseBlockers.missingReview.length > 0
-                          ? ' All tests have PDFs — run AI review on every test before releasing.'
-                          : ' All tests have PDFs — resolve AI review issues before releasing.'
-                      : ` ${testsMissingPdf.length} test${testsMissingPdf.length === 1 ? '' : 's'} still need a PDF before you can release.`}
-                </p>
+                <ol className="lab-result-entry__steps" aria-label="Result workflow">
+                  <li
+                    className={`lab-result-entry__step${
+                      resultStepStates.pdfDone
+                        ? ' lab-result-entry__step--done'
+                        : resultStepStates.current === 'pdf'
+                          ? ' lab-result-entry__step--current'
+                          : ''
+                    }`}
+                  >
+                    {isHardCopyOnly ? 'Lab PDFs' : 'Upload PDFs'}
+                  </li>
+                  <li
+                    className={`lab-result-entry__step${
+                      resultStepStates.aiDone
+                        ? ' lab-result-entry__step--done'
+                        : resultStepStates.current === 'ai'
+                          ? ' lab-result-entry__step--current'
+                          : ''
+                    }`}
+                  >
+                    AI review
+                  </li>
+                  <li
+                    className={`lab-result-entry__step${
+                      resultStepStates.deliverDone
+                        ? ' lab-result-entry__step--done'
+                        : resultStepStates.current === 'deliver'
+                          ? ' lab-result-entry__step--current'
+                          : ''
+                    }`}
+                  >
+                    {isHardCopyOnly ? 'Hand hard copy' : 'Release'}
+                  </li>
+                </ol>
               ) : detail.status === 'delivered' ? (
                 <p className="lab-result-entry__workflow-text">
-                  Results released to the patient. You can replace PDFs or re-run AI review if needed.
+                  {isHardCopyOnly
+                    ? 'Hard copy delivered.'
+                    : isBothDelivery
+                      ? 'Released (digital). Replace PDFs or re-run AI review if needed.'
+                      : 'Released. Replace PDFs or re-run AI review if needed.'}
                 </p>
               ) : null}
             </div>
@@ -1659,7 +1868,9 @@ export function LabResultManagementPage() {
                 Tests
               </h4>
               <span className="lab-result-entry__section-hint">
-                {uploadedItems.length} of {detail.items.length} with PDF
+                {isHardCopyOnly
+                  ? `${uploadedItems.length} of ${detail.items.length} lab PDFs`
+                  : `${uploadedItems.length} of ${detail.items.length} with PDF`}
               </span>
             </div>
 
@@ -2076,88 +2287,48 @@ export function LabResultManagementPage() {
           ) : null}
 
           <footer className="lab-result-entry__footer">
-            <p className="lab-result-entry__footer-text">
-              {detail.status === 'delivered'
-                ? 'This order has been released to the patient.'
-                : detail.status !== 'completed'
-                  ? 'Complete the lab run before uploading results or releasing.'
-                  : uploadedItems.length === 0
-                    ? 'Upload result PDFs for all tests to continue.'
-                    : !allTestsHavePdf
-                      ? `${uploadedItems.length} of ${detail.items.length} PDFs uploaded — upload all tests before releasing.`
-                      : !aiReviewConfigured
-                      ? 'Configure AI review, then run review on every test before releasing.'
-                      : hasIncorrectAiReview
-                        ? 'One or more tests failed AI review. Fix results and re-run review before releasing.'
-                        : aiReviewReleaseBlockers.missingReview.length > 0
-                          ? 'All tests have PDFs. Run AI review on every test before releasing to the patient.'
-                          : aiReviewReleaseBlockers.warnings.length > 0 ||
-                              aiReviewReleaseBlockers.errors.length > 0
-                            ? 'Resolve AI review warnings or errors before releasing to the patient.'
-                            : allTestsPassedAiReview
-                              ? 'All tests have PDFs and passed AI review. You can release to the patient.'
-                              : 'Complete AI review for all tests before releasing.'}
-            </p>
-            {detail.status === 'completed' ? (
-              <button
-                type="button"
-                className="btn btn-primary"
-                onClick={() => void releaseToPatient()}
-                disabled={!canReleaseToPatient}
-                title={releaseDisabledReason ?? undefined}
-                aria-disabled={!canReleaseToPatient}
-              >
-                {releaseSubmitting ? 'Releasing…' : 'Release to patient'}
-              </button>
-            ) : detail.status === 'delivered' ? (
-              <span className="badge badge--success">Released</span>
-            ) : null}
-          </footer>
-
-          {detail.status === 'delivered' && (detail.report_delivery_method === 'hard_copy' || detail.report_delivery_method === 'both') ? (
-            <div style={{
-              marginTop: '1.5rem',
-              padding: '1rem',
-              borderRadius: '8px',
-              border: '1px solid #c3e6cb',
-              backgroundColor: '#f4fbf5',
-              color: '#155724',
-              fontSize: '0.875rem'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>
-                <span className="material-symbols-outlined" style={{ color: '#28a745' }}>local_shipping</span>
-                <span>Physical Delivery Tracking</span>
-              </div>
-              <p style={{ margin: '0 0 0.5rem 0' }}>
-                Delivery Method: <strong>{detail.report_delivery_method === 'both' ? 'Both (Digital & Hardcopy)' : 'Hardcopy Only'}</strong>
-              </p>
-              {detail.schedule?.report_out_time ? (
-                <p style={{ margin: 0 }}>
-                  Scheduled Delivery Time: <strong>{new Date(detail.schedule.report_out_time).toLocaleString()}</strong>
-                </p>
-              ) : (
-                <p style={{ margin: 0, color: '#856404' }}>
-                  ⚠️ No delivery time has been scheduled yet. You can set it on the Order Schedule board.
-                </p>
-              )}
+            <p className="lab-result-entry__footer-text">{resultFooterMessage}</p>
+            <div className="lab-result-entry__footer-actions">
+              {detail.status === 'completed' ? (
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={() => void releaseToPatient()}
+                  disabled={!canReleaseToPatient}
+                  title={releaseDisabledReason ?? undefined}
+                  aria-disabled={!canReleaseToPatient}
+                >
+                  {releaseSubmitting ? (isHardCopyOnly ? 'Marking…' : 'Releasing…') : releaseActionLabel}
+                </button>
+              ) : detail.status === 'delivered' ? (
+                <span className="badge badge--success">{isHardCopyOnly ? 'Delivered' : 'Released'}</span>
+              ) : null}
             </div>
-          ) : null}
+          </footer>
         </div>
       ) : null}
 
       <ConfirmDialog
         open={releaseConfirmOpen}
-        title="Release results to patient?"
+        title={releaseConfirmTitle}
         message={
           detail
-            ? `Are you sure you want to release lab results for ${detail.patient_name.trim() || 'this patient'}? ${
-                detail.items.length === 1
-                  ? 'The patient will be able to view and download the test PDF in the app.'
-                  : `All ${detail.items.length} test PDFs will become available for the patient to view and download in the app.`
-              } This cannot be undone from this screen.`
+            ? isHardCopyOnly
+              ? `Confirm the physical report for ${detail.patient_name.trim() || 'this patient'} has been handed over in person. Digital PDFs will not be available in the patient app.`
+              : isBothDelivery
+                ? `Release lab results for ${detail.patient_name.trim() || 'this patient'}? Digital PDFs will be available in the app and a physical copy will be delivered.${
+                    detail.items.length === 1
+                      ? ''
+                      : ` All ${detail.items.length} test PDFs will become available for download.`
+                  }`
+                : `Are you sure you want to release lab results for ${detail.patient_name.trim() || 'this patient'}? ${
+                    detail.items.length === 1
+                      ? 'The patient will be able to view and download the test PDF in the app.'
+                      : `All ${detail.items.length} test PDFs will become available for the patient to view and download in the app.`
+                  } This cannot be undone from this screen.`
             : 'Are you sure you want to release these results to the patient?'
         }
-        confirmLabel={releaseSubmitting ? 'Releasing…' : 'Release to patient'}
+        confirmLabel={releaseSubmitting ? (isHardCopyOnly ? 'Marking…' : 'Releasing…') : releaseActionLabel}
         cancelLabel="Cancel"
         onConfirm={() => void confirmReleaseToPatient()}
         onCancel={() => !releaseSubmitting && setReleaseConfirmOpen(false)}

@@ -136,6 +136,14 @@ export type ApiOrderDetail = {
   payments?: ApiPayment[]
 }
 
+export type ReportDeliveryMethod = 'soft_copy' | 'hard_copy' | 'both'
+
+export function normalizeReportDeliveryMethod(method: string | null | undefined): ReportDeliveryMethod {
+  const key = (method ?? '').trim().toLowerCase()
+  if (key === 'hard_copy' || key === 'both') return key
+  return 'soft_copy'
+}
+
 export type ApiOrderCreateItem = {
   test_id: string
   quantity: number
@@ -155,7 +163,7 @@ export type ApiOrderCreateBody = {
   latitude?: number | null
   longitude?: number | null
   status?: ApiOrderStatus
-  report_delivery_method?: string
+  report_delivery_method: ReportDeliveryMethod
   original_price_mmk: number
   discount_percent: number
   final_price_mmk: number
@@ -200,13 +208,9 @@ export async function fetchOrderById(id: string): Promise<ApiOrderDetail | null>
 }
 
 export async function createOrder(body: ApiOrderCreateBody): Promise<unknown> {
-  const payload = {
-    report_delivery_method: 'email',
-    ...body,
-  }
   const res = await apiFetch('/api/orders', {
     method: 'POST',
-    body: JSON.stringify(payload),
+    body: JSON.stringify(body),
   })
   if (!res.ok) throw new Error(await readApiErrorBody(res))
   return res.json()
@@ -226,6 +230,7 @@ export type ApiOrderUpdateBody = {
   address: string
   latitude?: number | null
   longitude?: number | null
+  report_delivery_method: ReportDeliveryMethod
 }
 
 export type ApiOrderPendingSyncItem = {

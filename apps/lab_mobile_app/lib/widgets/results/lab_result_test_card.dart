@@ -97,6 +97,7 @@ class _LabResultTestCardState extends State<LabResultTestCard> {
     final cs = context.cs;
     final borderColor = cs.outlineVariant.withValues(alpha: 0.55);
     final hasPdf = test.hasPdf;
+    final isHardCopyOnly = report.isHardCopyOnly;
     final session = SessionScope.of(context);
     final hasCachedAi = session.aiAnalysisTestId == test.testId && session.aiAnalysis != null;
 
@@ -149,7 +150,7 @@ class _LabResultTestCardState extends State<LabResultTestCard> {
                                   fontWeight: FontWeight.w700,
                                 ),
                           ),
-                          _StatusBadge(hasPdf: hasPdf, l10n: l10n),
+                          _StatusBadge(hasPdf: hasPdf, isHardCopyOnly: isHardCopyOnly, l10n: l10n),
                         ],
                       ),
                       const SizedBox(height: 4),
@@ -171,7 +172,9 @@ class _LabResultTestCardState extends State<LabResultTestCard> {
                           children: [
                             Icon(Icons.event_outlined, size: 14, color: cs.onSurfaceVariant),
                             Text(
-                              l10n.resultsReleasedDate(_fmtDate(test.releasedAt!)),
+                              isHardCopyOnly
+                                  ? l10n.resultsHardCopyDate(_fmtDate(test.releasedAt!))
+                                  : l10n.resultsReleasedDate(_fmtDate(test.releasedAt!)),
                               style: Theme.of(context).textTheme.labelSmall?.copyWith(
                                     color: cs.onSurfaceVariant,
                                   ),
@@ -205,7 +208,29 @@ class _LabResultTestCardState extends State<LabResultTestCard> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                if (!hasPdf)
+                if (isHardCopyOnly)
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: cs.secondaryContainer.withValues(alpha: 0.35),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.local_shipping_outlined, size: 18, color: cs.onSurfaceVariant),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            l10n.labReportHardCopyTestDelivered,
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: cs.onSurfaceVariant,
+                                ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                else if (!hasPdf)
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
@@ -290,15 +315,29 @@ class _LabResultTestCardState extends State<LabResultTestCard> {
 }
 
 class _StatusBadge extends StatelessWidget {
-  const _StatusBadge({required this.hasPdf, required this.l10n});
+  const _StatusBadge({
+    required this.hasPdf,
+    required this.isHardCopyOnly,
+    required this.l10n,
+  });
 
   final bool hasPdf;
+  final bool isHardCopyOnly;
   final AppLocalizations l10n;
 
   @override
   Widget build(BuildContext context) {
-    final color = hasPdf ? AppColors.accentGreen : const Color(0xFFB45309);
+    final color = isHardCopyOnly
+        ? AppColors.accentGreen
+        : hasPdf
+            ? AppColors.accentGreen
+            : const Color(0xFFB45309);
     final bg = color.withValues(alpha: 0.12);
+    final label = isHardCopyOnly
+        ? l10n.resultsHardCopyBadge
+        : hasPdf
+            ? l10n.labReportPdfReady
+            : l10n.labReportPdfPending;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
@@ -307,7 +346,7 @@ class _StatusBadge extends StatelessWidget {
         border: Border.all(color: color.withValues(alpha: 0.25)),
       ),
       child: Text(
-        hasPdf ? l10n.labReportPdfReady : l10n.labReportPdfPending,
+        label,
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
               color: color,
               fontWeight: FontWeight.w700,

@@ -84,11 +84,16 @@ class _LabResultInsightCardsState extends State<LabResultInsightCards> {
   @override
   Widget build(BuildContext context) {
     final lines = report?.lines ?? const <LabResultLine>[];
-    final hasPdf = report?.hasPdfPayload ?? false;
-    final canAi = report != null && (lines.isNotEmpty || hasPdf);
+    final isHardCopyOnly = report?.isHardCopyOnly ?? false;
+    final hasPdf = !isHardCopyOnly && (report?.hasPdfPayload ?? false);
+    final canAi = !isHardCopyOnly && report != null && (lines.isNotEmpty || hasPdf);
     final gap = widget.compact ? 10.0 : 14.0;
     final cs = context.cs;
     final borderColor = cs.outlineVariant.withValues(alpha: 0.55);
+
+    if (isHardCopyOnly) {
+      return const SizedBox.shrink();
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,

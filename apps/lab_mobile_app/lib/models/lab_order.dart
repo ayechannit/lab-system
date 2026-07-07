@@ -212,6 +212,7 @@ class LabOrderSummary {
     this.scheduleAcceptedByUser = true,
     this.backendStatus,
     this.lineItems = const [],
+    this.reportDeliveryMethod = 'soft_copy',
   });
 
   final String id;
@@ -238,6 +239,9 @@ class LabOrderSummary {
 
   /// Line items from the server (`lab_order_items`), with catalog names when available.
   final List<OrderLineSummary> lineItems;
+
+  /// Backend `report_delivery_method`: `soft_copy` | `hard_copy` | `both`.
+  final String reportDeliveryMethod;
 
   bool get isReportReady => reportOutAt != null;
 
@@ -274,6 +278,7 @@ class LabOrderSummary {
       scheduleAcceptedByUser: scheduleAcceptedByUser ?? this.scheduleAcceptedByUser,
       backendStatus: backendStatus,
       lineItems: lineItems,
+      reportDeliveryMethod: reportDeliveryMethod,
     );
   }
 }

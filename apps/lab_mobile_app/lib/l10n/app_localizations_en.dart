@@ -532,6 +532,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get resultsReleasedBadge => 'Released';
 
   @override
+  String get resultsHardCopyBadge => 'Delivered';
+
+  @override
+  String resultsHardCopyDate(String date) {
+    return 'Delivered $date';
+  }
+
+  @override
   String get labReportTitle => 'Lab report';
 
   @override
@@ -559,6 +567,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get labReportPdfsNotUploadedYet => 'The lab has released this order, but PDFs are not uploaded yet. Check back soon or contact the lab.';
+
+  @override
+  String get labReportHardCopyHint => 'Physical copy only — digital PDFs are not available in the app.';
+
+  @override
+  String get labReportHardCopyDeliveredBanner => 'Your physical lab report has been delivered. Contact the lab if you need another copy.';
+
+  @override
+  String get labReportHardCopyTestDelivered => 'Physical report delivered for this test.';
 
   @override
   String get labReportSummaryValues => 'Summary values';

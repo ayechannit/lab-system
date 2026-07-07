@@ -21,3 +21,13 @@ export function formatReportDeliveryMethod(method: string | null | undefined): s
       return key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
   }
 }
+
+export function allowsDigitalResultDelivery(method: string | null | undefined): boolean {
+  const key = (method ?? '').trim().toLowerCase()
+  return key === 'soft_copy' || key === 'both'
+}
+
+export function requiresHardCopyDelivery(method: string | null | undefined): boolean {
+  const key = (method ?? '').trim().toLowerCase()
+  return key === 'hard_copy' || key === 'both'
+}
