@@ -285,7 +285,7 @@ class RestLabUserApi implements LabUserApi {
 
   @override
   Future<void> register(RegisterRequest request) async {
-    final body = jsonEncode({
+    final fields = <String, String>{
       'name': request.name,
       'email': request.email.trim().toLowerCase(),
       'phone': request.phone,
@@ -293,10 +293,46 @@ class RestLabUserApi implements LabUserApi {
       // Admin web sends plaintext in `password_hash`; `User.create` hashes it.
       'password_hash': request.password,
       'address': request.address.trim(),
-      'latitude': request.latitude,
-      'longitude': request.longitude,
-    });
-    final r = await http.post(Uri.parse('$_base/api/users'), headers: _jsonHeaders(withAuth: false), body: body);
+      'latitude': '${request.latitude}',
+      'longitude': '${request.longitude}',
+    };
+    final license = request.licenseNumber.trim();
+    if (license.isNotEmpty) {
+      fields['license_number'] = license;
+    }
+
+    final hasPhoto = request.profileImageBytes != null && request.profileImageBytes!.isNotEmpty;
+    final http.Response r;
+    if (hasPhoto) {
+      final mp = http.MultipartRequest('POST', Uri.parse('$_base/api/users'));
+      mp.headers['Accept'] = 'application/json';
+      mp.headers['Accept-Language'] = _localeCode;
+      mp.fields.addAll(fields);
+      final rawName = (request.profileImageFilename ?? 'profile.jpg').trim();
+      final shortName = rawName.contains('/') ? rawName.split('/').last : rawName.split(r'\').last;
+      final nameForPart = shortName.isEmpty ? 'profile.jpg' : shortName;
+      mp.files.add(
+        http.MultipartFile.fromBytes(
+          'image',
+          request.profileImageBytes!,
+          filename: nameForPart,
+          contentType: _prescriptionMediaTypeFromFilename(nameForPart),
+        ),
+      );
+      final streamed = await mp.send();
+      r = await http.Response.fromStream(streamed);
+    } else {
+      r = await http.post(
+        Uri.parse('$_base/api/users'),
+        headers: _jsonHeaders(withAuth: false),
+        body: jsonEncode(fields.map((k, v) {
+          if (k == 'latitude' || k == 'longitude') {
+            return MapEntry(k, double.tryParse(v) ?? 0);
+          }
+          return MapEntry(k, v);
+        })),
+      );
+    }
     if (r.statusCode >= 400) _throwFromResponse(r);
   }
 
@@ -393,6 +429,17 @@ class RestLabUserApi implements LabUserApi {
     if (r.statusCode >= 400) _throwFromResponse(r);
     final map = _asObj(jsonDecode(r.body));
     return _userFromMe(map);
+  }
+
+  @override
+  Future<void> deleteAccount(String userId) async {
+    final id = userId.trim();
+    if (id.isEmpty) throw LabApiException('Not signed in');
+    final r = await http.delete(
+      Uri.parse('$_base/api/users/${Uri.encodeComponent(id)}'),
+      headers: _jsonHeaders(),
+    );
+    if (r.statusCode >= 400) _throwFromResponse(r);
   }
 
   @override

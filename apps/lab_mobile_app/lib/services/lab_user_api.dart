@@ -17,8 +17,11 @@ class RegisterRequest {
     required this.password,
     required this.role,
     this.address = '',
+    this.licenseNumber = '',
     required this.latitude,
     required this.longitude,
+    this.profileImageBytes,
+    this.profileImageFilename,
   });
 
   final String name;
@@ -29,8 +32,15 @@ class RegisterRequest {
 
   /// Home / clinic address line (`POST /api/users`).
   final String address;
+
+  /// Required for doctor, clinic, and phlebotomist (`POST /api/users`).
+  final String licenseNumber;
   final double latitude;
   final double longitude;
+
+  /// Optional avatar uploaded with registration (multipart `image`).
+  final List<int>? profileImageBytes;
+  final String? profileImageFilename;
 }
 
 class LoginRequest {
@@ -81,6 +91,9 @@ abstract class LabUserApi {
     double? latitude,
     double? longitude,
   });
+
+  /// Soft-deletes the signed-in account (`DELETE /api/users/:id`).
+  Future<void> deleteAccount(String userId);
 
   Future<AppUser> uploadProfileImage({
     required String userId,

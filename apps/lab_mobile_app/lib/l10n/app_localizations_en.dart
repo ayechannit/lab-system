@@ -116,6 +116,28 @@ class AppLocalizationsEn extends AppLocalizations {
   String get signOut => 'Sign out';
 
   @override
+  String get deleteAccount => 'Delete account';
+
+  @override
+  String get deleteAccountSubtitle => 'Permanently deactivate this account';
+
+  @override
+  String get deleteAccountTitle => 'Delete account?';
+
+  @override
+  String get deleteAccountMessage =>
+      'This will deactivate your account. You will be signed out and will not be able to sign in again with this email.';
+
+  @override
+  String get deleteAccountConfirm => 'Delete account';
+
+  @override
+  String get deleteAccountSuccess => 'Your account has been deleted.';
+
+  @override
+  String get deleteAccountFailed => 'Could not delete account';
+
+  @override
   String get orderTracking => 'Order tracking';
 
   @override
@@ -760,7 +782,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profilePhoneRequired => 'Enter a phone number';
 
   @override
-  String get profilePhoneInvalid => 'Enter a valid phone number';
+  String get profilePhoneInvalid => 'Use + and digits only (e.g. +959…)';
 
   @override
   String get profileSaveChanges => 'Save changes';

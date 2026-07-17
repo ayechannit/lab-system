@@ -15,6 +15,8 @@ enum UserRole {
 
   bool get requiresStaffApproval => this != UserRole.patient;
 
+  bool get requiresLicenseNumber => this != UserRole.patient;
+
   String get signupDescription => switch (this) {
         UserRole.patient => 'Book tests and view your own results.',
         UserRole.doctor => 'Order lab tests for your patients.',

@@ -143,8 +143,11 @@ class SessionController extends ChangeNotifier {
     required String password,
     required UserRole role,
     String address = '',
+    String licenseNumber = '',
     required double latitude,
     required double longitude,
+    List<int>? profileImageBytes,
+    String? profileImageFilename,
   }) async {
     _setBusy(true);
     try {
@@ -156,8 +159,11 @@ class SessionController extends ChangeNotifier {
           password: password,
           role: role,
           address: address,
+          licenseNumber: licenseNumber,
           latitude: latitude,
           longitude: longitude,
+          profileImageBytes: profileImageBytes,
+          profileImageFilename: profileImageFilename,
         ),
       );
       _api.clearAuth();
@@ -187,6 +193,19 @@ class SessionController extends ChangeNotifier {
     _notificationsLoading = false;
     _notificationsError = null;
     notifyListeners();
+  }
+
+  /// Soft-deletes the current account on the server, then clears the local session.
+  Future<void> deleteAccount() async {
+    final u = _user;
+    if (u == null) throw StateError('Not signed in');
+    _setBusy(true);
+    try {
+      await _api.deleteAccount(u.id);
+      logout();
+    } finally {
+      _setBusy(false);
+    }
   }
 
   Future<void> updateProfile({

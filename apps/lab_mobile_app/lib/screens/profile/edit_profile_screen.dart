@@ -1,8 +1,7 @@
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:flutter/services.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../app/session_scope.dart';
@@ -12,6 +11,7 @@ import '../../widgets/common/app_branding_row.dart';
 import '../../widgets/common/notification_bell_button.dart';
 import '../../widgets/common/user_profile_avatar.dart';
 import '../../widgets/location/address_location_fields.dart';
+import '../../utils/phone_input.dart';
 import '../../widgets/navigation/lab_main_bottom_nav.dart';
 
 class EditProfileScreen extends StatefulWidget {
@@ -342,11 +342,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         controller: _phone,
                         decoration: _fieldDecoration(l10n.phone, prefix: Icons.phone_outlined),
                         keyboardType: TextInputType.phone,
-                        validator: (v) {
-                          if (v == null || v.trim().isEmpty) return l10n.profilePhoneRequired;
-                          if (v.trim().length < 6) return l10n.profilePhoneInvalid;
-                          return null;
-                        },
+                        inputFormatters: const [PhoneNumberInputFormatter()],
+                        validator: (v) => validatePhoneNumber(
+                          v,
+                          emptyMessage: l10n.profilePhoneRequired,
+                          invalidMessage: l10n.profilePhoneInvalid,
+                        ),
                       ),
                       const SizedBox(height: 14),
                       TextFormField(

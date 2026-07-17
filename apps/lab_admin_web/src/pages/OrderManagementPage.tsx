@@ -273,7 +273,7 @@ function resolveOrderingUserRole(
   const uid = order.user_id
   if (!uid) return undefined
   const r = order.ordering_user_role?.trim()
-  if (r === 'clinic' || r === 'doctor' || r === 'patient') return r
+  if (r === 'clinic' || r === 'doctor' || r === 'patient' || r === 'phlebotomist') return r
   return userMap.get(uid)?.role
 }
 

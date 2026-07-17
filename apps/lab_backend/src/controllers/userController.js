@@ -48,8 +48,31 @@ const createUser = async (req, res) => {
       return res.status(400).json({ message: 'license_number is required for doctor, clinic, and phlebotomist roles' });
     }
 
-    const userData = { name, email, phone, role, password, password_hash, address, latitude, longitude, license_number };
-    const user = await User.create(userData, req.user?.id);
+    const userData = {
+      name,
+      email,
+      phone,
+      role,
+      password,
+      password_hash,
+      address,
+      latitude: latitude != null && latitude !== '' ? Number(latitude) : latitude,
+      longitude: longitude != null && longitude !== '' ? Number(longitude) : longitude,
+      license_number,
+    };
+    let user = await User.create(userData, req.user?.id);
+
+    // Optional profile photo on signup (multipart field `image`).
+    if (user && req.file) {
+      try {
+        const StorageService = require('../utils/storageService');
+        const fileKey = await StorageService.uploadFile(req.file, 'profiles');
+        const fileUrl = (await StorageService.getFileUrl(fileKey)) || fileKey;
+        user = await User.updateProfileImage(user.id, fileUrl, user.id) || user;
+      } catch (imgErr) {
+        console.error('Profile image upload during registration failed:', imgErr.message);
+      }
+    }
 
     // Notify staff of new registration if role requires approval
     if (user && ['doctor', 'clinic', 'phlebotomist'].includes(user.role)) {
@@ -137,7 +160,27 @@ const approveUser = async (req, res) => {
 
 const deleteUser = async (req, res) => {
   try {
-    const success = await User.delete(req.params.id, req.user?.id);
+    if (!req.user) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+
+    const targetId = req.params.id;
+    const selfId = req.user.id;
+    const isStaff = req.user.type === 'staff';
+    const isAdmin = isStaff && ['admin', 'manager'].includes(req.user.role);
+    const same =
+      String(targetId).replace(/[{}]/g, '').toLowerCase() ===
+      String(selfId).replace(/[{}]/g, '').toLowerCase();
+
+    // End users may delete only their own account; staff admin/manager may delete any user.
+    if (!same && !isAdmin) {
+      return res.status(403).json({ message: 'You can only delete your own account' });
+    }
+
+    const existing = await User.getById(targetId);
+    if (!existing) return res.status(404).json({ message: 'User not found' });
+
+    const success = await User.delete(targetId, selfId);
     if (!success) return res.status(404).json({ message: 'User not found' });
     res.json({ message: 'User deleted successfully' });
   } catch (error) {

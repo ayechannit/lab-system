@@ -45,7 +45,7 @@ function isSessionRole(r: string): r is SessionRole {
 }
 
 function isEndUserRole(r: string): r is EndUserRole {
-  return r === 'clinic' || r === 'doctor' || r === 'patient'
+  return r === 'clinic' || r === 'doctor' || r === 'patient' || r === 'phlebotomist'
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {

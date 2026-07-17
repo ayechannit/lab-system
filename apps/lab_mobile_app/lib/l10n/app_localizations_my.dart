@@ -116,6 +116,28 @@ class AppLocalizationsMy extends AppLocalizations {
   String get signOut => 'ထွက်မည်';
 
   @override
+  String get deleteAccount => 'အကောင့် ဖျက်မည်';
+
+  @override
+  String get deleteAccountSubtitle => 'ဤအကောင့်ကို ပိတ်သိမ်းမည်';
+
+  @override
+  String get deleteAccountTitle => 'အကောင့် ဖျက်မည်လား?';
+
+  @override
+  String get deleteAccountMessage =>
+      'သင့်အကောင့်ကို ပိတ်သိမ်းမည်ဖြစ်သည်။ ထွက်ခွာပြီးနောက် ဤအီးမေးလ်ဖြင့် ပြန်လည် အကောင့်ဝင်၍မရပါ။';
+
+  @override
+  String get deleteAccountConfirm => 'အကောင့် ဖျက်မည်';
+
+  @override
+  String get deleteAccountSuccess => 'သင့်အကောင့်ကို ဖျက်ပြီးပါပြီ။';
+
+  @override
+  String get deleteAccountFailed => 'အကောင့်ကို ဖျက်၍မရပါ';
+
+  @override
   String get orderTracking => 'မှာယူမှု ခြေရာခံ';
 
   @override
@@ -760,7 +782,7 @@ class AppLocalizationsMy extends AppLocalizations {
   String get profilePhoneRequired => 'ဖုန်းနံပါတ် ထည့်သွင်းပါ';
 
   @override
-  String get profilePhoneInvalid => 'မှန်ကန်သော ဖုန်းနံပါတ် ထည့်သွင်းပါ';
+  String get profilePhoneInvalid => '+ နှင့် ဂဏန်းများသာ သုံးပါ (ဥပမာ +959…)';
 
   @override
   String get profileSaveChanges => 'ပြောင်းလဲမှုများ သိမ်းမည်';

@@ -1,7 +1,11 @@
 export type StaffRole = 'admin' | 'lab_technician' | 'reception' | 'manager' | 'collector'
 
 /** End-user roles for `POST /api/users` (`users.role`). */
-export type EndUserRole = 'clinic' | 'doctor' | 'patient'
+export type EndUserRole = 'clinic' | 'doctor' | 'patient' | 'phlebotomist'
+
+export function endUserRoleRequiresLicenseNumber(role: EndUserRole): boolean {
+  return role === 'doctor' || role === 'clinic' || role === 'phlebotomist'
+}
 
 /** Role stored in the admin session after login. */
 export type SessionRole = StaffRole | EndUserRole
@@ -28,6 +32,7 @@ export interface UserListRow {
   latitude: number
   longitude: number
   total_points: number
+  license_number: string | null
   /** Doctors/clinics register as pending until staff approves. Patients are auto-approved. */
   is_approved: boolean
   is_deleted: boolean

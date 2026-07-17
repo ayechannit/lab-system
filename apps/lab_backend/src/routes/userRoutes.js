@@ -342,7 +342,7 @@ router.get('/',authMiddleware, userController.getAllUsers);
 router.get('/:id/orders',authMiddleware, userController.getOrdersByUser);
 router.get('/:id',authMiddleware, userController.getUserById);
 
-router.post('/', userController.createUser);
+router.post('/', uploadProfile.single('image'), userController.createUser);
 
 /**
  * @swagger
@@ -377,6 +377,6 @@ router.put('/fcm-token', authMiddleware, userController.registerFcmToken);
 router.post('/:id/profile-image', authMiddleware, uploadProfile.single('image'), userController.uploadProfileImage);
 router.put('/:id', userController.updateUser);
 router.put('/:id/approve', authMiddleware, userController.approveUser);
-router.delete('/:id', userController.deleteUser);
+router.delete('/:id', authMiddleware, userController.deleteUser);
 
 module.exports = router;

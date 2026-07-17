@@ -37,11 +37,12 @@ class _AddressMapPickerScreenState extends State<AddressMapPickerScreen> {
   Timer? _forwardDebounce;
   var _reverseBusy = false;
   var _forwardBusy = false;
+  var _confirmBusy = false;
   int _reverseSeq = 0;
   int _forwardSeq = 0;
   String? _geoError;
 
-  bool get _lookupBusy => _reverseBusy || _forwardBusy;
+  bool get _lookupBusy => _reverseBusy || _forwardBusy || _confirmBusy;
 
   @override
   void initState() {
@@ -56,15 +57,13 @@ class _AddressMapPickerScreenState extends State<AddressMapPickerScreen> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      if (has) {
-        final id = ++_reverseSeq;
-        _runReverse(_marker, id);
-      } else {
-        final addr = widget.initialAddress.trim();
-        if (addr.length >= 4) {
-          _runForward(addr, fromInitialOpen: true);
-        }
+      final addr = widget.initialAddress.trim();
+      if (!has && addr.length >= 4) {
+        _runForward(addr, fromInitialOpen: true);
+        return;
       }
+      final id = ++_reverseSeq;
+      _runReverse(_marker, id);
     });
   }
 
@@ -186,10 +185,34 @@ class _AddressMapPickerScreenState extends State<AddressMapPickerScreen> {
     }
   }
 
-  void _confirm() {
+  Future<void> _confirm() async {
+    if (_confirmBusy) return;
+
+    _forwardDebounce?.cancel();
+    _reverseDebounce?.cancel();
+
+    final needsReverse = _address.text.trim().isEmpty || _reverseBusy;
+    if (needsReverse) {
+      setState(() => _confirmBusy = true);
+      try {
+        final id = ++_reverseSeq;
+        await _runReverse(_marker, id);
+      } finally {
+        if (mounted) setState(() => _confirmBusy = false);
+      }
+    }
+
+    if (!mounted) return;
+
+    final line = _address.text.trim();
+    if (line.isEmpty) {
+      setState(() => _geoError = 'Could not resolve address for this point. Try tapping the map again or type an address.');
+      return;
+    }
+
     Navigator.of(context).pop(
       AddressMapPickResult(
-        addressLine: _address.text.trim(),
+        addressLine: line,
         latitude: _marker.latitude,
         longitude: _marker.longitude,
       ),
@@ -209,8 +232,8 @@ class _AddressMapPickerScreenState extends State<AddressMapPickerScreen> {
         elevation: 0,
         actions: [
           TextButton(
-            onPressed: _confirm,
-            child: const Text('Save'),
+            onPressed: _lookupBusy ? null : _confirm,
+            child: Text(_confirmBusy ? 'Saving…' : 'Save'),
           ),
         ],
       ),
@@ -338,8 +361,8 @@ class _AddressMapPickerScreenState extends State<AddressMapPickerScreen> {
                         const SizedBox(width: 12),
                         Expanded(
                           child: FilledButton(
-                            onPressed: _confirm,
-                            child: const Text('Use this location'),
+                            onPressed: _lookupBusy ? null : _confirm,
+                            child: Text(_confirmBusy ? 'Resolving…' : 'Use this location'),
                           ),
                         ),
                       ],

@@ -21,7 +21,7 @@ import {
 import { roleLabel } from '../utils/roleLabels'
 import '../components/common/ui.css'
 
-const USER_ROLES: EndUserRole[] = ['clinic', 'doctor', 'patient']
+const USER_ROLES: EndUserRole[] = ['clinic', 'doctor', 'patient', 'phlebotomist']
 
 export function UserManagementPage() {
   const { t } = useTranslation()

@@ -22,6 +22,7 @@ import '../../widgets/common/app_toast.dart';
 import '../../widgets/common/app_dropdown_form_field.dart';
 import '../../widgets/common/app_field_decoration.dart';
 import '../../widgets/location/address_location_fields.dart';
+import '../../utils/phone_input.dart';
 import '../../widgets/navigation/lab_main_bottom_nav.dart';
 import '../../widgets/orders/collector_pick_field.dart';
 
@@ -796,9 +797,11 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
                     decoration: AppFieldDecoration.build(
                       context,
                       prefixIcon: Icon(Icons.phone_outlined, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                      hint: '+959…',
                     ),
                     keyboardType: TextInputType.phone,
-                    validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+                    inputFormatters: const [PhoneNumberInputFormatter()],
+                    validator: (v) => validatePhoneNumber(v),
                   ),
                   const SizedBox(height: 12),
                   _ResponsiveFieldPair(

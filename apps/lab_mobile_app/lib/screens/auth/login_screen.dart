@@ -35,13 +35,21 @@ class _LoginScreenState extends State<LoginScreen> {
     _email = TextEditingController();
     _password = TextEditingController();
     _loadRememberedLogin();
+    _applyRegisterHint();
+  }
+
+  @override
+  void didUpdateWidget(LoginScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.routeExtra != oldWidget.routeExtra) {
+      _applyRegisterHint();
+    }
+  }
+
+  void _applyRegisterHint() {
     final ex = widget.routeExtra;
     if (ex is PostRegisterLoginHint) {
       _email.text = ex.email;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        AppToast.info(context, ex.message);
-      });
     }
   }
 
@@ -131,29 +139,40 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           const SizedBox(height: 14),
                           Row(
-                            crossAxisAlignment: CrossAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.baseline,
+                            textBaseline: TextBaseline.alphabetic,
                             children: [
-                              Expanded(child: _FieldLabel(label: l10n.password)),
-                              Flexible(
-                                child: TextButton(
-                                  style: TextButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                                    minimumSize: Size.zero,
-                                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                  ),
-                                  onPressed: () {
-                                    context.push('/forgot-password', extra: _email.text.trim());
-                                  },
-                                  child: Text(
-                                    l10n.forgotPassword,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    textAlign: TextAlign.end,
+                              _FieldLabel(label: l10n.password, bottomPadding: 0),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Align(
+                                  alignment: Alignment.centerRight,
+                                  child: TextButton(
+                                    style: TextButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
+                                      minimumSize: Size.zero,
+                                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                      visualDensity: VisualDensity.compact,
+                                    ),
+                                    onPressed: () {
+                                      context.push('/forgot-password', extra: _email.text.trim());
+                                    },
+                                    child: Text(
+                                      l10n.forgotPassword,
+                                      softWrap: true,
+                                      textAlign: TextAlign.end,
+                                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                                            color: context.cs.primary,
+                                            height: 1.35,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                    ),
                                   ),
                                 ),
                               ),
                             ],
                           ),
+                          const SizedBox(height: 6),
                           _InputShell(
                             child: TextFormField(
                               controller: _password,
@@ -297,19 +316,21 @@ class _LoginScreenState extends State<LoginScreen> {
 }
 
 class _FieldLabel extends StatelessWidget {
-  const _FieldLabel({required this.label});
+  const _FieldLabel({required this.label, this.bottomPadding = 6});
 
   final String label;
+  final double bottomPadding;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(left: 2, bottom: 6),
+      padding: EdgeInsets.only(left: 2, bottom: bottomPadding),
       child: Text(
         label,
         style: Theme.of(context).textTheme.labelLarge?.copyWith(
               color: context.cs.onSurfaceVariant,
               fontWeight: FontWeight.w700,
+              height: 1.35,
             ),
       ),
     );

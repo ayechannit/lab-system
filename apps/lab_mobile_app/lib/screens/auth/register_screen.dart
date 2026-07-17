@@ -1,15 +1,21 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../app/session_scope.dart';
 import '../../config/map_defaults.dart';
+import '../../l10n/app_localizations.dart';
 import '../../models/post_register_login_hint.dart';
 import '../../models/user_role.dart';
 import '../../theme/theme_extensions.dart';
+import '../../utils/phone_input.dart';
 import '../../widgets/auth/signup_role_selector.dart';
 import '../../widgets/common/themed_input_shell.dart';
 import '../../widgets/common/app_brand_mark.dart';
 import '../../widgets/common/app_toast.dart';
+import '../../widgets/common/user_profile_avatar.dart';
 import '../../widgets/auth/auth_preference_controls.dart';
 import '../../widgets/location/address_location_fields.dart';
 
@@ -29,6 +35,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _name = TextEditingController();
   final _phone = TextEditingController();
   final _email = TextEditingController();
+  final _licenseNumber = TextEditingController();
   String _addressLine = '';
   final _password = TextEditingController();
   final _confirmPassword = TextEditingController();
@@ -38,18 +45,104 @@ class _RegisterScreenState extends State<RegisterScreen> {
   late UserRole _selectedRole;
   double _addressLat = 0;
   double _addressLng = 0;
+  Uint8List? _pendingPhotoBytes;
+  String _pendingPhotoName = '';
+
+  void _onNameChanged() {
+    if (_pendingPhotoBytes != null && mounted) setState(() {});
+  }
 
   @override
   void initState() {
     super.initState();
     _selectedRole = widget.initialRole ?? UserRole.patient;
+    _name.addListener(_onNameChanged);
+  }
+
+  Future<void> _pickPhoto(ImageSource source) async {
+    final l10n = AppLocalizations.of(context)!;
+    try {
+      final picker = ImagePicker();
+      final file = await picker.pickImage(
+        source: source,
+        imageQuality: 85,
+        maxWidth: 2048,
+        maxHeight: 2048,
+      );
+      if (file == null) return;
+      final bytes = await file.readAsBytes();
+      if (bytes.isEmpty) {
+        if (!mounted) return;
+        AppToast.warning(context, l10n.profilePhotoPickFailed);
+        return;
+      }
+      final name = file.name.trim().isNotEmpty
+          ? file.name
+          : 'profile_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      if (!mounted) return;
+      setState(() {
+        _pendingPhotoBytes = bytes;
+        _pendingPhotoName = name;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      AppToast.warning(context, l10n.profilePhotoPickFailed);
+    }
+  }
+
+  Future<void> _showPhotoPickerSheet() async {
+    final l10n = AppLocalizations.of(context)!;
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.photo_camera_outlined),
+                title: Text(l10n.profileTakePhoto),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _pickPhoto(ImageSource.camera);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library_outlined),
+                title: Text(l10n.profileChooseFromGallery),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _pickPhoto(ImageSource.gallery);
+                },
+              ),
+              if (_pendingPhotoBytes != null)
+                ListTile(
+                  leading: Icon(Icons.delete_outline, color: Theme.of(ctx).colorScheme.error),
+                  title: const Text('Remove photo'),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    setState(() {
+                      _pendingPhotoBytes = null;
+                      _pendingPhotoName = '';
+                    });
+                  },
+                ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   @override
+  @override
   void dispose() {
+    _name.removeListener(_onNameChanged);
     _name.dispose();
     _phone.dispose();
     _email.dispose();
+    _licenseNumber.dispose();
     _password.dispose();
     _confirmPassword.dispose();
     super.dispose();
@@ -108,12 +201,58 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             ),
                       ),
                       const SizedBox(height: 18),
+                      Center(
+                        child: Column(
+                          children: [
+                            UserProfileAvatar(
+                              name: _name.text.trim().isNotEmpty ? _name.text.trim() : '?',
+                              previewBytes: _pendingPhotoBytes,
+                              radius: 48,
+                              showEditBadge: true,
+                              onEditTap: _submitting ? null : _showPhotoPickerSheet,
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              AppLocalizations.of(context)!.profilePhotoTitle,
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: context.cs.onSurfaceVariant,
+                                  ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 18),
                       _RegisterLabel(text: 'Role'),
                       const SizedBox(height: 8),
                       SignupRoleSelector(
                         selected: _selectedRole,
                         onSelected: (role) => setState(() => _selectedRole = role),
                       ),
+                      if (_selectedRole.requiresLicenseNumber) ...[
+                        const SizedBox(height: 12),
+                        _RegisterLabel(text: 'License / registration number'),
+                        ThemedInputShell(
+                          child: TextFormField(
+                            controller: _licenseNumber,
+                            decoration: const InputDecoration(
+                              prefixIcon: Icon(Icons.badge_outlined),
+                              hintText: 'Medical or professional license ID',
+                              border: InputBorder.none,
+                              enabledBorder: InputBorder.none,
+                              focusedBorder: InputBorder.none,
+                              filled: false,
+                            ),
+                            textInputAction: TextInputAction.next,
+                            validator: (v) {
+                              if (!_selectedRole.requiresLicenseNumber) return null;
+                              if (v == null || v.trim().isEmpty) {
+                                return 'Required for ${_selectedRole.label.toLowerCase()} accounts';
+                              }
+                              return null;
+                            },
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: 18),
                       _RegisterLabel(text: 'Full Name'),
                       ThemedInputShell(
@@ -159,13 +298,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           controller: _phone,
                           decoration: const InputDecoration(
                             prefixIcon: Icon(Icons.call_outlined),
+                            hintText: '+959…',
                             border: InputBorder.none,
                             enabledBorder: InputBorder.none,
                             focusedBorder: InputBorder.none,
                             filled: false,
                           ),
                           keyboardType: TextInputType.phone,
-                          validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+                          inputFormatters: const [PhoneNumberInputFormatter()],
+                          validator: (v) => validatePhoneNumber(v),
                           textInputAction: TextInputAction.next,
                         ),
                       ),
@@ -254,6 +395,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                     );
                                     return;
                                   }
+                                  if (_selectedRole.requiresLicenseNumber &&
+                                      _licenseNumber.text.trim().isEmpty) {
+                                    AppToast.warning(
+                                      context,
+                                      'Enter your license or registration number.',
+                                    );
+                                    return;
+                                  }
                                   setState(() => _submitting = true);
                                   try {
                                     final emailTrim = _email.text.trim();
@@ -264,17 +413,28 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                       password: _password.text,
                                       role: _selectedRole,
                                       address: _addressLine.trim(),
+                                      licenseNumber: _licenseNumber.text.trim(),
                                       latitude: _addressLat,
                                       longitude: _addressLng,
+                                      profileImageBytes: _pendingPhotoBytes,
+                                      profileImageFilename: _pendingPhotoName.isEmpty
+                                          ? null
+                                          : _pendingPhotoName,
                                     );
                                     if (!context.mounted) return;
                                     final needsApproval = _selectedRole.requiresStaffApproval;
+                                    final successMessage = needsApproval
+                                        ? 'A lab staff member must approve your account before you can sign in.'
+                                        : 'Sign in with your email and password.';
+                                    AppToast.success(
+                                      context,
+                                      successMessage,
+                                      title: 'Account created',
+                                    );
                                     context.go(
                                       '/login',
                                       extra: PostRegisterLoginHint(
-                                        message: needsApproval
-                                            ? 'Account created. A lab staff member must approve your account before you can sign in.'
-                                            : 'Account created. Sign in with your email and password.',
+                                        message: successMessage,
                                         email: emailTrim,
                                       ),
                                     );

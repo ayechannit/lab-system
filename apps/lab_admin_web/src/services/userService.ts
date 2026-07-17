@@ -12,6 +12,7 @@ export type UserCreateBody = {
   latitude?: number | null
   longitude?: number | null
   total_points?: number
+  license_number?: string | null
 }
 
 export type UserUpdateBody = {
@@ -24,6 +25,7 @@ export type UserUpdateBody = {
   longitude: number
   total_points: number
   password_hash?: string
+  license_number?: string | null
 }
 
 function normalizeUserRow(raw: Record<string, unknown>): UserListRow {
@@ -37,6 +39,9 @@ function normalizeUserRow(raw: Record<string, unknown>): UserListRow {
     latitude: Number(raw.latitude ?? 0),
     longitude: Number(raw.longitude ?? 0),
     total_points: Number(raw.total_points ?? 0),
+    license_number: raw.license_number == null || raw.license_number === ''
+      ? null
+      : String(raw.license_number),
     is_approved: raw.is_approved === true || raw.is_approved === 1 || raw.is_approved === '1',
     is_deleted: Boolean(raw.is_deleted),
     created_at: String(raw.created_at ?? ''),
