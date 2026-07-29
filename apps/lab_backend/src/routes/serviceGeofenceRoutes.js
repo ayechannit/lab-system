@@ -1,9 +1,10 @@
 const express = require('express');
 const router = express.Router();
-const { authMiddleware } = require('../middlewares/authMiddleware');
+const { authMiddleware, modulePermission } = require('../middlewares/authMiddleware');
 const serviceGeofenceController = require('../controllers/serviceGeofenceController');
 
 router.use(authMiddleware);
+const manageGeofences = modulePermission('service-geofences');
 
 /**
  * @swagger
@@ -281,12 +282,12 @@ router.use(authMiddleware);
  *         description: Service geofence not found
  */
 
-router.get('/', serviceGeofenceController.getAllGeofences);
+router.get('/', manageGeofences, serviceGeofenceController.getAllGeofences);
 router.get('/active', serviceGeofenceController.getActiveGeofences);
 router.get('/calculate-fee', serviceGeofenceController.calculateServiceFee);
-router.get('/:id', serviceGeofenceController.getGeofenceById);
-router.post('/', serviceGeofenceController.createGeofence);
-router.put('/:id', serviceGeofenceController.updateGeofence);
-router.delete('/:id', serviceGeofenceController.deleteGeofence);
+router.get('/:id', manageGeofences, serviceGeofenceController.getGeofenceById);
+router.post('/', manageGeofences, serviceGeofenceController.createGeofence);
+router.put('/:id', manageGeofences, serviceGeofenceController.updateGeofence);
+router.delete('/:id', manageGeofences, serviceGeofenceController.deleteGeofence);
 
 module.exports = router;

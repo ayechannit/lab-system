@@ -1,8 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const systemSettingController = require('../controllers/systemSettingController');
-const { authMiddleware } = require('../middlewares/authMiddleware');
+const { authMiddleware, modulePermission } = require('../middlewares/authMiddleware');
 const upload = require('../middlewares/upload');
+
+const adminOnly = [authMiddleware, modulePermission('system-settings')];
 
 /**
  * @swagger
@@ -95,7 +97,7 @@ router.get('/', systemSettingController.getSettings);
  *       401:
  *         description: Unauthorized
  */
-router.put('/', authMiddleware, systemSettingController.updateSettings);
+router.put('/', adminOnly, systemSettingController.updateSettings);
 
 /**
  * @swagger
@@ -123,7 +125,7 @@ router.put('/', authMiddleware, systemSettingController.updateSettings);
  *       401:
  *         description: Unauthorized
  */
-router.post('/logo', authMiddleware, upload.uploadLogo.single('logo'), systemSettingController.uploadLogo);
+router.post('/logo', adminOnly, upload.uploadLogo.single('logo'), systemSettingController.uploadLogo);
 
 /**
  * @swagger
@@ -139,7 +141,7 @@ router.post('/logo', authMiddleware, upload.uploadLogo.single('logo'), systemSet
  *       401:
  *         description: Unauthorized
  */
-router.post('/reset', authMiddleware, systemSettingController.resetToDefaults);
+router.post('/reset', adminOnly, systemSettingController.resetToDefaults);
 
 /**
  * @swagger
@@ -150,6 +152,6 @@ router.post('/reset', authMiddleware, systemSettingController.resetToDefaults);
  *     security:
  *       - bearerAuth: []
  */
-router.patch('/ui-locale', authMiddleware, systemSettingController.updateUiLocale);
+router.patch('/ui-locale', adminOnly, systemSettingController.updateUiLocale);
 
 module.exports = router;

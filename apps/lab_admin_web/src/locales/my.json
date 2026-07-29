@@ -15,6 +15,7 @@
     "edit": "ပြင်မည်",
     "logout": "ထွက်မည်",
     "signedIn": "ဝင်ရောက်ပြီး",
+    "accessRestricted": "ဤစာမျက်နှာကို ဝင်ရောက်ခွင့်မရှိပါ။ အမှားဖြစ်နေသည်ဟု ယူဆပါက သင့်အက်ဒမင်ကို ဆက်သွယ်ပါ။",
     "openNav": "မီနူးဖွင့်မည်",
     "closeNav": "မီနူးပိတ်မည်",
     "expandSidebar": "ဘေးဘားကို ချဲ့မည်",
@@ -146,7 +147,8 @@
     "advertisements": "ကြော်ငြာများ",
     "loyalty": "သစ္စာရှိ အမှတ်များ (Loyalty points)",
     "systemSettings": "စနစ်ဆက်တင်များ",
-    "reports": "အစီရင်ခံစာများ"
+    "reports": "အစီရင်ခံစာများ",
+    "permissions": "ခွင့်ပြုချက်များ"
   },
   "roles": {
     "admin": "အက်ဒမင်",
@@ -178,7 +180,7 @@
     "staffSignInHint": "ဝန်ထမ်းအကောင့် (admin, technician, reception, manager) ဖြင့် အကောင့်ဝင်ပါ။",
     "email": "Email",
     "password": "Password",
-    "forgotPassword": "စကားဝှက် မေ့နေပါသလား?",
+    "forgotPasswordHint": "စကားဝှက် မေ့နေပါသလား? ပြန်လည်သတ်မှတ်ရန် သင့်အက်ဒမင်ကို ဆက်သွယ်ပါ။",
     "rememberMe": "အကောင့်ဝင်ထားမည်",
     "signIn": "အကောင့်ဝင်မည်",
     "signingIn": "အကောင့်ဝင်နေသည်…",
@@ -189,33 +191,6 @@
     "marketingLead": "လုံခြုံရေးနှင့် စည်းမျဉ်းများနဲ့အညီ ဓာတ်ခွဲခန်းလုပ်ငန်းများကို စီမံခန့်ခွဲလိုက်ပါ။",
     "emailPlaceholder": "you@example.com",
     "passwordPlaceholder": "••••••••",
-    "forgotTitle": "စကားဝှက် မေ့နေပါသလား",
-    "resetTitle": "စကားဝှက် အသစ်သတ်မှတ်မည်",
-    "forgotSubtitle": "ဝန်ထမ်း အီးမေးလ် ထည့်သွင်းပါ။ ဂဏန်း ၆ လုံးပါ အတည်ပြုကုဒ်ကို ပို့ပေးပါမည် (၁၅ မိနစ် သက်တမ်း)။",
-    "resetSubtitle": "{{email}} သို့ ပို့ထားသော ကုဒ်ကို ထည့်သွင်းပြီး စကားဝှက်အသစ် သတ်မှတ်ပါ။",
-    "resetSubtitleFallbackEmail": "your email",
-    "verificationCode": "Verification code",
-    "codePlaceholder": "000000",
-    "newPassword": "စကားဝှက်အသစ်",
-    "confirmPassword": "စကားဝှက် အတည်ပြုပါ",
-    "newPasswordPlaceholder": "At least 8 characters",
-    "confirmPasswordPlaceholder": "စကားဝှက်အသစ် ထပ်မံထည့်သွင်းပါ",
-    "sendCode": "အတည်ပြုကုဒ် ပို့မည်",
-    "sendingCode": "ကုဒ် ပို့နေသည်…",
-    "resetPassword": "စကားဝှက် အသစ်သတ်မှတ်မည်",
-    "updatingPassword": "စကားဝှက် ပြောင်းလဲနေသည်…",
-    "backToSignIn": "အကောင့်ဝင်ရန်သို့ ပြန်သွားမည်",
-    "useDifferentEmail": "အခြားအီးမေးလ်တစ်ခု အသုံးပြုမည်",
-    "resendCode": "ကုဒ် ထပ်မံပို့မည်",
-    "codeSent": "အတည်ပြုကုဒ် ပို့ပြီးပါပြီ။",
-    "codeResent": "ကုဒ်အသစ် ပို့ပြီးပါပြီ။",
-    "sendCodeFailed": "အတည်ပြုကုဒ် ပို့၍မရပါ",
-    "resendCodeFailed": "ကုဒ် ထပ်မံပို့၍မရပါ",
-    "passwordMinLength": "စကားဝှက် အနည်းဆုံး အက္ခရာ ၈ လုံး လိုအပ်ပါသည်။",
-    "passwordMismatch": "စကားဝှက်များ မကိုက်ညီပါ။",
-    "codeRequired": "အီးမေးလ်သို့ ပို့ထားသော ဂဏန်း ၆ လုံးပါ ကုဒ်ကို ထည့်ပါ။",
-    "resetSuccess": "စကားဝှက် အသစ်သတ်မှတ်ပြီးပါပြီ။",
-    "resetFailed": "စကားဝှက် အသစ်သတ်မှတ်၍ မရပါ",
     "brandAlt": "International Diagnostic & Healthcare Center",
     "securityHighlights": "Security and compliance highlights",
     "isoCertified": "ISO 15189 Certified",
@@ -233,11 +208,13 @@
     "name": "အမည်",
     "email": "အီးမေးလ်",
     "role": "အခန်းကဏ္ဍ",
+    "currentPassword": "လက်ရှိစကားဝှက်",
     "newPassword": "Password အသစ်",
     "confirmPassword": "Password အတည်ပြု",
     "namePlaceholder": "အမည်အပြည့်အစုံ",
     "emailPlaceholder": "name@lab.example",
     "passwordKeepHint": "Password မပြောင်းလိုပါက ဗလာထားပါ",
+    "currentPasswordPlaceholder": "သင့်လက်ရှိစကားဝှက်ကို ထည့်ပါ",
     "confirmPasswordPlaceholder": "Password ထပ်ထည့်ပါ",
     "saveChanges": "ပြောင်းလဲမှုများ သိမ်းမည်",
     "loadFailed": "ပရိုဖိုင် load လုပ်မရပါ",
@@ -245,7 +222,8 @@
     "cannotEdit": "ဤ account ကို ဤနေရာတွင် ပြင်ဆင်၍မရပါ။",
     "requestFailed": "တောင်းဆိုမှု မအောင်မြင်ပါ",
     "passwordMinLength": "Password အနည်းဆုံး {{count}} လုံး လိုအပ်ပါသည်။",
-    "passwordMismatch": "Password များ မကိုက်ညီပါ။"
+    "passwordMismatch": "Password များ မကိုက်ညီပါ။",
+    "currentPasswordRequired": "စကားဝှက်အသစ်သတ်မှတ်ရန် လက်ရှိစကားဝှက်ကို ထည့်ပါ။"
   },
   "pages": {
     "orders": {
@@ -304,6 +282,10 @@
     "reports": {
       "title": "အစီရင်ခံစာနှင့် လေ့လာသုံးသပ်မှုများ",
       "description": "အဓိက စွမ်းဆောင်ရည်ပြ အချက်အလက်များ (KPIs)၊ လုပ်ငန်းစဉ်များ၊ ဝန်ထမ်းစွမ်းဆောင်ရည်နှင့် ဘဏ္ဍာရေး အကျဉ်းချုပ်များကို ကြည့်ရှုပါ။"
+    },
+    "permissions": {
+      "title": "ခွင့်ပြုချက်များ",
+      "description": "ဝန်ထမ်းအခန်းကဏ္ဍတစ်ခုစီ ဝဘ်ဆိုက်တွင် မည်သည့်မော်ဂျူးများကို ဝင်ရောက်နိုင်သည်ကို ရွေးချယ်ပါ။ အက်ဒမင်တွင် အမြဲတမ်း အပြည့်အဝ ဝင်ရောက်ခွင့်ရှိသည်။"
     },
     "aiConfig": {
       "title": "AI ဖွဲ့စည်းပုံ",
@@ -737,6 +719,23 @@
       "saveChanges": "ပြောင်းလဲမှုများ သိမ်းမည်"
     }
   },
+  "permissions": {
+    "matrixTitle": "အခန်းကဏ္ဍအလိုက် မော်ဂျူးဝင်ရောက်ခွင့်",
+    "loading": "ခွင့်ပြုချက်များ load လုပ်နေသည်",
+    "loadFailed": "ခွင့်ပြုချက်များ load လုပ်၍မရပါ",
+    "adminAlwaysAllowed": "အက်ဒမင်တွင် အမြဲတမ်း ဝင်ရောက်ခွင့်ရှိသည်",
+    "adminHint": "အက်ဒမင်တွင် မော်ဂျူးအားလုံးကို အမြဲတမ်း အပြည့်အဝ ဝင်ရောက်ခွင့်ရှိပြီး ဤနေရာတွင် ပြင်ဆင်၍မရပါ — ထို့ကြောင့် အက်ဒမင်တစ်ဦးမျှ ပိတ်ပင်ခံရမည် မဟုတ်ပါ။",
+    "actions": {
+      "save": "ပြောင်းလဲမှုများ သိမ်းမည်"
+    },
+    "table": {
+      "module": "မော်ဂျူး"
+    },
+    "toasts": {
+      "saved": "ခွင့်ပြုချက်များ အပ်ဒိတ်ပြီးပါပြီ။",
+      "saveFailed": "ခွင့်ပြုချက်များ သိမ်း၍မရပါ"
+    }
+  },
   "staff": {
     "loadFailed": "ဝန်ထမ်းများကို ရယူ၍မရပါ",
     "filters": {
@@ -784,6 +783,8 @@
       "newPassword": "စကားဝှက် အသစ် (မဖြစ်မနေ မဟုတ်ပါ၊ အနည်းဆုံး အက္ခရာ {{count}} လုံး)",
       "passwordPlaceholder": "အနည်းဆုံး အက္ခရာ {{count}} လုံး",
       "passwordKeepPlaceholder": "လက်ရှိစကားဝှက်အတိုင်း ထားရှိရန် ဗလာထားပါ",
+      "currentPassword": "လက်ရှိစကားဝှက်",
+      "currentPasswordPlaceholder": "သင့်လက်ရှိစကားဝှက်ကို ထည့်ပါ",
       "createSubmit": "ဝန်ထမ်း ဖန်တီးမည်",
       "saveChanges": "ပြောင်းလဲမှုများ သိမ်းမည်",
       "errorName": "အမည်ကို ထည့်ပါ။",
@@ -792,6 +793,7 @@
       "errorPasswordRequired": "စကားဝှက်ကို ထည့်ပါ။",
       "errorPasswordMin": "စကားဝှက်သည် အနည်းဆုံး အက္ခရာ {{count}} လုံး ရှိရပါမည်။",
       "errorNewPasswordMin": "စကားဝှက်အသစ်သည် အနည်းဆုံး အက္ခရာ {{count}} လုံး ရှိရပါမည်။",
+      "errorCurrentPasswordRequired": "စကားဝှက်အသစ်သတ်မှတ်ရန် လက်ရှိစကားဝှက်ကို ထည့်ပါ။",
       "requestFailed": "တောင်းဆိုမှု မအောင်မြင်ပါ"
     },
     "profileImage": {

@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { authMiddleware } = require('../middlewares/authMiddleware');
+const { authMiddleware, modulePermission } = require('../middlewares/authMiddleware');
 const { uploadProfile } = require('../middlewares/upload');
 const staffController = require('../controllers/staffController');
 
@@ -283,9 +283,9 @@ router.use(authMiddleware);
 
 router.get('/', staffController.getAllStaff);
 router.get('/:id', staffController.getStaffById);
-router.post('/', staffController.createStaff);
+router.post('/', modulePermission('staff'), staffController.createStaff);
 router.put('/:id', staffController.updateStaff);
-router.delete('/:id', staffController.deleteStaff);
+router.delete('/:id', modulePermission('staff'), staffController.deleteStaff);
 router.post('/:id/profile-image', uploadProfile.single('image'), staffController.uploadProfileImage);
 
 module.exports = router;

@@ -1,9 +1,10 @@
 const express = require('express');
 const router = express.Router();
-const { authMiddleware } = require('../middlewares/authMiddleware');
+const { authMiddleware, modulePermission } = require('../middlewares/authMiddleware');
 const materialFeeController = require('../controllers/materialFeeController');
 
 router.use(authMiddleware);
+const manageMaterialFees = modulePermission('system-settings');
 
 /**
  * @swagger
@@ -196,11 +197,11 @@ router.use(authMiddleware);
  *         description: Material fee not found
  */
 
-router.get('/', materialFeeController.getAllFees);
+router.get('/', manageMaterialFees, materialFeeController.getAllFees);
 router.get('/active', materialFeeController.getActiveFees);
-router.get('/:id', materialFeeController.getFeeById);
-router.post('/', materialFeeController.createFee);
-router.put('/:id', materialFeeController.updateFee);
-router.delete('/:id', materialFeeController.deleteFee);
+router.get('/:id', manageMaterialFees, materialFeeController.getFeeById);
+router.post('/', manageMaterialFees, materialFeeController.createFee);
+router.put('/:id', manageMaterialFees, materialFeeController.updateFee);
+router.delete('/:id', manageMaterialFees, materialFeeController.deleteFee);
 
 module.exports = router;

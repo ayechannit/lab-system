@@ -15,6 +15,7 @@
     "edit": "Edit",
     "logout": "Logout",
     "signedIn": "Signed in",
+    "accessRestricted": "You don't have permission to access this page. Contact your administrator if you think this is a mistake.",
     "openNav": "Open navigation menu",
     "closeNav": "Close navigation menu",
     "expandSidebar": "Expand sidebar",
@@ -146,7 +147,8 @@
     "advertisements": "Advertisements",
     "loyalty": "Loyalty points",
     "systemSettings": "System settings",
-    "reports": "Reports"
+    "reports": "Reports",
+    "permissions": "Permissions"
   },
   "roles": {
     "admin": "Admin",
@@ -178,7 +180,7 @@
     "staffSignInHint": "Use your lab staff account (admin, technician, reception, or manager).",
     "email": "Email",
     "password": "Password",
-    "forgotPassword": "Forgot Password?",
+    "forgotPasswordHint": "Forgot your password? Contact your administrator to reset it.",
     "rememberMe": "Keep me signed in",
     "signIn": "Sign in",
     "signingIn": "Signing in…",
@@ -189,33 +191,6 @@
     "marketingLead": "Join thousands of clinical professionals managing laboratory workflows with state-of-the-art security and compliance.",
     "emailPlaceholder": "you@example.com",
     "passwordPlaceholder": "••••••••",
-    "forgotTitle": "Forgot password",
-    "resetTitle": "Reset password",
-    "forgotSubtitle": "Enter your staff email and we will send a 6-digit verification code (valid for 15 minutes).",
-    "resetSubtitle": "Enter the code sent to {{email}} and choose a new password.",
-    "resetSubtitleFallbackEmail": "your email",
-    "verificationCode": "Verification code",
-    "codePlaceholder": "000000",
-    "newPassword": "New password",
-    "confirmPassword": "Confirm password",
-    "newPasswordPlaceholder": "At least 8 characters",
-    "confirmPasswordPlaceholder": "Re-enter new password",
-    "sendCode": "Send verification code",
-    "sendingCode": "Sending code…",
-    "resetPassword": "Reset password",
-    "updatingPassword": "Updating password…",
-    "backToSignIn": "Back to sign in",
-    "useDifferentEmail": "Use a different email",
-    "resendCode": "Resend code",
-    "codeSent": "Verification code sent.",
-    "codeResent": "A new code has been sent.",
-    "sendCodeFailed": "Could not send verification code",
-    "resendCodeFailed": "Could not resend code",
-    "passwordMinLength": "Password must be at least 8 characters.",
-    "passwordMismatch": "Passwords do not match.",
-    "codeRequired": "Enter the 6-digit code from your email.",
-    "resetSuccess": "Password reset successfully.",
-    "resetFailed": "Could not reset password",
     "brandAlt": "International Diagnostic & Healthcare Center",
     "securityHighlights": "Security and compliance highlights",
     "isoCertified": "ISO 15189 Certified",
@@ -233,11 +208,13 @@
     "name": "Name",
     "email": "Email",
     "role": "Role",
+    "currentPassword": "Current password",
     "newPassword": "New password",
     "confirmPassword": "Confirm password",
     "namePlaceholder": "Full name",
     "emailPlaceholder": "name@lab.example",
     "passwordKeepHint": "Leave empty to keep current password",
+    "currentPasswordPlaceholder": "Enter your current password",
     "confirmPasswordPlaceholder": "Repeat new password",
     "saveChanges": "Save changes",
     "loadFailed": "Could not load profile",
@@ -245,7 +222,8 @@
     "cannotEdit": "This account cannot be edited here.",
     "requestFailed": "Request failed",
     "passwordMinLength": "Password must be at least {{count}} characters.",
-    "passwordMismatch": "Passwords do not match."
+    "passwordMismatch": "Passwords do not match.",
+    "currentPasswordRequired": "Enter your current password to set a new one."
   },
   "pages": {
     "orders": {
@@ -304,6 +282,10 @@
     "reports": {
       "title": "Reports & analytics",
       "description": "Dashboard KPIs, operational queues, staff performance, and financial summaries from the reporting API."
+    },
+    "permissions": {
+      "title": "Permissions",
+      "description": "Choose which modules each staff role can access in the website. Admin always has full access."
     },
     "aiConfig": {
       "title": "AI configuration",
@@ -737,6 +719,23 @@
       "saveChanges": "Save changes"
     }
   },
+  "permissions": {
+    "matrixTitle": "Module access by role",
+    "loading": "Loading permissions",
+    "loadFailed": "Could not load permissions",
+    "adminAlwaysAllowed": "Admin always has access",
+    "adminHint": "Admin always has full access to every module and isn't shown as editable here — this can't be changed, so an admin can never be locked out.",
+    "actions": {
+      "save": "Save changes"
+    },
+    "table": {
+      "module": "Module"
+    },
+    "toasts": {
+      "saved": "Permissions updated.",
+      "saveFailed": "Could not save permissions"
+    }
+  },
   "staff": {
     "loadFailed": "Failed to load staff",
     "filters": {
@@ -784,6 +783,8 @@
       "newPassword": "New password (optional, min. {{count}} characters)",
       "passwordPlaceholder": "At least {{count}} characters",
       "passwordKeepPlaceholder": "Leave empty to keep current password",
+      "currentPassword": "Current password",
+      "currentPasswordPlaceholder": "Enter your current password",
       "createSubmit": "Create staff",
       "saveChanges": "Save changes",
       "errorName": "Enter a name.",
@@ -792,6 +793,7 @@
       "errorPasswordRequired": "Enter an initial password.",
       "errorPasswordMin": "Password must be at least {{count}} characters.",
       "errorNewPasswordMin": "New password must be at least {{count}} characters.",
+      "errorCurrentPasswordRequired": "Enter your current password to set a new one.",
       "requestFailed": "Request failed"
     },
     "profileImage": {

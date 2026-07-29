@@ -1,9 +1,10 @@
 const express = require('express');
 const router = express.Router();
-const { authMiddleware } = require('../middlewares/authMiddleware');
+const { authMiddleware, modulePermission } = require('../middlewares/authMiddleware');
 const pointSettingController = require('../controllers/pointSettingController');
 
 router.use(authMiddleware);
+const manageLoyalty = modulePermission('loyalty');
 
 /**
  * @swagger
@@ -174,8 +175,8 @@ router.use(authMiddleware);
  */
 
 router.get('/', pointSettingController.getAllSettings);
-router.post('/', pointSettingController.createSetting);
-router.put('/:id', pointSettingController.updateSetting);
-router.delete('/:id', pointSettingController.deleteSetting);
+router.post('/', manageLoyalty, pointSettingController.createSetting);
+router.put('/:id', manageLoyalty, pointSettingController.updateSetting);
+router.delete('/:id', manageLoyalty, pointSettingController.deleteSetting);
 
 module.exports = router;

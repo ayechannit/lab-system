@@ -22,6 +22,8 @@ type StaffFormModalProps = {
   mode: 'create' | 'edit'
   initial: StaffListRow | null
   existingRows: StaffListRow[]
+  /** The signed-in staff member's id — when editing this row, a current-password check is required to change the password. */
+  currentStaffId?: string | null
   onClose: () => void
   onSuccess: () => void
 }
@@ -31,16 +33,19 @@ export function StaffFormModal({
   mode,
   initial,
   existingRows,
+  currentStaffId,
   onClose,
   onSuccess,
 }: StaffFormModalProps) {
   const { t } = useTranslation()
   const titleId = useId()
   const staffActiveId = useId()
+  const isSelf = mode === 'edit' && !!initial && !!currentStaffId && initial.id === currentStaffId
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [role, setRole] = useState<StaffRole>('admin')
   const [isActive, setIsActive] = useState(true)
+  const [currentPassword, setCurrentPassword] = useState('')
   /** Sent as `password_hash` (plain in this admin build — hash in production). */
   const [password, setPassword] = useState('')
   const [profileImageFile, setProfileImageFile] = useState<File | null>(null)
@@ -52,6 +57,7 @@ export function StaffFormModal({
   useEffect(() => {
     if (!open) return
     setFormError(null)
+    setCurrentPassword('')
     setPassword('')
     setProfileImageFile(null)
     setProfilePreviewUrl(null)
@@ -136,6 +142,10 @@ export function StaffFormModal({
         setFormError(t('staff.form.errorNewPasswordMin', { count: MIN_INITIAL_PASSWORD_LENGTH }))
         return
       }
+      if (pw !== '' && isSelf && currentPassword.trim() === '') {
+        setFormError(t('staff.form.errorCurrentPasswordRequired'))
+        return
+      }
     }
 
     setSubmitting(true)
@@ -159,7 +169,10 @@ export function StaffFormModal({
           is_active: isActive,
         }
         const nextPassword = password.trim()
-        if (nextPassword !== '') body.password_hash = nextPassword
+        if (nextPassword !== '') {
+          body.password_hash = nextPassword
+          if (isSelf) body.current_password = currentPassword.trim()
+        }
         await updateStaffApi(initial.id, body)
         staffId = initial.id
       }
@@ -314,21 +327,37 @@ export function StaffFormModal({
               />
             </div>
           ) : (
-            <div className="field">
-              <label htmlFor="sf-pw">
-                {t('staff.form.newPassword', { count: MIN_INITIAL_PASSWORD_LENGTH })}
-              </label>
-              <input
-                id="sf-pw"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                minLength={MIN_INITIAL_PASSWORD_LENGTH}
-                placeholder={t('staff.form.passwordKeepPlaceholder')}
-                autoComplete="new-password"
-                disabled={submitting}
-              />
-            </div>
+            <>
+              {isSelf ? (
+                <div className="field">
+                  <label htmlFor="sf-current-pw">{t('staff.form.currentPassword')}</label>
+                  <input
+                    id="sf-current-pw"
+                    type="password"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    placeholder={t('staff.form.currentPasswordPlaceholder')}
+                    autoComplete="current-password"
+                    disabled={submitting}
+                  />
+                </div>
+              ) : null}
+              <div className="field">
+                <label htmlFor="sf-pw">
+                  {t('staff.form.newPassword', { count: MIN_INITIAL_PASSWORD_LENGTH })}
+                </label>
+                <input
+                  id="sf-pw"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  minLength={MIN_INITIAL_PASSWORD_LENGTH}
+                  placeholder={t('staff.form.passwordKeepPlaceholder')}
+                  autoComplete="new-password"
+                  disabled={submitting}
+                />
+              </div>
+            </>
           )}
           {formError ? (
             <div className="form-alert form-alert--error" role="alert">

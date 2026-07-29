@@ -40,6 +40,7 @@ export function MyProfileModal({
   const titleId = useId()
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
+  const [currentPassword, setCurrentPassword] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [staffRow, setStaffRow] = useState<StaffListRow | null>(null)
@@ -53,6 +54,7 @@ export function MyProfileModal({
     if (!open) return
     setFormError(null)
     setLoadError(null)
+    setCurrentPassword('')
     setPassword('')
     setConfirmPassword('')
     setProfileImageFile(null)
@@ -127,9 +129,14 @@ export function MyProfileModal({
       return
     }
 
+    const cur = currentPassword.trim()
     const pw = password.trim()
     const cpw = confirmPassword.trim()
     if (pw !== '' || cpw !== '') {
+      if (cur === '') {
+        setFormError(t('profile.currentPasswordRequired'))
+        return
+      }
       if (pw.length < MIN_PASSWORD_LENGTH) {
         setFormError(t('profile.passwordMinLength', { count: MIN_PASSWORD_LENGTH }))
         return
@@ -148,7 +155,10 @@ export function MyProfileModal({
         role: account.role,
         is_active: staffRow.is_active,
       }
-      if (pw !== '') body.password_hash = pw
+      if (pw !== '') {
+        body.password_hash = pw
+        body.current_password = cur
+      }
       let updated = await updateStaffApi(account.id, body)
       if (profileImageFile) {
         updated = await uploadStaffProfileImage(account.id, profileImageFile)
@@ -255,6 +265,18 @@ export function MyProfileModal({
             }}
             disabled={submitting || !staffRow}
           />
+          <div className="field">
+            <label htmlFor="mp-current-pw">{t('profile.currentPassword')}</label>
+            <input
+              id="mp-current-pw"
+              type="password"
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+              placeholder={t('profile.currentPasswordPlaceholder')}
+              autoComplete="current-password"
+              disabled={submitting || !staffRow}
+            />
+          </div>
           <div className="field">
             <label htmlFor="mp-pw">
               {t('profile.newPassword')} (optional, min. {MIN_PASSWORD_LENGTH} characters)

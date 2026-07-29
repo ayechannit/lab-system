@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const labResultController = require('../controllers/labResultController');
-const { authMiddleware, roleMiddleware } = require('../middlewares/authMiddleware');
+const { authMiddleware, modulePermission } = require('../middlewares/authMiddleware');
 
 /**
  * @swagger
@@ -38,7 +38,7 @@ const { authMiddleware, roleMiddleware } = require('../middlewares/authMiddlewar
  *       201:
  *         description: Created
  */
-router.post('/', authMiddleware, roleMiddleware(['admin', 'lab_technician']), labResultController.createResult);
+router.post('/', authMiddleware, modulePermission('results'), labResultController.createResult);
 
 /**
  * @swagger
@@ -71,7 +71,7 @@ router.post('/', authMiddleware, roleMiddleware(['admin', 'lab_technician']), la
  *                   verdict: "pass"
  *                   analysis_detail: "All values within normal range."
  */
-router.get('/order/:orderId', authMiddleware, labResultController.getResultByOrderId);
+router.get('/order/:orderId', authMiddleware, modulePermission('results'), labResultController.getResultByOrderId);
 
 /**
  * @swagger
@@ -100,7 +100,7 @@ router.get('/order/:orderId', authMiddleware, labResultController.getResultByOrd
  *       200:
  *         description: Updated
  */
-router.patch('/:id/quality-check', authMiddleware, roleMiddleware(['admin', 'manager']), labResultController.updateQualityCheck);
+router.patch('/:id/quality-check', authMiddleware, modulePermission('results'), labResultController.updateQualityCheck);
 
 /**
  * @swagger
@@ -135,6 +135,6 @@ router.patch('/:id/quality-check', authMiddleware, roleMiddleware(['admin', 'man
  *       201:
  *         description: AI check added
  */
-router.post('/:resultId/ai-check', authMiddleware, roleMiddleware(['admin', 'manager']), labResultController.addAiQualityCheck);
+router.post('/:resultId/ai-check', authMiddleware, modulePermission('results'), labResultController.addAiQualityCheck);
 
 module.exports = router;

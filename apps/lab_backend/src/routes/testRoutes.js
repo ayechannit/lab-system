@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { authMiddleware } = require('../middlewares/authMiddleware');
+const { authMiddleware, modulePermission } = require('../middlewares/authMiddleware');
 const testController = require('../controllers/testController');
 
 router.use(authMiddleware);
@@ -275,8 +275,8 @@ router.use(authMiddleware);
 
 router.get('/', testController.getAllTests);
 router.get('/:id', testController.getTestById);
-router.post('/', testController.createTest);
-router.put('/:id', testController.updateTest);
-router.delete('/:id', testController.deleteTest);
+router.post('/', modulePermission('lab-tests'), testController.createTest);
+router.put('/:id', modulePermission('lab-tests'), testController.updateTest);
+router.delete('/:id', modulePermission('lab-tests'), testController.deleteTest);
 
 module.exports = router;

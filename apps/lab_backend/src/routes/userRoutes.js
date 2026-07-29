@@ -1,8 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const { authMiddleware } = require('../middlewares/authMiddleware');
+const { authMiddleware, modulePermission } = require('../middlewares/authMiddleware');
 const { uploadProfile } = require('../middlewares/upload');
 const userController = require('../controllers/userController');
+
+/** Governs staff browsing/approving other end-users' accounts (Users page in lab_admin_web). */
+const manageUsers = modulePermission('users');
 
 
 /**
@@ -340,7 +343,7 @@ const userController = require('../controllers/userController');
 router.get('/',authMiddleware, userController.getAllUsers);
 
 router.get('/:id/orders',authMiddleware, userController.getOrdersByUser);
-router.get('/:id',authMiddleware, userController.getUserById);
+router.get('/:id',authMiddleware, manageUsers, userController.getUserById);
 
 router.post('/', uploadProfile.single('image'), userController.createUser);
 
@@ -375,8 +378,8 @@ router.post('/', uploadProfile.single('image'), userController.createUser);
  */
 router.put('/fcm-token', authMiddleware, userController.registerFcmToken);
 router.post('/:id/profile-image', authMiddleware, uploadProfile.single('image'), userController.uploadProfileImage);
-router.put('/:id', userController.updateUser);
-router.put('/:id/approve', authMiddleware, userController.approveUser);
+router.put('/:id', authMiddleware, userController.updateUser);
+router.put('/:id/approve', authMiddleware, manageUsers, userController.approveUser);
 router.delete('/:id', authMiddleware, userController.deleteUser);
 
 module.exports = router;

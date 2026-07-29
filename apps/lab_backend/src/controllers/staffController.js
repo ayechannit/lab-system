@@ -1,4 +1,6 @@
+const bcrypt = require('bcryptjs');
 const Staff = require('../models/staffModel');
+const Permission = require('../models/permissionModel');
 
 const getAllStaff = async (req, res) => {
   try {
@@ -46,18 +48,18 @@ const updateStaff = async (req, res) => {
 
     const targetId = req.params.id;
     const selfId = req.user.id;
-    const isAdmin = req.user.role === 'admin';
+    const canManageStaff = await Permission.isRoleAllowed(req.user.role, 'staff');
     const same =
       String(targetId).replace(/[{}]/g, '').toLowerCase() ===
       String(selfId).replace(/[{}]/g, '').toLowerCase();
-    if (!same && !isAdmin) {
+    if (!same && !canManageStaff) {
       return res.status(403).json({ message: 'You can only update your own profile' });
     }
 
     const existing = await Staff.getById(targetId);
     if (!existing) return res.status(404).json({ message: 'Staff not found' });
 
-    let { name, is_active, password, password_hash, email } = req.body;
+    let { name, is_active, password, password_hash, email, current_password } = req.body;
 
     if (name == null || String(name).trim() === '') {
       return res.status(400).json({ message: 'name is required' });
@@ -67,8 +69,20 @@ const updateStaff = async (req, res) => {
       is_active = existing.is_active;
     }
 
-    if (same && !isAdmin) {
+    if (same && !canManageStaff) {
       is_active = existing.is_active;
+    }
+
+    const newPassword = password || password_hash;
+    if (same && newPassword) {
+      if (!current_password) {
+        return res.status(400).json({ message: 'Current password is required to change your password.' });
+      }
+      const currentHash = await Staff.getPasswordHash(targetId);
+      const matches = currentHash && (await bcrypt.compare(current_password, currentHash));
+      if (!matches) {
+        return res.status(400).json({ message: 'Current password is incorrect.' });
+      }
     }
 
     if (email !== undefined && email !== null && String(email).trim() !== '') {
@@ -112,8 +126,7 @@ const uploadProfileImage = async (req, res) => {
   try {
     const targetId = req.params.id;
     const selfId = req.user?.id;
-    const isAdmin = req.user?.role === 'admin';
-    const isManager = req.user?.role === 'manager';
+    const canManageStaff = req.user ? await Permission.isRoleAllowed(req.user.role, 'staff') : false;
 
     const staff = await Staff.getById(targetId);
     if (!staff) {
@@ -124,7 +137,7 @@ const uploadProfileImage = async (req, res) => {
       String(targetId).replace(/[{}]/g, '').toLowerCase() ===
       String(selfId).replace(/[{}]/g, '').toLowerCase();
 
-    if (!same && !isAdmin && !isManager) {
+    if (!same && !canManageStaff) {
       return res.status(403).json({ message: 'You can only upload a profile image for your own account' });
     }
 

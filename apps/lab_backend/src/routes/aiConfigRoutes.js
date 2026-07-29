@@ -1,10 +1,10 @@
 const express = require('express');
 const router = express.Router();
-const { authMiddleware } = require('../middlewares/authMiddleware');
+const { authMiddleware, roleMiddleware } = require('../middlewares/authMiddleware');
 const aiConfigController = require('../controllers/aiConfigController');
 
-// Ensure all routes require authentication
-router.use(authMiddleware);
+// AI configuration (API keys, models) is an admin-only feature
+router.use(authMiddleware, roleMiddleware(['admin']));
 
 /**
  * @swagger

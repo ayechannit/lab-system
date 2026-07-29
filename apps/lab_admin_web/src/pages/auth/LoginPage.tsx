@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, Navigate, useNavigate } from 'react-router-dom'
+import { Navigate, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '../../hooks/AuthContext'
 import { useToast } from '../../hooks/ToastContext'
@@ -85,9 +85,9 @@ export function LoginPage() {
                   <label className="auth-label" htmlFor="password">
                     {t('auth.password')}
                   </label>
-                  <Link className="auth-link" to="/forgot-password">
-                    {t('auth.forgotPassword')}
-                  </Link>
+                  <span className="auth-hint-text" title={t('auth.forgotPasswordHint')}>
+                    {t('auth.forgotPasswordHint')}
+                  </span>
                 </div>
                 <div className="auth-input-wrap">
                   <span className="material-symbols-outlined auth-input-icon">lock</span>

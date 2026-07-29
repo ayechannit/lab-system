@@ -54,6 +54,14 @@ class Staff {
     return result.recordset[0];
   }
 
+  static async getPasswordHash(id) {
+    const pool = await poolPromise;
+    const result = await pool.request()
+      .input('id', sql.UniqueIdentifier, id)
+      .query('SELECT password_hash FROM lab_staff WHERE id = @id AND is_deleted = 0');
+    return result.recordset[0]?.password_hash || null;
+  }
+
   static async create(data, createdBy = null) {
     const pool = await poolPromise;
     const hashedPassword = await bcrypt.hash(data.password_hash || data.password, 10);

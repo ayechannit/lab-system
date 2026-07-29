@@ -1,9 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const { authMiddleware } = require('../middlewares/authMiddleware');
+const { authMiddleware, modulePermission } = require('../middlewares/authMiddleware');
 const discountController = require('../controllers/discountController');
 
-router.use(authMiddleware);
+router.use(authMiddleware, modulePermission('discounts'));
 
 /**
  * @swagger

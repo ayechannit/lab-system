@@ -32,6 +32,8 @@ export type StaffUpdateBody = {
   role: StaffRole
   is_active: boolean
   password_hash?: string
+  /** Required when setting a new password on your own account (self-service). Not needed when an admin resets another staff member's password. */
+  current_password?: string
 }
 
 export type FetchStaffListParams = {

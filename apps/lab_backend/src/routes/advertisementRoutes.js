@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { authMiddleware } = require('../middlewares/authMiddleware');
+const { authMiddleware, modulePermission } = require('../middlewares/authMiddleware');
 const { uploadAdBanner } = require('../middlewares/upload');
 const advertisementController = require('../controllers/advertisementController');
 
@@ -250,9 +250,9 @@ router.get('/', advertisementController.getAllAdvertisements);
 router.get('/:id', advertisementController.getAdvertisementById);
 
 // Secured routes
-router.post('/upload-banner', authMiddleware, uploadAdBanner.single('image'), advertisementController.uploadBannerImage);
-router.post('/', authMiddleware, advertisementController.createAdvertisement);
-router.put('/:id', authMiddleware, advertisementController.updateAdvertisement);
-router.delete('/:id', authMiddleware, advertisementController.deleteAdvertisement);
+router.post('/upload-banner', authMiddleware, modulePermission('advertisements'), uploadAdBanner.single('image'), advertisementController.uploadBannerImage);
+router.post('/', authMiddleware, modulePermission('advertisements'), advertisementController.createAdvertisement);
+router.put('/:id', authMiddleware, modulePermission('advertisements'), advertisementController.updateAdvertisement);
+router.delete('/:id', authMiddleware, modulePermission('advertisements'), advertisementController.deleteAdvertisement);
 
 module.exports = router;

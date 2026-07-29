@@ -7,6 +7,7 @@ import './i18n'
 import App from './App.tsx'
 import { applyAppTheme, readStoredAdminTheme } from './theme/appThemes'
 import { AuthProvider } from './hooks/AuthContext'
+import { PermissionsProvider } from './hooks/PermissionsContext'
 import { SystemBrandingProvider } from './hooks/SystemBrandingContext'
 import { ToastProvider } from './hooks/ToastContext'
 
@@ -16,9 +17,11 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ToastProvider>
       <AuthProvider>
-        <SystemBrandingProvider>
-          <App />
-        </SystemBrandingProvider>
+        <PermissionsProvider>
+          <SystemBrandingProvider>
+            <App />
+          </SystemBrandingProvider>
+        </PermissionsProvider>
       </AuthProvider>
     </ToastProvider>
   </StrictMode>,

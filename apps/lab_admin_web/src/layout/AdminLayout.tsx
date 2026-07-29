@@ -8,6 +8,7 @@ import { NotificationBell } from '../components/common/NotificationBell'
 import { MyProfileModal } from '../components/profile/MyProfileModal'
 import { StaffAvatar } from '../components/staff/StaffAvatar'
 import { useAuth } from '../hooks/AuthContext'
+import { usePermissions } from '../hooks/PermissionsContext'
 import { useToast } from '../hooks/ToastContext'
 import { fetchStaffById } from '../services/staffService'
 import type { SessionRole } from '../model/types'
@@ -35,23 +36,28 @@ type NavItem = {
   /** Material Symbols ligature name (`material-symbols-outlined`). */
   icon: string
   end?: boolean
+  /** Governs visibility via the admin-configurable role_permissions matrix (see PermissionsContext). */
+  moduleKey?: string
+  /** Hardcoded admin-only, bypassing the matrix entirely (only admin can view/edit permissions). */
+  adminOnly?: boolean
 }
 
 const nav: NavItem[] = [
-  { to: '/orders', labelKey: 'nav.orders', icon: 'receipt_long' },
-  { to: '/lab-tests', labelKey: 'nav.labTests', icon: 'science' },
-  { to: '/staff', labelKey: 'nav.staff', icon: 'badge' },
-  { to: '/users', labelKey: 'nav.users', icon: 'group' },
-  { to: '/collections', labelKey: 'nav.collections', icon: 'water_drop' },
-  { to: '/results', labelKey: 'nav.results', icon: 'assignment' },
-  { to: '/ratings', labelKey: 'nav.ratings', icon: 'reviews' },
-  { to: '/discounts', labelKey: 'nav.discounts', icon: 'sell' },
-  { to: '/referral-fees', labelKey: 'nav.referralFees', icon: 'payments' },
-  { to: '/service-geofences', labelKey: 'nav.serviceGeofences', icon: 'map' },
-  { to: '/advertisements', labelKey: 'nav.advertisements', icon: 'campaign' },
-  { to: '/loyalty', labelKey: 'nav.loyalty', icon: 'card_giftcard' },
-  { to: '/system-settings', labelKey: 'nav.systemSettings', icon: 'settings' },
-  { to: '/reports', labelKey: 'nav.reports', icon: 'bar_chart' },
+  { to: '/orders', labelKey: 'nav.orders', icon: 'receipt_long', moduleKey: 'orders' },
+  { to: '/lab-tests', labelKey: 'nav.labTests', icon: 'science', moduleKey: 'lab-tests' },
+  { to: '/staff', labelKey: 'nav.staff', icon: 'badge', moduleKey: 'staff' },
+  { to: '/users', labelKey: 'nav.users', icon: 'group', moduleKey: 'users' },
+  { to: '/collections', labelKey: 'nav.collections', icon: 'water_drop', moduleKey: 'collections' },
+  { to: '/results', labelKey: 'nav.results', icon: 'assignment', moduleKey: 'results' },
+  { to: '/ratings', labelKey: 'nav.ratings', icon: 'reviews', moduleKey: 'ratings' },
+  { to: '/discounts', labelKey: 'nav.discounts', icon: 'sell', moduleKey: 'discounts' },
+  { to: '/referral-fees', labelKey: 'nav.referralFees', icon: 'payments', moduleKey: 'referral-fees' },
+  { to: '/service-geofences', labelKey: 'nav.serviceGeofences', icon: 'map', moduleKey: 'service-geofences' },
+  { to: '/advertisements', labelKey: 'nav.advertisements', icon: 'campaign', moduleKey: 'advertisements' },
+  { to: '/loyalty', labelKey: 'nav.loyalty', icon: 'card_giftcard', moduleKey: 'loyalty' },
+  { to: '/system-settings', labelKey: 'nav.systemSettings', icon: 'settings', moduleKey: 'system-settings' },
+  { to: '/reports', labelKey: 'nav.reports', icon: 'bar_chart', moduleKey: 'reports' },
+  { to: '/permissions', labelKey: 'nav.permissions', icon: 'admin_panel_settings', adminOnly: true },
 ]
 
 function headerTitleForPath(pathname: string, t: (key: string) => string): string {
@@ -71,6 +77,7 @@ export function AdminLayout() {
   const { t } = useTranslation()
   const { showSuccess } = useToast()
   const { signOut, account, role, refreshAccount } = useAuth()
+  const { loading: permissionsLoading, hasModule } = usePermissions()
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const headerTitle = headerTitleForPath(pathname, t)
@@ -143,6 +150,10 @@ export function AdminLayout() {
     return () => window.removeEventListener('keydown', onKey)
   }, [mobileDrawerOpen])
 
+  const visibleNav = permissionsLoading
+    ? []
+    : nav.filter((item) => (item.adminOnly ? role === 'admin' : !item.moduleKey || hasModule(item.moduleKey)))
+
   const closeMobileDrawer = () => setMobileDrawerOpen(false)
 
   function handleSidebarBrandClick() {
@@ -194,7 +205,7 @@ export function AdminLayout() {
           <IdhcBrandLockup compact={!isMobile && sidebarCollapsed} />
         </button>
         <nav className="admin-nav" aria-label={t('common.mainNav')}>
-          {nav.map((item) => (
+          {visibleNav.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}

@@ -1,9 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const { authMiddleware } = require('../middlewares/authMiddleware');
+const { authMiddleware, modulePermission } = require('../middlewares/authMiddleware');
 const referralFeeController = require('../controllers/referralFeeController');
 
-router.use(authMiddleware);
+router.use(authMiddleware, modulePermission('referral-fees'));
 
 /**
  * @swagger

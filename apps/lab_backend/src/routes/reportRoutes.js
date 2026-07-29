@@ -1,7 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const reportController = require('../controllers/reportController');
-const { authMiddleware, roleMiddleware } = require('../middlewares/authMiddleware');
+const { authMiddleware, modulePermission } = require('../middlewares/authMiddleware');
+
+const manageReports = modulePermission('reports');
 
 /**
  * @swagger
@@ -61,7 +63,7 @@ const { authMiddleware, roleMiddleware } = require('../middlewares/authMiddlewar
  *                     revenue: 310000.00
  *                     order_count: 22
  */
-router.get('/dashboard-kpis', authMiddleware, roleMiddleware(['admin', 'manager']), reportController.getDashboardKpis);
+router.get('/dashboard-kpis', authMiddleware, manageReports, reportController.getDashboardKpis);
 
 /**
  * @swagger
@@ -102,7 +104,7 @@ router.get('/dashboard-kpis', authMiddleware, roleMiddleware(['admin', 'manager'
  *                   test_count: 12
  *                   total_revenue: 1200000.00
  */
-router.get('/test-categories', authMiddleware, roleMiddleware(['admin', 'manager']), reportController.getTestCategoryDistribution);
+router.get('/test-categories', authMiddleware, manageReports, reportController.getTestCategoryDistribution);
 
 /**
  * @swagger
@@ -143,7 +145,7 @@ router.get('/test-categories', authMiddleware, roleMiddleware(['admin', 'manager
  *                   report_out_time: "2024-05-20T14:30:00Z"
  *                   tat_minutes: 270
  */
-router.get('/tat', authMiddleware, roleMiddleware(['admin', 'manager']), reportController.getTurnaroundTimeReport);
+router.get('/tat', authMiddleware, manageReports, reportController.getTurnaroundTimeReport);
 
 /**
  * @swagger
@@ -179,7 +181,7 @@ router.get('/tat', authMiddleware, roleMiddleware(['admin', 'manager']), reportC
  *                   revenue: 1200000.00
  *                   order_count: 15
  */
-router.get('/revenue-by-channel', authMiddleware, roleMiddleware(['admin', 'manager']), reportController.getRevenueByChannel);
+router.get('/revenue-by-channel', authMiddleware, manageReports, reportController.getRevenueByChannel);
 
 /**
  * @swagger
@@ -214,7 +216,7 @@ router.get('/revenue-by-channel', authMiddleware, roleMiddleware(['admin', 'mana
  *                   priority: "urgent"
  *                   hours_elapsed: 5
  */
-router.get('/pending-queue', authMiddleware, roleMiddleware(['admin', 'manager', 'collector']), reportController.getPendingResultsQueue);
+router.get('/pending-queue', authMiddleware, manageReports, reportController.getPendingResultsQueue);
 
 /**
  * @swagger
@@ -253,7 +255,7 @@ router.get('/pending-queue', authMiddleware, roleMiddleware(['admin', 'manager',
  *                   actions_performed: 450
  *                   last_action_at: "2024-05-22T09:00:00Z"
  */
-router.get('/staff-activity', authMiddleware, roleMiddleware(['admin', 'manager']), reportController.getStaffActivityAudit);
+router.get('/staff-activity', authMiddleware, manageReports, reportController.getStaffActivityAudit);
 
 /**
  * @swagger
@@ -287,7 +289,7 @@ router.get('/staff-activity', authMiddleware, roleMiddleware(['admin', 'manager'
  *                   collections_count: 50
  *                   avg_assignment_to_collection_minutes: 45.5
  */
-router.get('/collection-report', authMiddleware, roleMiddleware(['admin', 'manager', 'collector']), reportController.getCollectionReport);
+router.get('/collection-report', authMiddleware, manageReports, reportController.getCollectionReport);
 
 /**
  * @swagger
@@ -326,7 +328,7 @@ router.get('/collection-report', authMiddleware, roleMiddleware(['admin', 'manag
  *                 total_discount_given: 500000.00
  *                 effective_discount_percent: 10.0
  */
-router.get('/discount-impact', authMiddleware, roleMiddleware(['admin', 'manager']), reportController.getDiscountImpactAnalysis);
+router.get('/discount-impact', authMiddleware, manageReports, reportController.getDiscountImpactAnalysis);
 
 /**
  * @swagger
@@ -372,7 +374,7 @@ router.get('/discount-impact', authMiddleware, roleMiddleware(['admin', 'manager
  *                     user_name: "Bob Client"
  *                     created_at: "2024-05-21T15:00:00Z"
  */
-router.get('/ratings-summary', authMiddleware, roleMiddleware(['admin', 'manager']), reportController.getRatingsSummary);
+router.get('/ratings-summary', authMiddleware, manageReports, reportController.getRatingsSummary);
 
 /**
  * @swagger

@@ -1,5 +1,19 @@
 const User = require('../models/userModel');
 const Order = require('../models/orderModel');
+const Permission = require('../models/permissionModel');
+
+function isSameAccount(targetId, selfId) {
+  return (
+    String(targetId).replace(/[{}]/g, '').toLowerCase() ===
+    String(selfId ?? '').replace(/[{}]/g, '').toLowerCase()
+  );
+}
+
+/** Staff roles allowed to view/manage other end-users' accounts are governed by the 'users' module in role_permissions. */
+async function canManageOtherUsers(reqUser) {
+  if (!reqUser || reqUser.type !== 'staff') return false;
+  return Permission.isRoleAllowed(reqUser.role, 'users');
+}
 
 const getAllUsers = async (req, res) => {
   try {
@@ -22,6 +36,10 @@ const getUserById = async (req, res) => {
 
 const getOrdersByUser = async (req, res) => {
   try {
+    if (!isSameAccount(req.params.id, req.user?.id) && !(await canManageOtherUsers(req.user))) {
+      return res.status(403).json({ message: 'You can only view your own orders' });
+    }
+
     // Check if user exists
     const user = await User.getById(req.params.id);
     if (!user) return res.status(404).json({ message: 'User not found' });
@@ -96,6 +114,10 @@ const createUser = async (req, res) => {
 
 const updateUser = async (req, res) => {
   try {
+    if (!isSameAccount(req.params.id, req.user?.id) && !(await canManageOtherUsers(req.user))) {
+      return res.status(403).json({ message: 'You can only update your own account' });
+    }
+
     const existing = await User.getById(req.params.id);
     if (!existing) return res.status(404).json({ message: 'User not found' });
 
@@ -166,14 +188,10 @@ const deleteUser = async (req, res) => {
 
     const targetId = req.params.id;
     const selfId = req.user.id;
-    const isStaff = req.user.type === 'staff';
-    const isAdmin = isStaff && ['admin', 'manager'].includes(req.user.role);
-    const same =
-      String(targetId).replace(/[{}]/g, '').toLowerCase() ===
-      String(selfId).replace(/[{}]/g, '').toLowerCase();
+    const same = isSameAccount(targetId, selfId);
 
-    // End users may delete only their own account; staff admin/manager may delete any user.
-    if (!same && !isAdmin) {
+    // End users may delete only their own account; staff need the 'users' module permission to delete any user.
+    if (!same && !(await canManageOtherUsers(req.user))) {
       return res.status(403).json({ message: 'You can only delete your own account' });
     }
 
@@ -227,13 +245,9 @@ const uploadProfileImage = async (req, res) => {
     const existing = await User.getById(targetId);
     if (!existing) return res.status(404).json({ message: 'User not found' });
 
-    const isStaff = req.user.type === 'staff';
-    const isAdmin = isStaff && ['admin', 'manager'].includes(req.user.role);
-    const same =
-      String(targetId).replace(/[{}]/g, '').toLowerCase() ===
-      String(selfId).replace(/[{}]/g, '').toLowerCase();
+    const same = isSameAccount(targetId, selfId);
 
-    if (!same && !isAdmin) {
+    if (!same && !(await canManageOtherUsers(req.user))) {
       return res.status(403).json({ message: 'You can only upload a profile image for your own account' });
     }
 

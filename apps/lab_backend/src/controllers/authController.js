@@ -96,24 +96,18 @@ const forgotPassword = async (req, res) => {
 
   try {
     const em = String(email).trim().toLowerCase();
-    let account = null;
-    let userType = null;
 
-    // 1. Search in users table first
+    // 1. Search in users table (end-users self-serve reset via emailed PIN)
     const user = await User.getByEmail(em);
-    if (user) {
-      account = user;
-      userType = 'user';
-    } else {
-      // 2. Search in lab_staff table second
+    if (!user) {
+      // 2. Lab staff cannot self-serve reset; they must contact an administrator,
+      //    who resets their password directly from Staff Management.
       const staff = await Staff.getByEmail(em);
       if (staff) {
-        account = staff;
-        userType = 'staff';
+        return res.status(403).json({
+          message: 'Staff accounts cannot reset their password by email. Please contact your administrator to reset it.'
+        });
       }
-    }
-
-    if (!account) {
       return res.status(404).json({ message: 'No account registered with this email address' });
     }
 
@@ -121,10 +115,10 @@ const forgotPassword = async (req, res) => {
     const code = Math.floor(100000 + Math.random() * 900000).toString();
 
     // 4. Save code to password_resets table (expiring in 15 mins)
-    await PasswordReset.create(em, code, userType);
+    await PasswordReset.create(em, code, 'user');
 
     // 5. Dispatch email containing the code (non-blocking)
-    EmailService.sendPasswordResetEmail(em, code, account.name)
+    EmailService.sendPasswordResetEmail(em, code, user.name)
       .catch(err => console.error('Background forgot password email failed:', err.message));
 
     res.json({ message: 'A 6-digit verification code has been sent to your email.' });
@@ -149,13 +143,14 @@ const resetPassword = async (req, res) => {
       return res.status(400).json({ message: 'Invalid or expired verification code' });
     }
 
-    // 2. Update password based on target user type
-    let success = false;
+    // 2. Staff accounts never get a reset code issued (see forgotPassword), but
+    //    guard against it here too in case of stale/legacy records.
     if (resetRecord.user_type === 'staff') {
-      success = await Staff.updatePasswordByEmail(em, new_password);
-    } else {
-      success = await User.updatePasswordByEmail(em, new_password);
+      return res.status(403).json({
+        message: 'Staff accounts cannot reset their password by email. Please contact your administrator to reset it.'
+      });
     }
+    const success = await User.updatePasswordByEmail(em, new_password);
 
     if (!success) {
       return res.status(404).json({ message: 'Failed to reset password. Account not found or deleted.' });

@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { authMiddleware, roleMiddleware } = require('../middlewares/authMiddleware');
+const { authMiddleware, modulePermission } = require('../middlewares/authMiddleware');
 const pointTransactionController = require('../controllers/pointTransactionController');
 
 router.use(authMiddleware);
@@ -150,6 +150,6 @@ router.get('/', pointTransactionController.getAllTransactions);
  *       500:
  *         description: Server error
  */
-router.post('/adjust', roleMiddleware(['admin', 'manager']), pointTransactionController.createManualAdjustment);
+router.post('/adjust', modulePermission('loyalty'), pointTransactionController.createManualAdjustment);
 
 module.exports = router;

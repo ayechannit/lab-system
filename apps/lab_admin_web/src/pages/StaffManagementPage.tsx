@@ -334,6 +334,7 @@ export function StaffManagementPage() {
         mode={formMode}
         initial={editInitial}
         existingRows={rows}
+        currentStaffId={currentStaffId}
         onClose={closeForm}
         onSuccess={() => {
           showSuccess(formMode === 'edit' ? t('staff.toasts.updated') : t('staff.toasts.created'))
