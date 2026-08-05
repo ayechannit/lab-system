@@ -192,8 +192,12 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           const SizedBox(height: 10),
                           SizedBox(
-                            height: 58,
+                            width: double.infinity,
                             child: FilledButton.icon(
+                              style: FilledButton.styleFrom(
+                                minimumSize: const Size.fromHeight(58),
+                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                              ),
                               onPressed: _submitting
                                   ? null
                                   : () async {
@@ -230,7 +234,14 @@ class _LoginScreenState extends State<LoginScreen> {
                                       ),
                                     )
                                   : const Icon(Icons.arrow_forward, size: 20),
-                              label: Text(_submitting ? l10n.signingIn : l10n.signIn),
+                              label: Text(
+                                _submitting ? l10n.signingIn : l10n.signIn,
+                                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                                      height: 1.4,
+                                      color: context.cs.onPrimary,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                              ),
                             ),
                           ),
                           const SizedBox(height: 20),
@@ -239,17 +250,29 @@ class _LoginScreenState extends State<LoginScreen> {
                           Text(
                             l10n.noAccountPrompt,
                             textAlign: TextAlign.center,
-                            style: Theme.of(context)
-                                .textTheme
-                                .headlineSmall
-                                ?.copyWith(color: context.cs.onSurfaceVariant, fontSize: 34 / 2),
+                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  color: context.cs.onSurfaceVariant,
+                                  height: 1.4,
+                                  fontWeight: FontWeight.w500,
+                                ),
                           ),
                           const SizedBox(height: 12),
                           SizedBox(
-                            height: 58,
+                            width: double.infinity,
                             child: OutlinedButton(
+                              style: OutlinedButton.styleFrom(
+                                minimumSize: const Size.fromHeight(58),
+                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                              ),
                               onPressed: () => context.push('/register'),
-                              child: Text(l10n.createNewAccount),
+                              child: Text(
+                                l10n.createNewAccount,
+                                textAlign: TextAlign.center,
+                                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                                      height: 1.4,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                              ),
                             ),
                           ),
                         ],

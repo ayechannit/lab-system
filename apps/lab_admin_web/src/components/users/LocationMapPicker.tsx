@@ -9,8 +9,8 @@ import 'leaflet/dist/leaflet.css'
 import { MapLocationSearch } from '../common/MapLocationSearch'
 import { nominatimReverse } from '../../services/nominatimGeocode'
 
-/** Default view: Yangon area — most collection addresses are in Myanmar. */
-const MAP_INIT_CENTER: [number, number] = [16.8661, 96.1951]
+/** Default view: Mandalay — primary lab service area. */
+const MAP_INIT_CENTER: [number, number] = [21.9588, 96.0891]
 const MAP_INIT_ZOOM = 11
 const MAP_SELECTED_ZOOM = 15
 const MAP_SEARCH_ZOOM = 15

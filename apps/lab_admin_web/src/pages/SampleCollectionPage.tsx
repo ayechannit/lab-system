@@ -102,10 +102,14 @@ function splitOrdersEvenlyAlongRoute(orders: ApiOrderListRow[], count: number): 
 function resolveRoutePlanOrders(
   picked: ApiOrderListRow[],
   routePlan: { result: CollectionRouteResult },
+  options?: { includeUnlisted?: boolean },
 ): ApiOrderListRow[] {
-  const fromDetails = orderStopsFromRouteDetails(picked, routePlan.result.routeStops)
+  const includeUnlisted = options?.includeUnlisted ?? true
+  const fromDetails = orderStopsFromRouteDetails(picked, routePlan.result.routeStops, {
+    includeUnlisted,
+  })
   if (fromDetails.length > 0) return fromDetails
-  return orderStopsInRouteOrder(picked, routePlan.result.orderedStops)
+  return orderStopsInRouteOrder(picked, routePlan.result.orderedStops, { includeUnlisted })
 }
 
 function mergePlanRouteOrders(
@@ -115,9 +119,12 @@ function mergePlanRouteOrders(
   const merged: ApiOrderListRow[] = []
   const sortedRoutes = [...plan.routes].sort((a, b) => a.collectorIndex - b.collectorIndex)
   for (const routePlan of sortedRoutes) {
-    for (const order of resolveRoutePlanOrders(picked, routePlan)) {
+    for (const order of resolveRoutePlanOrders(picked, routePlan, { includeUnlisted: false })) {
       if (!merged.some((x) => x.id === order.id)) merged.push(order)
     }
+  }
+  for (const order of picked) {
+    if (!merged.some((x) => x.id === order.id)) merged.push(order)
   }
   return merged.length > 0 ? merged : picked
 }
@@ -149,9 +156,14 @@ function aiRoutesMatchRequestedSplit(
   if (plan.routes.length !== plan.collectorCount) return false
   const seen = new Set<string>()
   for (const routePlan of plan.routes) {
-    const orders = resolveRoutePlanOrders(picked, routePlan)
+    // Strict: only stops the AI assigned to this collector — do not pad with all selected orders.
+    const orders = resolveRoutePlanOrders(picked, routePlan, { includeUnlisted: false })
     if (orders.length === 0) return false
-    for (const order of orders) seen.add(order.id.toLowerCase())
+    for (const order of orders) {
+      const key = order.id.toLowerCase()
+      if (seen.has(key)) return false
+      seen.add(key)
+    }
   }
   return seen.size === picked.length
 }
@@ -247,7 +259,7 @@ function buildRoutePlanSlicesFromPlan(
     return [...plan.routes]
       .sort((a, b) => a.collectorIndex - b.collectorIndex)
       .map((routePlan, index) => {
-        const orders = resolveRoutePlanOrders(picked, routePlan)
+        const orders = resolveRoutePlanOrders(picked, routePlan, { includeUnlisted: false })
         return {
           collectorIndex: routePlan.collectorIndex || index + 1,
           result: routePlan.result,
@@ -257,22 +269,31 @@ function buildRoutePlanSlicesFromPlan(
       })
   }
 
+  // AI often returns one route per order (total_collectors = order count). Re-split evenly
+  // to the requested collector count while keeping AI visit order when possible.
   const resolvedAll = mergePlanRouteOrders(picked, plan)
   const baseResult = mergePlanBaseResult(plan)
   const chunks = splitOrdersEvenlyAlongRoute(resolvedAll, collectorCount)
 
-  return chunks.map((orders, index) => ({
-    collectorIndex: index + 1,
-    result: {
+  return chunks.map((orders, index) => {
+    const routeStops = baseResult.routeStops.filter((stop) =>
+      orders.some((order) => order.id.toLowerCase() === stop.orderId.toLowerCase()),
+    )
+    const sliceResult: CollectionRouteResult = {
       ...baseResult,
       summary: `${orders.length} stop(s) · collector ${index + 1} of ${collectorCount}`,
-      routeStops: baseResult.routeStops.filter((stop) =>
-        orders.some((order) => order.id.toLowerCase() === stop.orderId.toLowerCase()),
+      routeStops,
+      orderedStops: orders.map(
+        (order) => `${order.id}: ${order.patient_name} — ${order.address?.trim() || '—'}`,
       ),
-    },
-    orders,
-    editableStops: buildEditableRouteStops(baseResult, orders, startTime, minutesPerStop),
-  }))
+    }
+    return {
+      collectorIndex: index + 1,
+      result: sliceResult,
+      orders,
+      editableStops: buildEditableRouteStops(sliceResult, orders, startTime, minutesPerStop),
+    }
+  })
 }
 
 function parseRouteStartTimeInput(value: string): string | null {
@@ -415,7 +436,9 @@ function orderCoords(order: ApiOrderListRow): { lat: number; lng: number } | nul
 function orderStopsInRouteOrder(
   picked: ApiOrderListRow[],
   orderedStops: string[],
+  options?: { includeUnlisted?: boolean },
 ): ApiOrderListRow[] {
+  const includeUnlisted = options?.includeUnlisted ?? true
   const byId = new Map(picked.map((o) => [o.id.toLowerCase(), o]))
   const ordered: ApiOrderListRow[] = []
   for (const line of orderedStops) {
@@ -423,8 +446,10 @@ function orderStopsInRouteOrder(
     const o = id ? byId.get(id.toLowerCase()) : undefined
     if (o && !ordered.some((x) => x.id === o.id)) ordered.push(o)
   }
-  for (const o of picked) {
-    if (!ordered.some((x) => x.id === o.id)) ordered.push(o)
+  if (includeUnlisted) {
+    for (const o of picked) {
+      if (!ordered.some((x) => x.id === o.id)) ordered.push(o)
+    }
   }
   return ordered
 }
@@ -432,16 +457,20 @@ function orderStopsInRouteOrder(
 function orderStopsFromRouteDetails(
   picked: ApiOrderListRow[],
   routeStops: CollectionRouteStopDetail[],
+  options?: { includeUnlisted?: boolean },
 ): ApiOrderListRow[] {
-  if (routeStops.length === 0) return picked
+  const includeUnlisted = options?.includeUnlisted ?? true
+  if (routeStops.length === 0) return includeUnlisted ? picked : []
   const byId = new Map(picked.map((o) => [o.id.toLowerCase(), o]))
   const ordered: ApiOrderListRow[] = []
   for (const stop of [...routeStops].sort((a, b) => a.sequence - b.sequence)) {
     const order = byId.get(stop.orderId.toLowerCase())
     if (order && !ordered.some((x) => x.id === order.id)) ordered.push(order)
   }
-  for (const o of picked) {
-    if (!ordered.some((x) => x.id === o.id)) ordered.push(o)
+  if (includeUnlisted) {
+    for (const o of picked) {
+      if (!ordered.some((x) => x.id === o.id)) ordered.push(o)
+    }
   }
   return ordered
 }
@@ -466,13 +495,32 @@ function buildEditableRouteStops(
   minutesPerStop: number,
 ): Record<string, EditableRouteStopTimes> {
   const out: Record<string, EditableRouteStopTimes> = {}
+  const orderIds = new Set(orders.map((o) => o.id.toLowerCase()))
 
   if (result.routeStops.length > 0) {
     for (const stop of result.routeStops) {
+      if (!orderIds.has(stop.orderId.toLowerCase())) continue
       out[stop.orderId] = {
         arrivalTime: stop.arrivalTime ?? '',
         collectionStart: stop.collectionStart ?? stop.arrivalTime ?? '',
         collectionEnd: stop.collectionEnd ?? '',
+      }
+    }
+    // Fill any orders missing AI times so each stop on this route is editable.
+    const missing = orders.filter((o) => !out[o.id])
+    if (missing.length === 0) return out
+    const baseIso = clockTimeOnTodayToIso(startClock)
+    const baseMs = baseIso ? new Date(baseIso).getTime() : Date.now()
+    const timedCount = Object.keys(out).length
+    for (let i = 0; i < missing.length; i++) {
+      const arrivalMs = baseMs + (timedCount + i) * minutesPerStop * 60_000
+      const collectEndMs = arrivalMs + minutesPerStop * 60_000
+      const arrival = formatRouteStartTime(new Date(arrivalMs))
+      const end = formatRouteStartTime(new Date(collectEndMs))
+      out[missing[i].id] = {
+        arrivalTime: arrival,
+        collectionStart: arrival,
+        collectionEnd: end,
       }
     }
     return out
@@ -480,7 +528,9 @@ function buildEditableRouteStops(
 
   const baseIso = clockTimeOnTodayToIso(startClock)
   const baseMs = baseIso ? new Date(baseIso).getTime() : Date.now()
-  const sortedOrders = orderStopsInRouteOrder(orders, result.orderedStops)
+  const sortedOrders = orderStopsInRouteOrder(orders, result.orderedStops, {
+    includeUnlisted: true,
+  })
   for (let i = 0; i < sortedOrders.length; i++) {
     const arrivalMs = baseMs + i * minutesPerStop * 60_000
     const collectEndMs = arrivalMs + minutesPerStop * 60_000
@@ -566,10 +616,17 @@ export function SampleCollectionPage() {
   const isScheduleMode = statusFilter === 'scheduled'
   const routeCollectorOptions = useMemo(() => collectorRoleStaffList(staff), [staff])
 
-  const routePlanOrders = useMemo(
-    () => routePlanSlices.flatMap((slice) => slice.orders),
-    [routePlanSlices],
-  )
+  const routePlanOrders = useMemo(() => {
+    const seen = new Set<string>()
+    const out: ApiOrderListRow[] = []
+    for (const order of routePlanSlices.flatMap((slice) => slice.orders)) {
+      const key = order.id.toLowerCase()
+      if (seen.has(key)) continue
+      seen.add(key)
+      out.push(order)
+    }
+    return out
+  }, [routePlanSlices])
 
   const routeResult = routePlanSlices[0]?.result ?? null
   const editableRouteStops = useMemo(
@@ -1030,14 +1087,16 @@ export function SampleCollectionPage() {
           }
         }),
       })
-      initializeRoutePlan(
-        buildRoutePlanSlicesFromPlan(picked, plan, startTime, collectionDurationMinutes),
+      const slices = buildRoutePlanSlicesFromPlan(
+        picked,
+        plan,
+        startTime,
+        collectionDurationMinutes,
       )
+      initializeRoutePlan(slices)
       showSuccess(
-        plan.routes.length > 1 || collectorCount > 1
-          ? t('collections.toasts.routesGenerated', {
-              count: plan.routes.length > 1 ? plan.routes.length : collectorCount,
-            })
+        slices.length > 1
+          ? t('collections.toasts.routesGenerated', { count: slices.length })
           : t('collections.toasts.routeGenerated'),
       )
     } catch (err) {

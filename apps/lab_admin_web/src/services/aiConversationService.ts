@@ -75,12 +75,19 @@ export type AiReviewBatchParams = {
 }
 
 function buildRoutePlanMessage(params: PlanCollectionRouteParams): string {
-  const collectorCount = Math.max(1, params.collectorCount ?? 1)
+  const stopCount = params.stops.length
+  const collectorCount = Math.max(1, Math.min(params.collectorCount ?? 1, Math.max(1, stopCount)))
   const payload = {
+    instruction:
+      `Create exactly ${collectorCount} collector route(s) for ${stopCount} order(s). ` +
+      `total_collectors and routes.length MUST equal collector_count (${collectorCount}). ` +
+      `Partition every order into exactly one route — no duplicates, no omitted orders. ` +
+      `Do not create one collector per order unless collector_count equals the order count.`,
     start_location: params.startLocation,
     start_time: params.startTime,
     collection_duration_minutes: params.collectionDurationMinutes,
     collector_count: collectorCount,
+    required_collector_count: collectorCount,
     orders: params.stops.map((stop) => ({
       order_id: stop.orderId,
       customer_name: stop.patientName,
@@ -457,7 +464,8 @@ function normalizeCollectionRoutePlan(
   raw: unknown,
   params: PlanCollectionRouteParams,
 ): CollectionRoutePlanResult {
-  const collectorCount = Math.max(1, params.collectorCount ?? 1)
+  const stopCount = params.stops.length
+  const collectorCount = Math.max(1, Math.min(params.collectorCount ?? 1, Math.max(1, stopCount)))
   const allStops = params.stops
 
   if (!raw || typeof raw !== 'object') {
@@ -467,7 +475,8 @@ function normalizeCollectionRoutePlan(
   const body = unwrapRouteBody(raw)
 
   if (Array.isArray(body.routes) && body.routes.length > 0) {
-    const routes = body.routes.map((entry, idx) => {
+    const routeEntries = body.routes
+    const routes = routeEntries.map((entry, idx) => {
       const routeBody =
         entry && typeof entry === 'object' ? (entry as Record<string, unknown>) : {}
       const collectorIndexRaw = Number(routeBody.collector_index ?? routeBody.collectorIndex ?? idx + 1)
@@ -478,11 +487,14 @@ function normalizeCollectionRoutePlan(
           ? allStops.filter((stop) =>
               orderIds.some((id) => id.toLowerCase() === stop.orderId.toLowerCase()),
             )
-          : allStops
-      const mergedBody = { ...body, ...routeBody }
+          : []
+      // Use the route entry alone — spreading the parent body leaked a full `route`
+      // array into every collector and made each slice look like it owned all stops.
+      const stopsForRoute =
+        sliceStops.length > 0 ? sliceStops : routeEntries.length === 1 ? allStops : []
       const result = normalizeCollectionRouteResult(
-        mergedBody,
-        sliceStops.length > 0 ? sliceStops : allStops,
+        routeBody,
+        stopsForRoute,
         params.startTime,
       )
       return { collectorIndex, result }

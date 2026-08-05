@@ -110,6 +110,68 @@
   "trackingAwaitingSchedule": "Awaiting lab schedule",
   "trackingStepRunning": "Sample running",
   "trackingStepReportOut": "Report out",
+  "trackingPatientSection": "Patient details",
+  "trackingAge": "Age: {age}",
+  "@trackingAge": {
+    "placeholders": { "age": { "type": "int" } }
+  },
+  "trackingPhone": "Phone: {phone}",
+  "@trackingPhone": {
+    "placeholders": { "phone": { "type": "String" } }
+  },
+  "trackingPriority": "Priority: {priority}",
+  "@trackingPriority": {
+    "placeholders": { "priority": { "type": "String" } }
+  },
+  "trackingReportDelivery": "Report delivery: {method}",
+  "@trackingReportDelivery": {
+    "placeholders": { "method": { "type": "String" } }
+  },
+  "trackingTestsSection": "Tests",
+  "trackingNoTestsYet": "No catalog tests assigned yet. The lab may still be reviewing a prescription.",
+  "trackingTestLine": "{name} ({code})",
+  "@trackingTestLine": {
+    "placeholders": {
+      "name": { "type": "String" },
+      "code": { "type": "String" }
+    }
+  },
+  "trackingTestLineNoCode": "{name}",
+  "@trackingTestLineNoCode": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "trackingPricingSection": "Pricing",
+  "trackingTestsSubtotal": "Tests",
+  "trackingMaterialFee": "Material fee",
+  "trackingServiceFee": "Service fee",
+  "trackingDiscount": "Discount ({percent}%)",
+  "@trackingDiscount": {
+    "placeholders": { "percent": { "type": "String" } }
+  },
+  "trackingOriginalPrice": "Original",
+  "trackingAmountDue": "Amount due",
+  "trackingPaid": "Paid",
+  "trackingBalance": "Balance",
+  "trackingNotesSection": "Notes",
+  "trackingPrescriptionAttached": "Prescription file attached",
+  "trackingMmk": "{amount} MMK",
+  "@trackingMmk": {
+    "placeholders": { "amount": { "type": "String" } }
+  },
+  "trackingLabelPriority": "Priority",
+  "trackingLabelDelivery": "Report delivery",
+  "trackingLabelAddress": "Collection address",
+  "trackingLabelName": "Name",
+  "trackingLabelAge": "Age",
+  "trackingLabelPhone": "Phone",
+  "trackingPlacedOn": "Placed {date}",
+  "@trackingPlacedOn": {
+    "placeholders": { "date": { "type": "String" } }
+  },
+  "trackingOrderRef": "Order reference",
+  "trackingCopyId": "Copy",
+  "trackingIdCopied": "Order ID copied",
+  "trackingTestsTotal": "Tests subtotal",
   "collectorPending": "Pending",
   "preferredCollector": "Preferred collector",
   "noCollectorPreference": "No preference — lab assigns",
@@ -243,6 +305,98 @@
   "orderCreateEstimatedAmountDue": "Estimated amount due",
   "orderCreatePrescriptionEmpty": "Add a prescription file to submit.",
   "orderCreatePrescriptionAttached": "Prescription attached. Totals will be set when the lab assigns tests.",
+  "orderCreatePatientDetails": "Patient details",
+  "orderCreatePatientFullName": "Patient full name",
+  "orderCreateRequired": "Required",
+  "orderCreatePhoneHint": "+959…",
+  "orderCreatePhoneInvalid": "Use + and digits only (e.g. +959…)",
+  "orderCreateAge": "Age",
+  "orderCreateValidAge": "Enter a valid age",
+  "orderCreateValidAgeWhole": "Enter a valid age (whole number).",
+  "orderCreateGender": "Gender",
+  "orderCreateGenderMale": "Male",
+  "orderCreateGenderFemale": "Female",
+  "orderCreateGenderOther": "Other",
+  "orderCreateBloodTypeOptional": "Blood type (optional)",
+  "orderCreateClinicalNotesOptional": "Clinical notes (optional)",
+  "orderCreatePriorityDelivery": "Priority & delivery",
+  "orderCreateUrgent": "Urgent",
+  "orderCreateElective": "Elective",
+  "orderCreateReportDelivery": "Report delivery",
+  "orderCreateSoftCopy": "Soft copy (app/PDF)",
+  "orderCreateHardCopy": "Hard copy",
+  "orderCreateBoth": "Both",
+  "orderCreateFacilityNotesOptional": "Collection / facility notes (optional)",
+  "orderCreateFacilityNotesHint": "Notes for collector or lab…",
+  "orderCreatePreferredDate": "Preferred collection date",
+  "orderCreateTimeNoteOptional": "Time note (optional)",
+  "orderCreateTimeNoteHint": "e.g. Morning, after 2pm",
+  "orderCreatePreferredCollectorOptional": "Preferred collector (optional)",
+  "orderCreateCollectorsAssignedByLab": "Collectors will be assigned by the lab.",
+  "orderCreateCollectionAddress": "Collection address",
+  "orderCreateEnterCollectionAddress": "Enter collection address",
+  "orderCreateFullCollectionAddress": "Full address for sample collection",
+  "orderCreateProcessOrderTitle": "How should we process this order?",
+  "orderCreateTestsFromList": "Tests from list",
+  "orderCreatePrescriptionFile": "Prescription file",
+  "orderCreateCatalogEmpty": "No lab tests in the catalog. Use “Prescription file” or ask the lab to publish tests.",
+  "orderCreateTestsFromCatalog": "Tests from catalog",
+  "orderCreateSelectTestsPlaceholder": "Select tests from catalog…",
+  "orderCreateTestsSelected": "{count, plural, =1{1 test selected — tap to add or remove}other{{count} tests selected — tap to add or remove}}",
+  "@orderCreateTestsSelected": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "orderCreateAddPrescriptionMedia": "Add PDF, image, or take photo",
+  "orderCreateChangeFile": "Change file",
+  "orderCreatePrescriptionReviewHint": "The lab will review your file and assign tests. Order status stays pending until they add catalog lines.",
+  "orderCreateSetCoordinates": "Set collection coordinates — type the address or choose on the map.",
+  "orderCreateStillCheckingCoverage": "Still checking service coverage for this address.",
+  "orderCreateTestsLoadFailed": "Selected tests could not be loaded. Wait for the catalog or pick tests again.",
+  "orderCreateSubmittedTitle": "Order submitted",
+  "orderCreateSubmittedBody": "Status is pending — the lab will review your request.",
+  "orderCreateFailedTitle": "Order failed",
+  "orderCreateSaveOrder": "Save order",
+  "orderCreateSaving": "Saving…",
+  "orderCreateSelectAtLeastOneTest": "Select at least one test from the catalog.",
+  "orderCreateChoosePrescription": "Choose a prescription PDF or image.",
+  "orderCreatePrescriptionUpload": "Prescription upload",
+  "orderCreateSelectedTestsCount": "{count} selected tests",
+  "@orderCreateSelectedTestsCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "orderCreateAddPrescription": "Add prescription",
+  "orderCreateAddPrescriptionHint": "Take a photo, pick from gallery, or upload a PDF/image file.",
+  "orderCreateTakePhoto": "Take photo",
+  "orderCreateUseCamera": "Use camera",
+  "orderCreateChooseFromGallery": "Choose from gallery",
+  "orderCreateGalleryFormats": "JPG, PNG, or other image",
+  "orderCreateChooseFile": "Choose file",
+  "orderCreateFileFromDevice": "PDF or image from device",
+  "orderCreateCouldNotCaptureImage": "Could not capture image: {error}",
+  "@orderCreateCouldNotCaptureImage": {
+    "placeholders": { "error": { "type": "String" } }
+  },
+  "orderCreateCouldNotLoadImage": "Could not load image: {error}",
+  "@orderCreateCouldNotLoadImage": {
+    "placeholders": { "error": { "type": "String" } }
+  },
+  "orderCreateCouldNotReadFile": "Could not read the selected file.",
+  "orderCreateSelectTests": "Select tests",
+  "orderCreateDone": "Done",
+  "orderCreateSearchTestsHint": "Search by test name or code",
+  "orderCreateTestMatchSummary": "{matches, plural, =1{1 match · {selected} selected}other{{matches} matches · {selected} selected}}",
+  "@orderCreateTestMatchSummary": {
+    "placeholders": {
+      "matches": { "type": "int" },
+      "selected": { "type": "int" }
+    }
+  },
+  "orderCreateNoTestsMatchSearch": "No tests match your search.",
+  "orderCreatePreferredCollector": "Preferred collector",
+  "orderCreateNoPreference": "No preference",
+  "orderCreateLabWillAssign": "Lab will assign a collector",
+  "orderCreateNoPreferenceLabel": "No preference — lab assigns",
+  "orderCreateCollectorOptionalHint": "Optional — same collector when planning routes",
   "resultsTitle": "Your results",
   "resultsSubtitle": "Lab reports the team has released to you.",
   "resultsNoReleasedYet": "No released results yet",

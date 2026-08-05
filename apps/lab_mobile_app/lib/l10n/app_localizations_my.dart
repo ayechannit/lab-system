@@ -224,6 +224,103 @@ class AppLocalizationsMy extends AppLocalizations {
   String get trackingStepReportOut => 'အစီရင်ခံစာ ထွက်ရှိ';
 
   @override
+  String get trackingPatientSection => 'လူနာ အချက်အလက်';
+
+  @override
+  String trackingAge(int age) => 'အသက်: $age';
+
+  @override
+  String trackingPhone(String phone) => 'ဖုန်း: $phone';
+
+  @override
+  String trackingPriority(String priority) => 'ဦးစားပေး: $priority';
+
+  @override
+  String trackingReportDelivery(String method) => 'အစီရင်ခံစာ ပေးပို့ပုံ: $method';
+
+  @override
+  String get trackingTestsSection => 'ဓာတ်ခွဲစစ်ဆေးမှုများ';
+
+  @override
+  String get trackingNoTestsYet =>
+      'ကတ်တလောက် စစ်ဆေးမှုများ မသတ်မှတ်ရသေးပါ။ ဓာတ်ခွဲခန်းက ဆေးညွှန်းကို စစ်ဆေးနေနိုင်ပါသည်။';
+
+  @override
+  String trackingTestLine(String name, String code) => '$name ($code)';
+
+  @override
+  String trackingTestLineNoCode(String name) => name;
+
+  @override
+  String get trackingPricingSection => 'စျေးနှုန်း';
+
+  @override
+  String get trackingTestsSubtotal => 'ဓာတ်ခွဲများ';
+
+  @override
+  String get trackingMaterialFee => 'ပစ္စည်းခ';
+
+  @override
+  String get trackingServiceFee => 'ဝန်ဆောင်ခ';
+
+  @override
+  String trackingDiscount(String percent) => 'လျှော့ဈေး ($percent%)';
+
+  @override
+  String get trackingOriginalPrice => 'မူလဈေး';
+
+  @override
+  String get trackingAmountDue => 'ပေးချေရမည့်ပမာဏ';
+
+  @override
+  String get trackingPaid => 'ပေးပြီး';
+
+  @override
+  String get trackingBalance => 'ကျန်ငွေ';
+
+  @override
+  String get trackingNotesSection => 'မှတ်ချက်များ';
+
+  @override
+  String get trackingPrescriptionAttached => 'ဆေးညွှန်းဖိုင် ပူးတွဲထားပါသည်';
+
+  @override
+  String trackingMmk(String amount) => '$amount ကျပ်';
+
+  @override
+  String get trackingLabelPriority => 'ဦးစားပေး';
+
+  @override
+  String get trackingLabelDelivery => 'အစီရင်ခံစာ ပေးပို့ပုံ';
+
+  @override
+  String get trackingLabelAddress => 'ကောက်ယူမည့် လိပ်စာ';
+
+  @override
+  String get trackingLabelName => 'အမည်';
+
+  @override
+  String get trackingLabelAge => 'အသက်';
+
+  @override
+  String get trackingLabelPhone => 'ဖုန်း';
+
+  @override
+  String trackingPlacedOn(String date) => 'မှာယူသည့်ရက် $date';
+
+  @override
+  String get trackingOrderRef => 'မှာယူမှု ကိုးကားချက်';
+
+  @override
+  String get trackingCopyId => 'ကူးယူမည်';
+
+  @override
+  String get trackingIdCopied => 'မှာယူမှု ID ကူးယူပြီးပါပြီ';
+
+  @override
+  String get trackingTestsTotal => 'ဓာတ်ခွဲစုစုပေါင်း';
+
+  @override
   String get collectorPending => 'ဆိုင်းငံ့';
 
   @override
@@ -519,6 +616,248 @@ class AppLocalizationsMy extends AppLocalizations {
 
   @override
   String get orderCreatePrescriptionAttached => 'ဆေးညွှန်းဖိုင် ပူးတွဲထားပါသည်။ ဓာတ်ခွဲခန်းမှ စစ်ဆေးမှုများ သတ်မှတ်ပြီးနောက် စုစုပေါင်းကို ပြင်ဆင်ပါမည်။';
+
+  @override
+  String get orderCreatePatientDetails => 'လူနာ အချက်အလက်';
+
+  @override
+  String get orderCreatePatientFullName => 'လူနာအမည် အပြည့်အစုံ';
+
+  @override
+  String get orderCreateRequired => 'လိုအပ်သည်';
+
+  @override
+  String get orderCreatePhoneHint => '+၉၅၉…';
+
+  @override
+  String get orderCreatePhoneInvalid => '+ နှင့် ဂဏန်းများသာ သုံးပါ (ဥပမာ +၉၅၉…)';
+
+  @override
+  String get orderCreateAge => 'အသက်';
+
+  @override
+  String get orderCreateValidAge => 'မှန်ကန်သော အသက် ထည့်ပါ';
+
+  @override
+  String get orderCreateValidAgeWhole => 'မှန်ကန်သော အသက် (ကိန်းပြည့်) ထည့်ပါ။';
+
+  @override
+  String get orderCreateGender => 'ကျား/မ';
+
+  @override
+  String get orderCreateGenderMale => 'ကျား';
+
+  @override
+  String get orderCreateGenderFemale => 'မ';
+
+  @override
+  String get orderCreateGenderOther => 'အခြား';
+
+  @override
+  String get orderCreateBloodTypeOptional => 'သွေးအမျိုးအစား (ရွေးချယ်နိုင်သည်)';
+
+  @override
+  String get orderCreateClinicalNotesOptional => 'ဆေးမှတ်ချက်များ (ရွေးချယ်နိုင်သည်)';
+
+  @override
+  String get orderCreatePriorityDelivery => 'ဦးစားပေးနှင့် ပေးပို့မှု';
+
+  @override
+  String get orderCreateUrgent => 'အရေးပေါ်';
+
+  @override
+  String get orderCreateElective => 'ပုံမှန်';
+
+  @override
+  String get orderCreateReportDelivery => 'အစီရင်ခံစာ ပေးပို့ပုံ';
+
+  @override
+  String get orderCreateSoftCopy => 'ဆော့ဖ်ကော်ပီ (အက်ပ်/PDF)';
+
+  @override
+  String get orderCreateHardCopy => 'ဟာ့ဒ်ကော်ပီ';
+
+  @override
+  String get orderCreateBoth => 'နှစ်မျိုးလုံး';
+
+  @override
+  String get orderCreateFacilityNotesOptional => 'ကောက်ယူမှု / ဆေးခန်းမှတ်ချက် (ရွေးချယ်နိုင်သည်)';
+
+  @override
+  String get orderCreateFacilityNotesHint => 'ကောက်ယူသူ သို့မဟုတ် ဓာတ်ခွဲခန်းအတွက် မှတ်ချက်…';
+
+  @override
+  String get orderCreatePreferredDate => 'နှစ်သက်သော ကောက်ယူမည့်ရက်';
+
+  @override
+  String get orderCreateTimeNoteOptional => 'အချိန်မှတ်ချက် (ရွေးချယ်နိုင်သည်)';
+
+  @override
+  String get orderCreateTimeNoteHint => 'ဥပမာ နံနက်၊ ညနေ ၂ နာရီနောက်';
+
+  @override
+  String get orderCreatePreferredCollectorOptional => 'နှစ်သက်သော ကောက်ယူသူ (ရွေးချယ်နိုင်သည်)';
+
+  @override
+  String get orderCreateCollectorsAssignedByLab => 'ဓာတ်ခွဲခန်းမှ ကောက်ယူသူကို သတ်မှတ်ပေးပါမည်။';
+
+  @override
+  String get orderCreateCollectionAddress => 'ကောက်ယူမည့် လိပ်စာ';
+
+  @override
+  String get orderCreateEnterCollectionAddress => 'ကောက်ယူမည့် လိပ်စာ ထည့်ပါ';
+
+  @override
+  String get orderCreateFullCollectionAddress => 'နမူနာကောက်ယူရန် လိပ်စာ အပြည့်အစုံ';
+
+  @override
+  String get orderCreateProcessOrderTitle => 'ဤမှာယူမှုကို မည်သို့ လုပ်ဆောင်မည်နည်း။';
+
+  @override
+  String get orderCreateTestsFromList => 'စာရင်းမှ စစ်ဆေးမှုများ';
+
+  @override
+  String get orderCreatePrescriptionFile => 'ဆေးညွှန်းဖိုင်';
+
+  @override
+  String get orderCreateCatalogEmpty =>
+      'ကတ်တလောက်တွင် ဓာတ်ခွဲစစ်ဆေးမှု မရှိပါ။ “ဆေးညွှန်းဖိုင်” ကို သုံးပါ သို့မဟုတ် ဓာတ်ခွဲခန်းကို စစ်ဆေးမှုများ ထည့်ရန် တောင်းဆိုပါ။';
+
+  @override
+  String get orderCreateTestsFromCatalog => 'ကတ်တလောက်မှ စစ်ဆေးမှုများ';
+
+  @override
+  String get orderCreateSelectTestsPlaceholder => 'ကတ်တလောက်မှ စစ်ဆေးမှုများ ရွေးပါ…';
+
+  @override
+  String orderCreateTestsSelected(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'စစ်ဆေးမှု $count ခု ရွေးထားသည် — ထည့်/ဖယ်ရန် နှိပ်ပါ',
+      one: 'စစ်ဆေးမှု ၁ ခု ရွေးထားသည် — ထည့်/ဖယ်ရန် နှိပ်ပါ',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get orderCreateAddPrescriptionMedia => 'PDF၊ ပုံ ထည့်ပါ သို့မဟုတ် ဓာတ်ပုံရိုက်ပါ';
+
+  @override
+  String get orderCreateChangeFile => 'ဖိုင် ပြောင်းရန်';
+
+  @override
+  String get orderCreatePrescriptionReviewHint =>
+      'ဓာတ်ခွဲခန်းမှ သင့်ဖိုင်ကို စစ်ဆေးပြီး စစ်ဆေးမှုများ သတ်မှတ်ပါမည်။ ကတ်တလောက်စာကြောင်းများ ထည့်သည့်အထိ အခြေအနေသည် ဆိုင်းငံ့အဖြစ် ရှိနေမည်။';
+
+  @override
+  String get orderCreateSetCoordinates =>
+      'ကောက်ယူမည့် တည်နေရာ သတ်မှတ်ပါ — လိပ်စာရိုက်ပါ သို့မဟုတ် မြေပုံပေါ်တွင် ရွေးပါ။';
+
+  @override
+  String get orderCreateStillCheckingCoverage => 'ဤလိပ်စာအတွက် ဝန်ဆောင်မှု ဧရိယာကို ဆက်လက် စစ်ဆေးနေသည်။';
+
+  @override
+  String get orderCreateTestsLoadFailed =>
+      'ရွေးထားသော စစ်ဆေးမှုများကို မရယူနိုင်ပါ။ ကတ်တလောက်ကို စောင့်ပါ သို့မဟုတ် ထပ်မံ ရွေးချယ်ပါ။';
+
+  @override
+  String get orderCreateSubmittedTitle => 'မှာယူမှု တင်သွင်းပြီးပါပြီ';
+
+  @override
+  String get orderCreateSubmittedBody => 'အခြေအနေသည် ဆိုင်းငံ့ဖြစ်သည် — ဓာတ်ခွဲခန်းမှ သင့်တောင်းဆိုမှုကို စစ်ဆေးပါမည်။';
+
+  @override
+  String get orderCreateFailedTitle => 'မှာယူမှု မအောင်မြင်ပါ';
+
+  @override
+  String get orderCreateSaveOrder => 'မှာယူမှု သိမ်းမည်';
+
+  @override
+  String get orderCreateSaving => 'သိမ်းနေသည်…';
+
+  @override
+  String get orderCreateSelectAtLeastOneTest => 'ကတ်တလောက်မှ စစ်ဆေးမှု အနည်းဆုံး တစ်ခု ရွေးပါ။';
+
+  @override
+  String get orderCreateChoosePrescription => 'ဆေးညွှန်း PDF သို့မဟုတ် ပုံ ရွေးပါ။';
+
+  @override
+  String get orderCreatePrescriptionUpload => 'ဆေးညွှန်း တင်သွင်းခြင်း';
+
+  @override
+  String orderCreateSelectedTestsCount(int count) {
+    return 'ရွေးထားသော စစ်ဆေးမှု $count ခု';
+  }
+
+  @override
+  String get orderCreateAddPrescription => 'ဆေးညွှန်း ထည့်မည်';
+
+  @override
+  String get orderCreateAddPrescriptionHint => 'ဓာတ်ပုံရိုက်ပါ၊ ဂယ်လရီမှ ရွေးပါ သို့မဟုတ် PDF/ပုံဖိုင် တင်ပါ။';
+
+  @override
+  String get orderCreateTakePhoto => 'ဓာတ်ပုံရိုက်မည်';
+
+  @override
+  String get orderCreateUseCamera => 'ကင်မရာ သုံးမည်';
+
+  @override
+  String get orderCreateChooseFromGallery => 'ဂယ်လရီမှ ရွေးမည်';
+
+  @override
+  String get orderCreateGalleryFormats => 'JPG၊ PNG သို့မဟုတ် အခြားပုံ';
+
+  @override
+  String get orderCreateChooseFile => 'ဖိုင် ရွေးမည်';
+
+  @override
+  String get orderCreateFileFromDevice => 'စက်မှ PDF သို့မဟုတ် ပုံ';
+
+  @override
+  String orderCreateCouldNotCaptureImage(String error) {
+    return 'ဓာတ်ပုံ မရိုက်နိုင်ပါ: $error';
+  }
+
+  @override
+  String orderCreateCouldNotLoadImage(String error) {
+    return 'ပုံ မဖွင့်နိုင်ပါ: $error';
+  }
+
+  @override
+  String get orderCreateCouldNotReadFile => 'ရွေးထားသော ဖိုင်ကို မဖတ်နိုင်ပါ။';
+
+  @override
+  String get orderCreateSelectTests => 'စစ်ဆေးမှုများ ရွေးမည်';
+
+  @override
+  String get orderCreateDone => 'ပြီးပါပြီ';
+
+  @override
+  String get orderCreateSearchTestsHint => 'စစ်ဆေးမှုအမည် သို့မဟုတ် ကုဒ်ဖြင့် ရှာရန်';
+
+  @override
+  String orderCreateTestMatchSummary(int matches, int selected) {
+    return 'ကိုက်ညီမှု $matches ခု · ရွေးထားသည် $selected ခု';
+  }
+
+  @override
+  String get orderCreateNoTestsMatchSearch => 'ရှာဖွေမှုနှင့် ကိုက်ညီသော စစ်ဆေးမှု မရှိပါ။';
+
+  @override
+  String get orderCreatePreferredCollector => 'နှစ်သက်သော ကောက်ယူသူ';
+
+  @override
+  String get orderCreateNoPreference => 'ဦးစားပေး မရှိ';
+
+  @override
+  String get orderCreateLabWillAssign => 'ဓာတ်ခွဲခန်းမှ ကောက်ယူသူ သတ်မှတ်ပေးမည်';
+
+  @override
+  String get orderCreateNoPreferenceLabel => 'ဦးစားပေး မရှိ — ဓာတ်ခွဲခန်းမှ သတ်မှတ်မည်';
+
+  @override
+  String get orderCreateCollectorOptionalHint => 'ရွေးချယ်နိုင်သည် — လမ်းကြောင်းစီစဉ်သည့်အခါ တူညီသော ကောက်ယူသူ';
 
   @override
   String get resultsTitle => 'သင့်ရလဒ်များ';

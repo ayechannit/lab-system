@@ -297,8 +297,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                       const SizedBox(height: 16),
                       SizedBox(
-                        height: 58,
+                        width: double.infinity,
                         child: FilledButton.icon(
+                          style: FilledButton.styleFrom(
+                            minimumSize: const Size.fromHeight(58),
+                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                          ),
                           onPressed: _submitting
                               ? null
                               : () async {
@@ -347,7 +351,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   ),
                                 )
                               : const Icon(Icons.arrow_forward, size: 20),
-                          label: Text(_submitting ? 'Creating account…' : 'Register'),
+                          label: Text(
+                            _submitting ? 'Creating account…' : 'Register',
+                            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                                  height: 1.4,
+                                  color: context.cs.onPrimary,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                          ),
                         ),
                       ),
                     ],

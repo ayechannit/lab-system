@@ -4,7 +4,8 @@ import { getAppLocale } from '../i18n'
 
 export function requireApiOrigin(): string {
   const base = getApiBaseUrl()
-  if (!base) throw new Error('VITE_API_BASE_URL is not set')
+  // Empty string is valid in Vite DEV (same-origin + proxy).
+  if (base === null) throw new Error('VITE_API_BASE_URL is not set')
   return base
 }
 

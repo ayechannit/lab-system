@@ -204,6 +204,8 @@ class LabOrderSummary {
     required this.createdAt,
     required this.timeline,
     required this.createdAtLabel,
+    this.patientAge,
+    this.patientPhone,
     this.collectionAcceptedAt,
     this.collectorName,
     this.collectorProfileImageUrl,
@@ -213,11 +215,21 @@ class LabOrderSummary {
     this.backendStatus,
     this.lineItems = const [],
     this.reportDeliveryMethod = 'soft_copy',
+    this.originalPriceMmk = 0,
+    this.discountPercent = 0,
+    this.finalPriceMmk = 0,
+    this.materialFeeMmk = 0,
+    this.serviceFeeMmk = 0,
+    this.totalPaidMmk = 0,
+    this.balanceMmk = 0,
+    this.prescriptionUrl,
   });
 
   final String id;
   final String userId;
   final String patientName;
+  final int? patientAge;
+  final String? patientPhone;
   final String testType;
   final String description;
   final OrderPriority priority;
@@ -243,6 +255,15 @@ class LabOrderSummary {
   /// Backend `report_delivery_method`: `soft_copy` | `hard_copy` | `both`.
   final String reportDeliveryMethod;
 
+  final double originalPriceMmk;
+  final double discountPercent;
+  final double finalPriceMmk;
+  final double materialFeeMmk;
+  final double serviceFeeMmk;
+  final double totalPaidMmk;
+  final double balanceMmk;
+  final String? prescriptionUrl;
+
   bool get isReportReady => reportOutAt != null;
 
   /// True when the lab has proposed at least one schedule field.
@@ -256,13 +277,23 @@ class LabOrderSummary {
       !scheduleAcceptedByUser &&
       (collectionAcceptedAt != null || collectorName != null || runningAt != null);
 
+  bool get hasPricing =>
+      finalPriceMmk > 0 ||
+      originalPriceMmk > 0 ||
+      materialFeeMmk > 0 ||
+      serviceFeeMmk > 0 ||
+      lineItems.any((l) => l.subtotalMmk > 0);
+
   LabOrderSummary copyWith({
     bool? scheduleAcceptedByUser,
+    String? collectorProfileImageUrl,
   }) {
     return LabOrderSummary(
       id: id,
       userId: userId,
       patientName: patientName,
+      patientAge: patientAge,
+      patientPhone: patientPhone,
       testType: testType,
       description: description,
       priority: priority,
@@ -272,13 +303,21 @@ class LabOrderSummary {
       createdAtLabel: createdAtLabel,
       collectionAcceptedAt: collectionAcceptedAt,
       collectorName: collectorName,
-      collectorProfileImageUrl: collectorProfileImageUrl,
+      collectorProfileImageUrl: collectorProfileImageUrl ?? this.collectorProfileImageUrl,
       runningAt: runningAt,
       reportOutAt: reportOutAt,
       scheduleAcceptedByUser: scheduleAcceptedByUser ?? this.scheduleAcceptedByUser,
       backendStatus: backendStatus,
       lineItems: lineItems,
       reportDeliveryMethod: reportDeliveryMethod,
+      originalPriceMmk: originalPriceMmk,
+      discountPercent: discountPercent,
+      finalPriceMmk: finalPriceMmk,
+      materialFeeMmk: materialFeeMmk,
+      serviceFeeMmk: serviceFeeMmk,
+      totalPaidMmk: totalPaidMmk,
+      balanceMmk: balanceMmk,
+      prescriptionUrl: prescriptionUrl,
     );
   }
 }

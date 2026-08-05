@@ -473,6 +473,40 @@ abstract class AppLocalizations {
   /// **'Report out'**
   String get trackingStepReportOut;
 
+  String trackingAge(int age);
+  String trackingPhone(String phone);
+  String trackingPriority(String priority);
+  String trackingReportDelivery(String method);
+  String get trackingPatientSection;
+  String get trackingTestsSection;
+  String get trackingNoTestsYet;
+  String trackingTestLine(String name, String code);
+  String trackingTestLineNoCode(String name);
+  String get trackingPricingSection;
+  String get trackingTestsSubtotal;
+  String get trackingMaterialFee;
+  String get trackingServiceFee;
+  String trackingDiscount(String percent);
+  String get trackingOriginalPrice;
+  String get trackingAmountDue;
+  String get trackingPaid;
+  String get trackingBalance;
+  String get trackingNotesSection;
+  String get trackingPrescriptionAttached;
+  String trackingMmk(String amount);
+
+  String get trackingLabelPriority;
+  String get trackingLabelDelivery;
+  String get trackingLabelAddress;
+  String get trackingLabelName;
+  String get trackingLabelAge;
+  String get trackingLabelPhone;
+  String trackingPlacedOn(String date);
+  String get trackingOrderRef;
+  String get trackingCopyId;
+  String get trackingIdCopied;
+  String get trackingTestsTotal;
+
   /// No description provided for @collectorPending.
   ///
   /// In en, this message translates to:
@@ -1030,6 +1064,81 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Prescription attached. Totals will be set when the lab assigns tests.'**
   String get orderCreatePrescriptionAttached;
+
+  String get orderCreatePatientDetails;
+  String get orderCreatePatientFullName;
+  String get orderCreateRequired;
+  String get orderCreatePhoneHint;
+  String get orderCreatePhoneInvalid;
+  String get orderCreateAge;
+  String get orderCreateValidAge;
+  String get orderCreateValidAgeWhole;
+  String get orderCreateGender;
+  String get orderCreateGenderMale;
+  String get orderCreateGenderFemale;
+  String get orderCreateGenderOther;
+  String get orderCreateBloodTypeOptional;
+  String get orderCreateClinicalNotesOptional;
+  String get orderCreatePriorityDelivery;
+  String get orderCreateUrgent;
+  String get orderCreateElective;
+  String get orderCreateReportDelivery;
+  String get orderCreateSoftCopy;
+  String get orderCreateHardCopy;
+  String get orderCreateBoth;
+  String get orderCreateFacilityNotesOptional;
+  String get orderCreateFacilityNotesHint;
+  String get orderCreatePreferredDate;
+  String get orderCreateTimeNoteOptional;
+  String get orderCreateTimeNoteHint;
+  String get orderCreatePreferredCollectorOptional;
+  String get orderCreateCollectorsAssignedByLab;
+  String get orderCreateCollectionAddress;
+  String get orderCreateEnterCollectionAddress;
+  String get orderCreateFullCollectionAddress;
+  String get orderCreateProcessOrderTitle;
+  String get orderCreateTestsFromList;
+  String get orderCreatePrescriptionFile;
+  String get orderCreateCatalogEmpty;
+  String get orderCreateTestsFromCatalog;
+  String get orderCreateSelectTestsPlaceholder;
+  String orderCreateTestsSelected(int count);
+  String get orderCreateAddPrescriptionMedia;
+  String get orderCreateChangeFile;
+  String get orderCreatePrescriptionReviewHint;
+  String get orderCreateSetCoordinates;
+  String get orderCreateStillCheckingCoverage;
+  String get orderCreateTestsLoadFailed;
+  String get orderCreateSubmittedTitle;
+  String get orderCreateSubmittedBody;
+  String get orderCreateFailedTitle;
+  String get orderCreateSaveOrder;
+  String get orderCreateSaving;
+  String get orderCreateSelectAtLeastOneTest;
+  String get orderCreateChoosePrescription;
+  String get orderCreatePrescriptionUpload;
+  String orderCreateSelectedTestsCount(int count);
+  String get orderCreateAddPrescription;
+  String get orderCreateAddPrescriptionHint;
+  String get orderCreateTakePhoto;
+  String get orderCreateUseCamera;
+  String get orderCreateChooseFromGallery;
+  String get orderCreateGalleryFormats;
+  String get orderCreateChooseFile;
+  String get orderCreateFileFromDevice;
+  String orderCreateCouldNotCaptureImage(String error);
+  String orderCreateCouldNotLoadImage(String error);
+  String get orderCreateCouldNotReadFile;
+  String get orderCreateSelectTests;
+  String get orderCreateDone;
+  String get orderCreateSearchTestsHint;
+  String orderCreateTestMatchSummary(int matches, int selected);
+  String get orderCreateNoTestsMatchSearch;
+  String get orderCreatePreferredCollector;
+  String get orderCreateNoPreference;
+  String get orderCreateLabWillAssign;
+  String get orderCreateNoPreferenceLabel;
+  String get orderCreateCollectorOptionalHint;
 
   /// No description provided for @resultsTitle.
   ///

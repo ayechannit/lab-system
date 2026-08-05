@@ -224,6 +224,103 @@ class AppLocalizationsEn extends AppLocalizations {
   String get trackingStepReportOut => 'Report out';
 
   @override
+  String get trackingPatientSection => 'Patient details';
+
+  @override
+  String trackingAge(int age) => 'Age: $age';
+
+  @override
+  String trackingPhone(String phone) => 'Phone: $phone';
+
+  @override
+  String trackingPriority(String priority) => 'Priority: $priority';
+
+  @override
+  String trackingReportDelivery(String method) => 'Report delivery: $method';
+
+  @override
+  String get trackingTestsSection => 'Tests';
+
+  @override
+  String get trackingNoTestsYet =>
+      'No catalog tests assigned yet. The lab may still be reviewing a prescription.';
+
+  @override
+  String trackingTestLine(String name, String code) => '$name ($code)';
+
+  @override
+  String trackingTestLineNoCode(String name) => name;
+
+  @override
+  String get trackingPricingSection => 'Pricing';
+
+  @override
+  String get trackingTestsSubtotal => 'Tests';
+
+  @override
+  String get trackingMaterialFee => 'Material fee';
+
+  @override
+  String get trackingServiceFee => 'Service fee';
+
+  @override
+  String trackingDiscount(String percent) => 'Discount ($percent%)';
+
+  @override
+  String get trackingOriginalPrice => 'Original';
+
+  @override
+  String get trackingAmountDue => 'Amount due';
+
+  @override
+  String get trackingPaid => 'Paid';
+
+  @override
+  String get trackingBalance => 'Balance';
+
+  @override
+  String get trackingNotesSection => 'Notes';
+
+  @override
+  String get trackingPrescriptionAttached => 'Prescription file attached';
+
+  @override
+  String trackingMmk(String amount) => '$amount MMK';
+
+  @override
+  String get trackingLabelPriority => 'Priority';
+
+  @override
+  String get trackingLabelDelivery => 'Report delivery';
+
+  @override
+  String get trackingLabelAddress => 'Collection address';
+
+  @override
+  String get trackingLabelName => 'Name';
+
+  @override
+  String get trackingLabelAge => 'Age';
+
+  @override
+  String get trackingLabelPhone => 'Phone';
+
+  @override
+  String trackingPlacedOn(String date) => 'Placed $date';
+
+  @override
+  String get trackingOrderRef => 'Order reference';
+
+  @override
+  String get trackingCopyId => 'Copy';
+
+  @override
+  String get trackingIdCopied => 'Order ID copied';
+
+  @override
+  String get trackingTestsTotal => 'Tests subtotal';
+
+  @override
   String get collectorPending => 'Pending';
 
   @override
@@ -519,6 +616,255 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get orderCreatePrescriptionAttached => 'Prescription attached. Totals will be set when the lab assigns tests.';
+
+  @override
+  String get orderCreatePatientDetails => 'Patient details';
+
+  @override
+  String get orderCreatePatientFullName => 'Patient full name';
+
+  @override
+  String get orderCreateRequired => 'Required';
+
+  @override
+  String get orderCreatePhoneHint => '+959…';
+
+  @override
+  String get orderCreatePhoneInvalid => 'Use + and digits only (e.g. +959…)';
+
+  @override
+  String get orderCreateAge => 'Age';
+
+  @override
+  String get orderCreateValidAge => 'Enter a valid age';
+
+  @override
+  String get orderCreateValidAgeWhole => 'Enter a valid age (whole number).';
+
+  @override
+  String get orderCreateGender => 'Gender';
+
+  @override
+  String get orderCreateGenderMale => 'Male';
+
+  @override
+  String get orderCreateGenderFemale => 'Female';
+
+  @override
+  String get orderCreateGenderOther => 'Other';
+
+  @override
+  String get orderCreateBloodTypeOptional => 'Blood type (optional)';
+
+  @override
+  String get orderCreateClinicalNotesOptional => 'Clinical notes (optional)';
+
+  @override
+  String get orderCreatePriorityDelivery => 'Priority & delivery';
+
+  @override
+  String get orderCreateUrgent => 'Urgent';
+
+  @override
+  String get orderCreateElective => 'Elective';
+
+  @override
+  String get orderCreateReportDelivery => 'Report delivery';
+
+  @override
+  String get orderCreateSoftCopy => 'Soft copy (app/PDF)';
+
+  @override
+  String get orderCreateHardCopy => 'Hard copy';
+
+  @override
+  String get orderCreateBoth => 'Both';
+
+  @override
+  String get orderCreateFacilityNotesOptional => 'Collection / facility notes (optional)';
+
+  @override
+  String get orderCreateFacilityNotesHint => 'Notes for collector or lab…';
+
+  @override
+  String get orderCreatePreferredDate => 'Preferred collection date';
+
+  @override
+  String get orderCreateTimeNoteOptional => 'Time note (optional)';
+
+  @override
+  String get orderCreateTimeNoteHint => 'e.g. Morning, after 2pm';
+
+  @override
+  String get orderCreatePreferredCollectorOptional => 'Preferred collector (optional)';
+
+  @override
+  String get orderCreateCollectorsAssignedByLab => 'Collectors will be assigned by the lab.';
+
+  @override
+  String get orderCreateCollectionAddress => 'Collection address';
+
+  @override
+  String get orderCreateEnterCollectionAddress => 'Enter collection address';
+
+  @override
+  String get orderCreateFullCollectionAddress => 'Full address for sample collection';
+
+  @override
+  String get orderCreateProcessOrderTitle => 'How should we process this order?';
+
+  @override
+  String get orderCreateTestsFromList => 'Tests from list';
+
+  @override
+  String get orderCreatePrescriptionFile => 'Prescription file';
+
+  @override
+  String get orderCreateCatalogEmpty =>
+      'No lab tests in the catalog. Use “Prescription file” or ask the lab to publish tests.';
+
+  @override
+  String get orderCreateTestsFromCatalog => 'Tests from catalog';
+
+  @override
+  String get orderCreateSelectTestsPlaceholder => 'Select tests from catalog…';
+
+  @override
+  String orderCreateTestsSelected(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count tests selected — tap to add or remove',
+      one: '1 test selected — tap to add or remove',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get orderCreateAddPrescriptionMedia => 'Add PDF, image, or take photo';
+
+  @override
+  String get orderCreateChangeFile => 'Change file';
+
+  @override
+  String get orderCreatePrescriptionReviewHint =>
+      'The lab will review your file and assign tests. Order status stays pending until they add catalog lines.';
+
+  @override
+  String get orderCreateSetCoordinates =>
+      'Set collection coordinates — type the address or choose on the map.';
+
+  @override
+  String get orderCreateStillCheckingCoverage => 'Still checking service coverage for this address.';
+
+  @override
+  String get orderCreateTestsLoadFailed =>
+      'Selected tests could not be loaded. Wait for the catalog or pick tests again.';
+
+  @override
+  String get orderCreateSubmittedTitle => 'Order submitted';
+
+  @override
+  String get orderCreateSubmittedBody => 'Status is pending — the lab will review your request.';
+
+  @override
+  String get orderCreateFailedTitle => 'Order failed';
+
+  @override
+  String get orderCreateSaveOrder => 'Save order';
+
+  @override
+  String get orderCreateSaving => 'Saving…';
+
+  @override
+  String get orderCreateSelectAtLeastOneTest => 'Select at least one test from the catalog.';
+
+  @override
+  String get orderCreateChoosePrescription => 'Choose a prescription PDF or image.';
+
+  @override
+  String get orderCreatePrescriptionUpload => 'Prescription upload';
+
+  @override
+  String orderCreateSelectedTestsCount(int count) {
+    return '$count selected tests';
+  }
+
+  @override
+  String get orderCreateAddPrescription => 'Add prescription';
+
+  @override
+  String get orderCreateAddPrescriptionHint =>
+      'Take a photo, pick from gallery, or upload a PDF/image file.';
+
+  @override
+  String get orderCreateTakePhoto => 'Take photo';
+
+  @override
+  String get orderCreateUseCamera => 'Use camera';
+
+  @override
+  String get orderCreateChooseFromGallery => 'Choose from gallery';
+
+  @override
+  String get orderCreateGalleryFormats => 'JPG, PNG, or other image';
+
+  @override
+  String get orderCreateChooseFile => 'Choose file';
+
+  @override
+  String get orderCreateFileFromDevice => 'PDF or image from device';
+
+  @override
+  String orderCreateCouldNotCaptureImage(String error) {
+    return 'Could not capture image: $error';
+  }
+
+  @override
+  String orderCreateCouldNotLoadImage(String error) {
+    return 'Could not load image: $error';
+  }
+
+  @override
+  String get orderCreateCouldNotReadFile => 'Could not read the selected file.';
+
+  @override
+  String get orderCreateSelectTests => 'Select tests';
+
+  @override
+  String get orderCreateDone => 'Done';
+
+  @override
+  String get orderCreateSearchTestsHint => 'Search by test name or code';
+
+  @override
+  String orderCreateTestMatchSummary(int matches, int selected) {
+    String _temp0 = intl.Intl.pluralLogic(
+      matches,
+      locale: localeName,
+      other: '$matches matches · $selected selected',
+      one: '1 match · $selected selected',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get orderCreateNoTestsMatchSearch => 'No tests match your search.';
+
+  @override
+  String get orderCreatePreferredCollector => 'Preferred collector';
+
+  @override
+  String get orderCreateNoPreference => 'No preference';
+
+  @override
+  String get orderCreateLabWillAssign => 'Lab will assign a collector';
+
+  @override
+  String get orderCreateNoPreferenceLabel => 'No preference — lab assigns';
+
+  @override
+  String get orderCreateCollectorOptionalHint => 'Optional — same collector when planning routes';
 
   @override
   String get resultsTitle => 'Your results';

@@ -6,7 +6,7 @@
   "scripts": {
     "staff:seed": "node scripts/insertStaff.js",
     "start": "node src/index.js",
-    "dev": "nodemon",
+    "dev": "node --watch src/index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../models/lab_order.dart';
 import '../../theme/theme_extensions.dart';
 import '../common/app_field_decoration.dart';
@@ -29,6 +30,7 @@ class CollectorPickField extends StatelessWidget {
 
   Future<void> _openSheet(BuildContext context) async {
     if (!enabled) return;
+    final l10n = AppLocalizations.of(context)!;
     final picked = await showModalBottomSheet<String?>(
       context: context,
       showDragHandle: true,
@@ -43,14 +45,14 @@ class CollectorPickField extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
                 child: Text(
-                  'Preferred collector',
+                  l10n.orderCreatePreferredCollector,
                   style: Theme.of(ctx).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
                 ),
               ),
               ListTile(
                 leading: Icon(Icons.person_off_outlined, color: cs.onSurfaceVariant),
-                title: const Text('No preference'),
-                subtitle: const Text('Lab will assign a collector'),
+                title: Text(l10n.orderCreateNoPreference),
+                subtitle: Text(l10n.orderCreateLabWillAssign),
                 trailing: selectedId == null || selectedId!.isEmpty
                     ? Icon(Icons.check_circle, color: cs.primary)
                     : null,
@@ -88,8 +90,9 @@ class CollectorPickField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = context.cs;
+    final l10n = AppLocalizations.of(context)!;
     final selected = _selected;
-    final label = selected?.name ?? 'No preference — lab assigns';
+    final label = selected?.name ?? l10n.orderCreateNoPreferenceLabel;
 
     return Material(
       color: context.appExtras.surfaceContainer,
@@ -118,7 +121,7 @@ class CollectorPickField extends StatelessWidget {
                           ),
                     ),
                     Text(
-                      'Optional — same collector when planning routes',
+                      l10n.orderCreateCollectorOptionalHint,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: cs.onSurfaceVariant,
                           ),

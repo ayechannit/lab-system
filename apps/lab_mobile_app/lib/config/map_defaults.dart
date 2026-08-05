@@ -1,6 +1,6 @@
-/// Default map center when no coordinates are set (Yangon area — typical lab region).
-const double kDefaultMapLat = 16.8661;
-const double kDefaultMapLng = 96.1951;
+/// Default map center when no coordinates are set (Mandalay — primary lab region).
+const double kDefaultMapLat = 21.9588;
+const double kDefaultMapLng = 96.0891;
 
 bool hasMeaningfulCoordinates(double? lat, double? lng) {
   if (lat == null || lng == null) return false;

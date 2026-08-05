@@ -343,7 +343,7 @@
       "startTimePlaceholder": "Select start time",
       "duration": "Collection duration (min per stop)",
       "collectorCount": "Number of collectors",
-      "collectorCountHint": "Split stops across up to {{max}} collector{{suffix}} for this route plan.",
+      "collectorCountHint": "Use 1–{{max}} collector{{suffix}} (based on selected orders). The plan will split stops across that many routes.",
       "selectOrdersHint": "Select at least one order in the table above to set up a collection route."
     },
     "scheduled": {

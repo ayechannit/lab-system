@@ -33,8 +33,8 @@ const MIN_BOUNDS_SPAN = 0.0003
 
 type BoundsCorner = 'sw' | 'se' | 'ne' | 'nw'
 
-/** Default view: Yangon area — most service zones are in Myanmar. */
-const MAP_INIT_CENTER: [number, number] = [16.8661, 96.1951]
+/** Default view: Mandalay — primary lab service area. */
+const MAP_INIT_CENTER: [number, number] = [21.9588, 96.0891]
 const MAP_INIT_ZOOM = 11
 const MAP_SEARCH_ZOOM = 13
 

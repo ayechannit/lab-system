@@ -656,27 +656,7 @@ class RestLabUserApi implements LabUserApi {
     final collectorImageUrl = summary.collectorProfileImageUrl ??
         await _resolveCollectorProfileImageUrl(summary.collectorName, sched);
     if (collectorImageUrl == null) return summary;
-    return LabOrderSummary(
-      id: summary.id,
-      userId: summary.userId,
-      patientName: summary.patientName,
-      testType: summary.testType,
-      description: summary.description,
-      priority: summary.priority,
-      address: summary.address,
-      createdAt: summary.createdAt,
-      timeline: summary.timeline,
-      createdAtLabel: summary.createdAtLabel,
-      collectionAcceptedAt: summary.collectionAcceptedAt,
-      collectorName: summary.collectorName,
-      collectorProfileImageUrl: collectorImageUrl,
-      runningAt: summary.runningAt,
-      reportOutAt: summary.reportOutAt,
-      scheduleAcceptedByUser: summary.scheduleAcceptedByUser,
-      backendStatus: summary.backendStatus,
-      lineItems: summary.lineItems,
-      reportDeliveryMethod: summary.reportDeliveryMethod,
-    );
+    return summary.copyWith(collectorProfileImageUrl: collectorImageUrl);
   }
 
   Future<void> _ensureCollectorProfileCache() async {
@@ -755,10 +735,26 @@ class RestLabUserApi implements LabUserApi {
             .trim()
             .toLowerCase();
 
+    final patientAgeRaw = _gv(o, 'patient_age') ?? _gv(o, 'patientAge');
+    final patientAge = patientAgeRaw == null ? null : _asInt(patientAgeRaw);
+    final patientPhone = '${_gv(o, 'patient_phone') ?? _gv(o, 'patientPhone') ?? ''}'.trim();
+    final prescriptionUrl = '${_gv(o, 'prescription_url') ?? _gv(o, 'prescriptionUrl') ?? ''}'.trim();
+
+    final originalPrice = _asDouble(_gv(o, 'original_price_mmk') ?? _gv(o, 'originalPriceMmk'));
+    final discountPercent = _asDouble(_gv(o, 'discount_percent') ?? _gv(o, 'discountPercent'));
+    final finalPrice = _asDouble(_gv(o, 'final_price_mmk') ?? _gv(o, 'finalPriceMmk'));
+    final materialFee = _asDouble(_gv(o, 'material_fee_mmk') ?? _gv(o, 'materialFeeMmk'));
+    final serviceFee = _asDouble(_gv(o, 'service_fee_mmk') ?? _gv(o, 'serviceFeeMmk'));
+    final totalPaid = _asDouble(_gv(o, 'total_paid_mmk') ?? _gv(o, 'totalPaidMmk'));
+    final balanceRaw = _gv(o, 'balance_mmk') ?? _gv(o, 'balanceMmk');
+    final balance = balanceRaw == null ? (finalPrice - totalPaid) : _asDouble(balanceRaw);
+
     return LabOrderSummary(
       id: id,
       userId: userId,
       patientName: patientName,
+      patientAge: patientAge != null && patientAge > 0 ? patientAge : null,
+      patientPhone: patientPhone.isEmpty ? null : patientPhone,
       testType: testLabel,
       description: desc,
       priority: priority,
@@ -775,6 +771,14 @@ class RestLabUserApi implements LabUserApi {
       backendStatus: status,
       lineItems: lineItems,
       reportDeliveryMethod: deliveryMethod,
+      originalPriceMmk: originalPrice,
+      discountPercent: discountPercent,
+      finalPriceMmk: finalPrice,
+      materialFeeMmk: materialFee,
+      serviceFeeMmk: serviceFee,
+      totalPaidMmk: totalPaid,
+      balanceMmk: balance,
+      prescriptionUrl: prescriptionUrl.isEmpty ? null : prescriptionUrl,
     );
   }
 
@@ -933,10 +937,15 @@ class RestLabUserApi implements LabUserApi {
         '${_gv(row, 'report_delivery_method') ?? _gv(row, 'reportDeliveryMethod') ?? 'soft_copy'}'
             .trim()
             .toLowerCase();
+    final patientAgeRaw = _gv(row, 'patient_age') ?? _gv(row, 'patientAge');
+    final patientAge = patientAgeRaw == null ? null : _asInt(patientAgeRaw);
+    final patientPhone = '${_gv(row, 'patient_phone') ?? _gv(row, 'patientPhone') ?? ''}'.trim();
     return LabOrderSummary(
       id: id,
       userId: userId,
       patientName: patientName,
+      patientAge: patientAge != null && patientAge > 0 ? patientAge : null,
+      patientPhone: patientPhone.isEmpty ? null : patientPhone,
       testType: desc.trim().isEmpty ? 'Lab test' : desc.split('\n').first.trim(),
       description: desc,
       priority: priority,
@@ -946,6 +955,11 @@ class RestLabUserApi implements LabUserApi {
       createdAtLabel: createdLabel,
       backendStatus: status,
       reportDeliveryMethod: deliveryMethod,
+      originalPriceMmk: _asDouble(_gv(row, 'original_price_mmk') ?? _gv(row, 'originalPriceMmk')),
+      discountPercent: _asDouble(_gv(row, 'discount_percent') ?? _gv(row, 'discountPercent')),
+      finalPriceMmk: _asDouble(_gv(row, 'final_price_mmk') ?? _gv(row, 'finalPriceMmk')),
+      materialFeeMmk: _asDouble(_gv(row, 'material_fee_mmk') ?? _gv(row, 'materialFeeMmk')),
+      serviceFeeMmk: _asDouble(_gv(row, 'service_fee_mmk') ?? _gv(row, 'serviceFeeMmk')),
     );
   }
 

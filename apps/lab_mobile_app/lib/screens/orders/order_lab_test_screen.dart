@@ -193,15 +193,15 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
     );
   }
 
-  String? _validateProcessOrder() {
+  String? _validateProcessOrder(AppLocalizations l10n) {
     if (_mode == _OrderMode.catalogTests) {
       if (_selectedTestIds.isEmpty) {
-        return 'Select at least one test from the catalog.';
+        return l10n.orderCreateSelectAtLeastOneTest;
       }
       return null;
     }
     if (_prescriptionBytes == null || _prescriptionBytes!.isEmpty) {
-      return 'Choose a prescription PDF or image.';
+      return l10n.orderCreateChoosePrescription;
     }
     return null;
   }
@@ -501,6 +501,7 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
   double _sumFinal(List<CatalogOrderLine> lines) => lines.fold(0.0, (a, b) => a + b.subtotalMmk);
 
   Future<void> _pickPrescription() async {
+    final l10n = AppLocalizations.of(context)!;
     final choice = await showModalBottomSheet<_PrescriptionPickSource>(
       context: context,
       showDragHandle: true,
@@ -514,32 +515,32 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(
-                  'Add prescription',
+                  l10n.orderCreateAddPrescription,
                   style: Theme.of(ctx).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Take a photo, pick from gallery, or upload a PDF/image file.',
+                  l10n.orderCreateAddPrescriptionHint,
                   style: Theme.of(ctx).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
                 ),
                 const SizedBox(height: 12),
                 if (!kIsWeb)
                   ListTile(
                     leading: Icon(Icons.photo_camera_outlined, color: cs.primary),
-                    title: const Text('Take photo'),
-                    subtitle: const Text('Use camera'),
+                    title: Text(l10n.orderCreateTakePhoto),
+                    subtitle: Text(l10n.orderCreateUseCamera),
                     onTap: () => Navigator.pop(ctx, _PrescriptionPickSource.camera),
                   ),
                 ListTile(
                   leading: Icon(Icons.photo_library_outlined, color: cs.primary),
-                  title: const Text('Choose from gallery'),
-                  subtitle: const Text('JPG, PNG, or other image'),
+                  title: Text(l10n.orderCreateChooseFromGallery),
+                  subtitle: Text(l10n.orderCreateGalleryFormats),
                   onTap: () => Navigator.pop(ctx, _PrescriptionPickSource.gallery),
                 ),
                 ListTile(
                   leading: Icon(Icons.upload_file_outlined, color: cs.primary),
-                  title: const Text('Choose file'),
-                  subtitle: const Text('PDF or image from device'),
+                  title: Text(l10n.orderCreateChooseFile),
+                  subtitle: Text(l10n.orderCreateFileFromDevice),
                   onTap: () => Navigator.pop(ctx, _PrescriptionPickSource.file),
                 ),
               ],
@@ -581,9 +582,12 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
       _applyPrescriptionFile(bytes, name);
     } catch (e) {
       if (!mounted) return;
+      final l10n = AppLocalizations.of(context)!;
       AppToast.error(
         context,
-        'Could not ${source == ImageSource.camera ? 'capture' : 'load'} image: $e',
+        source == ImageSource.camera
+            ? l10n.orderCreateCouldNotCaptureImage('$e')
+            : l10n.orderCreateCouldNotLoadImage('$e'),
       );
     }
   }
@@ -622,11 +626,12 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
 
   void _showPrescriptionReadError() {
     if (!mounted) return;
-    AppToast.error(context, 'Could not read the selected file.');
+    AppToast.error(context, AppLocalizations.of(context)!.orderCreateCouldNotReadFile);
   }
 
   Future<void> _openTestCatalogSheet() async {
     if (_tests.isEmpty) return;
+    final l10n = AppLocalizations.of(context)!;
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -650,13 +655,13 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
                         children: [
                           Expanded(
                             child: Text(
-                              'Select tests',
+                              l10n.orderCreateSelectTests,
                               style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
                             ),
                           ),
                           TextButton(
                             onPressed: () => Navigator.of(sheetContext).pop(),
-                            child: const Text('Done'),
+                            child: Text(l10n.orderCreateDone),
                           ),
                         ],
                       ),
@@ -671,7 +676,7 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
                         },
                         decoration: AppFieldDecoration.build(
                           context,
-                          hint: 'Search by test name or code',
+                          hint: l10n.orderCreateSearchTestsHint,
                           prefixIcon: const Icon(Icons.search),
                         ),
                       ),
@@ -679,7 +684,7 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: Text(
-                        '${filtered.length} match${filtered.length == 1 ? '' : 'es'} · ${_selectedTestIds.length} selected',
+                        l10n.orderCreateTestMatchSummary(filtered.length, _selectedTestIds.length),
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(color: context.cs.onSurfaceVariant),
                       ),
                     ),
@@ -688,7 +693,7 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
                       child: filtered.isEmpty
                           ? Center(
                               child: Text(
-                                'No tests match your search.',
+                                l10n.orderCreateNoTestsMatchSearch,
                                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: context.cs.onSurfaceVariant),
                               ),
                             )
@@ -738,12 +743,12 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
     _revalidateProcessOrder();
   }
 
-  String _summaryTestTitle() {
-    if (_mode == _OrderMode.prescriptionOnly) return 'Prescription upload';
+  String _summaryTestTitle(AppLocalizations l10n) {
+    if (_mode == _OrderMode.prescriptionOnly) return l10n.orderCreatePrescriptionUpload;
     final lines = _buildLines();
     if (lines.isEmpty) return '—';
     if (lines.length == 1) return lines.first.testName;
-    return '${lines.length} selected tests';
+    return l10n.orderCreateSelectedTestsCount(lines.length);
   }
 
   void _goBack(BuildContext context) {
@@ -759,12 +764,13 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
     final session = SessionScope.of(context);
     final user = session.user;
     final lines = _buildLines();
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          tooltip: 'Back',
+          tooltip: l10n.profileBack,
           onPressed: () => _goBack(context),
         ),
         titleSpacing: 12,
@@ -775,39 +781,43 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
           children: [
-            Text('Order lab test', style: Theme.of(context).textTheme.headlineMedium),
+            Text(l10n.ordersOrderLabTest, style: Theme.of(context).textTheme.headlineMedium),
             const SizedBox(height: 16),
             _SectionCard(
               icon: Icons.person_outline,
-              title: 'Patient details',
+              title: l10n.orderCreatePatientDetails,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _stackedFieldLabel(context, 'Patient full name'),
+                  _stackedFieldLabel(context, l10n.orderCreatePatientFullName),
                   TextFormField(
                     controller: _patientName,
                     decoration: AppFieldDecoration.build(context),
-                    validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+                    validator: (v) => (v == null || v.trim().isEmpty) ? l10n.orderCreateRequired : null,
                   ),
                   const SizedBox(height: 12),
-                  _stackedFieldLabel(context, 'Phone'),
+                  _stackedFieldLabel(context, l10n.phone),
                   TextFormField(
                     controller: _phone,
                     decoration: AppFieldDecoration.build(
                       context,
                       prefixIcon: Icon(Icons.phone_outlined, color: Theme.of(context).colorScheme.onSurfaceVariant),
-                      hint: '+959…',
+                      hint: l10n.orderCreatePhoneHint,
                     ),
                     keyboardType: TextInputType.phone,
                     inputFormatters: const [PhoneNumberInputFormatter()],
-                    validator: (v) => validatePhoneNumber(v),
+                    validator: (v) => validatePhoneNumber(
+                      v,
+                      emptyMessage: l10n.orderCreateRequired,
+                      invalidMessage: l10n.orderCreatePhoneInvalid,
+                    ),
                   ),
                   const SizedBox(height: 12),
                   _ResponsiveFieldPair(
                     first: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _stackedFieldLabel(context, 'Age'),
+                        _stackedFieldLabel(context, l10n.orderCreateAge),
                         TextFormField(
                           controller: _age,
                           decoration: AppFieldDecoration.build(context),
@@ -815,7 +825,7 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
                           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                           validator: (v) {
                             final age = int.tryParse((v ?? '').trim());
-                            return (age == null || age <= 0) ? 'Enter a valid age' : null;
+                            return (age == null || age <= 0) ? l10n.orderCreateValidAge : null;
                           },
                         ),
                       ],
@@ -823,31 +833,37 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
                     second: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _stackedFieldLabel(context, 'Gender'),
+                        _stackedFieldLabel(context, l10n.orderCreateGender),
                         AppDropdownFormField<String>(
                           value: _gender,
                           style: _dropdownBodyStyle(context),
-                          items: ['Male', 'Female', 'Other']
-                              .map(
-                                (e) => DropdownMenuItem<String>(
-                                  value: e,
-                                  child: Text(e, style: _dropdownBodyStyle(context)),
-                                ),
-                              )
-                              .toList(),
+                          items: [
+                            DropdownMenuItem(
+                              value: 'Male',
+                              child: Text(l10n.orderCreateGenderMale, style: _dropdownBodyStyle(context)),
+                            ),
+                            DropdownMenuItem(
+                              value: 'Female',
+                              child: Text(l10n.orderCreateGenderFemale, style: _dropdownBodyStyle(context)),
+                            ),
+                            DropdownMenuItem(
+                              value: 'Other',
+                              child: Text(l10n.orderCreateGenderOther, style: _dropdownBodyStyle(context)),
+                            ),
+                          ],
                           onChanged: (v) => setState(() => _gender = v ?? _gender),
                         ),
                       ],
                     ),
                   ),
                   const SizedBox(height: 12),
-                  _stackedFieldLabel(context, 'Blood type (optional)'),
+                  _stackedFieldLabel(context, l10n.orderCreateBloodTypeOptional),
                   TextFormField(
                     controller: _bloodType,
                     decoration: AppFieldDecoration.build(context),
                   ),
                   const SizedBox(height: 12),
-                  _stackedFieldLabel(context, 'Clinical notes (optional)'),
+                  _stackedFieldLabel(context, l10n.orderCreateClinicalNotesOptional),
                   TextFormField(
                     controller: _description,
                     decoration: AppFieldDecoration.build(context),
@@ -859,42 +875,42 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
             const SizedBox(height: 12),
             _SectionCard(
               icon: Icons.flag_outlined,
-              title: 'Priority & delivery',
+              title: l10n.orderCreatePriorityDelivery,
               trailing: Switch(
                 value: _priority == OrderPriority.urgent,
                 onChanged: (v) => setState(() => _priority = v ? OrderPriority.urgent : OrderPriority.elective),
               ),
-              subtitle: _priority == OrderPriority.urgent ? 'Urgent' : 'Elective',
+              subtitle: _priority == OrderPriority.urgent ? l10n.orderCreateUrgent : l10n.orderCreateElective,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _stackedFieldLabel(context, 'Report delivery'),
+                  _stackedFieldLabel(context, l10n.orderCreateReportDelivery),
                   AppDropdownFormField<String>(
                     value: _reportDelivery,
                     style: _dropdownBodyStyle(context),
                     items: [
                       DropdownMenuItem(
                         value: 'soft_copy',
-                        child: Text('Soft copy (app/PDF)', style: _dropdownBodyStyle(context)),
+                        child: Text(l10n.orderCreateSoftCopy, style: _dropdownBodyStyle(context)),
                       ),
                       DropdownMenuItem(
                         value: 'hard_copy',
-                        child: Text('Hard copy', style: _dropdownBodyStyle(context)),
+                        child: Text(l10n.orderCreateHardCopy, style: _dropdownBodyStyle(context)),
                       ),
                       DropdownMenuItem(
                         value: 'both',
-                        child: Text('Both', style: _dropdownBodyStyle(context)),
+                        child: Text(l10n.orderCreateBoth, style: _dropdownBodyStyle(context)),
                       ),
                     ],
                     onChanged: (v) => setState(() => _reportDelivery = v ?? _reportDelivery),
                   ),
                   const SizedBox(height: 16),
-                  _stackedFieldLabel(context, 'Collection / facility notes (optional)'),
+                  _stackedFieldLabel(context, l10n.orderCreateFacilityNotesOptional),
                   TextFormField(
                     controller: _facilityNotes,
                     decoration: AppFieldDecoration.build(
                       context,
-                      hint: 'Notes for collector or lab…',
+                      hint: l10n.orderCreateFacilityNotesHint,
                     ),
                     maxLines: 2,
                   ),
@@ -903,7 +919,7 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
                     first: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _stackedFieldLabel(context, 'Preferred collection date'),
+                        _stackedFieldLabel(context, l10n.orderCreatePreferredDate),
                         InkWell(
                           onTap: () async {
                             final picked = await showDatePicker(
@@ -933,19 +949,19 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
                     second: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _stackedFieldLabel(context, 'Time note (optional)'),
+                        _stackedFieldLabel(context, l10n.orderCreateTimeNoteOptional),
                         TextFormField(
                           controller: _timeSlot,
                           decoration: AppFieldDecoration.build(
                             context,
-                            hint: 'e.g. Morning, after 2pm',
+                            hint: l10n.orderCreateTimeNoteHint,
                           ),
                         ),
                       ],
                     ),
                   ),
                   const SizedBox(height: 16),
-                  _stackedFieldLabel(context, 'Preferred collector (optional)'),
+                  _stackedFieldLabel(context, l10n.orderCreatePreferredCollectorOptional),
                   FutureBuilder<List<LabCollectorPick>>(
                     future: _collectorsFuture,
                     builder: (context, snapshot) {
@@ -957,7 +973,7 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
                       }
                       if (_collectors.isEmpty) {
                         return Text(
-                          'Collectors will be assigned by the lab.',
+                          l10n.orderCreateCollectorsAssignedByLab,
                           style: Theme.of(context).textTheme.bodySmall,
                         );
                       }
@@ -974,10 +990,10 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
             const SizedBox(height: 12),
             _SectionCard(
               icon: Icons.location_on_outlined,
-              title: 'Collection address',
+              title: l10n.orderCreateCollectionAddress,
               child: FormField<String>(
                 validator: (_) =>
-                    _addressLine.text.trim().isEmpty ? 'Enter collection address' : null,
+                    _addressLine.text.trim().isEmpty ? l10n.orderCreateEnterCollectionAddress : null,
                 builder: (state) => Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -985,7 +1001,7 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
                       addressLine: _addressLine.text,
                       latitude: _collectionLat,
                       longitude: _collectionLng,
-                      addressLabel: 'Full address for sample collection',
+                      addressLabel: l10n.orderCreateFullCollectionAddress,
                       onChanged: (line, lat, lng) {
                         _addressLine.text = line;
                         setState(() {
@@ -1013,7 +1029,7 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
             const SizedBox(height: 12),
             _SectionCard(
               icon: Icons.route_outlined,
-              title: 'How should we process this order?',
+              title: l10n.orderCreateProcessOrderTitle,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -1031,7 +1047,7 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
                       ButtonSegment(
                         value: _OrderMode.catalogTests,
                         label: Text(
-                          'Tests from list',
+                          l10n.orderCreateTestsFromList,
                           style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w400),
                         ),
                         icon: const Icon(Icons.checklist_outlined),
@@ -1039,7 +1055,7 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
                       ButtonSegment(
                         value: _OrderMode.prescriptionOnly,
                         label: Text(
-                          'Prescription file',
+                          l10n.orderCreatePrescriptionFile,
                           style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w400),
                         ),
                         icon: const Icon(Icons.upload_file_outlined),
@@ -1062,7 +1078,7 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
                   const SizedBox(height: 14),
                   FormField<void>(
                     key: _processOrderKey,
-                    validator: (_) => _validateProcessOrder(),
+                    validator: (_) => _validateProcessOrder(l10n),
                     builder: (field) {
                       final err = field.errorText;
                       if (_mode == _OrderMode.catalogTests) {
@@ -1077,7 +1093,7 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
                             }
                             if (_tests.isEmpty) {
                               return Text(
-                                'No lab tests in the catalog. Use “Prescription file” or ask the lab to publish tests.',
+                                l10n.orderCreateCatalogEmpty,
                                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.error),
                               );
                             }
@@ -1085,11 +1101,11 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
                             return Column(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
-                                _stackedFieldLabel(context, 'Tests from catalog', required: true),
+                                _stackedFieldLabel(context, l10n.orderCreateTestsFromCatalog, required: true),
                                 AppDropdownTapField(
                                   label: n == 0
-                                      ? 'Select tests from catalog…'
-                                      : '$n test${n == 1 ? '' : 's'} selected — tap to add or remove',
+                                      ? l10n.orderCreateSelectTestsPlaceholder
+                                      : l10n.orderCreateTestsSelected(n),
                                   onTap: _openTestCatalogSheet,
                                   hasError: err != null,
                                 ),
@@ -1102,11 +1118,11 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          _stackedFieldLabel(context, 'Prescription file', required: true),
+                          _stackedFieldLabel(context, l10n.orderCreatePrescriptionFile, required: true),
                           AppDropdownTapField(
                             label: _prescriptionName == null
-                                ? 'Add PDF, image, or take photo'
-                                : 'Change file',
+                                ? l10n.orderCreateAddPrescriptionMedia
+                                : l10n.orderCreateChangeFile,
                             onTap: _pickPrescription,
                             hasError: err != null,
                           ),
@@ -1122,7 +1138,7 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
                           ],
                           const SizedBox(height: 8),
                           Text(
-                            'The lab will review your file and assign tests. Order status stays pending until they add catalog lines.',
+                            l10n.orderCreatePrescriptionReviewHint,
                             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                   color: context.cs.onSurfaceVariant,
                                 ),
@@ -1137,14 +1153,14 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
             const SizedBox(height: 12),
             _SectionCard(
               icon: Icons.receipt_long_outlined,
-              title: AppLocalizations.of(context)!.orderCreateSummary,
+              title: l10n.orderCreateSummary,
               child: _mode == _OrderMode.catalogTests
                   ? Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         if (lines.isEmpty)
                           Text(
-                            AppLocalizations.of(context)!.orderCreateNoTestsSelected,
+                            l10n.orderCreateNoTestsSelected,
                             style: Theme.of(context).textTheme.bodyMedium,
                           )
                         else ...[
@@ -1177,8 +1193,8 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
                       children: [
                         Text(
                           _prescriptionBytes == null
-                              ? AppLocalizations.of(context)!.orderCreatePrescriptionEmpty
-                              : AppLocalizations.of(context)!.orderCreatePrescriptionAttached,
+                              ? l10n.orderCreatePrescriptionEmpty
+                              : l10n.orderCreatePrescriptionAttached,
                           style: Theme.of(context).textTheme.bodyMedium,
                         ),
                         const SizedBox(height: 12),
@@ -1197,19 +1213,18 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
                         if (!hasMeaningfulCoordinates(_collectionLat, _collectionLng)) {
                           AppToast.warning(
                             context,
-                            'Set collection coordinates — type the address or choose on the map.',
+                            l10n.orderCreateSetCoordinates,
                           );
                           return;
                         }
                         if (_serviceFeeLoading) {
-                          AppToast.warning(context, 'Still checking service coverage for this address.');
+                          AppToast.warning(context, l10n.orderCreateStillCheckingCoverage);
                           return;
                         }
                         if (_serviceFeeOutOfCoverage) {
                           AppToast.warning(
                             context,
-                            _serviceFeeError ??
-                                'This address is outside our service coverage areas.',
+                            _serviceFeeError ?? l10n.orderCreateServiceFeeOutOfCoverage,
                           );
                           return;
                         }
@@ -1220,7 +1235,7 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
 
                         final ageYears = int.tryParse(_age.text.trim());
                         if (ageYears == null || ageYears <= 0) {
-                          AppToast.warning(context, 'Enter a valid age (whole number).');
+                          AppToast.warning(context, l10n.orderCreateValidAgeWhole);
                           return;
                         }
 
@@ -1228,12 +1243,12 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
                         if (_mode == _OrderMode.catalogTests && builtLines.isEmpty) {
                           AppToast.warning(
                             context,
-                            'Selected tests could not be loaded. Wait for the catalog or pick tests again.',
+                            l10n.orderCreateTestsLoadFailed,
                           );
                           return;
                         }
                         final order = LabOrderRequest(
-                          testName: _summaryTestTitle(),
+                          testName: _summaryTestTitle(l10n),
                           description: _description.text.trim(),
                           priority: _priority,
                           patientName: _patientName.text.trim(),
@@ -1263,8 +1278,8 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
                           if (!context.mounted) return;
                           AppToast.successInShell(
                             context,
-                            'Status is pending — the lab will review your request.',
-                            title: 'Order submitted',
+                            l10n.orderCreateSubmittedBody,
+                            title: l10n.orderCreateSubmittedTitle,
                           );
                           context.go('/order-success');
                         } catch (e) {
@@ -1272,12 +1287,12 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
                           final msg = e is LabApiException
                               ? e.message
                               : '$e';
-                          AppToast.errorInShell(context, msg, title: 'Order failed');
+                          AppToast.errorInShell(context, msg, title: l10n.orderCreateFailedTitle);
                         }
                       },
                 icon: const Icon(Icons.save_outlined),
                 label: Text(
-                  session.busy ? 'Saving…' : 'Save order',
+                  session.busy ? l10n.orderCreateSaving : l10n.orderCreateSaveOrder,
                   style: Theme.of(context).textTheme.labelLarge?.copyWith(
                         fontWeight: FontWeight.w400,
                         color: Theme.of(context).colorScheme.onPrimary,

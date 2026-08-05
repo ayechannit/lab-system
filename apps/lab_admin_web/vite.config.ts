@@ -6,10 +6,10 @@ import { viteSingleFile } from 'vite-plugin-singlefile'
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   const apiTrim = (env.VITE_API_BASE_URL ?? '').trim().replace(/\/$/, '')
-  let uploadsProxyTarget = 'http://localhost:3000'
+  let apiProxyTarget = 'http://localhost:3000'
   if (apiTrim.startsWith('http://') || apiTrim.startsWith('https://')) {
     try {
-      uploadsProxyTarget = new URL(apiTrim).origin
+      apiProxyTarget = new URL(apiTrim).origin
     } catch {
       /* keep default */
     }
@@ -21,11 +21,11 @@ export default defineConfig(({ mode }) => {
       assetsInlineLimit: 100000000,
     },
     server: {
-      // Prescription PDFs use `/uploads/...` on the API host; embedding `localhost:3000` in an
-      // iframe from the Vite app (`localhost:5174`) often triggers Chrome’s “Failed to load PDF”.
-      // Same-origin `/uploads/...` + proxy avoids that in local dev.
+      // Same-origin `/api` + `/uploads` in dev avoids browser CORS when the
+      // admin UI is on :5173 and the API is on :3000.
       proxy: {
-        '/uploads': { target: uploadsProxyTarget, changeOrigin: true },
+        '/api': { target: apiProxyTarget, changeOrigin: true },
+        '/uploads': { target: apiProxyTarget, changeOrigin: true },
       },
     },
   }
