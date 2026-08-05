@@ -351,6 +351,17 @@ CREATE TABLE ai_prompts (
     updated_at DATETIME2 DEFAULT GETDATE()
 );
 
+-- ROLE PERMISSIONS (per-module access for lab_admin_web; 'admin' is never stored here — always full access)
+CREATE TABLE role_permissions (
+    id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+    role NVARCHAR(20) NOT NULL CHECK (role IN ('manager', 'reception', 'lab_technician', 'collector')),
+    module_key NVARCHAR(50) NOT NULL,
+    is_allowed BIT NOT NULL DEFAULT 0,
+    updated_user UNIQUEIDENTIFIER,
+    updated_at DATETIME2 DEFAULT GETDATE(),
+    CONSTRAINT UQ_RolePermissions_Role_Module UNIQUE (role, module_key)
+);
+
 -- THEMING & BRANDING
 CREATE TABLE theme_settings (
     id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),

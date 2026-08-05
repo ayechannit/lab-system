@@ -1,0 +1,2216 @@
+[
+  {
+    "test_name": "Haemogram (CBC) 43 para",
+    "test_code": "CBC",
+    "description": "Collection Tube: EDTA",
+    "base_price_mmk": 20500.0,
+    "category": "Haematology Tests",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Haemogram (CBC) 36 para",
+    "test_code": "CBC_2",
+    "description": "Collection Tube: EDTA",
+    "base_price_mmk": 15500.0,
+    "category": "Haematology Tests",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "CP (Manual)",
+    "test_code": "CP_MANUAL",
+    "description": "Collection Tube: EDTA",
+    "base_price_mmk": 11500.0,
+    "category": "Haematology Tests",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Hb%",
+    "test_code": "HB",
+    "description": "Collection Tube: EDTA",
+    "base_price_mmk": 8500.0,
+    "category": "Haematology Tests",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Platelet Count",
+    "test_code": "PLATELET_COUNT",
+    "description": "Collection Tube: EDTA",
+    "base_price_mmk": 11500.0,
+    "category": "Haematology Tests",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "PCV",
+    "test_code": "PCV",
+    "description": "Collection Tube: EDTA",
+    "base_price_mmk": 9500.0,
+    "category": "Haematology Tests",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "ESR",
+    "test_code": "ESR",
+    "description": "Collection Tube: ESR",
+    "base_price_mmk": 4000.0,
+    "category": "Haematology Tests",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Retic Count",
+    "test_code": "RETIC_COUNT",
+    "description": "Collection Tube: EDTA",
+    "base_price_mmk": 14500.0,
+    "category": "Haematology Tests",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Blood Grouping & Rh",
+    "test_code": "BLOOD_GROUPING_RH",
+    "description": "Collection Tube: EDTA",
+    "base_price_mmk": 8000.0,
+    "category": "Haematology Tests",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "G6PD (qualitative)",
+    "test_code": "G6PD_QUALITATIVE",
+    "description": "Collection Tube: EDTA",
+    "base_price_mmk": 14500.0,
+    "category": "Haematology Tests",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "G6PD (quantitative)",
+    "test_code": "G6PD_QUANTITATIVE",
+    "description": "Collection Tube: EDTA",
+    "base_price_mmk": 36000.0,
+    "category": "Haematology Tests",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Hb Electrophoresis",
+    "test_code": "HB_ELECTROPHORESIS",
+    "description": "Collection Tube: EDTA. Turnaround Time (TAT): 10 days",
+    "base_price_mmk": 60000.0,
+    "category": "Haematology Tests",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Coomb's test (Direct & Indirect)",
+    "test_code": "COOMB_S_TEST_DIRECT_INDIRECT",
+    "description": "Collection Tube: EDTA, Plain. Turnaround Time (TAT): 24 hrs",
+    "base_price_mmk": 33500.0,
+    "category": "Haematology Tests",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "PNH",
+    "test_code": "PNH",
+    "description": "Collection Tube: EDTA, Plain, PT",
+    "base_price_mmk": 33500.0,
+    "category": "Haematology Tests",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "CD4 count",
+    "test_code": "CD4_COUNT",
+    "description": "Collection Tube: EDTA. Turnaround Time (TAT): 3 days",
+    "base_price_mmk": 90000.0,
+    "category": "Haematology Tests",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Absolute Neutrophil Count (Body Fluid)",
+    "test_code": "ABSOLUTE_NEUTROPHIL_COUNT_BODY",
+    "description": "Collection Tube: Sterile Bottle. Turnaround Time (TAT): 2 days",
+    "base_price_mmk": 27500.0,
+    "category": "Haematology Tests",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "PT (INR)",
+    "test_code": "PT_INR",
+    "description": "Collection Tube: PT",
+    "base_price_mmk": 15500.0,
+    "category": "COAGULATION SCREENING",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "APTT",
+    "test_code": "APTT",
+    "description": "Collection Tube: PT",
+    "base_price_mmk": 15500.0,
+    "category": "COAGULATION SCREENING",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Factor VIII",
+    "test_code": "FACTOR_VIII",
+    "description": "Collection Tube: PT",
+    "base_price_mmk": 49000.0,
+    "category": "COAGULATION SCREENING",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Factor IX",
+    "test_code": "FACTOR_IX",
+    "description": "Collection Tube: PT",
+    "base_price_mmk": 49000.0,
+    "category": "COAGULATION SCREENING",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Fibrinogen",
+    "test_code": "FIBRINOGEN",
+    "description": "Collection Tube: PT. Turnaround Time (TAT): 24 hrs",
+    "base_price_mmk": 26500.0,
+    "category": "COAGULATION SCREENING",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "D-dimer (quantitative)",
+    "test_code": "D_DIMER_QUANTITATIVE",
+    "description": "Collection Tube: PT",
+    "base_price_mmk": 42000.0,
+    "category": "COAGULATION SCREENING",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "BT/CT",
+    "test_code": "BT_CT",
+    "description": "Collection Tube: Lab",
+    "base_price_mmk": 6000.0,
+    "category": "COAGULATION SCREENING",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Serum iron",
+    "test_code": "SERUM_IRON",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 19000.0,
+    "category": "ANAEMIC FACTOR STUDY",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "TIBC",
+    "test_code": "TIBC",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 24000.0,
+    "category": "ANAEMIC FACTOR STUDY",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Ferritin",
+    "test_code": "FERRITIN",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 33500.0,
+    "category": "ANAEMIC FACTOR STUDY",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Iron study",
+    "test_code": "IRON_STUDY",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 66000.0,
+    "category": "ANAEMIC FACTOR STUDY",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Serum B12",
+    "test_code": "SERUM_B12",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 32500.0,
+    "category": "ANAEMIC FACTOR STUDY",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Serum Folate",
+    "test_code": "SERUM_FOLATE",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 32500.0,
+    "category": "ANAEMIC FACTOR STUDY",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "LFT (TB, ALT,AST,ALP)",
+    "test_code": "LFT_TB_ALT_AST_ALP",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 30000.0,
+    "category": "LIVER FUNCTION PANEL",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "ALT (SGPT)",
+    "test_code": "ALT_SGPT",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 11000.0,
+    "category": "LIVER FUNCTION PANEL",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "AST (SGOT)",
+    "test_code": "AST_SGOT",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 11000.0,
+    "category": "LIVER FUNCTION PANEL",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "ALP",
+    "test_code": "ALP",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 11000.0,
+    "category": "LIVER FUNCTION PANEL",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Bilirubin (Total)",
+    "test_code": "BILIRUBIN_TOTAL",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 11000.0,
+    "category": "LIVER FUNCTION PANEL",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Bilirubin (Direct)",
+    "test_code": "BILIRUBIN_DIRECT",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 14500.0,
+    "category": "LIVER FUNCTION PANEL",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Bilirubin (Indirect)",
+    "test_code": "BILIRUBIN_INDIRECT",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 21500.0,
+    "category": "LIVER FUNCTION PANEL",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Split Bilirubin",
+    "test_code": "SPLIT_BILIRUBIN",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 24000.0,
+    "category": "LIVER FUNCTION PANEL",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "GGT",
+    "test_code": "GGT",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 17000.0,
+    "category": "LIVER FUNCTION PANEL",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "T & DP",
+    "test_code": "T_DP",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 19000.0,
+    "category": "PROTEIN ANALYSIS",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Total Protein",
+    "test_code": "TOTAL_PROTEIN",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 12000.0,
+    "category": "PROTEIN ANALYSIS",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Albumin",
+    "test_code": "ALBUMIN",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 12000.0,
+    "category": "PROTEIN ANALYSIS",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Globulin",
+    "test_code": "GLOBULIN",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 19000.0,
+    "category": "PROTEIN ANALYSIS",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Protein Electrophoresis",
+    "test_code": "PROTEIN_ELECTROPHORESIS",
+    "description": "Collection Tube: Plain. Turnaround Time (TAT): 10 Days",
+    "base_price_mmk": 102000.0,
+    "category": "PROTEIN ANALYSIS",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "CRP (Quanti)",
+    "test_code": "CRP_QUANTI",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 24000.0,
+    "category": "PROTEIN ANALYSIS",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "CRP (Quali)",
+    "test_code": "CRP_QUALI",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 18000.0,
+    "category": "PROTEIN ANALYSIS",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Urea",
+    "test_code": "UREA",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 12000.0,
+    "category": "RENAL PANEL",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Creatinine (with eGFR)",
+    "test_code": "CREATININE_WITH_EGFR",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 12000.0,
+    "category": "RENAL PANEL",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Electrolytes",
+    "test_code": "ELECTROLYTES",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 18000.0,
+    "category": "RENAL PANEL",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Sodium",
+    "test_code": "SODIUM",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 12000.0,
+    "category": "RENAL PANEL",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Potassium",
+    "test_code": "POTASSIUM",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 12000.0,
+    "category": "RENAL PANEL",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Chloride",
+    "test_code": "CHLORIDE",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 12000.0,
+    "category": "RENAL PANEL",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Bicarbonate (Direct)",
+    "test_code": "BICARBONATE_DIRECT",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 12000.0,
+    "category": "RENAL PANEL",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Troponin T (Quantitative)",
+    "test_code": "TROPONIN_T_QUANTITATIVE",
+    "description": "Collection Tube: Heparin",
+    "base_price_mmk": 67000.0,
+    "category": "CARDIAC BIOMARKERS",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Troponin I (Quantitative)",
+    "test_code": "TROPONIN_I_QUANTITATIVE",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 48000.0,
+    "category": "CARDIAC BIOMARKERS",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "CK / CPK (Quantitative)",
+    "test_code": "CK_CPK_QUANTITATIVE",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 21500.0,
+    "category": "CARDIAC BIOMARKERS",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "CK-MB (Quantitative)",
+    "test_code": "CK_MB_QUANTITATIVE",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 21000.0,
+    "category": "CARDIAC BIOMARKERS",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "LDH",
+    "test_code": "LDH",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 21000.0,
+    "category": "CARDIAC BIOMARKERS",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "hs CRP (Quantitative)",
+    "test_code": "HS_CRP_QUANTITATIVE",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 33000.0,
+    "category": "CARDIAC BIOMARKERS",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "NT-ProBNP",
+    "test_code": "NT_PROBNP",
+    "description": "Collection Tube: Heparin",
+    "base_price_mmk": 93500.0,
+    "category": "CARDIAC BIOMARKERS",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "FBS",
+    "test_code": "FBS",
+    "description": "Collection Tube: S Fluoride",
+    "base_price_mmk": 9500.0,
+    "category": "DIABETES PROFILE",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "RBS",
+    "test_code": "RBS",
+    "description": "Collection Tube: S Fluoride",
+    "base_price_mmk": 9500.0,
+    "category": "DIABETES PROFILE",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "2HPP",
+    "test_code": "2HPP",
+    "description": "Collection Tube: S Fluoride",
+    "base_price_mmk": 9500.0,
+    "category": "DIABETES PROFILE",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "OGTT",
+    "test_code": "OGTT",
+    "description": "Collection Tube: S Fluoride",
+    "base_price_mmk": 25000.0,
+    "category": "DIABETES PROFILE",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "FBS ( Glucometer )",
+    "test_code": "FBS_GLUCOMETER",
+    "description": "Collection Tube: Lab",
+    "base_price_mmk": 5000.0,
+    "category": "DIABETES PROFILE",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "RBS ( Glucometer )",
+    "test_code": "RBS_GLUCOMETER",
+    "description": "Collection Tube: Lab",
+    "base_price_mmk": 5000.0,
+    "category": "DIABETES PROFILE",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "HbA1C",
+    "test_code": "HBA1C",
+    "description": "Collection Tube: EDTA",
+    "base_price_mmk": 30000.0,
+    "category": "DIABETES PROFILE",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Insulin + FBS",
+    "test_code": "INSULIN_FBS",
+    "description": "Collection Tube: Plain, S Fluoride. Turnaround Time (TAT): 24 hrs",
+    "base_price_mmk": 45000.0,
+    "category": "DIABETES PROFILE",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "C Peptite + FBS",
+    "test_code": "C_PEPTITE_FBS",
+    "description": "Collection Tube: Plain, S Fluoride. Turnaround Time (TAT): 24 hrs",
+    "base_price_mmk": 45000.0,
+    "category": "DIABETES PROFILE",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Blood Ketone",
+    "test_code": "BLOOD_KETONE",
+    "description": "Collection Tube: Lab",
+    "base_price_mmk": 24000.0,
+    "category": "DIABETES PROFILE",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Lipid Profile",
+    "test_code": "LIPID_PROFILE",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 35000.0,
+    "category": "LIPID SCREENING",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Total Cholesterol",
+    "test_code": "TOTAL_CHOLESTEROL",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 12000.0,
+    "category": "LIPID SCREENING",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Triglyceride",
+    "test_code": "TRIGLYCERIDE",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 12000.0,
+    "category": "LIPID SCREENING",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Direct LDL",
+    "test_code": "DIRECT_LDL",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 24000.0,
+    "category": "LIPID SCREENING",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "HDL",
+    "test_code": "HDL",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 18000.0,
+    "category": "LIPID SCREENING",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Total Cholesterol / HDL Ratio",
+    "test_code": "TOTAL_CHOLESTEROL_HDL_RATIO",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 30000.0,
+    "category": "LIPID SCREENING",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "HBs Ag Quantitative Assay",
+    "test_code": "HBS_AG_QUANTITATIVE_ASSAY",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 78000.0,
+    "category": "Electrochemiluminescence Assay, ECL",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "HBs Ag",
+    "test_code": "HBS_AG",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 27500.0,
+    "category": "Electrochemiluminescence Assay, ECL",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "HBs Ab",
+    "test_code": "HBS_AB",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 30000.0,
+    "category": "Electrochemiluminescence Assay, ECL",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Hbe Ag",
+    "test_code": "HBE_AG",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 44500.0,
+    "category": "Electrochemiluminescence Assay, ECL",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Hbe Ab",
+    "test_code": "HBE_AB",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 44500.0,
+    "category": "Electrochemiluminescence Assay, ECL",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "HBc Ab (Total)",
+    "test_code": "HBC_AB_TOTAL",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 44500.0,
+    "category": "Electrochemiluminescence Assay, ECL",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Hbc Ab (IgM)",
+    "test_code": "HBC_AB_IGM",
+    "description": "Collection Tube: Plain. Turnaround Time (TAT): 3 days",
+    "base_price_mmk": 44500.0,
+    "category": "Electrochemiluminescence Assay, ECL",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "HCV Ab",
+    "test_code": "HCV_AB",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 54000.0,
+    "category": "Electrochemiluminescence Assay, ECL",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "HIV 1 & 2 Ab",
+    "test_code": "HIV_1_2_AB",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 36000.0,
+    "category": "Electrochemiluminescence Assay, ECL",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "HAV Ab (Total)",
+    "test_code": "HAV_AB_TOTAL",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 37000.0,
+    "category": "Electrochemiluminescence Assay, ECL",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "HAV Ab (IgM)",
+    "test_code": "HAV_AB_IGM",
+    "description": "Collection Tube: Plain. Turnaround Time (TAT): 4 Days",
+    "base_price_mmk": 50500.0,
+    "category": "Electrochemiluminescence Assay, ECL",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "nan",
+    "test_code": "NAN",
+    "description": "Diagnostic catalog test.",
+    "base_price_mmk": 0.0,
+    "category": "Electrochemiluminescence Assay, ECL",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "HBV Combo \n(HBsAg,HBsAb,HBeAg,HBeAb,HBcAb)",
+    "test_code": "HBV_COMBO_HBSAG_HBSAB_HBEAG_HB",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 24000.0,
+    "category": "Electrochemiluminescence Assay, ECL",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "HBs Ag",
+    "test_code": "HBS_AG_2",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 11000.0,
+    "category": "Electrochemiluminescence Assay, ECL",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "HCV Ab",
+    "test_code": "HCV_AB_2",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 12000.0,
+    "category": "Electrochemiluminescence Assay, ECL",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "HIV Ab",
+    "test_code": "HIV_AB",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 13000.0,
+    "category": "Electrochemiluminescence Assay, ECL",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "HBsAg + HCV Ab + HIV Ab",
+    "test_code": "HBSAG_HCV_AB_HIV_AB",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 30000.0,
+    "category": "Electrochemiluminescence Assay, ECL",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Dengue Duo(NS 1 Ag, IgG,IgM)",
+    "test_code": "DENGUE_DUO_NS_1_AG_IGG_IGM",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 31000.0,
+    "category": "Electrochemiluminescence Assay, ECL",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Chikungunya Ab",
+    "test_code": "CHIKUNGUNYA_AB",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 32500.0,
+    "category": "Electrochemiluminescence Assay, ECL",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "MP (ICT)",
+    "test_code": "MP_ICT",
+    "description": "Collection Tube: EDTA",
+    "base_price_mmk": 13000.0,
+    "category": "Electrochemiluminescence Assay, ECL",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "H.pylori Ab",
+    "test_code": "H_PYLORI_AB",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 17000.0,
+    "category": "Electrochemiluminescence Assay, ECL",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "H.pylori Ag (Stool)",
+    "test_code": "H_PYLORI_AG_STOOL",
+    "description": "Collection Tube: Sterile Bottle",
+    "base_price_mmk": 25000.0,
+    "category": "Electrochemiluminescence Assay, ECL",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Scrub Typhus Ab",
+    "test_code": "SCRUB_TYPHUS_AB",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 35000.0,
+    "category": "Electrochemiluminescence Assay, ECL",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Widal Test",
+    "test_code": "WIDAL_TEST",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 14500.0,
+    "category": "Electrochemiluminescence Assay, ECL",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Syphilis Ab Test",
+    "test_code": "SYPHILIS_AB_TEST",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 12000.0,
+    "category": "Electrochemiluminescence Assay, ECL",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "TPHA",
+    "test_code": "TPHA",
+    "description": "Collection Tube: Plain. Turnaround Time (TAT): 2 Days",
+    "base_price_mmk": 31000.0,
+    "category": "Electrochemiluminescence Assay, ECL",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "RPR",
+    "test_code": "RPR",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 32500.0,
+    "category": "Electrochemiluminescence Assay, ECL",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Leptospiral Ab (Qualitative)",
+    "test_code": "LEPTOSPIRAL_AB_QUALITATIVE",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 44500.0,
+    "category": "Electrochemiluminescence Assay, ECL",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Toxoplasma Ab",
+    "test_code": "TOXOPLASMA_AB",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 42000.0,
+    "category": "Electrochemiluminescence Assay, ECL",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Cryptococcal Antigen (Serum)",
+    "test_code": "SERUM",
+    "description": "Collection Tube: Lab. Turnaround Time (TAT): 24 hrs",
+    "base_price_mmk": 42000.0,
+    "category": "Electrochemiluminescence Assay, ECL",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Cryptococcal Antigen (CSF)",
+    "test_code": "CSF",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 68500.0,
+    "category": "Electrochemiluminescence Assay, ECL",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "TFT (Free) (FT3,FT4,TSH)",
+    "test_code": "TFT_FREE_FT3_FT4_TSH",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 59000.0,
+    "category": "THYROID PROFILE TESTS",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "TFT (Total) (TT3,TT4,TSH)",
+    "test_code": "TOTAL",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 75500.0,
+    "category": "THYROID PROFILE TESTS",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Total T3",
+    "test_code": "TOTAL_T3",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 30000.0,
+    "category": "THYROID PROFILE TESTS",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Total T4",
+    "test_code": "TOTAL_T4",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 30000.0,
+    "category": "THYROID PROFILE TESTS",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Free T3",
+    "test_code": "FREE_T3",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 23000.0,
+    "category": "THYROID PROFILE TESTS",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Free T4",
+    "test_code": "FREE_T4",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 23000.0,
+    "category": "THYROID PROFILE TESTS",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "TSH",
+    "test_code": "TSH",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 23000.0,
+    "category": "THYROID PROFILE TESTS",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Anti-TPO",
+    "test_code": "ANTI_TPO",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 56500.0,
+    "category": "THYROID PROFILE TESTS",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "TSH Receptor Antibody (Tr Ab)",
+    "test_code": "TRAB",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 74500.0,
+    "category": "THYROID PROFILE TESTS",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Thyroglobulin (TG)",
+    "test_code": "THYROGLOBULIN_TG",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 74500.0,
+    "category": "THYROID PROFILE TESTS",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Anti-Thyroglobulin (Anti-TG)",
+    "test_code": "ANTITG",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 74500.0,
+    "category": "THYROID PROFILE TESTS",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "CA 125",
+    "test_code": "CA_125",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 51500.0,
+    "category": "TUMOUR MARKERS (Quantitative assay)",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "CA 153",
+    "test_code": "CA_153",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 42000.0,
+    "category": "TUMOUR MARKERS (Quantitative assay)",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "CA 199",
+    "test_code": "CA_199",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 42000.0,
+    "category": "TUMOUR MARKERS (Quantitative assay)",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "AFP",
+    "test_code": "AFP",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 33500.0,
+    "category": "TUMOUR MARKERS (Quantitative assay)",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "CEA",
+    "test_code": "CEA",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 33500.0,
+    "category": "TUMOUR MARKERS (Quantitative assay)",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "PSA (Free)",
+    "test_code": "PSA_FREE",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 59000.0,
+    "category": "TUMOUR MARKERS (Quantitative assay)",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "PSA (Total)",
+    "test_code": "PSA_TOTAL",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 42000.0,
+    "category": "TUMOUR MARKERS (Quantitative assay)",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "PSA Profile(Total & Free)",
+    "test_code": "PSA_PROFILE_TOTAL_FREE",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 96000.0,
+    "category": "TUMOUR MARKERS (Quantitative assay)",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Cyfra 21-1",
+    "test_code": "CYFRA_21_1",
+    "description": "Collection Tube: Plain. Turnaround Time (TAT): 5 Days",
+    "base_price_mmk": 56500.0,
+    "category": "TUMOUR MARKERS (Quantitative assay)",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "PTH (Parathyroid Hormone)",
+    "test_code": "PTH_PARATHYROID_HORMONE",
+    "description": "Collection Tube: EDTA. Turnaround Time (TAT): 24 hrs",
+    "base_price_mmk": 47000.0,
+    "category": "HORMONES",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Estradiol (E2)",
+    "test_code": "ESTRADIOL_E2",
+    "description": "Collection Tube: Plain. Turnaround Time (TAT): 24 hrs",
+    "base_price_mmk": 37000.0,
+    "category": "HORMONES",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "FSH",
+    "test_code": "FSH",
+    "description": "Collection Tube: Plain. Turnaround Time (TAT): 24 hrs",
+    "base_price_mmk": 37000.0,
+    "category": "HORMONES",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "LH",
+    "test_code": "LH",
+    "description": "Collection Tube: Plain. Turnaround Time (TAT): 24 hrs",
+    "base_price_mmk": 37000.0,
+    "category": "HORMONES",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Progesterone",
+    "test_code": "PROGESTERONE",
+    "description": "Collection Tube: Plain. Turnaround Time (TAT): 24 hrs",
+    "base_price_mmk": 37000.0,
+    "category": "HORMONES",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Testosterone",
+    "test_code": "TESTOSTERONE",
+    "description": "Collection Tube: Plain. Turnaround Time (TAT): 24 hrs",
+    "base_price_mmk": 75000.0,
+    "category": "HORMONES",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Testosterone ( Free )",
+    "test_code": "TESTOSTERONE_FREE",
+    "description": "Collection Tube: Plain. Turnaround Time (TAT): 3 Days",
+    "base_price_mmk": 97000.0,
+    "category": "HORMONES",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Prolactin",
+    "test_code": "PROLACTIN",
+    "description": "Collection Tube: Plain. Turnaround Time (TAT): 24 hrs",
+    "base_price_mmk": 39500.0,
+    "category": "HORMONES",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Cortisol",
+    "test_code": "CORTISOL",
+    "description": "Collection Tube: Plain. Turnaround Time (TAT): 24 hrs",
+    "base_price_mmk": 45500.0,
+    "category": "HORMONES",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Serum β-HCG ( without dilution)",
+    "test_code": "SERUM_HCG_WITHOUT_DILUTION",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 38500.0,
+    "category": "HORMONES",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Serum β-HCG ( with dilution)",
+    "test_code": "SERUM_HCG_WITH_DILUTION",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 43000.0,
+    "category": "HORMONES",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "UCG",
+    "test_code": "UCG",
+    "description": "Collection Tube: Sterile Bottle",
+    "base_price_mmk": 3500.0,
+    "category": "HORMONES",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "ANA (IFA Method)",
+    "test_code": "ANA_IFA_METHOD",
+    "description": "Collection Tube: Plain. Turnaround Time (TAT): 3 Days",
+    "base_price_mmk": 56500.0,
+    "category": "IMMUNOLOGIC DISORDERS",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "ANF (Latex agglutination)",
+    "test_code": "ANF_LATEX_AGGLUTINATION",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 23000.0,
+    "category": "IMMUNOLOGIC DISORDERS",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Anti-CCP (Quantitative)",
+    "test_code": "ANTI_CCP_QUANTITATIVE",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 62500.0,
+    "category": "IMMUNOLOGIC DISORDERS",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "RA (Qualitative)",
+    "test_code": "RA_QUALITATIVE",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 11000.0,
+    "category": "IMMUNOLOGIC DISORDERS",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "RA (Quantitative)",
+    "test_code": "RA_QUANTITATIVE",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 27500.0,
+    "category": "IMMUNOLOGIC DISORDERS",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "ASO (Semi - quantitative)",
+    "test_code": "ASO_SEMI_QUANTITATIVE",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 18000.0,
+    "category": "IMMUNOLOGIC DISORDERS",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "ASO (Quantitative)",
+    "test_code": "ASO_QUANTITATIVE",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 26500.0,
+    "category": "IMMUNOLOGIC DISORDERS",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Anti ds DNA (Qualitative)",
+    "test_code": "ANTI_DS_DNA_QUALITATIVE",
+    "description": "Collection Tube: Plain. Turnaround Time (TAT): 24 hrs",
+    "base_price_mmk": 24000.0,
+    "category": "IMMUNOLOGIC DISORDERS",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "ENA panel 23 parameters   \n(Euroline assay)",
+    "test_code": "ENA_PANEL_23_PARAMETERS_EUROLI",
+    "description": "Collection Tube: Plain. Turnaround Time (TAT): 24 hrs",
+    "base_price_mmk": 156000.0,
+    "category": "IMMUNOLOGIC DISORDERS",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "ENA panel 17 parameters   \n(Euroline assay)",
+    "test_code": "ENA_PANEL_17_PARAMETERS_EUROLI",
+    "description": "Collection Tube: Plain. Turnaround Time (TAT): 24 hrs",
+    "base_price_mmk": 144000.0,
+    "category": "IMMUNOLOGIC DISORDERS",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "ANCA (IFA Method)",
+    "test_code": "ANCA_IFA_METHOD",
+    "description": "Collection Tube: Plain. Turnaround Time (TAT): 4 Days",
+    "base_price_mmk": 68500.0,
+    "category": "IMMUNOLOGIC DISORDERS",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Complement C3",
+    "test_code": "COMPLEMENT_C3",
+    "description": "Collection Tube: Plain. Turnaround Time (TAT): 24 hrs",
+    "base_price_mmk": 42000.0,
+    "category": "IMMUNOLOGIC DISORDERS",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Complement C4",
+    "test_code": "COMPLEMENT_C4",
+    "description": "Collection Tube: Plain. Turnaround Time (TAT): 24 hrs",
+    "base_price_mmk": 42000.0,
+    "category": "IMMUNOLOGIC DISORDERS",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Anti-Cardiolipin IgG",
+    "test_code": "ANTI_CARDIOLIPIN_IGG",
+    "description": "Collection Tube: Plain. Turnaround Time (TAT): 10 Days",
+    "base_price_mmk": 67000.0,
+    "category": "ANTI-PHOSPHOLIPID PANEL",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Lupus Anti-coagulant",
+    "test_code": "LUPUS_ANTI_COAGULANT",
+    "description": "Collection Tube: PT. Turnaround Time (TAT): 10 Days",
+    "base_price_mmk": 67000.0,
+    "category": "ANTI-PHOSPHOLIPID PANEL",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Beta 2 Glycoprotein IgG",
+    "test_code": "BETA_2_GLYCOPROTEIN_IGG",
+    "description": "Collection Tube: Plain. Turnaround Time (TAT): 10 Days",
+    "base_price_mmk": 67000.0,
+    "category": "ANTI-PHOSPHOLIPID PANEL",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Urine electrolytes",
+    "test_code": "URINE_ELECTROLYTES",
+    "description": "Collection Tube: Sterile Bottle",
+    "base_price_mmk": 42000.0,
+    "category": "URINALYSIS",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Urine Sodium",
+    "test_code": "URINE_SODIUM",
+    "description": "Collection Tube: Sterile Bottle",
+    "base_price_mmk": 15500.0,
+    "category": "URINALYSIS",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Urine Potassium",
+    "test_code": "URINE_POTASSIUM",
+    "description": "Collection Tube: Sterile Bottle",
+    "base_price_mmk": 15500.0,
+    "category": "URINALYSIS",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Urine Chloride",
+    "test_code": "URINE_CHLORIDE",
+    "description": "Collection Tube: Sterile Bottle",
+    "base_price_mmk": 15500.0,
+    "category": "URINALYSIS",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Urine Protein (Random)",
+    "test_code": "URINE_PROTEIN_RANDOM",
+    "description": "Collection Tube: Sterile Bottle",
+    "base_price_mmk": 23000.0,
+    "category": "URINALYSIS",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Urine Protein (24 hr)",
+    "test_code": "URINE_PROTEIN_24_HR",
+    "description": "Collection Tube: Lab",
+    "base_price_mmk": 25000.0,
+    "category": "URINALYSIS",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Urine Microalbumin (Quanti)",
+    "test_code": "QUANTI",
+    "description": "Collection Tube: Sterile Bottle",
+    "base_price_mmk": 35000.0,
+    "category": "URINALYSIS",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Urine Creatinine ( 24 hr )",
+    "test_code": "24HR",
+    "description": "Collection Tube: Lab",
+    "base_price_mmk": 23000.0,
+    "category": "URINALYSIS",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Urine Albumin (Random)",
+    "test_code": "URINE_ALBUMIN_RANDOM",
+    "description": "Collection Tube: Sterile Bottle",
+    "base_price_mmk": 35000.0,
+    "category": "URINALYSIS",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Urine Albumin (24 hr)",
+    "test_code": "URINE_ALBUMIN_24_HR",
+    "description": "Collection Tube: Lab",
+    "base_price_mmk": 36500.0,
+    "category": "URINALYSIS",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Urine ACR (Albumin/Creatinine ratio)",
+    "test_code": "URINE_ACR_ALBUMIN_CREATININE_R",
+    "description": "Collection Tube: Sterile Bottle",
+    "base_price_mmk": 45500.0,
+    "category": "URINALYSIS",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Urine PCR (Protein/Creatinine ratio)",
+    "test_code": "URINE_PCR_PROTEIN_CREATININE_R",
+    "description": "Collection Tube: Sterile Bottle",
+    "base_price_mmk": 30000.0,
+    "category": "URINALYSIS",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Urine Potassium Creatinine Ratio",
+    "test_code": "URINE_POTASSIUM_CREATININE_RAT",
+    "description": "Collection Tube: Sterile Bottle",
+    "base_price_mmk": 31000.0,
+    "category": "URINALYSIS",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "24 Hr Urine Potassium Creatinine ratio",
+    "test_code": "24_HR_URINE_POTASSIUM_CREATINI",
+    "description": "Collection Tube: Lab",
+    "base_price_mmk": 42000.0,
+    "category": "URINALYSIS",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Urine Osmolarity",
+    "test_code": "URINE_OSMOLARITY",
+    "description": "Collection Tube: Sterile Bottle",
+    "base_price_mmk": 15500.0,
+    "category": "URINALYSIS",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Urine Ketone",
+    "test_code": "URINE_KETONE",
+    "description": "Collection Tube: Sterile Bottle",
+    "base_price_mmk": 6000.0,
+    "category": "URINALYSIS",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Urine Albumin Strip Test",
+    "test_code": "URINE_ALBUMIN_STRIP_TEST",
+    "description": "Collection Tube: Sterile Bottle",
+    "base_price_mmk": 6000.0,
+    "category": "URINALYSIS",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Urine REME (14 parameters)",
+    "test_code": "URINE_REME_14_PARAMETERS",
+    "description": "Collection Tube: Sterile Bottle",
+    "base_price_mmk": 6000.0,
+    "category": "URINALYSIS",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Stool RE",
+    "test_code": "STOOL_RE",
+    "description": "Collection Tube: Sterile Bottle",
+    "base_price_mmk": 8500.0,
+    "category": "STOOL TESTS",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Stool for Reducing Sugar",
+    "test_code": "STOOL_FOR_REDUCING_SUGAR",
+    "description": "Collection Tube: Sterile Bottle",
+    "base_price_mmk": 8500.0,
+    "category": "STOOL TESTS",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Stool for Occult blood",
+    "test_code": "STOOL_FOR_OCCULT_BLOOD",
+    "description": "Collection Tube: Sterile Bottle",
+    "base_price_mmk": 21500.0,
+    "category": "STOOL TESTS",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Stool for Cryptosporidium",
+    "test_code": "STOOL_FOR_CRYPTOSPORIDIUM",
+    "description": "Collection Tube: Sterile Bottle. Turnaround Time (TAT): 24 hrs",
+    "base_price_mmk": 45500.0,
+    "category": "STOOL TESTS",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Fecal Calprotectin",
+    "test_code": "FECAL_CALPROTECTIN",
+    "description": "Collection Tube: Sterile Bottle. Turnaround Time (TAT): 5 Days",
+    "base_price_mmk": 84000.0,
+    "category": "STOOL TESTS",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Fecal Immunochemical Test (Stool FIT)",
+    "test_code": "STOOLFIT",
+    "description": "Collection Tube: Sterile Bottle. Turnaround Time (TAT): 24 hrs",
+    "base_price_mmk": 72000.0,
+    "category": "STOOL TESTS",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Fluid Cytology",
+    "test_code": "FLUID_CYTOLOGY",
+    "description": "Collection Tube: Sterile Bottle. Turnaround Time (TAT): 2 Days",
+    "base_price_mmk": 37000.0,
+    "category": "CYTOLOGY & BIOPSY",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Fluid REME",
+    "test_code": "FLUID_REME",
+    "description": "Collection Tube: Sterile Bottle",
+    "base_price_mmk": 43000.0,
+    "category": "CYTOLOGY & BIOPSY",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "FNAC",
+    "test_code": "FNAC",
+    "description": "Collection Tube: Sterile Bottle. Turnaround Time (TAT): 2 Days",
+    "base_price_mmk": 21500.0,
+    "category": "CYTOLOGY & BIOPSY",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "PAP Smear",
+    "test_code": "PAP_SMEAR",
+    "description": "Collection Tube: Lab. Turnaround Time (TAT): 2 Days",
+    "base_price_mmk": 18000.0,
+    "category": "CYTOLOGY & BIOPSY",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "LBC (Liquid Based Cytology)",
+    "test_code": "LBC_LIQUID_BASED_CYTOLOGY",
+    "description": "Collection Tube: Lab. Turnaround Time (TAT): 2 Days",
+    "base_price_mmk": 42000.0,
+    "category": "CYTOLOGY & BIOPSY",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Endoscopic Biopsy",
+    "test_code": "ENDOSCOPIC_BIOPSY",
+    "description": "Collection Tube: Lab. Turnaround Time (TAT): 3 Days",
+    "base_price_mmk": 30000.0,
+    "category": "CYTOLOGY & BIOPSY",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Appendix Biopsy",
+    "test_code": "APPENDIX_BIOPSY",
+    "description": "Collection Tube: Lab. Turnaround Time (TAT): 3 Days",
+    "base_price_mmk": 30000.0,
+    "category": "CYTOLOGY & BIOPSY",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Biopsy (1-3cm)",
+    "test_code": "BIOPSY_1_3CM",
+    "description": "Collection Tube: Lab. Turnaround Time (TAT): 3 Days",
+    "base_price_mmk": 30000.0,
+    "category": "CYTOLOGY & BIOPSY",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Biopsy (4- 9cm)",
+    "test_code": "BIOPSY_4_9CM",
+    "description": "Collection Tube: Lab. Turnaround Time (TAT): 4 Days",
+    "base_price_mmk": 35000.0,
+    "category": "CYTOLOGY & BIOPSY",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Biopsy (≥ 10 cm)",
+    "test_code": "BIOPSY_10_CM",
+    "description": "Collection Tube: Lab. Turnaround Time (TAT): 5 Days",
+    "base_price_mmk": 45500.0,
+    "category": "CYTOLOGY & BIOPSY",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "TAH + BSO",
+    "test_code": "TAH_BSO",
+    "description": "Collection Tube: Lab. Turnaround Time (TAT): 5 Days",
+    "base_price_mmk": 56500.0,
+    "category": "CYTOLOGY & BIOPSY",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Cell Block",
+    "test_code": "CELL_BLOCK",
+    "description": "Collection Tube: Lab. Turnaround Time (TAT): 5 Days",
+    "base_price_mmk": 43000.0,
+    "category": "CYTOLOGY & BIOPSY",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "ER",
+    "test_code": "ER",
+    "description": "Collection Tube: Lab. Turnaround Time (TAT): 7 Days",
+    "base_price_mmk": 132000.0,
+    "category": "Immunohistochemistry (IHC)",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "PR",
+    "test_code": "PR",
+    "description": "Collection Tube: Lab. Turnaround Time (TAT): 7 Days",
+    "base_price_mmk": 132000.0,
+    "category": "Immunohistochemistry (IHC)",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "HER 2",
+    "test_code": "HER_2",
+    "description": "Collection Tube: Lab. Turnaround Time (TAT): 7 Days",
+    "base_price_mmk": 132000.0,
+    "category": "Immunohistochemistry (IHC)",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "ER, PR, HER 2",
+    "test_code": "ER_PR_HER_2",
+    "description": "Collection Tube: Lab. Turnaround Time (TAT): 7 Days",
+    "base_price_mmk": 360000.0,
+    "category": "Immunohistochemistry (IHC)",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Sputum AFB-One day",
+    "test_code": "SPUTUM_AFB_ONE_DAY",
+    "description": "Collection Tube: Sterile Bottle. Turnaround Time (TAT): 24 hrs",
+    "base_price_mmk": 21500.0,
+    "category": "MICROSCOPY",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Urine AFB",
+    "test_code": "URINE_AFB",
+    "description": "Collection Tube: Sterile Bottle. Turnaround Time (TAT): 24 hrs",
+    "base_price_mmk": 18000.0,
+    "category": "MICROSCOPY",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Stool AFB",
+    "test_code": "STOOL_AFB",
+    "description": "Collection Tube: Sterile Bottle. Turnaround Time (TAT): 24 hrs",
+    "base_price_mmk": 18000.0,
+    "category": "MICROSCOPY",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Fluid AFB",
+    "test_code": "FLUID_AFB",
+    "description": "Collection Tube: Sterile Bottle. Turnaround Time (TAT): 24 hrs",
+    "base_price_mmk": 18000.0,
+    "category": "MICROSCOPY",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Blood for MP",
+    "test_code": "BLOOD_FOR_MP",
+    "description": "Collection Tube: EDTA, Flim. Turnaround Time (TAT): 24 hrs",
+    "base_price_mmk": 11000.0,
+    "category": "MICROSCOPY",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "GC Smear (Gram stain)",
+    "test_code": "GC_SMEAR_GRAM_STAIN",
+    "description": "Collection Tube: Lab. Turnaround Time (TAT): 24 hrs",
+    "base_price_mmk": 17000.0,
+    "category": "MICROSCOPY",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Fungal study",
+    "test_code": "FUNGAL_STUDY",
+    "description": "Collection Tube: Lab. Turnaround Time (TAT): 24 hrs",
+    "base_price_mmk": 23000.0,
+    "category": "MICROSCOPY",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Semen analysis",
+    "test_code": "SEMEN_ANALYSIS",
+    "description": "Collection Tube: Lab",
+    "base_price_mmk": 42000.0,
+    "category": "MICROSCOPY",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Fungal Stain",
+    "test_code": "FUNGAL_STAIN",
+    "description": "Collection Tube: Lab. Turnaround Time (TAT): 24 hrs",
+    "base_price_mmk": 24000.0,
+    "category": "MICROSCOPY",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Sputum for Fungal Study",
+    "test_code": "SPUTUM_FOR_FUNGAL_STUDY",
+    "description": "Collection Tube: Sterile Bottle. Turnaround Time (TAT): 24 hrs",
+    "base_price_mmk": 24000.0,
+    "category": "MICROSCOPY",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Pus AFB",
+    "test_code": "PUS_AFB",
+    "description": "Collection Tube: Swab. Turnaround Time (TAT): 24 hrs",
+    "base_price_mmk": 18000.0,
+    "category": "MICROSCOPY",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Sputum PCP ( Pneumocystis Carinii Pneumonia )",
+    "test_code": "SPUTUM_PCP_PNEUMOCYSTIS_CARINI",
+    "description": "Collection Tube: Sterile Bottle. Turnaround Time (TAT): 3 Days",
+    "base_price_mmk": 23000.0,
+    "category": "MICROSCOPY",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Blood+ Bottle Fee",
+    "test_code": "BLOOD_BOTTLE_FEE",
+    "description": "Collection Tube: Lab. Turnaround Time (TAT): 7 Days",
+    "base_price_mmk": 0.0,
+    "category": "CULTURE & SENSITIVITY (Manual)",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Sputum",
+    "test_code": "SPUTUM",
+    "description": "Collection Tube: Sterile Bottle. Turnaround Time (TAT): 5 Days",
+    "base_price_mmk": 30000.0,
+    "category": "CULTURE & SENSITIVITY (Manual)",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Urine",
+    "test_code": "URINE",
+    "description": "Collection Tube: Sterile Bottle. Turnaround Time (TAT): 5 Days",
+    "base_price_mmk": 30000.0,
+    "category": "CULTURE & SENSITIVITY (Manual)",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Fluid",
+    "test_code": "FLUID",
+    "description": "Collection Tube: Sterile Bottle. Turnaround Time (TAT): 5 Days",
+    "base_price_mmk": 30000.0,
+    "category": "CULTURE & SENSITIVITY (Manual)",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "CSF",
+    "test_code": "CSF_2",
+    "description": "Collection Tube: Sterile Bottle. Turnaround Time (TAT): 5 Days",
+    "base_price_mmk": 30000.0,
+    "category": "CULTURE & SENSITIVITY (Manual)",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Stool",
+    "test_code": "STOOL",
+    "description": "Collection Tube: Sterile Bottle. Turnaround Time (TAT): 5 Days",
+    "base_price_mmk": 30000.0,
+    "category": "CULTURE & SENSITIVITY (Manual)",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Pus",
+    "test_code": "PUS",
+    "description": "Collection Tube: Swab. Turnaround Time (TAT): 5 Days",
+    "base_price_mmk": 30000.0,
+    "category": "CULTURE & SENSITIVITY (Manual)",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Fungal",
+    "test_code": "FUNGAL",
+    "description": "Collection Tube: Sterile Bottle. Turnaround Time (TAT): 5 Days",
+    "base_price_mmk": 30000.0,
+    "category": "CULTURE & SENSITIVITY (Manual)",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Swab (Wound/Ear/Throat)",
+    "test_code": "SWAB_WOUND_EAR_THROAT",
+    "description": "Collection Tube: Swab. Turnaround Time (TAT): 5 Days",
+    "base_price_mmk": 30000.0,
+    "category": "CULTURE & SENSITIVITY (Manual)",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Nasal Swab",
+    "test_code": "NASAL_SWAB",
+    "description": "Collection Tube: Swab. Turnaround Time (TAT): 5 Days",
+    "base_price_mmk": 30000.0,
+    "category": "CULTURE & SENSITIVITY (Manual)",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Hand Swab",
+    "test_code": "HAND_SWAB",
+    "description": "Collection Tube: Swab. Turnaround Time (TAT): 5 Days",
+    "base_price_mmk": 30000.0,
+    "category": "CULTURE & SENSITIVITY (Manual)",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Blood+ Bottle Fee",
+    "test_code": "BLOOD_BOTTLE_FEE_2",
+    "description": "Collection Tube: Lab. Turnaround Time (TAT): 5 Days",
+    "base_price_mmk": 0.0,
+    "category": "CULTURE & SENSITIVITY (Automated)",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Sputum",
+    "test_code": "SPUTUM_2",
+    "description": "Collection Tube: Sterile Bottle. Turnaround Time (TAT): 5 Days",
+    "base_price_mmk": 48000.0,
+    "category": "CULTURE & SENSITIVITY (Automated)",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Urine",
+    "test_code": "URINE_2",
+    "description": "Collection Tube: Sterile Bottle. Turnaround Time (TAT): 5 Days",
+    "base_price_mmk": 48000.0,
+    "category": "CULTURE & SENSITIVITY (Automated)",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Body Fluid",
+    "test_code": "BODY_FLUID",
+    "description": "Collection Tube: Sterile Bottle. Turnaround Time (TAT): 5 Days",
+    "base_price_mmk": 48000.0,
+    "category": "CULTURE & SENSITIVITY (Automated)",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Fungal",
+    "test_code": "FUNGAL_2",
+    "description": "Collection Tube: Sterile Bottle. Turnaround Time (TAT): 5 Days",
+    "base_price_mmk": 59000.0,
+    "category": "CULTURE & SENSITIVITY (Automated)",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Stool",
+    "test_code": "STOOL_2",
+    "description": "Collection Tube: Sterile Bottle. Turnaround Time (TAT): 5 Days",
+    "base_price_mmk": 48000.0,
+    "category": "CULTURE & SENSITIVITY (Automated)",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "CSF",
+    "test_code": "CSF_3",
+    "description": "Collection Tube: Sterile Bottle. Turnaround Time (TAT): 5 Days",
+    "base_price_mmk": 48000.0,
+    "category": "CULTURE & SENSITIVITY (Automated)",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Pus",
+    "test_code": "PUS_2",
+    "description": "Collection Tube: Swab. Turnaround Time (TAT): 5 Days",
+    "base_price_mmk": 48000.0,
+    "category": "CULTURE & SENSITIVITY (Automated)",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Swab (Wound/Ear/Throat)",
+    "test_code": "SWAB_WOUND_EAR_THROAT_2",
+    "description": "Collection Tube: Swab. Turnaround Time (TAT): 5 Days",
+    "base_price_mmk": 48000.0,
+    "category": "CULTURE & SENSITIVITY (Automated)",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Nasal Swab",
+    "test_code": "NASAL_SWAB_2",
+    "description": "Collection Tube: Swab. Turnaround Time (TAT): 5 Days",
+    "base_price_mmk": 48000.0,
+    "category": "CULTURE & SENSITIVITY (Automated)",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Hand Swab",
+    "test_code": "HAND_SWAB_2",
+    "description": "Collection Tube: Swab. Turnaround Time (TAT): 5 Days",
+    "base_price_mmk": 48000.0,
+    "category": "CULTURE & SENSITIVITY (Automated)",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Magnesium",
+    "test_code": "MAGNESIUM",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 18000.0,
+    "category": "OTHERS",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Phosphate",
+    "test_code": "PHOSPHATE",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 14500.0,
+    "category": "OTHERS",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Calcium",
+    "test_code": "CALCIUM",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 13000.0,
+    "category": "OTHERS",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Corrected Calcium",
+    "test_code": "CORRECTED_CALCIUM",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 20500.0,
+    "category": "OTHERS",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Adenosine Deaminase ADA \n(Body Fluid)",
+    "test_code": "ADENOSINE_DEAMINASE_ADA_BODY_F",
+    "description": "Collection Tube: Sterile Bottle",
+    "base_price_mmk": 45500.0,
+    "category": "OTHERS",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Amylase (Urine)",
+    "test_code": "AMYLASE_URINE",
+    "description": "Collection Tube: Sterile Bottle",
+    "base_price_mmk": 14500.0,
+    "category": "OTHERS",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Amylase (Serum)",
+    "test_code": "AMYLASE_SERUM",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 15500.0,
+    "category": "OTHERS",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Lactate",
+    "test_code": "LACTATE",
+    "description": "Collection Tube: S Fluoride. Turnaround Time (TAT): 24 hrs",
+    "base_price_mmk": 24000.0,
+    "category": "OTHERS",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Serum Lipase",
+    "test_code": "SERUM_LIPASE",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 24000.0,
+    "category": "OTHERS",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Uric Acid",
+    "test_code": "URIC_ACID",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 14500.0,
+    "category": "OTHERS",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Vitamin D (total)",
+    "test_code": "VITAMIN_D_TOTAL",
+    "description": "Collection Tube: Plain ( cover )",
+    "base_price_mmk": 66000.0,
+    "category": "OTHERS",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Serum Osmolarity",
+    "test_code": "SERUM_OSMOLARITY",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 36000.0,
+    "category": "OTHERS",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Tacrolimus",
+    "test_code": "TACROLIMUS",
+    "description": "Collection Tube: EDTA",
+    "base_price_mmk": 109000.0,
+    "category": "OTHERS",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Procalcitonin",
+    "test_code": "PROCALCITONIN",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 73000.0,
+    "category": "OTHERS",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Ceruloplasmin",
+    "test_code": "CERULOPLASMIN",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 35000.0,
+    "category": "OTHERS",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Cystatin C",
+    "test_code": "CYSTATIN_C",
+    "description": "Collection Tube: Plain",
+    "base_price_mmk": 55000.0,
+    "category": "OTHERS",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Food Allergy Panel(20 para)",
+    "test_code": "20PARA",
+    "description": "Collection Tube: Plain. Turnaround Time (TAT): 24 hrs",
+    "base_price_mmk": 180000.0,
+    "category": "ALLERGY PANEL",
+    "is_package": 0,
+    "is_active": 1
+  },
+  {
+    "test_name": "Inhalation Allergy Panel(20 para)",
+    "test_code": "20PARA_2",
+    "description": "Collection Tube: Plain. Turnaround Time (TAT): 24 hrs",
+    "base_price_mmk": 180000.0,
+    "category": "ALLERGY PANEL",
+    "is_package": 0,
+    "is_active": 1
+  }
+]
