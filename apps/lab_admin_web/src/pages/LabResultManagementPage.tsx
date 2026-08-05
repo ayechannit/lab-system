@@ -911,7 +911,7 @@ export function LabResultManagementPage() {
     }
   }
 
-  function renderPdfActionButtons(testId: string, fileLabel: string, reviewBusy = false) {
+  function renderPdfActionButtons(testId: string, reviewBusy = false) {
     const busy = pdfAction?.testId === testId
     const viewing = busy && pdfAction?.mode === 'view'
     const downloading = busy && pdfAction?.mode === 'download'
@@ -944,10 +944,10 @@ export function LabResultManagementPage() {
     )
   }
 
-  function renderPdfAccessButtons(testId: string, fileLabel: string, reviewBusy = false) {
+  function renderPdfAccessButtons(testId: string, reviewBusy = false) {
     return (
       <div className="lab-result-test-card__actions lab-result-test-card__actions--readonly">
-        {renderPdfActionButtons(testId, fileLabel, reviewBusy)}
+        {renderPdfActionButtons(testId, reviewBusy)}
       </div>
     )
   }
@@ -2123,7 +2123,7 @@ export function LabResultManagementPage() {
                               ) : null}
                             </div>
                           ) : null}
-                          {hasFile ? renderPdfAccessButtons(items[0].test_id, label, isReviewing) : null}
+                          {hasFile ? renderPdfAccessButtons(items[0].test_id, isReviewing) : null}
                         </div>
                         {showAiPanels ? (
                           <div className="lab-result-test-card__shared-ai">
@@ -2262,10 +2262,10 @@ export function LabResultManagementPage() {
                                     : 'AI review'}
                               </button>
                             ) : null}
-                            {hasFile ? renderPdfActionButtons(it.test_id, testName, isReviewing) : null}
+                            {hasFile ? renderPdfActionButtons(it.test_id, isReviewing) : null}
                           </div>
                         ) : hasFile ? (
-                          renderPdfAccessButtons(it.test_id, testName, isReviewing)
+                          renderPdfAccessButtons(it.test_id, isReviewing)
                         ) : null}
                       </div>
                       {hasFile &&

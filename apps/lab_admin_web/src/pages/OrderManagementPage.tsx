@@ -2404,7 +2404,9 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
               const previewLeft = Math.max(0, amounts.total - previewPaid)
               const fullyPaid = amounts.total > 0 && amounts.balance <= 0
 
-              const redeemCustomer = userMap.get(paymentUpdateOrder.user_id)
+              const redeemCustomer = paymentUpdateOrder.user_id
+                ? userMap.get(paymentUpdateOrder.user_id)
+                : undefined
               const redeemCustomerPoints = redeemCustomer?.total_points ?? 0
               const canRedeemPoints = redeemCustomerPoints > 0 && mmkPerPoint > 0
               const maxRedeemablePoints = canRedeemPoints
