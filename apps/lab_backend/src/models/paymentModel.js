@@ -17,15 +17,23 @@ class Payment {
     const result = await pool.request()
       .input('order_id', sql.UniqueIdentifier, orderId)
       .query(`
-        SELECT 
+        SELECT
           o.final_price_mmk as total_price,
-          ISNULL(SUM(p.amount_mmk), 0) as total_paid,
-          (o.final_price_mmk - ISNULL(SUM(p.amount_mmk), 0)) as balance
+          ISNULL(SUM(p.amount_mmk), 0) + ISNULL(SUM(p.points_value_mmk), 0) as total_paid,
+          (o.final_price_mmk - (ISNULL(SUM(p.amount_mmk), 0) + ISNULL(SUM(p.points_value_mmk), 0))) as balance
         FROM lab_orders o
         LEFT JOIN payments p ON o.id = p.order_id AND p.status IN ('pending', 'received', 'verified')
         WHERE o.id = @order_id
         GROUP BY o.final_price_mmk
       `);
+    return result.recordset[0];
+  }
+
+  static async getById(id) {
+    const pool = await poolPromise;
+    const result = await pool.request()
+      .input('id', sql.UniqueIdentifier, id)
+      .query('SELECT * FROM payments WHERE id = @id');
     return result.recordset[0];
   }
 
@@ -37,11 +45,13 @@ class Payment {
       .input('status', sql.VarChar, data.status || 'received') // Defaulting to received per user suggestion
       .input('method', sql.VarChar, data.method)
       .input('reference_no', sql.VarChar, data.reference_no)
+      .input('points_redeemed', sql.Int, data.points_redeemed || 0)
+      .input('points_value_mmk', sql.Decimal(18, 2), data.points_value_mmk || 0)
       .input('created_user', sql.UniqueIdentifier, createdBy)
       .query(`
-        INSERT INTO payments (id, order_id, amount_mmk, status, method, reference_no, paid_at, created_user, updated_user)
+        INSERT INTO payments (id, order_id, amount_mmk, status, method, reference_no, points_redeemed, points_value_mmk, paid_at, created_user, updated_user)
         OUTPUT INSERTED.*
-        VALUES (NEWID(), @order_id, @amount_mmk, @status, @method, @reference_no, GETDATE(), @created_user, @created_user)
+        VALUES (NEWID(), @order_id, @amount_mmk, @status, @method, @reference_no, @points_redeemed, @points_value_mmk, GETDATE(), @created_user, @created_user)
       `);
     return result.recordset[0];
   }

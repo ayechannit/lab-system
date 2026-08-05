@@ -5,25 +5,18 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../app/session_scope.dart';
-import '../../config/map_defaults.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/post_register_login_hint.dart';
-import '../../models/user_role.dart';
 import '../../theme/theme_extensions.dart';
 import '../../utils/phone_input.dart';
-import '../../widgets/auth/signup_role_selector.dart';
 import '../../widgets/common/themed_input_shell.dart';
 import '../../widgets/common/app_brand_mark.dart';
 import '../../widgets/common/app_toast.dart';
 import '../../widgets/common/user_profile_avatar.dart';
 import '../../widgets/auth/auth_preference_controls.dart';
-import '../../widgets/location/address_location_fields.dart';
 
 class RegisterScreen extends StatefulWidget {
-  const RegisterScreen({super.key, this.initialRole});
-
-  /// When set (e.g. from role selection), pre-selects the signup role.
-  final UserRole? initialRole;
+  const RegisterScreen({super.key});
 
   @override
   State<RegisterScreen> createState() => _RegisterScreenState();
@@ -34,17 +27,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   final _name = TextEditingController();
   final _phone = TextEditingController();
-  final _email = TextEditingController();
-  final _licenseNumber = TextEditingController();
-  String _addressLine = '';
   final _password = TextEditingController();
   final _confirmPassword = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   bool _obscurePassword = true;
   bool _submitting = false;
-  late UserRole _selectedRole;
-  double _addressLat = 0;
-  double _addressLng = 0;
   Uint8List? _pendingPhotoBytes;
   String _pendingPhotoName = '';
 
@@ -55,7 +42,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   void initState() {
     super.initState();
-    _selectedRole = widget.initialRole ?? UserRole.patient;
     _name.addListener(_onNameChanged);
   }
 
@@ -136,13 +122,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   @override
-  @override
   void dispose() {
     _name.removeListener(_onNameChanged);
     _name.dispose();
     _phone.dispose();
-    _email.dispose();
-    _licenseNumber.dispose();
     _password.dispose();
     _confirmPassword.dispose();
     super.dispose();
@@ -194,7 +177,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Tell us who you are, then fill in your details.',
+                        'Fill in your details to get started.',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               color: context.cs.onSurfaceVariant,
                               height: 1.35,
@@ -222,38 +205,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         ),
                       ),
                       const SizedBox(height: 18),
-                      _RegisterLabel(text: 'Role'),
-                      const SizedBox(height: 8),
-                      SignupRoleSelector(
-                        selected: _selectedRole,
-                        onSelected: (role) => setState(() => _selectedRole = role),
-                      ),
-                      if (_selectedRole.requiresLicenseNumber) ...[
-                        const SizedBox(height: 12),
-                        _RegisterLabel(text: 'License / registration number'),
-                        ThemedInputShell(
-                          child: TextFormField(
-                            controller: _licenseNumber,
-                            decoration: const InputDecoration(
-                              prefixIcon: Icon(Icons.badge_outlined),
-                              hintText: 'Medical or professional license ID',
-                              border: InputBorder.none,
-                              enabledBorder: InputBorder.none,
-                              focusedBorder: InputBorder.none,
-                              filled: false,
-                            ),
-                            textInputAction: TextInputAction.next,
-                            validator: (v) {
-                              if (!_selectedRole.requiresLicenseNumber) return null;
-                              if (v == null || v.trim().isEmpty) {
-                                return 'Required for ${_selectedRole.label.toLowerCase()} accounts';
-                              }
-                              return null;
-                            },
-                          ),
-                        ),
-                      ],
-                      const SizedBox(height: 18),
                       _RegisterLabel(text: 'Full Name'),
                       ThemedInputShell(
                         child: TextFormField(
@@ -266,28 +217,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             filled: false,
                           ),
                           validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
-                          textInputAction: TextInputAction.next,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      _RegisterLabel(text: 'Email'),
-                      ThemedInputShell(
-                        child: TextFormField(
-                          controller: _email,
-                          decoration: const InputDecoration(
-                            prefixIcon: Icon(Icons.mail_outline),
-                            border: InputBorder.none,
-                            enabledBorder: InputBorder.none,
-                            focusedBorder: InputBorder.none,
-                            filled: false,
-                          ),
-                          keyboardType: TextInputType.emailAddress,
-                          validator: (v) {
-                            final t = (v ?? '').trim();
-                            if (t.isEmpty) return 'Required';
-                            if (!t.contains('@')) return 'Enter a valid email';
-                            return null;
-                          },
                           textInputAction: TextInputAction.next,
                         ),
                       ),
@@ -309,19 +238,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           validator: (v) => validatePhoneNumber(v),
                           textInputAction: TextInputAction.next,
                         ),
-                      ),
-                      const SizedBox(height: 12),
-                      AddressLocationFields(
-                        addressLine: _addressLine,
-                        latitude: _addressLat,
-                        longitude: _addressLng,
-                        onChanged: (line, lat, lng) {
-                          setState(() {
-                            _addressLine = line;
-                            _addressLat = lat;
-                            _addressLng = lng;
-                          });
-                        },
                       ),
                       const SizedBox(height: 12),
                       _RegisterLabel(text: 'Password'),
@@ -387,45 +303,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               ? null
                               : () async {
                                   if (!_formKey.currentState!.validate()) return;
-                                  if (!hasMeaningfulCoordinates(_addressLat, _addressLng) ||
-                                      _addressLine.trim().isEmpty) {
-                                    AppToast.warning(
-                                      context,
-                                      'Choose a location on the map and confirm it to set your address.',
-                                    );
-                                    return;
-                                  }
-                                  if (_selectedRole.requiresLicenseNumber &&
-                                      _licenseNumber.text.trim().isEmpty) {
-                                    AppToast.warning(
-                                      context,
-                                      'Enter your license or registration number.',
-                                    );
-                                    return;
-                                  }
                                   setState(() => _submitting = true);
                                   try {
-                                    final emailTrim = _email.text.trim();
+                                    final phoneTrim = _phone.text.trim();
                                     await session.register(
                                       name: _name.text.trim(),
-                                      phone: _phone.text.trim(),
-                                      email: emailTrim,
+                                      phone: phoneTrim,
                                       password: _password.text,
-                                      role: _selectedRole,
-                                      address: _addressLine.trim(),
-                                      licenseNumber: _licenseNumber.text.trim(),
-                                      latitude: _addressLat,
-                                      longitude: _addressLng,
                                       profileImageBytes: _pendingPhotoBytes,
                                       profileImageFilename: _pendingPhotoName.isEmpty
                                           ? null
                                           : _pendingPhotoName,
                                     );
                                     if (!context.mounted) return;
-                                    final needsApproval = _selectedRole.requiresStaffApproval;
-                                    final successMessage = needsApproval
-                                        ? 'A lab staff member must approve your account before you can sign in.'
-                                        : 'Sign in with your email and password.';
+                                    const successMessage = 'Sign in with your phone number and password.';
                                     AppToast.success(
                                       context,
                                       successMessage,
@@ -435,7 +326,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                       '/login',
                                       extra: PostRegisterLoginHint(
                                         message: successMessage,
-                                        email: emailTrim,
+                                        phone: phoneTrim,
                                       ),
                                     );
                                   } catch (e) {
@@ -513,4 +404,3 @@ class _RegisterLabel extends StatelessWidget {
     );
   }
 }
-

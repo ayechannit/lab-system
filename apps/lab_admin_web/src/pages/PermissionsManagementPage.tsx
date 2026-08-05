@@ -34,12 +34,14 @@ export function PermissionsManagementPage() {
 
   useEffect(() => {
     if (!hasApi) {
-      setLoading(false)
+      queueMicrotask(() => setLoading(false))
       return
     }
     let cancelled = false
-    setLoading(true)
-    setLoadError(null)
+    queueMicrotask(() => {
+      setLoading(true)
+      setLoadError(null)
+    })
     void (async () => {
       try {
         const res = await fetchPermissionMatrix()

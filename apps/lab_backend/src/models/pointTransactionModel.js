@@ -26,35 +26,46 @@ class PointTransaction {
   /**
    * Get point transactions for a specific user.
    * @param {string} userId - The user ID to get transactions for
+   * @param {object} filters - Optional filters ({ transaction_type })
    * @returns {Promise<Array>} List of transactions sorted by newest first
    */
-  static async getByUserId(userId) {
+  static async getByUserId(userId, filters = {}) {
     const pool = await poolPromise;
-    const result = await pool.request()
-      .input('user_id', sql.UniqueIdentifier, userId)
-      .query(`
-        SELECT pt.*, u.name as user_name, u.email as user_email 
-        FROM point_transactions pt
-        LEFT JOIN users u ON pt.user_id = u.id
-        WHERE pt.user_id = @user_id
-        ORDER BY pt.created_at DESC
-      `);
+    const request = pool.request().input('user_id', sql.UniqueIdentifier, userId);
+    let query = `
+      SELECT pt.*, u.name as user_name, u.phone as user_phone
+      FROM point_transactions pt
+      LEFT JOIN users u ON pt.user_id = u.id
+      WHERE pt.user_id = @user_id
+    `;
+    if (filters.transaction_type) {
+      request.input('transaction_type', sql.NVarChar(50), filters.transaction_type);
+      query += ' AND pt.transaction_type = @transaction_type';
+    }
+    query += ' ORDER BY pt.created_at DESC';
+    const result = await request.query(query);
     return result.recordset;
   }
 
   /**
    * Get all point transactions across all users (Admin/Manager view).
+   * @param {object} filters - Optional filters ({ transaction_type })
    * @returns {Promise<Array>} List of all transactions sorted by newest first
    */
-  static async getAll() {
+  static async getAll(filters = {}) {
     const pool = await poolPromise;
-    const result = await pool.request()
-      .query(`
-        SELECT pt.*, u.name as user_name, u.email as user_email 
-        FROM point_transactions pt
-        LEFT JOIN users u ON pt.user_id = u.id
-        ORDER BY pt.created_at DESC
-      `);
+    const request = pool.request();
+    let query = `
+      SELECT pt.*, u.name as user_name, u.phone as user_phone
+      FROM point_transactions pt
+      LEFT JOIN users u ON pt.user_id = u.id
+    `;
+    if (filters.transaction_type) {
+      request.input('transaction_type', sql.NVarChar(50), filters.transaction_type);
+      query += ' WHERE pt.transaction_type = @transaction_type';
+    }
+    query += ' ORDER BY pt.created_at DESC';
+    const result = await request.query(query);
     return result.recordset;
   }
 }

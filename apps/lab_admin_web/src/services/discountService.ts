@@ -1,26 +1,24 @@
-import type { EndUserRole } from '../model/types'
 import { apiFetch } from './apiClient'
 import { readApiErrorBody } from './readApiError'
 
 export type FetchDiscountsParams = {
-  role?: EndUserRole | ''
-  test_id?: string
   is_active?: boolean
   test_name?: string
   test_code?: string
   page?: number
   limit?: number
+  sortBy?: string
+  sortOrder?: 'ASC' | 'DESC' | 'asc' | 'desc'
 }
 
 export type TestDiscountListRow = {
   id: string
   test_id: string
-  role: string
   discount_percent: number
   is_active: boolean
   is_deleted: boolean
-  start_date: string | null
-  end_date: string | null
+  start_date?: string
+  end_date?: string
   test_name?: string
   test_code?: string
   original_price?: number
@@ -31,11 +29,10 @@ export type TestDiscountListRow = {
 
 export type DiscountUpsertBody = {
   test_id: string
-  role: EndUserRole | 'all'
   discount_percent: number
   is_active: boolean
-  start_date: string | null
-  end_date: string | null
+  start_date?: string
+  end_date?: string
 }
 
 export type DiscountBulkUpsertBody = {
@@ -45,13 +42,13 @@ export type DiscountBulkUpsertBody = {
 function toQuery(params?: FetchDiscountsParams): string {
   if (!params) return ''
   const q = new URLSearchParams()
-  if (params.role) q.set('role', params.role)
-  if (params.test_id) q.set('test_id', params.test_id)
   if (params.is_active !== undefined) q.set('is_active', String(params.is_active))
   if (params.test_name) q.set('test_name', params.test_name)
   if (params.test_code) q.set('test_code', params.test_code)
   if (params.page != null) q.set('page', String(params.page))
   if (params.limit != null) q.set('limit', String(params.limit))
+  if (params.sortBy) q.set('sortBy', params.sortBy)
+  if (params.sortOrder) q.set('sortOrder', params.sortOrder)
   const s = q.toString()
   return s ? `?${s}` : ''
 }
@@ -60,12 +57,11 @@ function normalizeDiscountRow(raw: Record<string, unknown>): TestDiscountListRow
   return {
     id: String(raw.id),
     test_id: String(raw.test_id),
-    role: String(raw.role ?? ''),
     discount_percent: Number(raw.discount_percent ?? 0),
     is_active: Boolean(raw.is_active),
     is_deleted: Boolean(raw.is_deleted),
-    start_date: raw.start_date != null && String(raw.start_date).trim() ? String(raw.start_date) : null,
-    end_date: raw.end_date != null && String(raw.end_date).trim() ? String(raw.end_date) : null,
+    start_date: raw.start_date != null ? String(raw.start_date) : undefined,
+    end_date: raw.end_date != null ? String(raw.end_date) : undefined,
     test_name: raw.test_name != null ? String(raw.test_name) : undefined,
     test_code: raw.test_code != null ? String(raw.test_code) : undefined,
     original_price: raw.original_price != null ? Number(raw.original_price) : undefined,
@@ -75,33 +71,8 @@ function normalizeDiscountRow(raw: Record<string, unknown>): TestDiscountListRow
   }
 }
 
-export function formatDiscountDateCell(iso: string | null): string {
-  if (!iso) return '—'
-  const d = new Date(iso)
-  if (!Number.isFinite(d.getTime())) return '—'
-  return d.toLocaleString(undefined, {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  })
-}
-
-export function formatDiscountSchedulePeriod(start: string | null, end: string | null): string {
-  if (!start && !end) return 'Always'
-  const fmt = (iso: string) =>
-    new Date(iso).toLocaleString(undefined, {
-      dateStyle: 'medium',
-      timeStyle: 'short',
-    })
-  if (start && end) return `${fmt(start)} → ${fmt(end)}`
-  if (start) return `From ${fmt(start)}`
-  return `Until ${fmt(end!)}`
-}
-
-export function isDiscountLiveNow(row: TestDiscountListRow, now = new Date()): boolean {
-  if (!row.is_active) return false
-  if (row.start_date && now < new Date(row.start_date)) return false
-  if (row.end_date && now > new Date(row.end_date)) return false
-  return true
+export function discountAmountMmk(basePriceMmk: number, discountPercent: number): number {
+  return Math.round(basePriceMmk * (1 - discountPercent / 100))
 }
 
 export async function fetchAllDiscounts(params?: FetchDiscountsParams): Promise<TestDiscountListRow[]> {
@@ -112,7 +83,7 @@ export async function fetchAllDiscounts(params?: FetchDiscountsParams): Promise<
   return data.map((row) => normalizeDiscountRow(row))
 }
 
-export async function upsertTestDiscount(body: DiscountUpsertBody): Promise<unknown> {
+export async function upsertDiscount(body: DiscountUpsertBody): Promise<unknown> {
   const res = await apiFetch('/api/discounts', {
     method: 'POST',
     body: JSON.stringify(body),
@@ -121,8 +92,7 @@ export async function upsertTestDiscount(body: DiscountUpsertBody): Promise<unkn
   return res.json()
 }
 
-/** `POST /api/discounts/bulk` — upsert many test/role rows in one request. */
-export async function bulkUpsertTestDiscounts(body: DiscountBulkUpsertBody): Promise<unknown> {
+export async function bulkUpsertDiscounts(body: DiscountBulkUpsertBody): Promise<unknown> {
   const res = await apiFetch('/api/discounts/bulk', {
     method: 'POST',
     body: JSON.stringify(body),

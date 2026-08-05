@@ -2,9 +2,9 @@
 class PostRegisterLoginHint {
   const PostRegisterLoginHint({
     required this.message,
-    required this.email,
+    required this.phone,
   });
 
   final String message;
-  final String email;
+  final String phone;
 }

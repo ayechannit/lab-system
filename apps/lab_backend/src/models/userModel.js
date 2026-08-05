@@ -5,26 +5,25 @@ class User {
   static async getAll(filters = {}) {
     const pool = await poolPromise;
     const request = pool.request();
-    let query = 'SELECT id, name, email, phone, role, address, latitude, longitude, total_points, license_number, is_approved, profile_image_url, created_user, updated_user, created_at, updated_at FROM users WHERE is_deleted = 0';
+    let query = `SELECT u.id, u.name, u.phone, u.address, u.latitude, u.longitude, u.total_points, u.total_spent_mmk, u.profile_image_url, u.created_user, u.updated_user, u.created_at, u.updated_at,
+      (SELECT TOP 1 mt.discount_percent FROM membership_tiers mt
+       WHERE mt.is_active = 1 AND mt.is_deleted = 0 AND mt.min_spend_mmk <= u.total_spent_mmk
+       ORDER BY mt.min_spend_mmk DESC) AS tier_discount_percent,
+      (SELECT TOP 1 mt.name FROM membership_tiers mt
+       WHERE mt.is_active = 1 AND mt.is_deleted = 0 AND mt.min_spend_mmk <= u.total_spent_mmk
+       ORDER BY mt.min_spend_mmk DESC) AS tier_name
+      FROM users u WHERE u.is_deleted = 0`;
 
-    if (filters.role) {
-      query += ' AND role = @role';
-      request.input('role', sql.VarChar, filters.role);
-    }
     if (filters.name) {
-      query += ' AND name LIKE @name';
+      query += ' AND u.name LIKE @name';
       request.input('name', sql.VarChar, `%${filters.name}%`);
     }
     if (filters.phone) {
-      query += ' AND phone LIKE @phone';
+      query += ' AND u.phone LIKE @phone';
       request.input('phone', sql.VarChar, `%${filters.phone}%`);
     }
-    if (filters.is_approved !== undefined) {
-      query += ' AND is_approved = @is_approved';
-      request.input('is_approved', sql.Bit, filters.is_approved === 'true' || filters.is_approved === true ? 1 : 0);
-    }
 
-    const validSortFields = ['created_at', 'updated_at', 'name', 'email', 'role', 'total_points'];
+    const validSortFields = ['created_at', 'updated_at', 'name', 'total_points'];
     const sortBy = validSortFields.includes(filters.sortBy) ? filters.sortBy : 'created_at';
     const sortOrder = filters.sortOrder === 'ASC' || filters.sortOrder === 'asc' ? 'ASC' : 'DESC';
     query += ` ORDER BY ${sortBy} ${sortOrder}`;
@@ -46,46 +45,48 @@ class User {
     const pool = await poolPromise;
     const result = await pool.request()
       .input('id', sql.UniqueIdentifier, id)
-      .query('SELECT id, name, email, phone, role, address, latitude, longitude, total_points, license_number, is_approved, profile_image_url, created_user, updated_user, created_at, updated_at FROM users WHERE id = @id AND is_deleted = 0');
+      .query(`SELECT u.id, u.name, u.phone, u.address, u.latitude, u.longitude, u.total_points, u.total_spent_mmk, u.profile_image_url, u.created_user, u.updated_user, u.created_at, u.updated_at,
+        (SELECT TOP 1 mt.discount_percent FROM membership_tiers mt
+         WHERE mt.is_active = 1 AND mt.is_deleted = 0 AND mt.min_spend_mmk <= u.total_spent_mmk
+         ORDER BY mt.min_spend_mmk DESC) AS tier_discount_percent,
+        (SELECT TOP 1 mt.name FROM membership_tiers mt
+         WHERE mt.is_active = 1 AND mt.is_deleted = 0 AND mt.min_spend_mmk <= u.total_spent_mmk
+         ORDER BY mt.min_spend_mmk DESC) AS tier_name
+        FROM users u WHERE u.id = @id AND u.is_deleted = 0`);
     return result.recordset[0];
   }
 
-  static async getByEmail(email) {
+  static async getByPhone(phone) {
     const pool = await poolPromise;
     const result = await pool.request()
-      .input('email', sql.VarChar, email)
-      .query('SELECT * FROM users WHERE email = @email AND is_deleted = 0');
+      .input('phone', sql.VarChar, phone)
+      .query('SELECT * FROM users WHERE phone = @phone AND is_deleted = 0');
     return result.recordset[0];
   }
 
   static async create(data, createdBy = null) {
     const pool = await poolPromise;
     const hashedPassword = await bcrypt.hash(data.password_hash || data.password, 10);
-    const isApproved = data.role === 'patient' ? 1 : 0; // Require approval for doctors and clinics
 
     const result = await pool.request()
       .input('name', sql.VarChar, data.name)
-      .input('email', sql.VarChar, data.email)
       .input('phone', sql.VarChar, data.phone)
       .input('password_hash', sql.VarChar, hashedPassword)
-      .input('role', sql.VarChar, data.role)
       .input('address', sql.Text, data.address)
       .input('latitude', sql.Float, data.latitude)
       .input('longitude', sql.Float, data.longitude)
-      .input('license_number', sql.NVarChar, data.license_number || null)
-      .input('is_approved', sql.Bit, isApproved)
       .input('created_user', sql.UniqueIdentifier, createdBy)
       .query(`
-        INSERT INTO users (id, name, email, phone, password_hash, role, address, latitude, longitude, total_points, license_number, is_approved, created_user, updated_user, is_deleted)
-        OUTPUT INSERTED.id, INSERTED.name, INSERTED.email, INSERTED.phone, INSERTED.role, INSERTED.address, INSERTED.latitude, INSERTED.longitude, INSERTED.total_points, INSERTED.license_number, INSERTED.is_approved, INSERTED.profile_image_url, INSERTED.created_user, INSERTED.updated_user, INSERTED.created_at, INSERTED.updated_at
-        VALUES (NEWID(), @name, @email, @phone, @password_hash, @role, @address, @latitude, @longitude, 0, @license_number, @is_approved, @created_user, @created_user, 0)
+        INSERT INTO users (id, name, phone, password_hash, address, latitude, longitude, total_points, created_user, updated_user, is_deleted)
+        OUTPUT INSERTED.id, INSERTED.name, INSERTED.phone, INSERTED.address, INSERTED.latitude, INSERTED.longitude, INSERTED.total_points, INSERTED.total_spent_mmk, INSERTED.profile_image_url, INSERTED.created_user, INSERTED.updated_user, INSERTED.created_at, INSERTED.updated_at
+        VALUES (NEWID(), @name, @phone, @password_hash, @address, @latitude, @longitude, 0, @created_user, @created_user, 0)
       `);
     return result.recordset[0];
   }
 
   static async update(id, data, updatedBy = null) {
     const pool = await poolPromise;
-    
+
     let passwordFragment = '';
     const request = pool.request()
       .input('id', sql.UniqueIdentifier, id)
@@ -94,7 +95,6 @@ class User {
       .input('address', sql.Text, data.address)
       .input('latitude', sql.Float, data.latitude)
       .input('longitude', sql.Float, data.longitude)
-      .input('license_number', sql.NVarChar, data.license_number || null)
       .input('updated_user', sql.UniqueIdentifier, updatedBy);
 
     const newPassword = data.password || data.password_hash;
@@ -106,12 +106,11 @@ class User {
 
     const result = await request.query(`
       UPDATE users
-      SET name = @name, phone = @phone, 
-          address = @address, latitude = @latitude, longitude = @longitude, 
-          license_number = ISNULL(@license_number, license_number),
+      SET name = @name, phone = @phone,
+          address = @address, latitude = @latitude, longitude = @longitude,
           updated_user = @updated_user, updated_at = GETDATE()
           ${passwordFragment}
-      OUTPUT INSERTED.id, INSERTED.name, INSERTED.email, INSERTED.phone, INSERTED.role, INSERTED.address, INSERTED.latitude, INSERTED.longitude, INSERTED.total_points, INSERTED.license_number, INSERTED.is_approved, INSERTED.profile_image_url, INSERTED.created_user, INSERTED.updated_user, INSERTED.created_at, INSERTED.updated_at
+      OUTPUT INSERTED.id, INSERTED.name, INSERTED.phone, INSERTED.address, INSERTED.latitude, INSERTED.longitude, INSERTED.total_points, INSERTED.total_spent_mmk, INSERTED.profile_image_url, INSERTED.created_user, INSERTED.updated_user, INSERTED.created_at, INSERTED.updated_at
       WHERE id = @id AND is_deleted = 0
     `);
     return result.recordset[0];
@@ -126,7 +125,7 @@ class User {
       .query(`
         UPDATE users
         SET profile_image_url = @profile_image_url, updated_user = @updated_user, updated_at = GETDATE()
-        OUTPUT INSERTED.id, INSERTED.name, INSERTED.email, INSERTED.phone, INSERTED.role, INSERTED.address, INSERTED.latitude, INSERTED.longitude, INSERTED.total_points, INSERTED.license_number, INSERTED.is_approved, INSERTED.profile_image_url, INSERTED.created_user, INSERTED.updated_user, INSERTED.created_at, INSERTED.updated_at
+        OUTPUT INSERTED.id, INSERTED.name, INSERTED.phone, INSERTED.address, INSERTED.latitude, INSERTED.longitude, INSERTED.total_points, INSERTED.total_spent_mmk, INSERTED.profile_image_url, INSERTED.created_user, INSERTED.updated_user, INSERTED.created_at, INSERTED.updated_at
         WHERE id = @id AND is_deleted = 0
       `);
     return result.recordset[0];
@@ -139,9 +138,9 @@ class User {
       .input('points', sql.Int, pointsToAdd)
       .input('updated_user', sql.UniqueIdentifier, updatedBy)
       .query(`
-        UPDATE users 
+        UPDATE users
         SET total_points = total_points + @points, updated_user = @updated_user, updated_at = GETDATE()
-        OUTPUT INSERTED.id, INSERTED.name, INSERTED.email, INSERTED.phone, INSERTED.role, INSERTED.address, INSERTED.latitude, INSERTED.longitude, INSERTED.total_points, INSERTED.license_number, INSERTED.is_approved, INSERTED.profile_image_url, INSERTED.created_user, INSERTED.updated_user, INSERTED.created_at, INSERTED.updated_at
+        OUTPUT INSERTED.id, INSERTED.name, INSERTED.phone, INSERTED.address, INSERTED.latitude, INSERTED.longitude, INSERTED.total_points, INSERTED.total_spent_mmk, INSERTED.profile_image_url, INSERTED.created_user, INSERTED.updated_user, INSERTED.created_at, INSERTED.updated_at
         WHERE id = @id AND is_deleted = 0
       `);
 
@@ -161,17 +160,19 @@ class User {
     return updatedUser;
   }
 
-  static async approve(id, updatedBy = null) {
+  static async addSpend(id, amountMmk, updatedBy = null) {
     const pool = await poolPromise;
     const result = await pool.request()
       .input('id', sql.UniqueIdentifier, id)
+      .input('amount', sql.Decimal(18, 2), amountMmk)
       .input('updated_user', sql.UniqueIdentifier, updatedBy)
       .query(`
-        UPDATE users 
-        SET is_approved = 1, updated_user = @updated_user, updated_at = GETDATE()
-        OUTPUT INSERTED.id, INSERTED.name, INSERTED.email, INSERTED.phone, INSERTED.role, INSERTED.is_approved, INSERTED.updated_at
+        UPDATE users
+        SET total_spent_mmk = total_spent_mmk + @amount, updated_user = @updated_user, updated_at = GETDATE()
+        OUTPUT INSERTED.id, INSERTED.name, INSERTED.phone, INSERTED.address, INSERTED.latitude, INSERTED.longitude, INSERTED.total_points, INSERTED.total_spent_mmk, INSERTED.profile_image_url, INSERTED.created_user, INSERTED.updated_user, INSERTED.created_at, INSERTED.updated_at
         WHERE id = @id AND is_deleted = 0
       `);
+
     return result.recordset[0];
   }
 
@@ -198,15 +199,6 @@ class User {
     return result.rowsAffected[0] > 0;
   }
 
-  static async updatePasswordByEmail(email, newPassword) {
-    const pool = await poolPromise;
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-    const result = await pool.request()
-      .input('email', sql.VarChar, email)
-      .input('password_hash', sql.VarChar, hashedPassword)
-      .query('UPDATE users SET password_hash = @password_hash, updated_at = GETDATE() WHERE email = @email AND is_deleted = 0');
-    return result.rowsAffected[0] > 0;
-  }
 }
 
 module.exports = User;

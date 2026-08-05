@@ -4,7 +4,7 @@ class PointSetting {
   static async getAll() {
     const pool = await poolPromise;
     const result = await pool.request()
-      .query('SELECT *, created_user, updated_user FROM point_settings WHERE is_deleted = 0 ORDER BY spend_amount_mmk DESC');
+      .query('SELECT * FROM point_settings WHERE is_deleted = 0 ORDER BY spend_amount_mmk DESC');
     return result.recordset;
   }
 
@@ -12,8 +12,8 @@ class PointSetting {
     const pool = await poolPromise;
     const result = await pool.request()
       .query(`
-        SELECT *, created_user, updated_user FROM point_settings 
-        WHERE is_active = 1 
+        SELECT * FROM point_settings
+        WHERE is_active = 1
         AND is_deleted = 0 
         AND (start_date IS NULL OR start_date <= GETDATE())
         AND (end_date IS NULL OR end_date >= GETDATE())
@@ -26,7 +26,7 @@ class PointSetting {
     const pool = await poolPromise;
     const result = await pool.request()
       .input('id', sql.UniqueIdentifier, id)
-      .query('SELECT *, created_user, updated_user FROM point_settings WHERE id = @id AND is_deleted = 0');
+      .query('SELECT * FROM point_settings WHERE id = @id AND is_deleted = 0');
     return result.recordset[0];
   }
 

@@ -1,10 +1,7 @@
 import { apiFetch } from './apiClient'
 import { readApiErrorBody } from './readApiError'
 
-export type ReferralFeeRole = 'clinic' | 'doctor' | 'patient' | 'phlebotomist'
-
 export type FetchReferralFeesParams = {
-  role?: ReferralFeeRole | ''
   is_active?: boolean
   test_name?: string
   test_code?: string
@@ -17,7 +14,6 @@ export type FetchReferralFeesParams = {
 export type TestReferralFeeListRow = {
   id: string
   test_id: string
-  role: string
   referral_percent: number
   is_active: boolean
   is_deleted: boolean
@@ -31,7 +27,6 @@ export type TestReferralFeeListRow = {
 
 export type ReferralFeeUpsertBody = {
   test_id: string
-  role: ReferralFeeRole | 'all'
   referral_percent: number
   is_active: boolean
 }
@@ -43,7 +38,6 @@ export type ReferralFeeBulkUpsertBody = {
 function toQuery(params?: FetchReferralFeesParams): string {
   if (!params) return ''
   const q = new URLSearchParams()
-  if (params.role) q.set('role', params.role)
   if (params.is_active !== undefined) q.set('is_active', String(params.is_active))
   if (params.test_name) q.set('test_name', params.test_name)
   if (params.test_code) q.set('test_code', params.test_code)
@@ -59,7 +53,6 @@ function normalizeReferralFeeRow(raw: Record<string, unknown>): TestReferralFeeL
   return {
     id: String(raw.id),
     test_id: String(raw.test_id),
-    role: String(raw.role ?? ''),
     referral_percent: Number(raw.referral_percent ?? 0),
     is_active: Boolean(raw.is_active),
     is_deleted: Boolean(raw.is_deleted),

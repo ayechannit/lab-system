@@ -110,7 +110,6 @@ export type ApiOrderDetail = {
   collector_id?: string | null
   /** From users join on GET /orders/:id (may be null if no user row) */
   ordering_user_name?: string | null
-  ordering_user_role?: string | null
   patient_name: string
   patient_phone: string
   patient_age?: number

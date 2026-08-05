@@ -1,17 +1,14 @@
 import { type FormEvent, useCallback, useEffect, useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { createPortal } from 'react-dom'
-import { endUserRoleRequiresLicenseNumber, type EndUserRole, type UserListRow } from '../../model/types'
+import type { UserListRow } from '../../model/types'
 import { useAddressGeocode } from '../../hooks/useAddressGeocode'
 import { createUser, updateUser, type UserCreateBody, type UserUpdateBody } from '../../services/userService'
-import { roleLabel } from '../../utils/roleLabels'
 import { isValidPhoneInput, sanitizePhoneInput } from '../../utils/phoneInput'
 import { formatCoordPair, hasUsableCoords, LocationMapPicker } from './LocationMapPicker'
 import '../common/ui.css'
 /** Minimum length for initial password on create (plain value sent as `password_hash` in this admin build). */
 const MIN_INITIAL_PASSWORD_LENGTH = 8
-
-const USER_ROLES: EndUserRole[] = ['clinic', 'doctor', 'patient', 'phlebotomist']
 
 type UserFormModalProps = {
   open: boolean
@@ -33,10 +30,7 @@ export function UserFormModal({
   const { t } = useTranslation()
   const titleId = useId()
   const [name, setName] = useState('')
-  const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
-  const [role, setRole] = useState<EndUserRole>('patient')
-  const [licenseNumber, setLicenseNumber] = useState('')
   const [address, setAddress] = useState('')
   const [latitude, setLatitude] = useState<number | ''>('')
   const [longitude, setLongitude] = useState<number | ''>('')
@@ -53,10 +47,7 @@ export function UserFormModal({
     setSubmitting(false)
     if (mode === 'edit' && initial) {
       setName(initial.name)
-      setEmail(initial.email)
       setPhone(initial.phone)
-      setRole(initial.role)
-      setLicenseNumber(initial.license_number ?? '')
       setAddress(initial.address)
       const hasCoords = hasUsableCoords(initial.latitude, initial.longitude)
       setLatitude(hasCoords ? initial.latitude : '')
@@ -67,10 +58,7 @@ export function UserFormModal({
     } else {
       setAddressBaseline(null)
       setName('')
-      setEmail('')
       setPhone('')
-      setRole('patient')
-      setLicenseNumber('')
       setAddress('')
       setLatitude('')
       setLongitude('')
@@ -117,21 +105,12 @@ export function UserFormModal({
       setFormError(t('users.form.errorName'))
       return
     }
-    const em = email.trim().toLowerCase()
-    if (!em || !em.includes('@')) {
-      setFormError(t('users.form.errorEmail'))
-      return
-    }
     if (!phone.trim()) {
       setFormError(t('users.form.errorPhone'))
       return
     }
     if (!isValidPhoneInput(phone)) {
       setFormError(t('users.form.errorPhoneInvalid'))
-      return
-    }
-    if (endUserRoleRequiresLicenseNumber(role) && !licenseNumber.trim()) {
-      setFormError(t('users.form.errorLicenseRequired'))
       return
     }
     if (mode === 'create') {
@@ -152,11 +131,12 @@ export function UserFormModal({
         return
       }
     }
+    const phoneTrimmed = phone.trim()
     const taken = existingRows.some(
-      (r) => r.email.toLowerCase() === em && (mode === 'create' || r.id !== initial?.id),
+      (r) => r.phone === phoneTrimmed && (mode === 'create' || r.id !== initial?.id),
     )
     if (taken) {
-      setFormError(t('users.form.errorEmailTaken'))
+      setFormError(t('users.form.errorPhoneTaken'))
       return
     }
 
@@ -173,28 +153,22 @@ export function UserFormModal({
       if (mode === 'create') {
         const body: UserCreateBody = {
           name: n,
-          email: em,
-          phone: phone.trim(),
+          phone: phoneTrimmed,
           password_hash: password.trim(),
-          role,
           address: address.trim() || '',
           latitude: latN,
           longitude: lngN,
           total_points: ptsN,
-          license_number: endUserRoleRequiresLicenseNumber(role) ? licenseNumber.trim() : null,
         }
         await createUser(body)
       } else if (initial) {
         const body: UserUpdateBody = {
           name: n,
-          email: em,
-          phone: phone.trim(),
-          role,
+          phone: phoneTrimmed,
           address: address.trim() || '',
           latitude: latN,
           longitude: lngN,
           total_points: ptsN,
-          license_number: endUserRoleRequiresLicenseNumber(role) ? licenseNumber.trim() : null,
         }
         const nextPassword = password.trim()
         if (nextPassword !== '') body.password_hash = nextPassword
@@ -260,20 +234,6 @@ export function UserFormModal({
                     />
                   </div>
                   <div className="field">
-                    <label htmlFor="uf-email">{t('users.form.email')}</label>
-                    <input
-                      id="uf-email"
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder={t('users.form.emailPlaceholder')}
-                      autoComplete="email"
-                      disabled={submitting}
-                    />
-                  </div>
-                </div>
-                <div className="grid-2">
-                  <div className="field">
                     <label htmlFor="uf-phone">{t('users.form.phone')}</label>
                     <input
                       id="uf-phone"
@@ -286,36 +246,7 @@ export function UserFormModal({
                       disabled={submitting}
                     />
                   </div>
-                  <div className="field">
-                    <label htmlFor="uf-role">{t('users.form.role')}</label>
-                    <select
-                      id="uf-role"
-                      className="select-chevron-left"
-                      value={role}
-                      onChange={(e) => setRole(e.target.value as EndUserRole)}
-                      disabled={submitting}
-                    >
-                      {USER_ROLES.map((r) => (
-                        <option key={r} value={r}>
-                          {roleLabel(r)}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
                 </div>
-                {endUserRoleRequiresLicenseNumber(role) ? (
-                  <div className="field">
-                    <label htmlFor="uf-license">{t('users.form.licenseNumber')}</label>
-                    <input
-                      id="uf-license"
-                      value={licenseNumber}
-                      onChange={(e) => setLicenseNumber(e.target.value)}
-                      placeholder={t('users.form.licenseNumberPlaceholder')}
-                      autoComplete="off"
-                      disabled={submitting}
-                    />
-                  </div>
-                ) : null}
                 {mode === 'create' ? (
                   <div className="field">
                     <label htmlFor="uf-password">

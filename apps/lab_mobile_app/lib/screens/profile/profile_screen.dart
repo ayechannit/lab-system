@@ -121,11 +121,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w700),
           ),
-          Text(
-            user.role.label,
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(color: cs.onSurfaceVariant),
-          ),
           const SizedBox(height: 18),
           _ContactCard(
             icon: Icons.call_outlined,
@@ -133,14 +128,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
             label: l10n.phone,
             value: user.phone,
             leftBorderColor: cs.primary,
-          ),
-          const SizedBox(height: 12),
-          _ContactCard(
-            icon: Icons.mail_outline,
-            iconColor: const Color(0xFFE07A3A),
-            label: l10n.email,
-            value: user.email,
-            leftBorderColor: const Color(0xFFE07A3A),
           ),
           const SizedBox(height: 18),
           Text(
@@ -240,6 +227,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             fontWeight: FontWeight.w700,
                           ),
                     ),
+                    if (user.tierName != null && user.tierName!.trim().isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        l10n.membershipTierLabel(user.tierName!, user.tierDiscountPercent),
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: cs.onPrimary.withValues(alpha: 0.85),
+                            ),
+                      ),
+                    ],
                   ],
                 ),
               ),

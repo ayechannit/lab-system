@@ -16,7 +16,6 @@ export type RatingListRow = {
   user_name?: string
   user_email?: string
   user_phone?: string
-  user_role?: string
   patient_name?: string
   patient_age?: number | null
   order_status?: ApiOrderStatus
@@ -52,12 +51,6 @@ export async function fetchAllRatings(): Promise<RatingListRow[]> {
     user_name: raw.user_name != null ? String(raw.user_name) : undefined,
     user_email: raw.user_email != null ? String(raw.user_email) : undefined,
     user_phone: raw.user_phone != null ? String(raw.user_phone) : undefined,
-    user_role:
-      raw.user_role != null
-        ? String(raw.user_role)
-        : raw.role != null
-          ? String(raw.role)
-          : undefined,
     patient_name: raw.patient_name != null ? String(raw.patient_name) : undefined,
     patient_age:
       raw.patient_age != null && Number.isFinite(Number(raw.patient_age))

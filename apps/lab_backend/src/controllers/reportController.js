@@ -36,18 +36,6 @@ exports.getTurnaroundTimeReport = async (req, res, next) => {
   }
 };
 
-exports.getRevenueByChannel = async (req, res, next) => {
-  try {
-    const data = await Report.getRevenueByChannel(req.query);
-    res.json({
-      success: true,
-      data
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
 exports.getPendingResultsQueue = async (req, res, next) => {
   try {
     const data = await Report.getPendingResultsQueue(req.query);

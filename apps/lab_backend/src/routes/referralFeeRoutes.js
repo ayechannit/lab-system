@@ -13,7 +13,6 @@ router.use(authMiddleware, modulePermission('referral-fees'));
  *       type: object
  *       required:
  *         - test_id
- *         - role
  *         - referral_percent
  *       properties:
  *         id:
@@ -22,9 +21,6 @@ router.use(authMiddleware, modulePermission('referral-fees'));
  *         test_id:
  *           type: string
  *           format: uuid
- *         role:
- *           type: string
- *           enum: [clinic, doctor, patient, phlebotomist]
  *         referral_percent:
  *           type: number
  *         is_active:
@@ -51,7 +47,7 @@ router.use(authMiddleware, modulePermission('referral-fees'));
  * @swagger
  * tags:
  *   name: Referral Fees
- *   description: Test-specific role-based referral fee management
+ *   description: Test-specific referral fee management
  */
 
 /**
@@ -61,12 +57,6 @@ router.use(authMiddleware, modulePermission('referral-fees'));
  *     summary: Get all test-specific referral fees
  *     tags: [Referral Fees]
  *     parameters:
- *       - in: query
- *         name: role
- *         schema:
- *           type: string
- *           enum: [clinic, doctor, patient, phlebotomist]
- *         description: Filter referral fees by role
  *       - in: query
  *         name: is_active
  *         schema:
@@ -142,36 +132,6 @@ router.use(authMiddleware, modulePermission('referral-fees'));
 
 /**
  * @swagger
- * /api/referral-fees/{test_id}/{role}:
- *   get:
- *     summary: Get a specific referral fee config for a test and role
- *     tags: [Referral Fees]
- *     parameters:
- *       - in: path
- *         name: test_id
- *         required: true
- *         schema:
- *           type: string
- *           format: uuid
- *       - in: path
- *         name: role
- *         required: true
- *         schema:
- *           type: string
- *           enum: [clinic, doctor, patient, phlebotomist]
- *     responses:
- *       200:
- *         description: Referral fee configuration details
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ReferralFee'
- *       404:
- *         description: Referral fee config not found
- */
-
-/**
- * @swagger
  * /api/referral-fees:
  *   post:
  *     summary: Create or update a referral fee
@@ -184,15 +144,11 @@ router.use(authMiddleware, modulePermission('referral-fees'));
  *             type: object
  *             required:
  *               - test_id
- *               - role
  *               - referral_percent
  *             properties:
  *               test_id:
  *                 type: string
  *                 format: uuid
- *               role:
- *                 type: string
- *                 enum: [clinic, doctor, patient, phlebotomist, all]
  *               referral_percent:
  *                 type: number
  *               is_active:
@@ -229,15 +185,11 @@ router.use(authMiddleware, modulePermission('referral-fees'));
  *                   type: object
  *                   required:
  *                     - test_id
- *                     - role
  *                     - referral_percent
  *                   properties:
  *                     test_id:
  *                       type: string
  *                       format: uuid
- *                     role:
- *                       type: string
- *                       enum: [clinic, doctor, patient, phlebotomist, all]
  *                     referral_percent:
  *                       type: number
  *                     is_active:
@@ -275,7 +227,6 @@ router.use(authMiddleware, modulePermission('referral-fees'));
 
 router.get('/', referralFeeController.getAllReferralFees);
 router.get('/:test_id', referralFeeController.getReferralFeesByTestId);
-router.get('/:test_id/:role', referralFeeController.getReferralFeeByTestIdAndRole);
 router.post('/bulk', referralFeeController.bulkUpsertReferralFees);
 router.post('/', referralFeeController.upsertReferralFee);
 router.delete('/:id', referralFeeController.deleteReferralFee);

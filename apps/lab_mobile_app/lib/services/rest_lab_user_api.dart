@@ -13,7 +13,6 @@ import '../models/lab_test_pick.dart';
 import '../models/loyalty.dart';
 import '../models/rating.dart';
 import '../models/user_report.dart';
-import '../models/user_role.dart';
 import 'lab_user_api.dart';
 
 class LabApiException implements Exception {
@@ -231,32 +230,6 @@ class RestLabUserApi implements LabUserApi {
     return s == 'true' || s == '1';
   }
 
-  List<LabTestDiscount> _parseDiscountList(dynamic raw) {
-    if (raw is! List) return const [];
-    final out = <LabTestDiscount>[];
-    for (final e in raw) {
-      final m = _asObj(e);
-      final role = '${_gv(m, 'role')}'.trim();
-      if (role.isEmpty) continue;
-      final pct = _asInt(_gv(m, 'discount_percent') ?? _gv(m, 'discountPercent')).clamp(0, 100);
-      out.add(LabTestDiscount(role: role, discountPercent: pct));
-    }
-    return out;
-  }
-
-  UserRole _parseRole(String? r) {
-    switch ((r ?? '').toLowerCase()) {
-      case 'doctor':
-        return UserRole.doctor;
-      case 'clinic':
-        return UserRole.clinic;
-      case 'phlebotomist':
-        return UserRole.phlebotomist;
-      default:
-        return UserRole.patient;
-    }
-  }
-
   String? _profileImageUrlFrom(dynamic raw) {
     final urlRaw = '${raw ?? ''}'.trim();
     if (urlRaw.isEmpty) return null;
@@ -273,13 +246,17 @@ class RestLabUserApi implements LabUserApi {
       id: id,
       name: '${_gv(m, 'name') ?? ''}',
       phone: '${_gv(m, 'phone') ?? ''}',
-      email: '${_gv(m, 'email') ?? ''}',
-      role: _parseRole('${_gv(m, 'role')}'),
       pointsBalance: _asInt(_gv(m, 'total_points')),
       address: '${_gv(m, 'address') ?? ''}'.trim(),
       latitude: _asDouble(_gv(m, 'latitude')),
       longitude: _asDouble(_gv(m, 'longitude')),
       profileImageUrl: _profileImageUrlFrom(_gv(m, 'profile_image_url') ?? _gv(m, 'profileImageUrl')),
+      tierName: () {
+        final raw = _gv(m, 'tier_name') ?? _gv(m, 'tierName');
+        final s = raw == null ? '' : '$raw'.trim();
+        return s.isEmpty ? null : s;
+      }(),
+      tierDiscountPercent: _asInt(_gv(m, 'tier_discount_percent') ?? _gv(m, 'tierDiscountPercent')),
     );
   }
 
@@ -287,19 +264,10 @@ class RestLabUserApi implements LabUserApi {
   Future<void> register(RegisterRequest request) async {
     final fields = <String, String>{
       'name': request.name,
-      'email': request.email.trim().toLowerCase(),
       'phone': request.phone,
-      'role': request.role.name,
       // Admin web sends plaintext in `password_hash`; `User.create` hashes it.
       'password_hash': request.password,
-      'address': request.address.trim(),
-      'latitude': '${request.latitude}',
-      'longitude': '${request.longitude}',
     };
-    final license = request.licenseNumber.trim();
-    if (license.isNotEmpty) {
-      fields['license_number'] = license;
-    }
 
     final hasPhoto = request.profileImageBytes != null && request.profileImageBytes!.isNotEmpty;
     final http.Response r;
@@ -325,12 +293,7 @@ class RestLabUserApi implements LabUserApi {
       r = await http.post(
         Uri.parse('$_base/api/users'),
         headers: _jsonHeaders(withAuth: false),
-        body: jsonEncode(fields.map((k, v) {
-          if (k == 'latitude' || k == 'longitude') {
-            return MapEntry(k, double.tryParse(v) ?? 0);
-          }
-          return MapEntry(k, v);
-        })),
+        body: jsonEncode(fields),
       );
     }
     if (r.statusCode >= 400) _throwFromResponse(r);
@@ -352,7 +315,7 @@ class RestLabUserApi implements LabUserApi {
       Uri.parse('$_base/api/auth/login/user'),
       headers: _jsonHeaders(withAuth: false),
       body: jsonEncode({
-        'email': request.email.trim().toLowerCase(),
+        'phone': request.phone.trim(),
         'password': request.password,
         'remember': request.remember,
       }),
@@ -366,50 +329,11 @@ class RestLabUserApi implements LabUserApi {
     return getCurrentUser();
   }
 
-  String _messageFromJsonMap(Map<String, dynamic> map, String fallback) {
-    final m = map['message'] ?? map['error'];
-    if (m != null && '$m'.trim().isNotEmpty) return '$m'.trim();
-    return fallback;
-  }
-
-  @override
-  Future<String> requestPasswordReset(String email) async {
-    final r = await http.post(
-      Uri.parse('$_base/api/auth/forgot-password'),
-      headers: _jsonHeaders(withAuth: false),
-      body: jsonEncode({'email': email.trim().toLowerCase()}),
-    );
-    if (r.statusCode >= 400) _throwFromResponse(r);
-    final map = _asObj(jsonDecode(r.body));
-    return _messageFromJsonMap(map, 'A verification code has been sent to your email.');
-  }
-
-  @override
-  Future<String> resetPasswordWithCode({
-    required String email,
-    required String code,
-    required String newPassword,
-  }) async {
-    final r = await http.post(
-      Uri.parse('$_base/api/auth/reset-password'),
-      headers: _jsonHeaders(withAuth: false),
-      body: jsonEncode({
-        'email': email.trim().toLowerCase(),
-        'code': code.trim(),
-        'new_password': newPassword,
-      }),
-    );
-    if (r.statusCode >= 400) _throwFromResponse(r);
-    final map = _asObj(jsonDecode(r.body));
-    return _messageFromJsonMap(map, 'Password has been reset successfully.');
-  }
-
   @override
   Future<AppUser> updateProfile({
     required String userId,
     String? name,
     String? phone,
-    String? email,
     String? address,
     double? latitude,
     double? longitude,
@@ -417,7 +341,6 @@ class RestLabUserApi implements LabUserApi {
     final body = <String, dynamic>{};
     if (name != null) body['name'] = name;
     if (phone != null) body['phone'] = phone;
-    if (email != null) body['email'] = email;
     if (address != null) body['address'] = address;
     if (latitude != null) body['latitude'] = latitude;
     if (longitude != null) body['longitude'] = longitude;
@@ -486,12 +409,13 @@ class RestLabUserApi implements LabUserApi {
     if (list is! List) return const [];
     return list.map((e) {
       final m = _asObj(e);
+      final discountRaw = _gv(m, 'discount_percent') ?? _gv(m, 'discountPercent');
       return LabTestPick(
         id: '${_gv(m, 'id')}',
         name: '${_gv(m, 'test_name') ?? _gv(m, 'testName') ?? 'Test'}',
         code: '${_gv(m, 'test_code') ?? _gv(m, 'testCode') ?? ''}',
         basePriceMmk: _asInt(_gv(m, 'base_price_mmk') ?? _gv(m, 'basePriceMmk')),
-        discounts: _parseDiscountList(m['discounts']),
+        discountPercent: discountRaw == null ? null : _asInt(discountRaw),
       );
     }).toList();
   }

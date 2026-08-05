@@ -61,13 +61,17 @@ export function LabTestCatalogPage() {
 
   useEffect(() => {
     if (!hasApi) {
-      setLoading(false)
-      setRows([])
+      queueMicrotask(() => {
+        setLoading(false)
+        setRows([])
+      })
       return
     }
     let cancelled = false
-    setLoading(true)
-    setLoadError(null)
+    queueMicrotask(() => {
+      setLoading(true)
+      setLoadError(null)
+    })
     void (async () => {
       try {
         const query: FetchLabTestsQueryParams = {}
@@ -219,12 +223,8 @@ export function LabTestCatalogPage() {
                 <th>{t('labTests.table.name')}</th>
                 <th>{t('labTests.table.code')}</th>
                 <th className="col-num">{t('labTests.table.base')}</th>
-                <th className="col-num" title={t('labTests.table.discountTitle')}>
-                  {t('labTests.table.discount')}
-                </th>
-                <th className="col-num" title={t('labTests.table.afterTitle')}>
-                  {t('labTests.table.after')}
-                </th>
+                <th className="col-num">{t('labTests.table.discountPercent')}</th>
+                <th className="col-num">{t('labTests.table.discountedPrice')}</th>
                 <th>{t('labTests.table.status')}</th>
                 <th>{t('labTests.table.category')}</th>
                 <th className="action-col">{t('labTests.table.actions')}</th>
@@ -262,8 +262,12 @@ export function LabTestCatalogPage() {
                       <code>{r.test_code}</code>
                     </td>
                     <td className="col-num">{r.base_price_mmk.toLocaleString()}</td>
-                    <td className="col-num">{r.discount_percent}%</td>
-                    <td className="col-num">{r.discounted_price_mmk.toLocaleString()}</td>
+                    <td className="col-num">
+                      {r.discount_percent != null ? `${r.discount_percent}%` : '—'}
+                    </td>
+                    <td className="col-num">
+                      {r.discounted_price_mmk != null ? r.discounted_price_mmk.toLocaleString() : '—'}
+                    </td>
                     <td>
                       {r.is_active ? (
                         <span className="badge badge--success">{t('common.active')}</span>

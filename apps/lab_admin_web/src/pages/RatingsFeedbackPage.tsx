@@ -20,7 +20,6 @@ import {
   type RatingListRow,
 } from '../services/ratingService'
 import { orderPriorityLabel, orderStatusLabel } from '../utils/orderLabels'
-import { roleLabel } from '../utils/roleLabels'
 import '../components/common/ui.css'
 
 const RATING_SCORE_FILTER_VALUES: ('' | '1' | '2' | '3' | '4' | '5')[] = ['', '5', '4', '3', '2', '1']
@@ -94,13 +93,17 @@ export function RatingsFeedbackPage() {
 
   useEffect(() => {
     if (!hasApi) {
-      setLoading(false)
-      setRows([])
+      queueMicrotask(() => {
+        setLoading(false)
+        setRows([])
+      })
       return
     }
     let cancelled = false
-    setLoading(true)
-    setLoadError(null)
+    queueMicrotask(() => {
+      setLoading(true)
+      setLoadError(null)
+    })
     void (async () => {
       try {
         const list = await fetchAllRatings()
@@ -143,7 +146,6 @@ export function RatingsFeedbackPage() {
         r.patient_name,
         r.patient_age != null ? String(r.patient_age) : '',
         r.user_name,
-        r.user_role,
         formatRatingContact(r),
         formatShortOrderId(r.order_id),
         r.order_id,
@@ -279,9 +281,6 @@ export function RatingsFeedbackPage() {
                   </td>
                   <td>
                     <span>{r.user_name?.trim() || t('common.none')}</span>
-                    <span style={{ display: 'block', fontSize: '0.78rem', color: 'var(--muted)' }}>
-                      {roleLabel(r.user_role)}
-                    </span>
                   </td>
                   <td>{formatRatingContact(r)}</td>
                   <td>

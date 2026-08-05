@@ -7,7 +7,7 @@ import {
   useState,
   type ReactNode,
 } from 'react'
-import type { EndUserRole, SessionRole } from '../model/types'
+import type { SessionRole } from '../model/types'
 import {
   clearSession,
   getStoredAccessToken,
@@ -37,15 +37,8 @@ function isSessionRole(r: string): r is SessionRole {
     r === 'lab_technician' ||
     r === 'reception' ||
     r === 'manager' ||
-    r === 'collector' ||
-    r === 'clinic' ||
-    r === 'doctor' ||
-    r === 'patient'
+    r === 'collector'
   )
-}
-
-function isEndUserRole(r: string): r is EndUserRole {
-  return r === 'clinic' || r === 'doctor' || r === 'patient' || r === 'phlebotomist'
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -67,8 +60,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       try {
         const me = await fetchSessionAccount()
-        // Old sessions used `POST /api/auth/login/user`; admin web is staff-only — drop end-user JWTs.
-        if (isEndUserRole(me.role)) {
+        // Old sessions used `POST /api/auth/login/user`; admin web is staff-only — drop end-user sessions.
+        if (me.type !== 'staff') {
           clearSession()
           if (!cancelled) {
             setAccount(null)
@@ -122,7 +115,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const token = getStoredAccessToken()
     if (!token) return
     const me = await fetchSessionAccount()
-    if (isEndUserRole(me.role)) {
+    if (me.type !== 'staff') {
       clearSession()
       setAccount(null)
       setSignedIn(false)

@@ -11,7 +11,6 @@ import '../models/lab_test_pick.dart';
 import '../models/loyalty.dart';
 import '../models/rating.dart';
 import '../models/user_report.dart';
-import '../models/user_role.dart';
 import 'lab_user_api.dart';
 import 'lab_report_pdf_service.dart';
 import 'auth_session_storage.dart';
@@ -72,7 +71,7 @@ class SessionController extends ChangeNotifier {
   String get homeRoute => _user == null ? '/login' : '/home';
 
   Future<void> login({
-    required String email,
+    required String phone,
     required String password,
     bool remember = false,
   }) async {
@@ -80,7 +79,7 @@ class SessionController extends ChangeNotifier {
     try {
       _user = await _api.login(
         LoginRequest(
-          email: email,
+          phone: phone,
           password: password,
           remember: remember,
         ),
@@ -90,7 +89,7 @@ class SessionController extends ChangeNotifier {
         await AuthSessionStorage.saveSession(
           token: token,
           remember: remember,
-          email: email,
+          phone: phone,
         );
       }
       await _hydrateUserData();
@@ -127,25 +126,10 @@ class SessionController extends ChangeNotifier {
 
   /// Creates the account on the server only. Caller should navigate to `/login`;
   /// the user is not signed in after this returns.
-  Future<String> requestPasswordReset(String email) => _api.requestPasswordReset(email);
-
-  Future<String> resetPasswordWithCode({
-    required String email,
-    required String code,
-    required String newPassword,
-  }) =>
-      _api.resetPasswordWithCode(email: email, code: code, newPassword: newPassword);
-
   Future<void> register({
     required String name,
     required String phone,
-    required String email,
     required String password,
-    required UserRole role,
-    String address = '',
-    String licenseNumber = '',
-    required double latitude,
-    required double longitude,
     List<int>? profileImageBytes,
     String? profileImageFilename,
   }) async {
@@ -155,13 +139,7 @@ class SessionController extends ChangeNotifier {
         RegisterRequest(
           name: name,
           phone: phone,
-          email: email,
           password: password,
-          role: role,
-          address: address,
-          licenseNumber: licenseNumber,
-          latitude: latitude,
-          longitude: longitude,
           profileImageBytes: profileImageBytes,
           profileImageFilename: profileImageFilename,
         ),
@@ -211,7 +189,6 @@ class SessionController extends ChangeNotifier {
   Future<void> updateProfile({
     String? name,
     String? phone,
-    String? email,
     String? address,
     double? latitude,
     double? longitude,
@@ -222,7 +199,6 @@ class SessionController extends ChangeNotifier {
       userId: u.id,
       name: name,
       phone: phone,
-      email: email,
       address: address,
       latitude: latitude,
       longitude: longitude,

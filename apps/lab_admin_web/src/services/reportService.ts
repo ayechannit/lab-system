@@ -32,12 +32,6 @@ export type TestCategoryRow = {
   total_revenue: number
 }
 
-export type RevenueByChannelRow = {
-  role: string
-  revenue: number
-  order_count: number
-}
-
 export type TatReportRow = {
   order_id: string
   patient_name: string
@@ -86,9 +80,7 @@ export type DiscountImpact = {
   effective_discount_percent: number
 }
 
-export type DiscountImpactFilters = ReportDateFilters & {
-  role?: 'clinic' | 'doctor' | 'patient'
-}
+export type DiscountImpactFilters = ReportDateFilters
 
 export type TatReportFilters = ReportDateFilters & {
   priority?: 'urgent' | 'elective'
@@ -245,18 +237,6 @@ export async function fetchTestCategoryDistribution(
   }))
 }
 
-export async function fetchRevenueByChannel(filters?: ReportDateFilters): Promise<RevenueByChannelRow[]> {
-  const data = await unwrapReport<Record<string, unknown>[]>(
-    await apiFetch(`/api/reports/revenue-by-channel${toQuery(filters)}`),
-  )
-  if (!Array.isArray(data)) return []
-  return data.map((raw) => ({
-    role: String(raw.role ?? 'unknown'),
-    revenue: num(raw.revenue),
-    order_count: num(raw.order_count),
-  }))
-}
-
 export async function fetchTurnaroundTimeReport(filters?: TatReportFilters): Promise<TatReportRow[]> {
   const data = await unwrapReport<Record<string, unknown>[]>(
     await apiFetch(
@@ -344,7 +324,6 @@ export async function fetchDiscountImpactAnalysis(
       `/api/reports/discount-impact${buildQuery({
         startDate: filters?.startDate,
         endDate: filters?.endDate,
-        role: filters?.role,
       })}`,
     ),
   )

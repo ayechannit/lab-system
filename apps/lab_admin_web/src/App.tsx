@@ -13,6 +13,7 @@ import { ServiceGeofencesManagementPage } from './pages/ServiceGeofencesManageme
 import { LabTestCatalogPage } from './pages/LabTestCatalogPage'
 import { LabResultManagementPage } from './pages/LabResultManagementPage'
 import { LoyaltyPointsManagementPage } from './pages/LoyaltyPointsManagementPage'
+import { MembershipTiersManagementPage } from './pages/MembershipTiersManagementPage'
 import { OrderManagementPage } from './pages/OrderManagementPage'
 import { RatingsFeedbackPage } from './pages/RatingsFeedbackPage'
 import { ReportsAnalyticsPage } from './pages/ReportsAnalyticsPage'
@@ -93,11 +94,11 @@ export default function App() {
             <Route element={<RequireModule moduleKey="ratings" />}>
               <Route path="ratings" element={<RatingsFeedbackPage />} />
             </Route>
-            <Route element={<RequireModule moduleKey="discounts" />}>
-              <Route path="discounts" element={<DiscountManagementPage />} />
-            </Route>
             <Route element={<RequireModule moduleKey="referral-fees" />}>
               <Route path="referral-fees" element={<ReferralFeesManagementPage />} />
+            </Route>
+            <Route element={<RequireModule moduleKey="discounts" />}>
+              <Route path="discounts" element={<DiscountManagementPage />} />
             </Route>
             <Route element={<RequireModule moduleKey="service-geofences" />}>
               <Route path="service-geofences" element={<ServiceGeofencesManagementPage />} />
@@ -107,6 +108,9 @@ export default function App() {
             </Route>
             <Route element={<RequireModule moduleKey="loyalty" />}>
               <Route path="loyalty" element={<LoyaltyPointsManagementPage />} />
+            </Route>
+            <Route element={<RequireModule moduleKey="membership-tiers" />}>
+              <Route path="membership-tiers" element={<MembershipTiersManagementPage />} />
             </Route>
             <Route element={<RequireModule moduleKey="reports" />}>
               <Route path="reports" element={<ReportsAnalyticsPage />} />

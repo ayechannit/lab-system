@@ -52,6 +52,12 @@ const nav: NavItem[] = [
   { to: '/ratings', labelKey: 'nav.ratings', icon: 'reviews', moduleKey: 'ratings' },
   { to: '/discounts', labelKey: 'nav.discounts', icon: 'sell', moduleKey: 'discounts' },
   { to: '/referral-fees', labelKey: 'nav.referralFees', icon: 'payments', moduleKey: 'referral-fees' },
+  {
+    to: '/membership-tiers',
+    labelKey: 'nav.membershipTiers',
+    icon: 'workspace_premium',
+    moduleKey: 'membership-tiers',
+  },
   { to: '/service-geofences', labelKey: 'nav.serviceGeofences', icon: 'map', moduleKey: 'service-geofences' },
   { to: '/advertisements', labelKey: 'nav.advertisements', icon: 'campaign', moduleKey: 'advertisements' },
   { to: '/loyalty', labelKey: 'nav.loyalty', icon: 'card_giftcard', moduleKey: 'loyalty' },

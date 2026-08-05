@@ -54,6 +54,7 @@
     "endDate": "End date",
     "record": "Record",
     "user": "User",
+    "tier": "Tier",
     "allRoles": "All roles",
     "allCustomers": "All customers",
     "activeOnly": "Active only",
@@ -143,6 +144,7 @@
     "ratings": "Ratings & feedback",
     "discounts": "Discounts",
     "referralFees": "Referral fees",
+    "membershipTiers": "Membership tiers",
     "serviceGeofences": "Service geofences",
     "advertisements": "Advertisements",
     "loyalty": "Loyalty points",
@@ -156,10 +158,6 @@
     "reception": "Reception",
     "manager": "Manager",
     "collector": "Collector",
-    "clinic": "Clinic",
-    "doctor": "Doctor",
-    "patient": "Patient",
-    "phlebotomist": "Phlebotomist",
     "all": "All"
   },
   "theme": {
@@ -228,11 +226,11 @@
   "pages": {
     "orders": {
       "title": "Order management",
-      "description": "Review orders from the mobile app: confirm prescription, assign lab tests with role-based discounts, set collection schedule, then advance status through delivery."
+      "description": "Review orders from the mobile app: confirm prescription, assign lab tests, set collection schedule, then advance status through delivery."
     },
     "labTests": {
       "title": "Test catalog",
-      "description": "Browse and edit the tests you offer: names, codes, prices, and whether each test is available. Discount columns show example prices when a discount applies; set those rules on the Discounts page."
+      "description": "Browse and edit the tests you offer: names, codes, prices, and whether each test is available."
     },
     "staff": {
       "title": "Lab staff",
@@ -256,12 +254,16 @@
       "description": "Review patient and partner ratings with order context — patient, tests, status, and contact details."
     },
     "discounts": {
-      "title": "Test discounts",
-      "description": "Choose how much each type of customer saves on specific tests. Changes here affect the prices people see when discounts apply."
+      "title": "Discounts",
+      "description": "Configure a flat discount percentage for each lab test, with an optional active date range."
     },
     "referralFees": {
       "title": "Referral fees",
-      "description": "Configure referral commission percentages per lab test and referrer role (clinic, doctor, patient, phlebotomist)."
+      "description": "Configure a flat referral commission percentage for each lab test."
+    },
+    "membershipTiers": {
+      "title": "Membership tiers",
+      "description": "Classify customers into spend-based tiers (e.g. Normal, Silver, Gold), each with a discount that stacks on top of a test's own discount."
     },
     "serviceGeofences": {
       "title": "Service geofences",
@@ -508,7 +510,6 @@
       "title": "Create order",
       "orderingUser": "Ordering user",
       "noUsers": "No users available",
-      "discountHint": "Per-test discounts use this user's role (same rules as mobile / Assign tests).",
       "testsOnOrder": "Tests on this order",
       "catalogManyHint": "Many tests in the catalog. Open Test and use the search box — the list shows at most {{limit}} matches at a time.",
       "testPickerHint": "Open Test for search and checkboxes (multi-select). Selected lines also appear in the table below — use Delete there if a test is not in the current search results.",
@@ -517,11 +518,9 @@
       "age": "Age",
       "description": "Description",
       "originalTotal": "Original total (MMK)",
-      "blendedDiscount": "Blended discount %",
       "finalTotal": "Final total (MMK)",
       "pricingSummary": "Order pricing",
       "testsSubtotal": "Tests",
-      "testsDiscountHint": "Original {{original}} · {{percent}}% off",
       "serviceFee": "Service fee (MMK)",
       "serviceFeeShort": "Service fee",
       "serviceZone": "Service zone",
@@ -546,7 +545,7 @@
     "edit": {
       "title": "Update order",
       "saveChanges": "Save changes",
-      "discountRoleHint": "Open Test for search and checkboxes (multi-select). Discounts follow the ordering user's role ({{role}})."
+      "testPickerHint": "Open Test for search and checkboxes (multi-select)."
     },
     "detail": {
       "title": "Order detail",
@@ -563,6 +562,7 @@
       "description": "Description",
       "reportDelivery": "Report delivery",
       "originalPrice": "Original price",
+      "discountPercent": "Discount %",
       "finalPrice": "Final price",
       "paymentStatus": "Payment status",
       "payments": "Payments",
@@ -570,6 +570,7 @@
       "method": "Method",
       "reference": "Reference",
       "paidAt": "Paid at",
+      "pointsRedeemedLine": "Points redeemed: {{points}} ({{value}} {{currency}})",
       "schedule": "Schedule",
       "collectingPerson": "Collecting person",
       "collectionTime": "Collection time",
@@ -611,14 +612,17 @@
       "previewPaid": "Total paid",
       "previewLeft": "Remaining",
       "record": "Record payment",
-      "recording": "Recording…"
+      "recording": "Recording…",
+      "pointsAvailable": "Redeem points ({{points}} available)",
+      "pointsUnit": "pts",
+      "pointsValueHint": "= {{value}} {{currency}}"
     },
     "assign": {
       "title": "Add tests to order",
       "ordering": "Ordering:",
       "clinicalNotes": "Clinical notes",
       "noClinicalNotes": "None provided for this order.",
-      "hint": "Choose tests from the catalog (multi-select). Open Test and use the search box there. Discounts follow the ordering user's role ({{role}}). Up to {{limit}} matches per search.",
+      "hint": "Choose tests from the catalog (multi-select). Open Test and use the search box there. Up to {{limit}} matches per search.",
       "catalogWarn": "Large catalog: open Test and search — the list shows at most {{limit}} matches at a time.",
       "submit": "Add selected tests",
       "submitting": "Adding…"
@@ -632,10 +636,7 @@
       "selected_other": "{{count}} tests selected",
       "showingMatches": "Showing {{shown}} of {{total}} matches — narrow your search.",
       "noMatches": "No matches — try different keywords.",
-      "noDiscount": "No discount",
-      "percentOff": "{{pct}}% off",
       "done": "Done",
-      "discount": "Discount",
       "finalMmk": "Final (MMK)"
     },
     "delete": {
@@ -667,10 +668,8 @@
       "name": "Name",
       "code": "Code",
       "base": "Base (MMK)",
-      "discount": "Disc. %",
-      "discountTitle": "Highest discount_percent among this test's configured role discounts",
-      "after": "After (MMK)",
-      "afterTitle": "Base price after that discount",
+      "discountPercent": "Discount (%)",
+      "discountedPrice": "Discounted price (MMK)",
       "status": "Status",
       "category": "Category",
       "actions": "Actions"
@@ -706,7 +705,7 @@
       "descriptionPlaceholder": "What the panel includes, fasting notes, etc.",
       "activeTitle": "Test is active",
       "inactiveTitle": "Test is inactive",
-      "activeDesc": "Inactive tests stay in the catalog for admin but are hidden from published role pricing.",
+      "activeDesc": "Inactive tests stay in the catalog for admin but are hidden from the mobile app.",
       "testCode": "Test code (optional)",
       "testCodePlaceholder": "Auto from name if empty",
       "category": "Category (optional)",
@@ -810,30 +809,21 @@
   "users": {
     "loadFailed": "Failed to load users",
     "filters": {
-      "ariaLabel": "User filters",
-      "approvalPending": "Pending approval",
-      "approvalApproved": "Approved"
+      "ariaLabel": "User filters"
     },
     "listTitle": "User directory",
     "actions": {
       "add": "Add user",
-      "edit": "Edit",
-      "approve": "Approve account"
+      "edit": "Edit"
     },
     "table": {
       "name": "Name",
-      "email": "Email",
       "phone": "Phone",
-      "role": "Role",
       "status": "Status",
       "address": "Address",
       "coords": "Lat / Lng",
       "points": "Points",
       "actions": "Actions"
-    },
-    "status": {
-      "approved": "Approved",
-      "pending": "Pending"
     },
     "loading": "Loading users",
     "empty": "No users yet.",
@@ -846,23 +836,16 @@
       "deleted": "Deleted user \"{{name}}\".",
       "deleteFailed": "Delete failed",
       "updated": "User updated.",
-      "created": "User created.",
-      "approved": "Approved \"{{name}}\". They can sign in on the mobile app now.",
-      "approveFailed": "Approve failed"
+      "created": "User created."
     },
     "form": {
       "createTitle": "Add user",
       "editTitle": "Edit user",
       "profile": "Profile",
       "name": "Name",
-      "namePlaceholder": "Clinic, doctor, or patient name",
-      "email": "Email",
-      "emailPlaceholder": "user@example.com",
+      "namePlaceholder": "Full name",
       "phone": "Phone",
       "phonePlaceholder": "+95 …",
-      "role": "Role",
-      "licenseNumber": "License / registration number",
-      "licenseNumberPlaceholder": "Medical or professional license ID",
       "totalPoints": "Total points",
       "address": "Address",
       "addressPlaceholder": "Street, city, etc.",
@@ -873,11 +856,9 @@
       "createSubmit": "Create user",
       "saveChanges": "Save changes",
       "errorName": "Enter a name.",
-      "errorEmail": "Enter a valid email.",
       "errorPhone": "Enter a phone number.",
       "errorPhoneInvalid": "Use + and digits only (e.g. +959…).",
-      "errorLicenseRequired": "Enter a license or registration number for this role.",
-      "errorEmailTaken": "That email is already registered.",
+      "errorPhoneTaken": "That phone number is already registered.",
       "errorPasswordRequired": "Enter an initial password.",
       "errorPasswordMin": "Password must be at least {{count}} characters.",
       "errorNewPasswordMin": "New password must be at least {{count}} characters.",
@@ -950,32 +931,32 @@
       "searchDetail": "name or code"
     },
     "add": "Add discount",
-    "hint": "Rules apply to active catalog tests only. Optional start/end dates limit when a discount applies; leave empty for always-on.",
+    "hint": "Rules apply to active catalog tests only. Discounted price (MMK) = base price × (1 − discount %).",
     "table": {
-      "afterDiscount": "After discount",
-      "discountPercent": "Discount (%)"
+      "discountPercent": "Discount (%)",
+      "afterDiscountPrice": "After discount (MMK)"
     },
     "loading": "Loading discounts",
     "empty": {
       "title": "No discount rules yet",
-      "body": "Add a rule for each test and customer type. The Lab tests list shows base price and example prices when discounts apply."
+      "body": "Set a discount percentage for each test. The after-discount price is calculated from the test base price."
     },
-    "noMatch": "No discounts match these filters. Clear filters or try a different test or role.",
+    "noMatch": "No discounts match these filters. Clear filters or try a different test.",
     "delete": {
       "title": "Delete discount?",
-      "message": "Delete this {{role}} discount for \"{{test}}\"?",
+      "message": "Delete the discount for \"{{test}}\"?",
       "success": "Discount rule deleted."
     },
     "toast": {
-      "created": "Discount rule created.",
-      "updated": "Discount rule updated."
+      "created": "Discount created.",
+      "updated": "Discount updated."
     },
     "form": {
-      "createTitle": "Add test discount",
-      "editTitle": "Edit test discount",
+      "createTitle": "Add discount",
+      "editTitle": "Edit discount",
       "labTest": "Lab test",
       "labTests": "Lab tests",
-      "labTestsHint": "Select one or more tests. The same roles, discount %, and active setting apply to each combination.",
+      "labTestsHint": "Select one or more tests to apply this discount to. The same discount % and active setting apply to each one.",
       "noTestsInCatalog": "No tests in catalog.",
       "searchTests": "Search tests",
       "searchPlaceholder": "Search by name or code…",
@@ -988,36 +969,24 @@
       "selectTestAria": "Select {{name}}",
       "selectAll": "Select all",
       "clear": "Clear",
-      "rolesHint": "Select one or more roles. \"All roles\" uses one rule for clinic, doctor, and patient.",
-      "roles": "Roles",
-      "chooseRoles": "Choose roles…",
-      "allRolesSamePercent": "All roles (same %)",
-      "oneRoleSelected": "1 role selected",
-      "clinicDoctorPatient": "Clinic, doctor, patient",
-      "rolesSelected": "{{count}} roles selected",
-      "allRolesOption": "All roles (same %)",
       "discountPercent": "Discount %",
-      "previewInline": "Base {{base}} MMK → after discount {{after}} MMK",
-      "previewTitle": "After discount (preview)",
-      "previewRow": "{{base}} → {{after}} MMK",
-      "startOptional": "Start (optional)",
-      "endOptional": "End (optional)",
-      "startPlaceholder": "Start date & time",
-      "endPlaceholder": "End date & time",
-      "datesHint": "Leave both dates empty for an always-on discount. Outside the range the rule is kept but does not apply.",
-      "activeTitle": "Discount is active",
-      "inactiveTitle": "Discount is inactive",
-      "activeDesc": "Inactive rows are kept but do not apply to role-based pricing until turned on again.",
+      "startDate": "Start date (optional)",
+      "endDate": "End date (optional)",
+      "previewInline": "Base {{base}} MMK → after discount {{price}} MMK",
+      "previewTitle": "After discount price (preview)",
+      "previewRow": "{{base}} base → {{price}} MMK",
+      "activeTitle": "Rule is active",
+      "inactiveTitle": "Rule is inactive",
+      "activeDesc": "Inactive rows are kept but do not apply until turned on again.",
       "errorSelectTest": "Select at least one lab test.",
-      "errorSelectRole": "Select at least one role.",
-      "errorDiscountRange": "Enter a discount between 0 and 100.",
-      "errorEndBeforeStart": "End date must be on or after the start date.",
+      "errorPercentRange": "Enter a discount between 0 and 100%.",
+      "errorDateRange": "Start date must be before end date.",
       "requestFailed": "Request failed",
-      "creating": "Creating discount…",
-      "saving": "Saving discount…",
-      "createDiscount": "Create discount",
-      "createDiscounts": "Create {{count}} discounts",
-      "saveDiscount": "Save discount"
+      "creating": "Creating…",
+      "saving": "Saving…",
+      "createRule": "Create rule",
+      "createRules": "Create {{count}} rules",
+      "saveRule": "Save rule"
     }
   },
   "referralFees": {
@@ -1035,12 +1004,12 @@
     "loading": "Loading referral fees",
     "empty": {
       "title": "No referral fee rules yet",
-      "body": "Set a referral percentage for each test and referrer role. The fee amount is calculated from the test base price."
+      "body": "Set a referral percentage for each test. The fee amount is calculated from the test base price."
     },
-    "noMatch": "No referral fees match these filters. Clear filters or try a different test or role.",
+    "noMatch": "No referral fees match these filters. Clear filters or try a different test.",
     "delete": {
       "title": "Delete referral fee?",
-      "message": "Delete this {{role}} referral fee for \"{{test}}\"?",
+      "message": "Delete the referral fee for \"{{test}}\"?",
       "success": "Referral fee rule deleted."
     },
     "toast": {
@@ -1051,9 +1020,21 @@
       "createTitle": "Add referral fee",
       "editTitle": "Edit referral fee",
       "labTest": "Lab test",
-      "labTestsHint": "Select one or more tests. The same roles, referral %, and active setting apply to each combination.",
+      "labTests": "Lab tests",
+      "labTestsHint": "Select one or more tests. The same referral % and active setting apply to each one.",
+      "noTestsInCatalog": "No tests in catalog.",
+      "searchTests": "Search tests",
+      "searchPlaceholder": "Search by name or code…",
+      "selectedCount": "{{count}} selected",
+      "showingMatches": "Showing {{shown}} of {{total}} matches — narrow your search.",
+      "selectColumn": "Select",
+      "clearVisibleSelection": "Clear selection for visible tests",
+      "selectAllVisible": "Select all visible tests",
+      "noSearchMatch": "No tests match your search.",
+      "selectTestAria": "Select {{name}}",
+      "selectAll": "Select all",
+      "clear": "Clear",
       "referralPercent": "Referral fee %",
-      "rolesHint": "Select one or more roles. \"All roles\" applies the same % to clinic, doctor, patient, and phlebotomist.",
       "previewInline": "Base {{base}} MMK → referral fee {{fee}} MMK",
       "previewTitle": "Referral fee (preview)",
       "previewRow": "{{base}} base → {{fee}} MMK",
@@ -1061,7 +1042,6 @@
       "inactiveTitle": "Rule is inactive",
       "activeDesc": "Inactive rows are kept but do not apply until turned on again.",
       "errorSelectTest": "Select at least one lab test.",
-      "errorSelectRole": "Select at least one role.",
       "errorPercentRange": "Enter a referral fee between 0 and 100%.",
       "requestFailed": "Request failed",
       "creating": "Creating…",
@@ -1069,6 +1049,45 @@
       "createRule": "Create rule",
       "createRules": "Create {{count}} rules",
       "saveRule": "Save rule"
+    }
+  },
+  "membershipTiers": {
+    "title": "Membership tiers",
+    "loadFailed": "Failed to load membership tiers",
+    "loading": "Loading membership tiers",
+    "noApi": "Connect the API to manage membership tiers.",
+    "add": "Add tier",
+    "hint": "Customers are classified into the highest tier they qualify for by lifetime spend. Each tier's discount stacks additively with a test's own discount, clamped at 100% combined.",
+    "table": {
+      "minSpend": "Min spend (MMK)",
+      "discountPercent": "Discount %"
+    },
+    "empty": "No membership tiers yet. Add one to start classifying customers by spend.",
+    "delete": {
+      "title": "Delete membership tier?",
+      "message": "Delete \"{{name}}\"? Customers who qualified for this tier will fall back to the next eligible tier.",
+      "success": "Membership tier deleted."
+    },
+    "toast": {
+      "created": "Membership tier created.",
+      "updated": "Membership tier updated."
+    },
+    "form": {
+      "createTitle": "Add membership tier",
+      "editTitle": "Edit membership tier",
+      "tierName": "Tier name",
+      "minSpendMmk": "Minimum spend (MMK)",
+      "discountPercent": "Discount percent",
+      "activeTitle": "Tier is active",
+      "inactiveTitle": "Tier is inactive",
+      "activeDesc": "When inactive, the tier stays in the list but customers can no longer qualify for it.",
+      "errorName": "Enter a name for this tier (e.g. Silver).",
+      "errorMinSpend": "Minimum spend must be 0 or more.",
+      "errorDiscount": "Discount percent must be between 0 and 100.",
+      "requestFailed": "Request failed",
+      "saving": "Saving…",
+      "saveChanges": "Save changes",
+      "createTier": "Create tier"
     }
   },
   "serviceGeofences": {
@@ -1229,6 +1248,8 @@
     "tabsAria": "Loyalty sections",
     "tabRules": "Earn rules",
     "tabUsers": "Points by user",
+    "tabRedeem": "Redemption rate",
+    "tabRecords": "Redemption records",
     "rulesTitle": "Earn rules (MMK → points)",
     "rulesHint": "Each rule defines how many points are granted when spend reaches the MMK threshold. Optional start and end dates limit seasonal campaigns. Inactive rules are listed here but do not award points until you turn them on again.",
     "addRule": "Add rule",
@@ -1236,7 +1257,7 @@
     "usersHint": "Live total_points from each account for support and reconciliation.",
     "filters": {
       "usersAria": "User points search",
-      "searchDetail": "name, email, role"
+      "searchDetail": "name, phone"
     },
     "table": {
       "mmkPerBatch": "MMK per batch",
@@ -1288,6 +1309,42 @@
       "saveChanges": "Save changes",
       "createRule": "Create rule",
       "defaultTierName": "Default tier"
+    },
+    "redeem": {
+      "title": "Point redemption rate",
+      "description": "Set the global rate at which customers can redeem loyalty points against what they owe on an order. This applies to all customers.",
+      "currentRateLabel": "Current rate",
+      "currentRateValue": "1 point = {{amount}} {{currency}}",
+      "inputLabel": "MMK per point",
+      "save": "Save rate",
+      "toastSuccess": "Redemption rate updated.",
+      "toastError": "Could not update the redemption rate",
+      "unsetHint": "Not configured yet — staff cannot redeem points until you set a rate above 0.",
+      "noApi": "Connect the API to manage the redemption rate.",
+      "loading": "Loading redemption rate",
+      "errorInvalid": "Enter a rate of 0 or more."
+    },
+    "records": {
+      "title": "Point transaction records",
+      "description": "Every earn, redeem, and manual adjustment across all customers, newest first.",
+      "filtersAria": "Point transaction filters",
+      "searchDetail": "name, phone, description",
+      "typeLabel": "Type",
+      "typeAll": "All types",
+      "typeEarn": "Earned",
+      "typeRedeem": "Redeemed",
+      "typeAdjustment": "Adjustment",
+      "table": {
+        "date": "Date",
+        "type": "Type",
+        "points": "Points",
+        "description": "Description"
+      },
+      "loading": "Loading point transactions",
+      "noApi": "Connect the API to view point transaction records.",
+      "empty": "No point transactions yet.",
+      "noMatch": "No transactions match your search.",
+      "loadFailed": "Failed to load point transactions"
     }
   },
   "systemSettings": {
@@ -1358,7 +1415,6 @@
     "charts": {
       "dailyOrders": "Daily orders (last {{days}} days)",
       "monthlyRevenue": "Monthly revenue (MMK)",
-      "revenueByChannel": "Revenue by channel",
       "testsByCategory": "Tests by category",
       "ratingsBreakdown": "Customer ratings breakdown",
       "revenue": "Revenue",

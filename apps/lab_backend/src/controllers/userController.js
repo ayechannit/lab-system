@@ -55,28 +55,21 @@ const getOrdersByUser = async (req, res) => {
 
 const createUser = async (req, res) => {
   try {
-    const { name, email, phone, role, password, password_hash, address, latitude, longitude, license_number } = req.body;
-    
-    // Basic validation
-    if (!name || !email || !phone || !role || (!password && !password_hash)) {
-      return res.status(400).json({ message: 'name, email, phone, role, and password are required' });
-    }
+    const { name, phone, password, password_hash, address, latitude, longitude } = req.body;
 
-    if ((role === 'doctor' || role === 'clinic' || role === 'phlebotomist') && !license_number) {
-      return res.status(400).json({ message: 'license_number is required for doctor, clinic, and phlebotomist roles' });
+    // Basic validation
+    if (!name || !phone || (!password && !password_hash)) {
+      return res.status(400).json({ message: 'name, phone, and password are required' });
     }
 
     const userData = {
       name,
-      email,
       phone,
-      role,
       password,
       password_hash,
       address,
       latitude: latitude != null && latitude !== '' ? Number(latitude) : latitude,
       longitude: longitude != null && longitude !== '' ? Number(longitude) : longitude,
-      license_number,
     };
     let user = await User.create(userData, req.user?.id);
 
@@ -92,21 +85,10 @@ const createUser = async (req, res) => {
       }
     }
 
-    // Notify staff of new registration if role requires approval
-    if (user && ['doctor', 'clinic', 'phlebotomist'].includes(user.role)) {
-      const NotificationService = require('../services/notificationService');
-      NotificationService.sendToTopic(
-        'staff_notifications',
-        'New Registration Pending Approval',
-        `A new ${user.role} account ("${user.name}") has registered and is pending approval.`,
-        { user_id: user.id, event: 'new_registration' }
-      ).catch(err => console.error('Error sending registration alert to staff:', err.message));
-    }
-
     res.status(201).json(user);
   } catch (error) {
     if (error.message.includes('UNIQUE KEY')) {
-      return res.status(400).json({ message: 'Email already exists' });
+      return res.status(400).json({ message: 'Phone number already exists' });
     }
     res.status(500).json({ error: error.message });
   }
@@ -124,13 +106,11 @@ const updateUser = async (req, res) => {
     const {
       name,
       phone,
-      email,
       address,
       latitude,
       longitude,
       password,
       password_hash,
-      license_number,
     } = req.body;
 
     const merge = (next, prev) => (next !== undefined ? next : prev);
@@ -138,11 +118,9 @@ const updateUser = async (req, res) => {
     const updateData = {
       name: merge(name, existing.name),
       phone: merge(phone, existing.phone),
-      email: merge(email, existing.email),
       address: merge(address, existing.address),
       latitude: merge(latitude, existing.latitude),
       longitude: merge(longitude, existing.longitude),
-      license_number: merge(license_number, existing.license_number),
       password,
       password_hash,
     };
@@ -150,31 +128,6 @@ const updateUser = async (req, res) => {
     const user = await User.update(req.params.id, updateData, req.user?.id);
     if (!user) return res.status(404).json({ message: 'User not found' });
     res.json(user);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-};
-
-const approveUser = async (req, res) => {
-  try {
-    const user = await User.getById(req.params.id);
-    if (!user) return res.status(404).json({ message: 'User not found' });
-
-    const updatedUser = await User.approve(req.params.id, req.user?.id);
-
-    // Notify the user of their account approval
-    if (updatedUser) {
-      const NotificationService = require('../services/notificationService');
-      NotificationService.sendToUser(
-        updatedUser.id,
-        'user',
-        'Account Approved',
-        `Your lab account has been approved by the administrators. You can now log in.`,
-        { user_id: updatedUser.id, event: 'account_approved' }
-      ).catch(err => console.error('Error sending account approval notification:', err.message));
-    }
-
-    res.json({ message: 'User approved successfully', user: updatedUser });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -276,7 +229,6 @@ module.exports = {
   getOrdersByUser,
   createUser,
   updateUser,
-  approveUser,
   deleteUser,
   registerFcmToken,
   uploadProfileImage,

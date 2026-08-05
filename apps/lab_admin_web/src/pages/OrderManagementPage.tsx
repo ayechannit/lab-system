@@ -10,9 +10,8 @@ import { messageFromError, useErrorToast } from '../hooks/usePageNotify'
 import { TableActionMenu } from '../components/common/TableActionMenu'
 import { DEFAULT_TABLE_PAGE_SIZE, TablePagination } from '../components/common/TablePagination'
 import { formatCoordPair, hasUsableCoords, LocationMapPicker } from '../components/users/LocationMapPicker'
-import type { EndUserRole, LabTestCatalogRow, StaffListRow, UserListRow } from '../model/types'
+import type { LabTestCatalogRow, StaffListRow, UserListRow } from '../model/types'
 import { getApiBaseUrl, isApiMode } from '../services/apiBase'
-import { fetchAllDiscounts, type TestDiscountListRow } from '../services/discountService'
 import { fetchLabTestsList } from '../services/labTestCatalogService'
 import {
   createPayment,
@@ -22,6 +21,7 @@ import {
   type ApiPaymentOrderSummary,
   type ApiPaymentStatus,
 } from '../services/paymentService'
+import { fetchPointRedemptionSetting } from '../services/pointRedemptionSettingService'
 import {
   addOrderItems,
   createOrder,
@@ -56,7 +56,6 @@ import {
   paymentDisplayKeyLabel,
   type PaymentDisplayKey,
 } from '../utils/orderLabels'
-import { roleLabel } from '../utils/roleLabels'
 
 const ORDER_STATUS_OPTIONS: ApiOrderStatus[] = [
   'pending',
@@ -265,18 +264,6 @@ function fmtDateTime(raw: string | undefined): string {
   return d.toLocaleString()
 }
 
-/** Role for discounts: prefer value from order detail (join), else admin user list. */
-function resolveOrderingUserRole(
-  order: Pick<ApiOrderDetail, 'user_id' | 'ordering_user_role'>,
-  userMap: Map<string, UserListRow>,
-): EndUserRole | undefined {
-  const uid = order.user_id
-  if (!uid) return undefined
-  const r = order.ordering_user_role?.trim()
-  if (r === 'clinic' || r === 'doctor' || r === 'patient' || r === 'phlebotomist') return r
-  return userMap.get(uid)?.role
-}
-
 function renderOrderingUser(
   userId: string | undefined,
   orderingUserName: string | null | undefined,
@@ -422,6 +409,19 @@ function coordsForOrderApi(lat: number | '', lng: number | ''): { latitude: numb
   return { latitude: la, longitude: ln }
 }
 
+/**
+ * Combines a test's own discount with the buyer's membership-tier discount, additively, clamped
+ * at 100% combined (a test discount and a tier discount could theoretically sum past 100).
+ */
+function combinedDiscountPercent(
+  testDiscountPercent: number | null | undefined,
+  tierDiscountPercent: number | null | undefined,
+): number {
+  const testPct = testDiscountPercent ?? 0
+  const tierPct = tierDiscountPercent ?? 0
+  return Math.min(100, Math.max(0, testPct + tierPct))
+}
+
 /** Max options in test dropdowns per filter (keeps UI fast for large catalogs). */
 const ORDER_TEST_PICKER_LIMIT = 100
 
@@ -444,21 +444,6 @@ function filterTestsForOrderDropdown(
   return { rows: matched.slice(0, limit), totalMatches: matched.length }
 }
 
-/** Active test discount for an end-user role; prefers a specific role row over `all`. */
-function activeDiscountPercentForOrder(
-  discounts: TestDiscountListRow[],
-  testId: string,
-  userRole: EndUserRole | undefined,
-): number {
-  if (!testId || !userRole) return 0
-  const active = discounts.filter((d) => d.test_id === testId && !d.is_deleted && d.is_active)
-  const roleRow = active.find((d) => d.role === userRole)
-  if (roleRow) return Math.max(0, Math.min(100, roleRow.discount_percent))
-  const allRow = active.find((d) => d.role === 'all')
-  if (allRow) return Math.max(0, Math.min(100, allRow.discount_percent))
-  return 0
-}
-
 type OrderTestCheckboxPickerProps = {
   disabled: boolean
   open: boolean
@@ -467,8 +452,6 @@ type OrderTestCheckboxPickerProps = {
   totalMatches: number
   selectedIds: string[]
   onToggle: (testId: string) => void
-  userRole: EndUserRole | undefined
-  testDiscounts: TestDiscountListRow[]
   triggerId: string
   listId: string
   filterValue: string
@@ -485,8 +468,6 @@ function OrderTestCheckboxPicker({
   totalMatches,
   selectedIds,
   onToggle,
-  userRole,
-  testDiscounts,
   triggerId,
   listId,
   filterValue,
@@ -583,10 +564,6 @@ function OrderTestCheckboxPicker({
             </p>
           ) : (
             rows.map((testRow) => {
-              const pct = activeDiscountPercentForOrder(testDiscounts, testRow.id, userRole)
-              const unit = testRow.base_price_mmk
-              const lineFinal =
-                Math.round(unit * (1 - Math.max(0, Math.min(100, pct)) / 100) * 100) / 100
               const checked = selectedSet.has(testRow.id)
               return (
                 <label key={testRow.id} className="order-test-multiselect-row">
@@ -603,13 +580,8 @@ function OrderTestCheckboxPicker({
                       <span className="order-test-multiselect-row__code">{testRow.test_code}</span>
                     </span>
                     <span className="order-test-multiselect-row__foot">
-                      <span className="order-test-multiselect-row__discount">
-                        {pct > 0
-                          ? t('orders.testPicker.percentOff', { pct })
-                          : t('orders.testPicker.noDiscount')}
-                      </span>
                       <span className="order-test-multiselect-row__price">
-                        {lineFinal.toLocaleString()} MMK
+                        {testRow.base_price_mmk.toLocaleString()} MMK
                       </span>
                     </span>
                   </span>
@@ -640,7 +612,6 @@ export function OrderManagementPage() {
   const [rows, setRows] = useState<ApiOrderListRow[]>([])
   const [users, setUsers] = useState<UserListRow[]>([])
   const [tests, setTests] = useState<LabTestCatalogRow[]>([])
-  const [testDiscounts, setTestDiscounts] = useState<TestDiscountListRow[]>([])
   const [loading, setLoading] = useState(hasApi)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [refreshTick, setRefreshTick] = useState(0)
@@ -730,23 +701,27 @@ export function OrderManagementPage() {
 
   useEffect(() => {
     if (!createOpen) {
-      setCreateServiceFee(null)
-      setCreateServiceFeeError(null)
-      setCreateServiceFeeOutOfCoverage(false)
-      setCreateServiceFeeLoading(false)
+      queueMicrotask(() => {
+        setCreateServiceFee(null)
+        setCreateServiceFeeError(null)
+        setCreateServiceFeeOutOfCoverage(false)
+        setCreateServiceFeeLoading(false)
+      })
       return
     }
     if (!hasUsableCoords(createLatitude, createLongitude)) {
-      setCreateServiceFee(null)
-      setCreateServiceFeeError(null)
-      setCreateServiceFeeOutOfCoverage(false)
-      setCreateServiceFeeLoading(false)
+      queueMicrotask(() => {
+        setCreateServiceFee(null)
+        setCreateServiceFeeError(null)
+        setCreateServiceFeeOutOfCoverage(false)
+        setCreateServiceFeeLoading(false)
+      })
       return
     }
     const { latitude: lat, longitude: lng } = coordsForOrderApi(createLatitude, createLongitude)
     if (lat == null || lng == null) return
     let cancelled = false
-    setCreateServiceFeeLoading(true)
+    queueMicrotask(() => setCreateServiceFeeLoading(true))
     calculateServiceFee(lat, lng)
       .then((result) => {
         if (cancelled) return
@@ -772,12 +747,14 @@ export function OrderManagementPage() {
 
   useEffect(() => {
     if (!createOpen) {
-      setCreateMaterialFee(null)
-      setCreateMaterialFeeLoading(false)
+      queueMicrotask(() => {
+        setCreateMaterialFee(null)
+        setCreateMaterialFeeLoading(false)
+      })
       return
     }
     let cancelled = false
-    setCreateMaterialFeeLoading(true)
+    queueMicrotask(() => setCreateMaterialFeeLoading(true))
     fetchActiveMaterialFees()
       .then((fees) => {
         if (cancelled) return
@@ -798,12 +775,14 @@ export function OrderManagementPage() {
 
   useEffect(() => {
     if (!createOpen || !hasApi) {
-      setCreateCollectors([])
-      setCreateCollectorsLoading(false)
+      queueMicrotask(() => {
+        setCreateCollectors([])
+        setCreateCollectorsLoading(false)
+      })
       return
     }
     let cancelled = false
-    setCreateCollectorsLoading(true)
+    queueMicrotask(() => setCreateCollectorsLoading(true))
     fetchStaffList({ role: 'collector', is_active: true })
       .then((rows) => {
         if (cancelled) return
@@ -841,6 +820,9 @@ export function OrderManagementPage() {
   const [paymentUpdateReference, setPaymentUpdateReference] = useState('')
   const [paymentUpdateSubmitting, setPaymentUpdateSubmitting] = useState(false)
   const [paymentUpdateError, setPaymentUpdateError] = useState<string | null>(null)
+  const [paymentUpdatePointsToRedeem, setPaymentUpdatePointsToRedeem] = useState<number | ''>('')
+
+  const [mmkPerPoint, setMmkPerPoint] = useState(0)
 
   useEffect(() => {
     const id = window.setTimeout(() => setOrderFilterPatient(orderFilterPatientInput.trim()), 350)
@@ -872,23 +854,25 @@ export function OrderManagementPage() {
 
   useEffect(() => {
     if (!hasApi) {
-      setRows([])
-      setUsers([])
-      setTests([])
-      setTestDiscounts([])
-      setLoading(false)
+      queueMicrotask(() => {
+        setRows([])
+        setUsers([])
+        setTests([])
+        setLoading(false)
+      })
       return
     }
     let cancelled = false
-    setLoading(true)
-    setLoadError(null)
+    queueMicrotask(() => {
+      setLoading(true)
+      setLoadError(null)
+    })
     void (async () => {
       try {
-        const [ordersRes, usersRes, testsRes, discountsRes] = await Promise.all([
+        const [ordersRes, usersRes, testsRes] = await Promise.all([
           fetchOrders(ordersListQuery),
           fetchUserList(),
           fetchLabTestsList(),
-          fetchAllDiscounts(),
         ])
         if (cancelled) return
         setRows(ordersRes)
@@ -897,7 +881,6 @@ export function OrderManagementPage() {
         }
         setUsers(usersRes.filter((u) => !u.is_deleted))
         setTests(testsRes.filter((t) => t.is_active && !t.is_deleted))
-        setTestDiscounts(discountsRes)
       } catch (e) {
         if (!cancelled) setLoadError(e instanceof Error ? e.message : t('orders.detail.loadFailed'))
       } finally {
@@ -911,12 +894,14 @@ export function OrderManagementPage() {
 
   useEffect(() => {
     if (!hasApi || rows.length === 0) {
-      setPaymentByOrderId(new Map())
-      setPaymentsLoading(false)
+      queueMicrotask(() => {
+        setPaymentByOrderId(new Map())
+        setPaymentsLoading(false)
+      })
       return
     }
     let cancelled = false
-    setPaymentsLoading(true)
+    queueMicrotask(() => setPaymentsLoading(true))
     void (async () => {
       const entries = await Promise.all(
         rows.map(async (o) => {
@@ -942,26 +927,49 @@ export function OrderManagementPage() {
   }, [hasApi, rows])
 
   useEffect(() => {
-    if (!createOpen) setCreateTestPickerOpen(false)
+    let cancelled = false
+    void (async () => {
+      if (!hasApi) {
+        if (!cancelled) setMmkPerPoint(0)
+        return
+      }
+      try {
+        const setting = await fetchPointRedemptionSetting()
+        if (!cancelled) setMmkPerPoint(setting.mmk_per_point)
+      } catch {
+        if (!cancelled) setMmkPerPoint(0)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [hasApi, refreshTick])
+
+  useEffect(() => {
+    if (!createOpen) queueMicrotask(() => setCreateTestPickerOpen(false))
   }, [createOpen])
 
   useEffect(() => {
     if (!editOpen) {
-      setEditTestPickerOpen(false)
-      setEditOrderDetail(null)
-      setEditSelectedTestIds([])
-      setEditTestSearch('')
+      queueMicrotask(() => {
+        setEditTestPickerOpen(false)
+        setEditOrderDetail(null)
+        setEditSelectedTestIds([])
+        setEditTestSearch('')
+      })
     }
   }, [editOpen])
 
   useEffect(() => {
     if (!assignOpen) {
-      setAssignTestPickerOpen(false)
-      setAssignOrderDetail(null)
-      setAssignOrderId(null)
-      setAssignSelectedIds([])
-      setAssignTestSearch('')
-      setAssignError(null)
+      queueMicrotask(() => {
+        setAssignTestPickerOpen(false)
+        setAssignOrderDetail(null)
+        setAssignOrderId(null)
+        setAssignSelectedIds([])
+        setAssignTestSearch('')
+        setAssignError(null)
+      })
     }
   }, [assignOpen])
 
@@ -973,27 +981,23 @@ export function OrderManagementPage() {
     [tests, createTestSearch],
   )
 
-  const createOrderUser = useMemo(
-    () => (createUserId ? userMap.get(createUserId) : undefined),
-    [createUserId, userMap],
-  )
+  const createBuyer = userMap.get(createUserId)
 
   const createSelection = useMemo(() => {
-    const role = createOrderUser?.role
-    const lines: { testId: string; unit: number; pct: number; sub: number }[] = []
+    const tierPct = createBuyer?.tier_discount_percent ?? 0
+    const lines: { testId: string; unit: number; sub: number }[] = []
     for (const id of createSelectedTestIds) {
       const t = testMap.get(id)
       if (!t) continue
-      const pct = activeDiscountPercentForOrder(testDiscounts, id, role)
       const unit = Math.round(t.base_price_mmk * 100) / 100
-      const sub = Math.round(unit * (1 - Math.max(0, Math.min(100, pct)) / 100) * 100) / 100
-      lines.push({ testId: id, unit, pct, sub })
+      const combinedPct = combinedDiscountPercent(t.discount_percent, tierPct)
+      const sub = Math.round(unit * (1 - combinedPct / 100) * 100) / 100
+      lines.push({ testId: id, unit, sub })
     }
     const originalSum = lines.reduce((s, l) => s + l.unit, 0)
     const finalSum = lines.reduce((s, l) => s + l.sub, 0)
-    const blendedDisc = originalSum > 0 ? Math.round((1 - finalSum / originalSum) * 10000) / 100 : 0
-    return { lines, originalSum, finalSum, blendedDisc }
-  }, [createSelectedTestIds, testMap, testDiscounts, createOrderUser?.role])
+    return { lines, originalSum, finalSum }
+  }, [createSelectedTestIds, testMap, createBuyer])
 
   const createMaterialFeeMmk = createMaterialFee?.amount_mmk ?? 0
 
@@ -1022,27 +1026,30 @@ export function OrderManagementPage() {
     [tests, assignTestSearch],
   )
 
+  const assignBuyer = assignOrderDetail?.user_id ? userMap.get(assignOrderDetail.user_id) : undefined
+
   const editPickerPanel = useMemo(
     () => filterTestsForOrderDropdown(tests, editTestSearch, new Set(), ORDER_TEST_PICKER_LIMIT),
     [tests, editTestSearch],
   )
 
+  const editBuyer = editOrderDetail?.user_id ? userMap.get(editOrderDetail.user_id) : undefined
+
   const editSelection = useMemo(() => {
-    const role = editOrderDetail ? resolveOrderingUserRole(editOrderDetail, userMap) : undefined
-    const lines: { testId: string; unit: number; pct: number; sub: number }[] = []
+    const tierPct = editBuyer?.tier_discount_percent ?? 0
+    const lines: { testId: string; unit: number; sub: number }[] = []
     for (const id of editSelectedTestIds) {
       const t = testMap.get(id)
       if (!t) continue
-      const pct = activeDiscountPercentForOrder(testDiscounts, id, role)
       const unit = Math.round(t.base_price_mmk * 100) / 100
-      const sub = Math.round(unit * (1 - Math.max(0, Math.min(100, pct)) / 100) * 100) / 100
-      lines.push({ testId: id, unit, pct, sub })
+      const combinedPct = combinedDiscountPercent(t.discount_percent, tierPct)
+      const sub = Math.round(unit * (1 - combinedPct / 100) * 100) / 100
+      lines.push({ testId: id, unit, sub })
     }
     const originalSum = lines.reduce((s, l) => s + l.unit, 0)
     const finalSum = lines.reduce((s, l) => s + l.sub, 0)
-    const blendedDisc = originalSum > 0 ? Math.round((1 - finalSum / originalSum) * 10000) / 100 : 0
-    return { lines, originalSum, finalSum, blendedDisc }
-  }, [editSelectedTestIds, testMap, testDiscounts, editOrderDetail, userMap])
+    return { lines, originalSum, finalSum }
+  }, [editSelectedTestIds, testMap, editBuyer])
 
   const sorted = useMemo(
     () => [...rows].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()),
@@ -1070,6 +1077,7 @@ export function OrderManagementPage() {
     setPaymentUpdateMethod('cash')
     setPaymentUpdateReference('')
     setPaymentUpdateError(null)
+    setPaymentUpdatePointsToRedeem('')
     setOpenMenuId(null)
     setPaymentUpdateOpen(true)
   }
@@ -1082,7 +1090,12 @@ export function OrderManagementPage() {
       typeof paymentUpdateAmount === 'number'
         ? paymentUpdateAmount
         : Number.parseFloat(String(paymentUpdateAmount))
-    if (!Number.isFinite(amount) || amount <= 0) {
+    const pointsToRedeem =
+      typeof paymentUpdatePointsToRedeem === 'number' && paymentUpdatePointsToRedeem > 0
+        ? paymentUpdatePointsToRedeem
+        : 0
+    // Cash amount may be 0 when the redeemed points fully cover the balance due.
+    if (!Number.isFinite(amount) || amount < 0 || (amount <= 0 && pointsToRedeem <= 0)) {
       return setPaymentUpdateError(t('orders.paymentModal.amount'))
     }
     setPaymentUpdateSubmitting(true)
@@ -1093,6 +1106,7 @@ export function OrderManagementPage() {
         method: paymentUpdateMethod,
         status: 'received',
         reference_no: paymentUpdateReference.trim() || null,
+        points_redeemed: pointsToRedeem > 0 ? pointsToRedeem : undefined,
       })
       showSuccess(t('orders.toasts.paymentRecorded'))
       setPaymentUpdateOpen(false)
@@ -1183,7 +1197,7 @@ export function OrderManagementPage() {
     }
     const age = typeof createPatientAge === 'number' ? createPatientAge : Number.parseInt(String(createPatientAge), 10)
     if (!Number.isFinite(age) || age < 0) return setCreateError(t('orders.create.age'))
-    const { lines, originalSum, finalSum, blendedDisc } = createSelection
+    const { lines, originalSum, finalSum } = createSelection
     const items = lines.map((l) => ({
       test_id: l.testId,
       quantity: 1,
@@ -1207,7 +1221,7 @@ export function OrderManagementPage() {
         longitude: lngApi,
         status: 'pending',
         original_price_mmk: Math.round(originalSum * 100) / 100,
-        discount_percent: blendedDisc,
+        discount_percent: originalSum > 0 ? Math.round((1 - finalSum / originalSum) * 100) : 0,
         final_price_mmk: Math.round(finalSum * 100) / 100,
         material_fee_mmk: createMaterialFeeMmk > 0 ? createMaterialFeeMmk : undefined,
         items,
@@ -1290,7 +1304,7 @@ export function OrderManagementPage() {
       }
 
       if (testsEditable) {
-        const { lines, originalSum, finalSum, blendedDisc } = editSelection
+        const { lines, originalSum, finalSum } = editSelection
         await syncPendingOrder(editOrderId, {
           ...basePayload,
           items: lines.map((l) => ({
@@ -1300,7 +1314,7 @@ export function OrderManagementPage() {
             subtotal_mmk: l.sub,
           })),
           original_price_mmk: Math.round(originalSum * 100) / 100,
-          discount_percent: blendedDisc,
+          discount_percent: originalSum > 0 ? Math.round((1 - finalSum / originalSum) * 100) : 0,
           final_price_mmk: Math.round(finalSum * 100) / 100,
         })
       } else {
@@ -1388,14 +1402,14 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
       setAssignError(t('orders.create.testsOnOrder'))
       return
     }
-    const role = resolveOrderingUserRole(assignOrderDetail, userMap)
+    const assignTierPct = assignBuyer?.tier_discount_percent ?? 0
     const items: { test_id: string; quantity: number; unit_price_mmk: number; subtotal_mmk: number }[] = []
     for (const testId of assignSelectedIds) {
       const t = testMap.get(testId)
       if (!t) continue
-      const pct = activeDiscountPercentForOrder(testDiscounts, testId, role)
       const unit = Math.round(t.base_price_mmk * 100) / 100
-      const sub = Math.round(unit * (1 - Math.max(0, Math.min(100, pct)) / 100) * 100) / 100
+      const combinedPct = combinedDiscountPercent(t.discount_percent, assignTierPct)
+      const sub = Math.round(unit * (1 - combinedPct / 100) * 100) / 100
       items.push({ test_id: testId, quantity: 1, unit_price_mmk: unit, subtotal_mmk: sub })
     }
     if (items.length === 0) {
@@ -1404,14 +1418,12 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
     }
     const originalSum = items.reduce((s, it) => s + it.unit_price_mmk * it.quantity, 0)
     const finalSum = items.reduce((s, it) => s + it.subtotal_mmk, 0)
-    const blendedDisc =
-      originalSum > 0 ? Math.round((1 - finalSum / originalSum) * 10000) / 100 : 0
     setAssignSubmitting(true)
     try {
       await addOrderItems(assignOrderId, {
         items,
         original_price_mmk: Math.round(originalSum * 100) / 100,
-        discount_percent: blendedDisc,
+        discount_percent: originalSum > 0 ? Math.round((1 - finalSum / originalSum) * 100) : 0,
         final_price_mmk: Math.round(finalSum * 100) / 100,
       })
       const next = await fetchOrderById(assignOrderId)
@@ -1826,14 +1838,11 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
                   ) : (
                     users.map((u) => (
                       <option key={u.id} value={u.id}>
-                        {u.name} ({roleLabel(u.role)})
+                        {u.name} ({u.phone})
                       </option>
                     ))
                   )}
                 </select>
-                <p style={{ margin: '0.35rem 0 0', fontSize: '0.78rem', color: 'var(--muted)' }}>
-                  {t('orders.create.discountHint')}
-                </p>
               </div>
               <div className="field">
                 <div id="om-tests-label" style={{ fontWeight: 600, fontSize: '0.875rem', marginBottom: '0.35rem', color: 'var(--heading)' }}>
@@ -1855,8 +1864,6 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
                   totalMatches={createPickerPanel.totalMatches}
                   selectedIds={createSelectedTestIds}
                   onToggle={toggleCreateTest}
-                  userRole={createOrderUser?.role}
-                  testDiscounts={testDiscounts}
                   triggerId="om-test-multiselect"
                   listId="om-test-multiselect-list"
                   filterValue={createTestSearch}
@@ -1869,7 +1876,6 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
                       <thead>
                         <tr>
                           <th>{t('orders.testPicker.label')}</th>
-                          <th>{t('orders.testPicker.discount')}</th>
                           <th>{t('orders.testPicker.finalMmk')}</th>
                           <th className="action-col"> </th>
                         </tr>
@@ -1878,18 +1884,19 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
                         {createSelectedTestIds.map((id) => {
                           const test = testMap.get(id)
                           if (!test) return null
-                          const pct = activeDiscountPercentForOrder(testDiscounts, id, createOrderUser?.role)
-                          const unit = Math.round(test.base_price_mmk * 100) / 100
-                          const sub =
-                            Math.round(unit * (1 - Math.max(0, Math.min(100, pct)) / 100) * 100) / 100
+                          const base = Math.round(test.base_price_mmk * 100) / 100
+                          const combinedPct = combinedDiscountPercent(
+                            test.discount_percent,
+                            createBuyer?.tier_discount_percent,
+                          )
+                          const unit = Math.round(base * (1 - combinedPct / 100) * 100) / 100
                           return (
                             <tr key={id}>
                               <td>
                                 {test.test_name}{' '}
                                 <span style={{ color: 'var(--muted)' }}>({test.test_code})</span>
                               </td>
-                              <td>{pct}%</td>
-                              <td>{sub.toLocaleString()}</td>
+                              <td>{unit.toLocaleString()}</td>
                               <td className="action-cell">
                                 <button
                                   type="button"
@@ -2007,14 +2014,6 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
                   <div className="order-create-pricing__line">
                     <div className="order-create-pricing__line-main">
                       <span className="order-create-pricing__label">{t('orders.create.testsSubtotal')}</span>
-                      {createSelection.blendedDisc > 0 ? (
-                        <span className="order-create-pricing__caption">
-                          {t('orders.create.testsDiscountHint', {
-                            original: createSelection.originalSum.toLocaleString(),
-                            percent: createSelection.blendedDisc,
-                          })}
-                        </span>
-                      ) : null}
                     </div>
                     <span className="order-create-pricing__value">
                       {createSelection.finalSum.toLocaleString()} {t('orders.currency')}
@@ -2156,14 +2155,7 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
                         </p>
                       ) : null}
                       <p style={{ margin: '0 0 0.45rem', fontSize: '0.82rem', color: 'var(--muted)' }}>
-                        {t('orders.edit.discountRoleHint', {
-                          role:
-                            (editOrderDetail.user_id
-                              ? resolveOrderingUserRole(editOrderDetail, userMap) ??
-                                userMap.get(editOrderDetail.user_id)?.role ??
-                                t('common.none')
-                              : t('common.none')) as string,
-                        })}
+                        {t('orders.edit.testPickerHint')}
                       </p>
                       <OrderTestCheckboxPicker
                         disabled={editSubmitting || tests.length === 0}
@@ -2173,8 +2165,6 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
                         totalMatches={editPickerPanel.totalMatches}
                         selectedIds={editSelectedTestIds}
                         onToggle={toggleEditTest}
-                        userRole={resolveOrderingUserRole(editOrderDetail, userMap)}
-                        testDiscounts={testDiscounts}
                         triggerId="om-edit-test-multiselect"
                         listId="om-edit-test-multiselect-list"
                         filterValue={editTestSearch}
@@ -2187,7 +2177,6 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
                             <thead>
                               <tr>
                                 <th>{t('orders.testPicker.label')}</th>
-                                <th>{t('orders.testPicker.discount')}</th>
                                 <th>{t('orders.testPicker.finalMmk')}</th>
                                 <th className="action-col"> </th>
                               </tr>
@@ -2196,22 +2185,19 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
                               {editSelectedTestIds.map((id) => {
                                 const test = testMap.get(id)
                                 if (!test) return null
-                                const pct = activeDiscountPercentForOrder(
-                                  testDiscounts,
-                                  id,
-                                  resolveOrderingUserRole(editOrderDetail, userMap),
+                                const base = Math.round(test.base_price_mmk * 100) / 100
+                                const combinedPct = combinedDiscountPercent(
+                                  test.discount_percent,
+                                  editBuyer?.tier_discount_percent,
                                 )
-                                const unit = Math.round(test.base_price_mmk * 100) / 100
-                                const sub =
-                                  Math.round(unit * (1 - Math.max(0, Math.min(100, pct)) / 100) * 100) / 100
+                                const unit = Math.round(base * (1 - combinedPct / 100) * 100) / 100
                                 return (
                                   <tr key={id}>
                                     <td>
                                       {test.test_name}{' '}
                                       <span style={{ color: 'var(--muted)' }}>({test.test_code})</span>
                                     </td>
-                                    <td>{pct}%</td>
-                                    <td>{sub.toLocaleString()}</td>
+                                    <td>{unit.toLocaleString()}</td>
                                     <td className="action-cell">
                                       <button
                                         type="button"
@@ -2234,22 +2220,13 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
                           {t('orders.create.noTestsAdded')}
                         </p>
                       )}
-                      <div className="order-create-modal__grid-three" style={{ marginTop: '0.85rem' }}>
+                      <div className="grid-2" style={{ marginTop: '0.85rem' }}>
                         <div className="field">
                           <label>{t('orders.create.originalTotal')}</label>
                           <input
                             readOnly
                             disabled
                             value={editSelection.originalSum.toLocaleString()}
-                            className="lab-test-modal__input-computed"
-                          />
-                        </div>
-                        <div className="field">
-                          <label>{t('orders.create.blendedDiscount')}</label>
-                          <input
-                            readOnly
-                            disabled
-                            value={String(editSelection.blendedDisc)}
                             className="lab-test-modal__input-computed"
                           />
                         </div>
@@ -2426,7 +2403,32 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
               const previewPaid = Math.min(amounts.total, amounts.paid + adding)
               const previewLeft = Math.max(0, amounts.total - previewPaid)
               const fullyPaid = amounts.total > 0 && amounts.balance <= 0
-              const canRecordPayment = adding > 0 && !paymentUpdateSubmitting
+
+              const redeemCustomer = userMap.get(paymentUpdateOrder.user_id)
+              const redeemCustomerPoints = redeemCustomer?.total_points ?? 0
+              const canRedeemPoints = redeemCustomerPoints > 0 && mmkPerPoint > 0
+              const maxRedeemablePoints = canRedeemPoints
+                ? Math.max(0, Math.floor(Math.min(redeemCustomerPoints, amounts.balance / mmkPerPoint)))
+                : 0
+              const pointsToRedeemNum =
+                typeof paymentUpdatePointsToRedeem === 'number' ? paymentUpdatePointsToRedeem : 0
+              const pointsValueMmk = Math.round(pointsToRedeemNum * mmkPerPoint * 100) / 100
+              // Points alone may cover the balance, leaving a $0 cash amount — still a valid payment.
+              const canRecordPayment = (adding > 0 || pointsToRedeemNum > 0) && !paymentUpdateSubmitting
+
+              const handlePointsToRedeemChange = (raw: string) => {
+                if (raw === '') {
+                  setPaymentUpdatePointsToRedeem('')
+                  setPaymentUpdateAmount(amounts.balance > 0 ? Math.round(amounts.balance * 100) / 100 : '')
+                  return
+                }
+                let n = Math.floor(Number(raw))
+                if (!Number.isFinite(n) || n < 0) n = 0
+                if (n > maxRedeemablePoints) n = maxRedeemablePoints
+                setPaymentUpdatePointsToRedeem(n)
+                const value = Math.round(n * mmkPerPoint * 100) / 100
+                setPaymentUpdateAmount(Math.max(0, Math.round((amounts.balance - value) * 100) / 100))
+              }
 
               return (
                 <>
@@ -2459,6 +2461,38 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
                     ) : null}
 
                     <div className="payment-sheet-form">
+                      {canRedeemPoints ? (
+                        <div className="field">
+                          <label htmlFor="pu-points-redeem">
+                            {t('orders.paymentModal.pointsAvailable', { points: redeemCustomerPoints })}
+                          </label>
+                          <div className="payment-sheet__amount-wrap">
+                            <input
+                              id="pu-points-redeem"
+                              type="number"
+                              className="payment-sheet__amount-input"
+                              min={0}
+                              max={maxRedeemablePoints}
+                              step={1}
+                              inputMode="numeric"
+                              placeholder="0"
+                              value={paymentUpdatePointsToRedeem === '' ? '' : paymentUpdatePointsToRedeem}
+                              onChange={(e) => handlePointsToRedeemChange(e.target.value)}
+                              disabled={paymentUpdateSubmitting}
+                            />
+                            <span className="payment-sheet__amount-unit" aria-hidden="true">
+                              {t('orders.paymentModal.pointsUnit')}
+                            </span>
+                          </div>
+                          <p className="payment-sheet__hint">
+                            {t('orders.paymentModal.pointsValueHint', {
+                              value: pointsValueMmk.toLocaleString(),
+                              currency: t('orders.currency'),
+                            })}
+                          </p>
+                        </div>
+                      ) : null}
+
                       <div className="field">
                         <div className="payment-sheet__amount-head">
                           <label htmlFor="pu-amount">{t('orders.paymentModal.amount')}</label>
@@ -2696,7 +2730,7 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
                       </span>
                     </div>
                     <div className="order-detail-item">
-                      <span className="order-detail-label">{t('orders.create.blendedDiscount')}</span>
+                      <span className="order-detail-label">{t('orders.detail.discountPercent')}</span>
                       <span className="order-detail-value">{detailOrder.discount_percent}%</span>
                     </div>
                     <div className="order-detail-item">
@@ -2784,7 +2818,18 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
                           const displayStatus = normalizePaymentStatusForDisplay(p.status)
                           return (
                           <tr key={p.id}>
-                            <td>{p.amount_mmk.toLocaleString()}</td>
+                            <td>
+                              {p.amount_mmk.toLocaleString()}
+                              {p.points_redeemed && p.points_redeemed > 0 ? (
+                                <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginTop: '0.15rem' }}>
+                                  {t('orders.detail.pointsRedeemedLine', {
+                                    points: p.points_redeemed,
+                                    value: (p.points_value_mmk ?? 0).toLocaleString(),
+                                    currency: t('orders.currency'),
+                                  })}
+                                </div>
+                              ) : null}
+                            </td>
                             <td>
                               <span className={paymentBadgeClass(displayStatus)}>
                                 {paymentDisplayKeyLabel(displayStatus as PaymentDisplayKey)}
@@ -2940,14 +2985,6 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
                           {assignOrderDetail.ordering_user_name?.trim() ||
                             userMap.get(assignOrderDetail.user_id)?.name ||
                             assignOrderDetail.user_id}
-                          <span className="assign-tests-order-summary__role">
-                            {' '}
-                            (
-                            {resolveOrderingUserRole(assignOrderDetail, userMap) ??
-                              userMap.get(assignOrderDetail.user_id)?.role ??
-                              t('common.none')}
-                            )
-                          </span>
                         </span>
                       ) : null}
                     </div>
@@ -2969,15 +3006,7 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
                   <div className="assign-tests-left-body">
                     <div className="assign-tests-catalog-block">
                       <p className="assign-tests-dialog__hint">
-                        {t('orders.assign.hint', {
-                          role:
-                            (assignOrderDetail.user_id
-                              ? resolveOrderingUserRole(assignOrderDetail, userMap) ??
-                                userMap.get(assignOrderDetail.user_id)?.role ??
-                                t('common.none')
-                              : t('common.none')) as string,
-                          limit: ORDER_TEST_PICKER_LIMIT,
-                        })}
+                        {t('orders.assign.hint', { limit: ORDER_TEST_PICKER_LIMIT })}
                       </p>
                       {tests.length > ORDER_TEST_PICKER_LIMIT && !assignTestSearch.trim() ? (
                         <p className="assign-tests-banner assign-tests-banner--warn">
@@ -2992,8 +3021,6 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
                         totalMatches={assignPickerPanel.totalMatches}
                         selectedIds={assignSelectedIds}
                         onToggle={toggleAssignTest}
-                        userRole={resolveOrderingUserRole(assignOrderDetail, userMap)}
-                        testDiscounts={testDiscounts}
                         triggerId="assign-test-multiselect"
                         listId="assign-test-multiselect-list"
                         filterValue={assignTestSearch}
@@ -3015,7 +3042,6 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
                             <thead>
                               <tr>
                                 <th>{t('orders.testPicker.label')}</th>
-                                <th>{t('orders.testPicker.discount')}</th>
                                 <th>{t('orders.testPicker.finalMmk')}</th>
                                 <th className="action-col"> </th>
                               </tr>
@@ -3024,22 +3050,19 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
                               {assignSelectedIds.map((id) => {
                                 const test = testMap.get(id)
                                 if (!test) return null
-                                const pct = activeDiscountPercentForOrder(
-                                  testDiscounts,
-                                  id,
-                                  resolveOrderingUserRole(assignOrderDetail, userMap),
+                                const base = Math.round(test.base_price_mmk * 100) / 100
+                                const combinedPct = combinedDiscountPercent(
+                                  test.discount_percent,
+                                  assignBuyer?.tier_discount_percent,
                                 )
-                                const unit = Math.round(test.base_price_mmk * 100) / 100
-                                const sub =
-                                  Math.round(unit * (1 - Math.max(0, Math.min(100, pct)) / 100) * 100) / 100
+                                const unit = Math.round(base * (1 - combinedPct / 100) * 100) / 100
                                 return (
                                   <tr key={id}>
                                     <td>
                                       {test.test_name}{' '}
                                       <span style={{ color: 'var(--muted)' }}>({test.test_code})</span>
                                     </td>
-                                    <td>{pct}%</td>
-                                    <td>{sub.toLocaleString()}</td>
+                                    <td>{unit.toLocaleString()}</td>
                                     <td className="action-cell">
                                       <button
                                         type="button"

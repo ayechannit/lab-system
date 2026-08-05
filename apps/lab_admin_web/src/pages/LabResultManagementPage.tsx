@@ -82,7 +82,7 @@ const AI_REVIEW_VERDICT_PATTERNS: { verdict: AiReviewVerdict; re: RegExp; label:
   { verdict: 'pass', re: /^(pass|passed|valid|approved?)\b/i, label: 'Passed' },
 ]
 
-function extractJsonObject(text: string): any {
+function extractJsonObject(text: string): unknown {
   const trimmed = text.trim()
   try {
     return JSON.parse(trimmed)
@@ -564,18 +564,22 @@ export function LabResultManagementPage() {
   }, [patientName, statusFilter])
 
   useEffect(() => {
-    setOrderId('')
+    queueMicrotask(() => setOrderId(''))
   }, [ordersListQuery])
 
   useEffect(() => {
     if (!hasApi) {
-      setOrders([])
-      setListLoading(false)
+      queueMicrotask(() => {
+        setOrders([])
+        setListLoading(false)
+      })
       return
     }
     let cancelled = false
-    setListLoading(true)
-    setListError(null)
+    queueMicrotask(() => {
+      setListLoading(true)
+      setListError(null)
+    })
     void (async () => {
       try {
         const list = await fetchOrders(ordersListQuery)
@@ -603,14 +607,18 @@ export function LabResultManagementPage() {
 
   useEffect(() => {
     if (!hasApi || !orderId) {
-      setDetail(null)
-      setAiReviewByTestId({})
-      setAiReviewErrorByTestId({})
+      queueMicrotask(() => {
+        setDetail(null)
+        setAiReviewByTestId({})
+        setAiReviewErrorByTestId({})
+      })
       return
     }
     let cancelled = false
-    setDetailLoading(true)
-    setDetailError(null)
+    queueMicrotask(() => {
+      setDetailLoading(true)
+      setDetailError(null)
+    })
     void (async () => {
       try {
         const d = await fetchOrderById(orderId)
@@ -724,8 +732,10 @@ export function LabResultManagementPage() {
   const deliveryHandoverDirty = deliveryHandoverLocal !== savedDeliveryHandoverLocal
 
   useEffect(() => {
-    setDeliveryHandoverLocal(savedDeliveryHandoverLocal)
-    setDeliveryHandoverError(null)
+    queueMicrotask(() => {
+      setDeliveryHandoverLocal(savedDeliveryHandoverLocal)
+      setDeliveryHandoverError(null)
+    })
   }, [detail?.id, savedDeliveryHandoverLocal])
 
   const releaseActionLabel = isHardCopyOnly ? 'Mark delivered' : 'Release to patient'
@@ -888,7 +898,7 @@ export function LabResultManagementPage() {
     }
   }
 
-  async function downloadTestResultPdf(testId: string, _fileLabel: string) {
+  async function downloadTestResultPdf(testId: string) {
     setPdfAction({ testId, mode: 'download' })
     try {
       const directUrl = resolveTestResultDownloadUrl(testId)
@@ -923,7 +933,7 @@ export function LabResultManagementPage() {
           type="button"
           className="btn btn-primary btn-sm lab-result-test-card__action-btn"
           disabled={disabled}
-          onClick={() => void downloadTestResultPdf(testId, fileLabel)}
+          onClick={() => void downloadTestResultPdf(testId)}
         >
           <span className="material-symbols-outlined" aria-hidden>
             download
@@ -943,7 +953,7 @@ export function LabResultManagementPage() {
   }
 
   useEffect(() => {
-    setBulkPdfSelectedIds([])
+    queueMicrotask(() => setBulkPdfSelectedIds([]))
   }, [detail?.id])
 
   async function refreshOrderDetail(id: string) {

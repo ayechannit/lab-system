@@ -27,7 +27,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   final _formKey = GlobalKey<FormState>();
   final _name = TextEditingController();
   final _phone = TextEditingController();
-  final _email = TextEditingController();
   String _addressLine = '';
   double _addressLat = 0;
   double _addressLng = 0;
@@ -52,7 +51,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _seeded = true;
     _name.text = u.name;
     _phone.text = u.phone;
-    _email.text = u.email;
     _addressLine = u.address;
     _addressLat = u.latitude;
     _addressLng = u.longitude;
@@ -62,7 +60,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   void dispose() {
     _name.dispose();
     _phone.dispose();
-    _email.dispose();
     super.dispose();
   }
 
@@ -113,7 +110,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       await session.updateProfile(
         name: _name.text.trim(),
         phone: _phone.text.trim(),
-        email: _email.text.trim(),
         address: _addressLine.trim(),
         latitude: _addressLat,
         longitude: _addressLng,
@@ -348,19 +344,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                           emptyMessage: l10n.profilePhoneRequired,
                           invalidMessage: l10n.profilePhoneInvalid,
                         ),
-                      ),
-                      const SizedBox(height: 14),
-                      TextFormField(
-                        controller: _email,
-                        decoration: _fieldDecoration(l10n.email, prefix: Icons.mail_outline),
-                        keyboardType: TextInputType.emailAddress,
-                        autocorrect: false,
-                        validator: (v) {
-                          if (v == null || v.trim().isEmpty) return l10n.emailRequired;
-                          final s = v.trim();
-                          if (!s.contains('@') || !s.contains('.')) return l10n.emailInvalid;
-                          return null;
-                        },
                       ),
                       const SizedBox(height: 14),
                       AddressLocationFields(

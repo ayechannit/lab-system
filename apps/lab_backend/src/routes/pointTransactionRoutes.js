@@ -41,9 +41,9 @@ router.use(authMiddleware);
  *         user_name:
  *           type: string
  *           description: The name of the user (joined from users table)
- *         user_email:
+ *         user_phone:
  *           type: string
- *           description: The email of the user (joined from users table)
+ *           description: The phone number of the user (joined from users table)
  *     PointAdjustment:
  *       type: object
  *       required:
@@ -79,8 +79,8 @@ router.use(authMiddleware);
  *     summary: Retrieve point transactions history
  *     description: |
  *       Retrieves point transactions.
- *       - Patients/Clinics/Doctors without admin privilege will get only their own transactions.
- *       - Admin/Manager users can get all transactions or filter by user_id.
+ *       - End users (customers) will get only their own transactions.
+ *       - Admin/Manager staff can get all transactions or filter by user_id.
  *     tags: [PointTransactions]
  *     parameters:
  *       - in: query
@@ -90,6 +90,13 @@ router.use(authMiddleware);
  *           type: string
  *           format: uuid
  *         description: Filter by user ID (Admin/Manager only, or matches logged-in user)
+ *       - in: query
+ *         name: transaction_type
+ *         required: false
+ *         schema:
+ *           type: string
+ *           enum: [earn, redeem, adjustment]
+ *         description: Filter by transaction type
  *     responses:
  *       200:
  *         description: A list of point transactions

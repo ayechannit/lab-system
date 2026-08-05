@@ -1,14 +1,7 @@
 export type StaffRole = 'admin' | 'lab_technician' | 'reception' | 'manager' | 'collector'
 
-/** End-user roles for `POST /api/users` (`users.role`). */
-export type EndUserRole = 'clinic' | 'doctor' | 'patient' | 'phlebotomist'
-
-export function endUserRoleRequiresLicenseNumber(role: EndUserRole): boolean {
-  return role === 'doctor' || role === 'clinic' || role === 'phlebotomist'
-}
-
 /** Role stored in the admin session after login. */
-export type SessionRole = StaffRole | EndUserRole
+export type SessionRole = StaffRole
 
 export interface StaffListRow {
   id: string
@@ -25,22 +18,20 @@ export interface StaffListRow {
 export interface UserListRow {
   id: string
   name: string
-  email: string
   phone: string
-  role: EndUserRole
   address: string
   latitude: number
   longitude: number
   total_points: number
-  license_number: string | null
-  /** Doctors/clinics register as pending until staff approves. Patients are auto-approved. */
-  is_approved: boolean
+  total_spent_mmk: number
+  tier_name: string
+  tier_discount_percent: number
   is_deleted: boolean
   created_at: string
   updated_at: string
 }
 
-/** Row for lab catalog UI: core fields from `GET /api/tests`; discount columns from each row’s `discounts` array (see service). */
+/** Row for lab catalog UI: core fields from `GET /api/tests`. */
 export interface LabTestCatalogRow {
   id: string
   test_name: string
@@ -50,10 +41,8 @@ export interface LabTestCatalogRow {
   category: string | null
   is_active: boolean
   is_deleted: boolean
-  /** Highest `discount_percent` among nested discounts on GET /api/tests (embedded array). */
-  discount_percent: number
-  /** Base price after `discount_percent`. */
-  discounted_price_mmk: number
   created_at: string
   updated_at?: string
+  discount_percent?: number | null
+  discounted_price_mmk?: number | null
 }

@@ -13,7 +13,6 @@ router.use(authMiddleware, modulePermission('discounts'));
  *       type: object
  *       required:
  *         - test_id
- *         - role
  *         - discount_percent
  *       properties:
  *         id:
@@ -22,9 +21,6 @@ router.use(authMiddleware, modulePermission('discounts'));
  *         test_id:
  *           type: string
  *           format: uuid
- *         role:
- *           type: string
- *           enum: [clinic, doctor, patient, phlebotomist, all]
  *         discount_percent:
  *           type: number
  *         is_active:
@@ -32,11 +28,9 @@ router.use(authMiddleware, modulePermission('discounts'));
  *         start_date:
  *           type: string
  *           format: date-time
- *           nullable: true
  *         end_date:
  *           type: string
  *           format: date-time
- *           nullable: true
  *         is_deleted:
  *           type: boolean
  *         test_name:
@@ -59,7 +53,7 @@ router.use(authMiddleware, modulePermission('discounts'));
  * @swagger
  * tags:
  *   name: Discounts
- *   description: Test-specific role-based discount management
+ *   description: Test-specific discount management
  */
 
 /**
@@ -69,12 +63,6 @@ router.use(authMiddleware, modulePermission('discounts'));
  *     summary: Get all test-specific discounts
  *     tags: [Discounts]
  *     parameters:
- *       - in: query
- *         name: role
- *         schema:
- *           type: string
- *           enum: [clinic, doctor, patient, phlebotomist]
- *         description: Filter discounts by role
  *       - in: query
  *         name: is_active
  *         schema:
@@ -106,17 +94,16 @@ router.use(authMiddleware, modulePermission('discounts'));
  *         name: sortBy
  *         schema:
  *           type: string
- *           enum: [created_at, updated_at, discount_percent, role, test_name]
- *         description: Sort field for discounts
+ *         description: Field to sort by (created_at, updated_at, discount_percent, test_name)
  *       - in: query
  *         name: sortOrder
  *         schema:
  *           type: string
- *           enum: [asc, desc, ASC, DESC]
- *         description: Sort order (ASC or DESC)
+ *           enum: [asc, desc]
+ *         description: Sort order
  *     responses:
  *       200:
- *         description: List of all discounts
+ *         description: List of test-specific discounts
  *         content:
  *           application/json:
  *             schema:
@@ -129,7 +116,7 @@ router.use(authMiddleware, modulePermission('discounts'));
  * @swagger
  * /api/discounts/{test_id}:
  *   get:
- *     summary: Get all discounts for a specific test
+ *     summary: Get all discount configurations for a specific test
  *     tags: [Discounts]
  *     parameters:
  *       - in: path
@@ -140,7 +127,7 @@ router.use(authMiddleware, modulePermission('discounts'));
  *           format: uuid
  *     responses:
  *       200:
- *         description: List of discounts for the test
+ *         description: Discount configurations for the test
  *         content:
  *           application/json:
  *             schema:
@@ -151,40 +138,47 @@ router.use(authMiddleware, modulePermission('discounts'));
 
 /**
  * @swagger
- * /api/discounts/{test_id}/{role}:
- *   get:
- *     summary: Get a discount for a specific test and role
+ * /api/discounts:
+ *   post:
+ *     summary: Create or update a discount
  *     tags: [Discounts]
- *     parameters:
- *       - in: path
- *         name: test_id
- *         required: true
- *         schema:
- *           type: string
- *           format: uuid
- *       - in: path
- *         name: role
- *         required: true
- *         schema:
- *           type: string
- *           enum: [clinic, doctor, patient, phlebotomist]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - test_id
+ *               - discount_percent
+ *             properties:
+ *               test_id:
+ *                 type: string
+ *                 format: uuid
+ *               discount_percent:
+ *                 type: number
+ *               is_active:
+ *                 type: boolean
+ *               start_date:
+ *                 type: string
+ *                 format: date-time
+ *               end_date:
+ *                 type: string
+ *                 format: date-time
  *     responses:
  *       200:
- *         description: Discount detail including pricing
+ *         description: The created/updated discount config
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Discount'
- *       404:
- *         description: Discount not found
  */
 
 /**
  * @swagger
  * /api/discounts/bulk:
  *   post:
- *     summary: Bulk create or update discounts
- *     description: Accepts an array of discounts and upserts them.
+ *     summary: Bulk create or update multiple discount configurations
  *     tags: [Discounts]
  *     requestBody:
  *       required: true
@@ -201,15 +195,11 @@ router.use(authMiddleware, modulePermission('discounts'));
  *                   type: object
  *                   required:
  *                     - test_id
- *                     - role
  *                     - discount_percent
  *                   properties:
  *                     test_id:
  *                       type: string
  *                       format: uuid
- *                     role:
- *                       type: string
- *                       enum: [clinic, doctor, patient, phlebotomist, all]
  *                     discount_percent:
  *                       type: number
  *                     is_active:
@@ -217,61 +207,12 @@ router.use(authMiddleware, modulePermission('discounts'));
  *                     start_date:
  *                       type: string
  *                       format: date-time
- *                       nullable: true
  *                     end_date:
  *                       type: string
  *                       format: date-time
- *                       nullable: true
  *     responses:
  *       200:
- *         description: The created/updated discounts
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/Discount'
- */
-
-/**
- * @swagger
- * /api/discounts:
- *   post:
- *     summary: Create or update a discount
- *     description: Supports 'all' role to bulk update clinic, doctor, and patient roles.
- *     tags: [Discounts]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - test_id
- *               - role
- *               - discount_percent
- *             properties:
- *               test_id:
- *                 type: string
- *                 format: uuid
- *               role:
- *                 type: string
- *                 enum: [clinic, doctor, patient, phlebotomist, all]
- *               discount_percent:
- *                 type: number
- *               is_active:
- *                 type: boolean
- *               start_date:
- *                 type: string
- *                 format: date-time
- *                 nullable: true
- *               end_date:
- *                 type: string
- *                 format: date-time
- *                 nullable: true
- *     responses:
- *       200:
- *         description: The created/updated discount(s)
+ *         description: The created/updated discount configs
  *         content:
  *           application/json:
  *             schema:
@@ -297,12 +238,11 @@ router.use(authMiddleware, modulePermission('discounts'));
  *       200:
  *         description: Discount deleted
  *       404:
- *         description: Discount not found
+ *         description: Discount entry not found
  */
 
 router.get('/', discountController.getAllDiscounts);
 router.get('/:test_id', discountController.getDiscountsByTestId);
-router.get('/:test_id/:role', discountController.getDiscountByTestIdAndRole);
 router.post('/bulk', discountController.bulkUpsertDiscounts);
 router.post('/', discountController.upsertDiscount);
 router.delete('/:id', discountController.deleteDiscount);

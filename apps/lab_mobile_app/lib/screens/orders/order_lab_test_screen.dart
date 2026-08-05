@@ -12,7 +12,6 @@ import '../../l10n/app_localizations.dart';
 import '../../app/session_scope.dart';
 import '../../models/lab_order.dart';
 import '../../models/lab_test_pick.dart';
-import '../../models/user_role.dart';
 import '../../config/map_defaults.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/theme_extensions.dart';
@@ -474,20 +473,23 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
     return (base ?? const TextStyle(fontSize: 16)).copyWith(fontWeight: FontWeight.w400);
   }
 
-  List<CatalogOrderLine> _linesForRole(UserRole role) {
+  List<CatalogOrderLine> _buildLines() {
+    final session = SessionScope.of(context);
+    final tierPct = session.user?.tierDiscountPercent ?? 0;
     final out = <CatalogOrderLine>[];
     for (final id in _selectedTestIds) {
       final t = _testById(id);
       if (t == null) continue;
-      final pct = t.discountPercentForUser(role);
       final unit = t.basePriceMmk.toDouble();
-      final sub = t.lineSubtotalMmk(role);
+      final testPct = t.discountPercent ?? 0;
+      final combinedPct = (testPct + tierPct).clamp(0, 100).toInt();
+      final sub = unit * (100 - combinedPct) / 100;
       out.add(CatalogOrderLine(
         testId: t.id,
         testName: t.name,
         testCode: t.code,
         unitPriceMmk: unit,
-        discountPercent: pct,
+        discountPercent: combinedPct,
         subtotalMmk: sub,
       ));
     }
@@ -623,7 +625,7 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
     AppToast.error(context, 'Could not read the selected file.');
   }
 
-  Future<void> _openTestCatalogSheet(UserRole role) async {
+  Future<void> _openTestCatalogSheet() async {
     if (_tests.isEmpty) return;
     await showModalBottomSheet<void>(
       context: context,
@@ -696,8 +698,6 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
                               itemBuilder: (context, index) {
                                 final t = filtered[index];
                                 final checked = _selectedTestIds.contains(t.id);
-                                final pct = t.discountPercentForUser(role);
-                                final sub = t.lineSubtotalMmk(role);
                                 final body = Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w400);
                                 final small = Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w400);
                                 return Card(
@@ -718,7 +718,7 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
                                     },
                                     title: Text(t.name, maxLines: 2, overflow: TextOverflow.ellipsis, style: body),
                                     subtitle: Text(
-                                      '${t.code} · $pct% off · ${sub.toStringAsFixed(0)} MMK (was ${t.basePriceMmk} MMK)',
+                                      '${t.code} · ${t.basePriceMmk} MMK',
                                       style: small,
                                     ),
                                     controlAffinity: ListTileControlAffinity.leading,
@@ -738,9 +738,9 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
     _revalidateProcessOrder();
   }
 
-  String _summaryTestTitle(UserRole role) {
+  String _summaryTestTitle() {
     if (_mode == _OrderMode.prescriptionOnly) return 'Prescription upload';
-    final lines = _linesForRole(role);
+    final lines = _buildLines();
     if (lines.isEmpty) return '—';
     if (lines.length == 1) return lines.first.testName;
     return '${lines.length} selected tests';
@@ -758,8 +758,7 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
   Widget build(BuildContext context) {
     final session = SessionScope.of(context);
     final user = session.user;
-    final role = user?.role ?? UserRole.patient;
-    final lines = _linesForRole(role);
+    final lines = _buildLines();
 
     return Scaffold(
       appBar: AppBar(
@@ -1091,7 +1090,7 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
                                   label: n == 0
                                       ? 'Select tests from catalog…'
                                       : '$n test${n == 1 ? '' : 's'} selected — tap to add or remove',
-                                  onTap: () => _openTestCatalogSheet(role),
+                                  onTap: _openTestCatalogSheet,
                                   hasError: err != null,
                                 ),
                                 if (err != null) _fieldErrorText(context, err),
@@ -1225,7 +1224,7 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
                           return;
                         }
 
-                        final builtLines = _linesForRole(user.role);
+                        final builtLines = _buildLines();
                         if (_mode == _OrderMode.catalogTests && builtLines.isEmpty) {
                           AppToast.warning(
                             context,
@@ -1234,7 +1233,7 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
                           return;
                         }
                         final order = LabOrderRequest(
-                          testName: _summaryTestTitle(user.role),
+                          testName: _summaryTestTitle(),
                           description: _description.text.trim(),
                           priority: _priority,
                           patientName: _patientName.text.trim(),

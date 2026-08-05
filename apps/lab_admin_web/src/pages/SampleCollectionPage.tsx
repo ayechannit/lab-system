@@ -606,13 +606,17 @@ export function SampleCollectionPage() {
 
   useEffect(() => {
     if (!hasApi) {
-      setOrders([])
-      setLoading(false)
+      queueMicrotask(() => {
+        setOrders([])
+        setLoading(false)
+      })
       return
     }
     let cancelled = false
-    setLoading(true)
-    setLoadError(null)
+    queueMicrotask(() => {
+      setLoading(true)
+      setLoadError(null)
+    })
     void (async () => {
       try {
         const [list, staffRes] = await Promise.all([fetchOrders(ordersListQuery), fetchStaffList()])
@@ -661,12 +665,14 @@ export function SampleCollectionPage() {
   }, [hasApi, isScheduleMode])
 
   useEffect(() => {
-    setSelectedIds(new Set())
-    setRoutePlanSlices([])
-    setRouteAssignCollectors({})
-    setRouteAssignments({})
-    setScheduledEditOpen(false)
-    setScheduledEditOrderId(null)
+    queueMicrotask(() => {
+      setSelectedIds(new Set())
+      setRoutePlanSlices([])
+      setRouteAssignCollectors({})
+      setRouteAssignments({})
+      setScheduledEditOpen(false)
+      setScheduledEditOrderId(null)
+    })
   }, [ordersListQuery])
 
   const assignedOrderIds = useMemo(

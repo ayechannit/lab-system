@@ -9,24 +9,9 @@ import {
   type TestReferralFeeListRow,
   upsertReferralFee,
 } from '../../services/referralFeeService'
-import { roleLabel } from '../../utils/roleLabels'
 import '../common/ui.css'
 
-function referralRoleDisplay(role: string | undefined, t: (key: string) => string): string {
-  if (!role) return ''
-  if (role === 'all') return t('discounts.form.allRolesSamePercent')
-  return roleLabel(role)
-}
-
 const REFERRAL_TEST_PICKER_MAX = 100
-
-const ROLE_VALUES: ReferralFeeUpsertBody['role'][] = [
-  'clinic',
-  'doctor',
-  'patient',
-  'phlebotomist',
-  'all',
-]
 
 type ReferralFeeFormModalProps = {
   open: boolean
@@ -49,15 +34,10 @@ export function ReferralFeeFormModal({
   const titleId = useId()
   const activeId = useId()
   const testFilterId = useId()
-  const roleTriggerId = useId()
-  const rolePanelId = useId()
   const testFilterInputRef = useRef<HTMLInputElement>(null)
   const selectAllVisibleRef = useRef<HTMLInputElement>(null)
-  const rolePickerWrapRef = useRef<HTMLDivElement>(null)
-  const [rolesPickerOpen, setRolesPickerOpen] = useState(false)
   const [testId, setTestId] = useState('')
   const [selectedTestIds, setSelectedTestIds] = useState<string[]>([])
-  const [selectedRoles, setSelectedRoles] = useState<ReferralFeeUpsertBody['role'][]>([])
   const [testSearch, setTestSearch] = useState('')
   const [referralPercent, setReferralPercent] = useState<number | ''>(0)
   const [isActive, setIsActive] = useState(true)
@@ -72,16 +52,12 @@ export function ReferralFeeFormModal({
       setTestId(initial.test_id)
       setSelectedTestIds([])
       setTestSearch('')
-      setRolesPickerOpen(false)
-      setSelectedRoles([initial.role as ReferralFeeUpsertBody['role']])
       setReferralPercent(initial.referral_percent)
       setIsActive(initial.is_active)
     } else {
       setTestId('')
       setSelectedTestIds([])
       setTestSearch('')
-      setRolesPickerOpen(false)
-      setSelectedRoles([])
       setReferralPercent(0)
       setIsActive(true)
     }
@@ -100,27 +76,11 @@ export function ReferralFeeFormModal({
     if (!open) return
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape' || submitting) return
-      if (mode === 'create' && rolesPickerOpen) {
-        setRolesPickerOpen(false)
-        return
-      }
       onClose()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [open, onClose, submitting, mode, rolesPickerOpen])
-
-  useEffect(() => {
-    if (!rolesPickerOpen) return
-    function onDocPointerDown(e: PointerEvent) {
-      const target = e.target
-      if (!(target instanceof Node)) return
-      if (!rolePickerWrapRef.current?.contains(target)) setRolesPickerOpen(false)
-    }
-    // Capture phase — modal card stops bubble, so bubble-phase listeners never run.
-    document.addEventListener('pointerdown', onDocPointerDown, true)
-    return () => document.removeEventListener('pointerdown', onDocPointerDown, true)
-  }, [rolesPickerOpen])
+  }, [open, onClose, submitting])
 
   useEffect(() => {
     if (!open || submitting || mode !== 'create') return
@@ -181,47 +141,11 @@ export function ReferralFeeFormModal({
     setSelectedTestIds((prev) => [...new Set([...prev, ...visibleTestIds])])
   }
 
-  const selectedRoleSet = useMemo(() => new Set(selectedRoles), [selectedRoles])
-
-  const roleOptions = useMemo(
-    () =>
-      ROLE_VALUES.map((value) => ({
-        value,
-        label: value === 'all' ? t('discounts.form.allRolesOption') : roleLabel(value),
-      })),
-    [t],
-  )
-
-  const rolePickerSummary = useMemo(() => {
-    if (selectedRoles.length === 0) return t('discounts.form.chooseRoles')
-    if (selectedRoles.includes('all')) return t('discounts.form.allRolesSamePercent')
-    if (selectedRoles.length === 1) {
-      return roleOptions.find((o) => o.value === selectedRoles[0])?.label ?? t('discounts.form.oneRoleSelected')
-    }
-    return t('discounts.form.rolesSelected', { count: selectedRoles.length })
-  }, [selectedRoles, roleOptions, t])
-
-  function toggleRole(value: ReferralFeeUpsertBody['role']) {
-    if (value === 'all') {
-      setSelectedRoles((prev) => (prev.includes('all') ? [] : ['all']))
-      return
-    }
-    setSelectedRoles((prev) => {
-      const next = prev.filter((r) => r !== 'all')
-      if (next.includes(value)) return next.filter((r) => r !== value)
-      return [...next, value]
-    })
-  }
-
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setFormError(null)
     if (mode === 'create' && selectedTestIds.length === 0) {
       setFormError(t('referralFees.form.errorSelectTest'))
-      return
-    }
-    if (mode === 'create' && selectedRoles.length === 0) {
-      setFormError(t('referralFees.form.errorSelectRole'))
       return
     }
     const pctRaw =
@@ -237,7 +161,6 @@ export function ReferralFeeFormModal({
       if (mode === 'edit' && initial) {
         const body: ReferralFeeUpsertBody = {
           test_id: testId,
-          role: initial.role as ReferralFeeUpsertBody['role'],
           referral_percent: pctN,
           is_active: isActive,
         }
@@ -247,21 +170,11 @@ export function ReferralFeeFormModal({
         return
       }
 
-      const ids = selectedTestIds
-      const rolesForBulk: ReferralFeeUpsertBody['role'][] = selectedRoles.includes('all')
-        ? ['all']
-        : selectedRoles
-      const referral_fees: ReferralFeeUpsertBody[] = []
-      for (const test_id of ids) {
-        for (const role of rolesForBulk) {
-          referral_fees.push({
-            test_id,
-            role,
-            referral_percent: pctN,
-            is_active: isActive,
-          })
-        }
-      }
+      const referral_fees: ReferralFeeUpsertBody[] = selectedTestIds.map((test_id) => ({
+        test_id,
+        referral_percent: pctN,
+        is_active: isActive,
+      }))
       await bulkUpsertReferralFees({ referral_fees })
       onSuccess()
       onClose()
@@ -299,12 +212,9 @@ export function ReferralFeeFormModal({
       : null
 
   const createSubmitDisabled =
-    submitting ||
-    (mode === 'create' &&
-      (tests.length === 0 || selectedTestIds.length === 0 || selectedRoles.length === 0))
+    submitting || (mode === 'create' && (tests.length === 0 || selectedTestIds.length === 0))
 
-  const createRuleCount =
-    mode === 'create' ? selectedTestIds.length * (selectedRoles.includes('all') ? 1 : selectedRoles.length) : 0
+  const createRuleCount = mode === 'create' ? selectedTestIds.length : 0
 
   const modal = (
     <div
@@ -349,16 +259,6 @@ export function ReferralFeeFormModal({
                     <p className="discount-form-modal__readonly-test-name">{testLabel}</p>
                   </div>
                   <div className="field">
-                    <label htmlFor="rf-role-ro">{t('discounts.form.roles')}</label>
-                    <input
-                      id="rf-role-ro"
-                      readOnly
-                      disabled
-                      value={referralRoleDisplay(initial?.role, t)}
-                      className="lab-test-modal__input-computed"
-                    />
-                  </div>
-                  <div className="field">
                     <label htmlFor="rf-pct">{t('referralFees.form.referralPercent')}</label>
                     <input
                       id="rf-pct"
@@ -387,22 +287,22 @@ export function ReferralFeeFormModal({
                 <>
                   <div className="discount-form-modal__fieldset">
                     <span className="user-form-modal__section-label" style={{ display: 'block', marginBottom: '0.35rem' }}>
-                      {t('discounts.form.labTests')}
+                      {t('referralFees.form.labTests')}
                     </span>
                     <p className="discount-form-modal__hint">{t('referralFees.form.labTestsHint')}</p>
                     {tests.length === 0 ? (
-                      <p className="discount-form-modal__panel-note">{t('discounts.form.noTestsInCatalog')}</p>
+                      <p className="discount-form-modal__panel-note">{t('referralFees.form.noTestsInCatalog')}</p>
                     ) : (
                       <div className="discount-form-modal__test-panel">
                         <div className="discount-form-modal__test-toolbar">
                           <label htmlFor={testFilterId} className="visually-hidden">
-                            {t('discounts.form.searchTests')}
+                            {t('referralFees.form.searchTests')}
                           </label>
                           <input
                             ref={testFilterInputRef}
                             id={testFilterId}
                             type="search"
-                            placeholder={t('discounts.form.searchPlaceholder')}
+                            placeholder={t('referralFees.form.searchPlaceholder')}
                             value={testSearch}
                             onChange={(e) => setTestSearch(e.target.value)}
                             disabled={submitting}
@@ -410,12 +310,12 @@ export function ReferralFeeFormModal({
                             spellCheck={false}
                           />
                           <span className="discount-form-modal__count-badge">
-                            {t('discounts.form.selectedCount', { count: selectedTestIds.length })}
+                            {t('referralFees.form.selectedCount', { count: selectedTestIds.length })}
                           </span>
                         </div>
                         {filteredTestsSorted.length > REFERRAL_TEST_PICKER_MAX ? (
                           <p className="discount-form-modal__panel-note">
-                            {t('discounts.form.showingMatches', {
+                            {t('referralFees.form.showingMatches', {
                               shown: REFERRAL_TEST_PICKER_MAX,
                               total: filteredTestsSorted.length,
                             })}
@@ -426,7 +326,7 @@ export function ReferralFeeFormModal({
                             <thead>
                               <tr>
                                 <th className="discount-form-modal__test-table-check" scope="col">
-                                  <span className="visually-hidden">{t('discounts.form.selectColumn')}</span>
+                                  <span className="visually-hidden">{t('referralFees.form.selectColumn')}</span>
                                   <input
                                     ref={selectAllVisibleRef}
                                     type="checkbox"
@@ -435,8 +335,8 @@ export function ReferralFeeFormModal({
                                     disabled={submitting || visibleTestIds.length === 0}
                                     aria-label={
                                       allVisibleTestsSelected
-                                        ? t('discounts.form.clearVisibleSelection')
-                                        : t('discounts.form.selectAllVisible')
+                                        ? t('referralFees.form.clearVisibleSelection')
+                                        : t('referralFees.form.selectAllVisible')
                                     }
                                   />
                                 </th>
@@ -451,7 +351,7 @@ export function ReferralFeeFormModal({
                               {filteredTestsSorted.length === 0 ? (
                                 <tr>
                                   <td colSpan={4} className="data-table__state">
-                                    {t('discounts.form.noSearchMatch')}
+                                    {t('referralFees.form.noSearchMatch')}
                                   </td>
                                 </tr>
                               ) : (
@@ -470,7 +370,7 @@ export function ReferralFeeFormModal({
                                           onChange={() => toggleTestId(testRow.id)}
                                           onClick={(e) => e.stopPropagation()}
                                           disabled={submitting}
-                                          aria-label={t('discounts.form.selectTestAria', { name: testRow.test_name })}
+                                          aria-label={t('referralFees.form.selectTestAria', { name: testRow.test_name })}
                                         />
                                       </td>
                                       <td>{testRow.test_name}</td>
@@ -492,7 +392,7 @@ export function ReferralFeeFormModal({
                             onClick={selectAllTests}
                             disabled={submitting || tests.length === 0}
                           >
-                            {t('discounts.form.selectAll')}
+                            {t('referralFees.form.selectAll')}
                           </button>
                           <button
                             type="button"
@@ -500,67 +400,11 @@ export function ReferralFeeFormModal({
                             onClick={clearTestSelection}
                             disabled={submitting || selectedTestIds.length === 0}
                           >
-                            {t('discounts.form.clear')}
+                            {t('referralFees.form.clear')}
                           </button>
                         </div>
                       </div>
                     )}
-                  </div>
-
-                  <div className="discount-form-modal__fieldset">
-                    <p className="discount-form-modal__hint" style={{ marginTop: 0 }}>
-                      {t('referralFees.form.rolesHint')}
-                    </p>
-                    <div
-                      ref={rolePickerWrapRef}
-                      className={`field order-test-multiselect discount-form-modal__roles-picker order-test-multiselect--drop-up${rolesPickerOpen && !submitting ? ' order-test-multiselect--open' : ''}`}
-                      style={{ marginBottom: 0 }}
-                    >
-                      <label htmlFor={roleTriggerId}>{t('discounts.form.roles')}</label>
-                      <div className="order-test-multiselect__anchor">
-                        <button
-                          type="button"
-                          id={roleTriggerId}
-                          className={`order-test-multiselect-trigger${selectedRoles.length === 0 ? ' order-test-multiselect-trigger--placeholder' : ''}`}
-                          disabled={submitting}
-                          aria-expanded={rolesPickerOpen}
-                          aria-controls={rolePanelId}
-                          aria-haspopup="listbox"
-                          onClick={() => !submitting && setRolesPickerOpen((o) => !o)}
-                        >
-                          {rolePickerSummary}
-                        </button>
-                        {rolesPickerOpen && !submitting ? (
-                          <div
-                            id={rolePanelId}
-                            className="order-test-multiselect-panel order-test-multiselect-panel--compact order-test-multiselect-panel--drop-up"
-                            role="listbox"
-                            aria-multiselectable="true"
-                          >
-                            {roleOptions.map((o) => {
-                              const checked = selectedRoleSet.has(o.value)
-                              return (
-                                <label key={o.value} className="order-test-multiselect-row">
-                                  <input
-                                    type="checkbox"
-                                    className="order-test-multiselect-row__check"
-                                    checked={checked}
-                                    onChange={() => toggleRole(o.value)}
-                                    onClick={(e) => e.stopPropagation()}
-                                    disabled={submitting}
-                                  />
-                                  <span className="order-test-multiselect-row__body">
-                                    <span className="order-test-multiselect-row__title">
-                                      <span className="order-test-multiselect-row__name">{o.label}</span>
-                                    </span>
-                                  </span>
-                                </label>
-                              )
-                            })}
-                          </div>
-                        ) : null}
-                      </div>
-                    </div>
                   </div>
 
                   <div className="field">

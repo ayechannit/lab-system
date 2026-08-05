@@ -43,19 +43,6 @@ router.use(authMiddleware);
  *         created_at:
  *           type: string
  *           format: date-time
- *         discounts:
- *           type: array
- *           description: List of active role-based discounts for this test
- *           items:
- *             type: object
- *             properties:
- *               id:
- *                 type: string
- *                 format: uuid
- *               role:
- *                 type: string
- *               discount_percent:
- *                 type: number
  */
 
 /**
@@ -69,7 +56,7 @@ router.use(authMiddleware);
  * @swagger
  * /api/tests:
  *   get:
- *     summary: Returns the list of all lab tests with their associated discounts
+ *     summary: Returns the list of all lab tests
  *     tags: [Tests]
  *     parameters:
  *       - in: query

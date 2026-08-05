@@ -2,7 +2,7 @@ const LabTest = require('../models/testModel');
 
 const getAllTests = async (req, res) => {
   try {
-    const tests = await LabTest.getAllWithAllDiscounts(req.query);
+    const tests = await LabTest.getAll(req.query);
     res.json(tests);
   } catch (error) {
     res.status(500).json({ error: error.message });

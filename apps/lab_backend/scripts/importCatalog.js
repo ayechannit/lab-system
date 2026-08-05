@@ -19,7 +19,6 @@ async function run() {
   try {
     // Temporarily disable foreign keys referring to lab_test_catalog if any
     await pool.request().query('ALTER TABLE lab_order_items NOCHECK CONSTRAINT ALL');
-    await pool.request().query('ALTER TABLE test_specific_discounts NOCHECK CONSTRAINT ALL');
     await pool.request().query('ALTER TABLE test_referral_fees NOCHECK CONSTRAINT ALL');
     
     await pool.request().query('DELETE FROM lab_test_catalog');
@@ -60,7 +59,6 @@ async function run() {
   console.log('\nRe-enabling foreign key constraints...');
   try {
     await pool.request().query('ALTER TABLE lab_order_items CHECK CONSTRAINT ALL');
-    await pool.request().query('ALTER TABLE test_specific_discounts CHECK CONSTRAINT ALL');
     await pool.request().query('ALTER TABLE test_referral_fees CHECK CONSTRAINT ALL');
   } catch (err) {
     console.warn('Warning: Could not re-enable some constraints:', err.message);

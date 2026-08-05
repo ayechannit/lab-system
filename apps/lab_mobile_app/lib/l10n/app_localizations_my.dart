@@ -57,28 +57,16 @@ class AppLocalizationsMy extends AppLocalizations {
   String get signingIn => 'အကောင့်ဝင်နေသည်…';
 
   @override
-  String get email => 'အီးမေးလ်';
-
-  @override
   String get password => 'စကားဝှက်';
 
   @override
   String get rememberMe => 'ဆက်လက်ဝင်ရောက်ထားမည်';
 
   @override
-  String get forgotPassword => 'စကားဝှက် မေ့နေပါသလား?';
-
-  @override
   String get noAccountPrompt => 'အကောင့်မရှိသေးဘူးလား?';
 
   @override
   String get createNewAccount => 'အကောင့်သစ် ဖန်တီးမည်';
-
-  @override
-  String get emailRequired => 'အီးမေးလ် ထည့်သွင်းပါ';
-
-  @override
-  String get emailInvalid => 'မှန်ကန်သော အီးမေးလ် ထည့်သွင်းပါ';
 
   @override
   String get passwordRequired => 'စကားဝှက် ထည့်သွင်းပါ';
@@ -110,6 +98,11 @@ class AppLocalizationsMy extends AppLocalizations {
   }
 
   @override
+  String membershipTierLabel(String tierName, int percent) {
+    return '$tierName အဆင့် · $percent% လျှော့ချမှု';
+  }
+
+  @override
   String get phone => 'ဖုန်း';
 
   @override
@@ -125,8 +118,7 @@ class AppLocalizationsMy extends AppLocalizations {
   String get deleteAccountTitle => 'အကောင့် ဖျက်မည်လား?';
 
   @override
-  String get deleteAccountMessage =>
-      'သင့်အကောင့်ကို ပိတ်သိမ်းမည်ဖြစ်သည်။ ထွက်ခွာပြီးနောက် ဤအီးမေးလ်ဖြင့် ပြန်လည် အကောင့်ဝင်၍မရပါ။';
+  String get deleteAccountMessage => 'သင့်အကောင့်ကို ပိတ်သိမ်းမည်ဖြစ်သည်။ ထွက်ခွာပြီးနောက် ဤဖုန်းနံပါတ်ဖြင့် ပြန်လည် အကောင့်ဝင်၍မရပါ။';
 
   @override
   String get deleteAccountConfirm => 'အကောင့် ဖျက်မည်';

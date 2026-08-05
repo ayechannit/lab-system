@@ -25,6 +25,8 @@ export type ApiPayment = {
   verified_at?: string | null
   created_at?: string
   updated_at?: string
+  points_redeemed?: number
+  points_value_mmk?: number
 }
 
 export type ApiPaymentOrderSummary = {
@@ -42,6 +44,7 @@ export type ApiPaymentCreateBody = {
   method: ApiPaymentMethod
   status?: ApiPaymentStatus
   reference_no?: string | null
+  points_redeemed?: number
 }
 
 export async function fetchPaymentsByOrderId(orderId: string): Promise<ApiPaymentOrderSummary> {

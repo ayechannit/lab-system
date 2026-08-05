@@ -93,7 +93,7 @@ export function SystemSettingsPage() {
   const [materialFeeAmount, setMaterialFeeAmount] = useState<number | ''>('')
   const [loadedAddressBaseline, setLoadedAddressBaseline] = useState<string | null>(null)
 
-  const savedFormSnapshotRef = useRef('')
+  const [savedFormSnapshot, setSavedFormSnapshot] = useState('')
   const isDirtyRef = useRef(false)
 
   const applyMaterialFeeToState = useCallback((fee: MaterialFeeRow | null) => {
@@ -122,7 +122,7 @@ export function SystemSettingsPage() {
 
   const syncSavedSnapshot = useCallback(
     (row: SystemSettingsRow, feeAmount: number | '') => {
-      savedFormSnapshotRef.current = snapshotFromState(row, feeAmount)
+      setSavedFormSnapshot(snapshotFromState(row, feeAmount))
     },
     [],
   )
@@ -155,9 +155,11 @@ export function SystemSettingsPage() {
   )
 
   const isDirty =
-    hasApi && !loading && savedFormSnapshotRef.current.length > 0 && currentSnapshot !== savedFormSnapshotRef.current
+    hasApi && !loading && savedFormSnapshot.length > 0 && currentSnapshot !== savedFormSnapshot
 
-  isDirtyRef.current = isDirty
+  useEffect(() => {
+    isDirtyRef.current = isDirty
+  }, [isDirty])
 
   const handleThemeChange = useCallback((next: ThemeMode) => {
     setMode(next)
@@ -167,12 +169,14 @@ export function SystemSettingsPage() {
 
   useEffect(() => {
     if (!hasApi) {
-      setLoading(false)
+      queueMicrotask(() => setLoading(false))
       return
     }
     let cancelled = false
-    setLoading(true)
-    setLoadError(null)
+    queueMicrotask(() => {
+      setLoading(true)
+      setLoadError(null)
+    })
     void (async () => {
       try {
         const [row, fees] = await Promise.all([fetchSystemSettings(), fetchActiveMaterialFees()])

@@ -18,22 +18,12 @@ import { isApiMode } from '../services/apiBase'
 import {
   deleteReferralFeeById,
   fetchAllReferralFees,
-  type ReferralFeeRole,
   type TestReferralFeeListRow,
 } from '../services/referralFeeService'
 import { fetchLabTestsList } from '../services/labTestCatalogService'
-import { roleLabel } from '../utils/roleLabels'
 import '../components/common/ui.css'
 
-const colSpan = 8
-
-const REFERRAL_ROLE_FILTER_VALUES: ('' | ReferralFeeRole)[] = [
-  '',
-  'clinic',
-  'doctor',
-  'patient',
-  'phlebotomist',
-]
+const colSpan = 7
 
 export function ReferralFeesManagementPage() {
   const { t } = useTranslation()
@@ -58,27 +48,21 @@ export function ReferralFeesManagementPage() {
 
   const [searchInput, setSearchInput] = useState('')
   const [search, setSearch] = useState('')
-  const [roleFilter, setRoleFilter] = useState<'' | ReferralFeeRole>('')
-
-  const roleFilterOptions = useMemo(
-    () =>
-      REFERRAL_ROLE_FILTER_VALUES.map((value) => ({
-        value,
-        label: value === '' ? t('common.allRoles') : roleLabel(value),
-      })),
-    [t],
-  )
 
   useEffect(() => {
     if (!hasApi) {
-      setLoading(false)
-      setRows([])
-      setTests([])
+      queueMicrotask(() => {
+        setLoading(false)
+        setRows([])
+        setTests([])
+      })
       return
     }
     let cancelled = false
-    setLoading(true)
-    setLoadError(null)
+    queueMicrotask(() => {
+      setLoading(true)
+      setLoadError(null)
+    })
     void (async () => {
       try {
         const [feeList, catalog] = await Promise.all([fetchAllReferralFees(), fetchLabTestsList()])
@@ -104,21 +88,14 @@ export function ReferralFeesManagementPage() {
 
   useEffect(() => {
     queueMicrotask(() => setPage(1))
-  }, [refreshTick, search, roleFilter])
+  }, [refreshTick, search])
 
   const sorted = useMemo(() => {
-    return [...rows].sort((a, b) => {
-      const na = (a.test_name ?? a.test_id).localeCompare(b.test_name ?? b.test_id)
-      if (na !== 0) return na
-      return a.role.localeCompare(b.role)
-    })
+    return [...rows].sort((a, b) => (a.test_name ?? a.test_id).localeCompare(b.test_name ?? b.test_id))
   }, [rows])
 
   const filtered = useMemo(() => {
     let list = sorted
-    if (roleFilter) {
-      list = list.filter((r) => r.role === roleFilter)
-    }
     if (search) {
       list = list.filter((r) => {
         const name = (r.test_name ?? '').toLowerCase()
@@ -127,7 +104,7 @@ export function ReferralFeesManagementPage() {
       })
     }
     return list
-  }, [sorted, search, roleFilter])
+  }, [sorted, search])
 
   const paged = useMemo(() => {
     const start = (page - 1) * pageSize
@@ -167,7 +144,6 @@ export function ReferralFeesManagementPage() {
   function clearFilters() {
     setSearchInput('')
     setSearch('')
-    setRoleFilter('')
     setPage(1)
   }
 
@@ -191,29 +167,11 @@ export function ReferralFeesManagementPage() {
               onChange={(e) => setSearchInput(e.target.value)}
               disabled={loading || !hasApi}
             />
-            <div className="list-filters-bar__group">
-              <label className="list-filters-bar__label" htmlFor="referral-fee-filter-role">
-                {t('common.role')}
-              </label>
-              <select
-                id="referral-fee-filter-role"
-                className="list-filters-bar__select"
-                value={roleFilter}
-                onChange={(e) => setRoleFilter((e.target.value || '') as '' | ReferralFeeRole)}
-                disabled={loading || !hasApi}
-              >
-                {roleFilterOptions.map((o) => (
-                  <option key={o.value || 'all-roles'} value={o.value}>
-                    {o.label}
-                  </option>
-                ))}
-              </select>
-            </div>
             <button
               type="button"
               className="btn btn-ghost btn-sm list-filters-bar__clear"
               onClick={clearFilters}
-              disabled={loading || !hasApi || (searchInput.trim() === '' && roleFilter === '')}
+              disabled={loading || !hasApi || searchInput.trim() === ''}
             >
               {t('filters.clearFilters')}
             </button>
@@ -239,7 +197,6 @@ export function ReferralFeesManagementPage() {
               <tr>
                 <th>{t('common.test')}</th>
                 <th>{t('common.code')}</th>
-                <th>{t('common.role')}</th>
                 <th className="col-num">{t('labTests.table.base')}</th>
                 <th className="col-num">{t('referralFees.table.referralPercent')}</th>
                 <th className="col-num">{t('referralFees.table.fee')}</th>
@@ -284,7 +241,6 @@ export function ReferralFeesManagementPage() {
                     <td>
                       <code>{r.test_code ?? t('common.none')}</code>
                     </td>
-                    <td>{roleLabel(r.role)}</td>
                     <td className="col-num">
                       {r.original_price !== undefined ? r.original_price.toLocaleString() : t('common.none')}
                     </td>
@@ -345,7 +301,6 @@ export function ReferralFeesManagementPage() {
         message={
           deleteTarget
             ? t('referralFees.delete.message', {
-                role: roleLabel(deleteTarget.role),
                 test: deleteTarget.test_name ?? deleteTarget.test_id,
               })
             : ''

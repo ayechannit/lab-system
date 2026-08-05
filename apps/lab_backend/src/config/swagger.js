@@ -12,9 +12,7 @@ const options = {
 ### 🔔 System Notification Triggers Guide
 The backend implements automatic background-dispatched push and in-app notifications on critical events. Below is the integration list of which endpoints automatically trigger dispatches:
 
-#### 1. Accounts & Approvals (\`/api/users\`)
-* **\`POST /api/users\`** - When professional accounts register (doctor/clinic/phlebotomist), notifies admin/staff on \`staff_notifications\` topic.
-* **\`PUT /api/users/:id/approve\`** - When approved, notifies user's device FCM token: *"Account Approved"*.
+#### 1. Accounts (\`/api/users\`)
 * **\`PUT /api/users/fcm-token\`** - Registers/updates active FCM registration tokens for devices.
 
 #### 2. Order Management (\`/api/orders\`)
@@ -33,10 +31,7 @@ The backend implements automatic background-dispatched push and in-app notificat
 * **\`PUT /api/payments/:id/status\`** - Notifies user on verification (*"Payment Verified Successfully"*) or rejection (*"Payment Verification Failed"*).
 
 #### 6. Customer Feedback (\`/api/ratings\`)
-* **\`POST /api/ratings\`** - Notifies staff topic of incoming review scores: *"New Order Rating"*.
-
-#### 7. Campaigns & Discounts (\`/api/discounts\`)
-* **\`POST /api/discounts\`** - Launches active discounts, broadcasting to \`all_users\` or targeted roles (e.g. \`clinic_notifications\`, \`patient_notifications\`).`,
+* **\`POST /api/ratings\`** - Notifies staff topic of incoming review scores: *"New Order Rating"*.`,
     },
     servers: [
       {

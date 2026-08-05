@@ -2,68 +2,44 @@ const { sql, poolPromise } = require('../config/db');
 
 class ReferralFee {
   /**
-   * Upsert a referral fee percentage for a specific test and role.
-   * If role is 'all', it applies to clinic, doctor, and patient.
+   * Upsert a referral fee percentage for a specific test.
    */
   static async upsert(data, updatedBy = null) {
     const pool = await poolPromise;
-    const roles = data.role === 'all' ? ['clinic', 'doctor', 'patient', 'phlebotomist'] : [data.role];
-    const results = [];
-
-    for (const role of roles) {
-      const result = await pool.request()
-        .input('test_id', sql.UniqueIdentifier, data.test_id)
-        .input('role', sql.VarChar, role)
-        .input('referral_percent', sql.Decimal(5, 2), data.referral_percent)
-        .input('is_active', sql.Bit, data.is_active !== undefined ? data.is_active : 1)
-        .input('updated_user', sql.UniqueIdentifier, updatedBy)
-        .query(`
-          IF EXISTS (SELECT 1 FROM test_referral_fees WHERE test_id = @test_id AND role = @role)
-          BEGIN
-              UPDATE test_referral_fees 
-              SET referral_percent = @referral_percent, is_active = @is_active, is_deleted = 0, 
-                  updated_user = @updated_user, updated_at = GETDATE()
-              OUTPUT INSERTED.*
-              WHERE test_id = @test_id AND role = @role
-          END
-          ELSE
-          BEGIN
-              INSERT INTO test_referral_fees (id, test_id, role, referral_percent, is_active, is_deleted, created_user, updated_user)
-              OUTPUT INSERTED.*
-              VALUES (NEWID(), @test_id, @role, @referral_percent, @is_active, 0, @updated_user, @updated_user)
-          END
-        `);
-      results.push(result.recordset[0]);
-    }
-    return results;
+    const result = await pool.request()
+      .input('test_id', sql.UniqueIdentifier, data.test_id)
+      .input('referral_percent', sql.Decimal(5, 2), data.referral_percent)
+      .input('is_active', sql.Bit, data.is_active !== undefined ? data.is_active : 1)
+      .input('updated_user', sql.UniqueIdentifier, updatedBy)
+      .query(`
+        IF EXISTS (SELECT 1 FROM test_referral_fees WHERE test_id = @test_id)
+        BEGIN
+            UPDATE test_referral_fees
+            SET referral_percent = @referral_percent, is_active = @is_active, is_deleted = 0,
+                updated_user = @updated_user, updated_at = GETDATE()
+            OUTPUT INSERTED.*
+            WHERE test_id = @test_id
+        END
+        ELSE
+        BEGIN
+            INSERT INTO test_referral_fees (id, test_id, referral_percent, is_active, is_deleted, created_user, updated_user)
+            OUTPUT INSERTED.*
+            VALUES (NEWID(), @test_id, @referral_percent, @is_active, 0, @updated_user, @updated_user)
+        END
+      `);
+    return result.recordset[0];
   }
 
   /**
-   * Bulk upsert multiple referral fee percentages.
+   * Bulk upsert multiple referral fee percentages, one per test_id.
    */
   static async bulkUpsert(referralsArray, updatedBy = null) {
     const results = [];
     for (const data of referralsArray) {
       const res = await this.upsert(data, updatedBy);
-      results.push(...res);
+      results.push(res);
     }
     return results;
-  }
-
-  static async getByTestIdAndRole(test_id, role) {
-    const pool = await poolPromise;
-    const result = await pool.request()
-      .input('test_id', sql.UniqueIdentifier, test_id)
-      .input('role', sql.VarChar, role)
-      .query(`
-        SELECT rf.*, t.test_name, t.test_code, t.base_price_mmk as original_price,
-               (t.base_price_mmk * (rf.referral_percent / 100)) as referral_fee_amount,
-               rf.created_user, rf.updated_user
-        FROM test_referral_fees rf
-        JOIN lab_test_catalog t ON rf.test_id = t.id
-        WHERE rf.test_id = @test_id AND rf.role = @role AND rf.is_deleted = 0 AND t.is_deleted = 0
-      `);
-    return result.recordset[0];
   }
 
   static async getByTestId(test_id) {
@@ -72,8 +48,7 @@ class ReferralFee {
       .input('test_id', sql.UniqueIdentifier, test_id)
       .query(`
         SELECT rf.*, t.test_name, t.test_code, t.base_price_mmk as original_price,
-               (t.base_price_mmk * (rf.referral_percent / 100)) as referral_fee_amount,
-               rf.created_user, rf.updated_user
+               (t.base_price_mmk * (rf.referral_percent / 100)) as referral_fee_amount
         FROM test_referral_fees rf
         JOIN lab_test_catalog t ON rf.test_id = t.id
         WHERE rf.test_id = @test_id AND rf.is_deleted = 0 AND t.is_deleted = 0
@@ -87,17 +62,11 @@ class ReferralFee {
 
     let query = `
       SELECT rf.*, t.test_name, t.test_code, t.base_price_mmk as original_price,
-             (t.base_price_mmk * (rf.referral_percent / 100)) as referral_fee_amount,
-             rf.created_user, rf.updated_user
+             (t.base_price_mmk * (rf.referral_percent / 100)) as referral_fee_amount
       FROM test_referral_fees rf
       JOIN lab_test_catalog t ON rf.test_id = t.id
       WHERE rf.is_deleted = 0 AND t.is_deleted = 0
     `;
-
-    if (filters.role) {
-      request.input('role', sql.VarChar, filters.role);
-      query += ` AND rf.role = @role`;
-    }
 
     if (filters.is_active !== undefined) {
       const activeVal = filters.is_active === 'true' || filters.is_active === true || filters.is_active === '1' ? 1 : 0;

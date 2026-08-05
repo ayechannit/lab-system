@@ -191,12 +191,6 @@ abstract class AppLocalizations {
   /// **'Signing in…'**
   String get signingIn;
 
-  /// No description provided for @email.
-  ///
-  /// In en, this message translates to:
-  /// **'Email'**
-  String get email;
-
   /// No description provided for @password.
   ///
   /// In en, this message translates to:
@@ -209,12 +203,6 @@ abstract class AppLocalizations {
   /// **'Keep me signed in'**
   String get rememberMe;
 
-  /// No description provided for @forgotPassword.
-  ///
-  /// In en, this message translates to:
-  /// **'Forgot password?'**
-  String get forgotPassword;
-
   /// No description provided for @noAccountPrompt.
   ///
   /// In en, this message translates to:
@@ -226,18 +214,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Create New Account'**
   String get createNewAccount;
-
-  /// No description provided for @emailRequired.
-  ///
-  /// In en, this message translates to:
-  /// **'Enter your email'**
-  String get emailRequired;
-
-  /// No description provided for @emailInvalid.
-  ///
-  /// In en, this message translates to:
-  /// **'Enter a valid email'**
-  String get emailInvalid;
 
   /// No description provided for @passwordRequired.
   ///
@@ -293,6 +269,12 @@ abstract class AppLocalizations {
   /// **'{count} points'**
   String pointsCount(int count);
 
+  /// No description provided for @membershipTierLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'{tierName} member · {percent}% off'**
+  String membershipTierLabel(String tierName, int percent);
+
   /// No description provided for @phone.
   ///
   /// In en, this message translates to:
@@ -326,7 +308,7 @@ abstract class AppLocalizations {
   /// No description provided for @deleteAccountMessage.
   ///
   /// In en, this message translates to:
-  /// **'This will deactivate your account. You will be signed out and will not be able to sign in again with this email.'**
+  /// **'This will deactivate your account. You will be signed out and will not be able to sign in again with this phone number.'**
   String get deleteAccountMessage;
 
   /// No description provided for @deleteAccountConfirm.
@@ -1490,7 +1472,7 @@ abstract class AppLocalizations {
   /// No description provided for @profilePhoneInvalid.
   ///
   /// In en, this message translates to:
-  /// **'Enter a valid phone number'**
+  /// **'Use + and digits only (e.g. +959…)'**
   String get profilePhoneInvalid;
 
   /// No description provided for @profileSaveChanges.

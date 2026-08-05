@@ -1,4 +1,3 @@
-import { discountedPriceMmk } from '../model/labTestCatalogApi'
 import type { LabTestCatalogRow } from '../model/types'
 import { apiFetch } from './apiClient'
 import { readApiErrorBody } from './readApiError'
@@ -33,26 +32,8 @@ function searchParamsFromQuery(query: FetchLabTestsQueryParams): string {
   return s ? `?${s}` : ''
 }
 
-function clampPct(n: number): number {
-  if (!Number.isFinite(n)) return 0
-  return Math.max(0, Math.min(100, n))
-}
-
-/** Each test from GET /api/tests includes `discounts: { id, role, discount_percent }[]` (active only). */
-function maxDiscountPercentFromEmbedded(raw: unknown): number {
-  if (!Array.isArray(raw) || raw.length === 0) return 0
-  let max = 0
-  for (const item of raw) {
-    if (!item || typeof item !== 'object') continue
-    const p = Number((item as Record<string, unknown>).discount_percent ?? 0)
-    if (Number.isFinite(p)) max = Math.max(max, clampPct(p))
-  }
-  return max
-}
-
 function toCatalogRow(t: Record<string, unknown>): LabTestCatalogRow {
   const base = Number(t.base_price_mmk ?? 0)
-  const pct = maxDiscountPercentFromEmbedded(t.discounts)
   return {
     id: String(t.id),
     test_name: String(t.test_name ?? ''),
@@ -62,10 +43,10 @@ function toCatalogRow(t: Record<string, unknown>): LabTestCatalogRow {
     category: t.category != null ? String(t.category) : null,
     is_active: Boolean(t.is_active),
     is_deleted: Boolean(t.is_deleted),
-    discount_percent: pct,
-    discounted_price_mmk: discountedPriceMmk(base, pct),
     created_at: String(t.created_at ?? ''),
     updated_at: t.updated_at != null ? String(t.updated_at) : undefined,
+    discount_percent: t.discount_percent != null ? Number(t.discount_percent) : null,
+    discounted_price_mmk: t.discounted_price_mmk != null ? Number(t.discounted_price_mmk) : null,
   }
 }
 

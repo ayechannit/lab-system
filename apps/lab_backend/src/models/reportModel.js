@@ -129,35 +129,6 @@ class Report {
     return result.recordset;
   }
 
-  static async getRevenueByChannel(filters = {}) {
-    const pool = await poolPromise;
-    const request = pool.request();
-    
-    let query = `
-      SELECT 
-        u.role,
-        SUM(o.final_price_mmk) as revenue,
-        COUNT(o.id) as order_count
-      FROM lab_orders o
-      JOIN users u ON o.user_id = u.id
-      WHERE o.is_deleted = 0
-    `;
-
-    if (filters.startDate) {
-      query += ' AND o.created_at >= @startDate';
-      request.input('startDate', sql.DateTime2, filters.startDate);
-    }
-    if (filters.endDate) {
-      query += ' AND o.created_at <= @endDate';
-      request.input('endDate', sql.DateTime2, filters.endDate);
-    }
-
-    query += ' GROUP BY u.role';
-    
-    const result = await request.query(query);
-    return result.recordset;
-  }
-
   static async getPendingResultsQueue(filters = {}) {
     const pool = await poolPromise;
     const request = pool.request();
@@ -238,7 +209,6 @@ class Report {
           ELSE 0 
         END as effective_discount_percent
       FROM lab_orders o
-      JOIN users u ON o.user_id = u.id
       WHERE o.is_deleted = 0
     `;
 
@@ -250,11 +220,7 @@ class Report {
       query += ' AND o.created_at <= @endDate';
       request.input('endDate', sql.DateTime2, filters.endDate);
     }
-    if (filters.role) {
-      query += ' AND u.role = @role';
-      request.input('role', sql.NVarChar, filters.role);
-    }
-    
+
     const result = await request.query(query);
     return result.recordset[0];
   }

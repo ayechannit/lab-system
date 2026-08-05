@@ -141,7 +141,6 @@ class Order {
       .query(`
         SELECT o.*,
                u.name AS ordering_user_name,
-               u.role AS ordering_user_role,
                (
                  SELECT oi.*, tc.test_name, tc.test_code
                  FROM lab_order_items oi

@@ -149,42 +149,6 @@ router.get('/tat', authMiddleware, manageReports, reportController.getTurnaround
 
 /**
  * @swagger
- * /api/reports/revenue-by-channel:
- *   get:
- *     summary: Get revenue breakdown by user role (channel)
- *     tags: [Reports]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: query
- *         name: startDate
- *         schema:
- *           type: string
- *           format: date-time
- *       - in: query
- *         name: endDate
- *         schema:
- *           type: string
- *           format: date-time
- *     responses:
- *       200:
- *         description: Revenue by channel data
- *         content:
- *           application/json:
- *             example:
- *               success: true
- *               data:
- *                 - role: "clinic"
- *                   revenue: 5000000.00
- *                   order_count: 40
- *                 - role: "patient"
- *                   revenue: 1200000.00
- *                   order_count: 15
- */
-router.get('/revenue-by-channel', authMiddleware, manageReports, reportController.getRevenueByChannel);
-
-/**
- * @swagger
  * /api/reports/pending-queue:
  *   get:
  *     summary: Get list of pending orders that require action
@@ -310,11 +274,6 @@ router.get('/collection-report', authMiddleware, manageReports, reportController
  *         schema:
  *           type: string
  *           format: date-time
- *       - in: query
- *         name: role
- *         schema:
- *           type: string
- *           enum: [clinic, doctor, patient]
  *     responses:
  *       200:
  *         description: Discount impact data

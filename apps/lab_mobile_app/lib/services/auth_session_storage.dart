@@ -4,21 +4,21 @@ import 'package:shared_preferences/shared_preferences.dart';
 abstract final class AuthSessionStorage {
   static const _tokenKey = 'lab_patient_access_token';
   static const _rememberKey = 'lab_patient_remember_me';
-  static const _emailKey = 'lab_patient_remembered_email';
+  static const _phoneKey = 'lab_patient_remembered_phone';
 
   static Future<void> saveSession({
     required String token,
     required bool remember,
-    String? email,
+    String? phone,
   }) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_rememberKey, remember);
     await prefs.setString(_tokenKey, token.trim());
-    final trimmed = email?.trim().toLowerCase();
+    final trimmed = phone?.trim();
     if (remember && trimmed != null && trimmed.isNotEmpty) {
-      await prefs.setString(_emailKey, trimmed);
+      await prefs.setString(_phoneKey, trimmed);
     } else {
-      await prefs.remove(_emailKey);
+      await prefs.remove(_phoneKey);
     }
   }
 
@@ -34,12 +34,12 @@ abstract final class AuthSessionStorage {
     return prefs.getBool(_rememberKey) ?? true;
   }
 
-  static Future<String?> readRememberedEmail() async {
+  static Future<String?> readRememberedPhone() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_emailKey);
+    return prefs.getString(_phoneKey);
   }
 
-  /// Drop token after expiry while keeping email / remember preference for the login form.
+  /// Drop token after expiry while keeping phone / remember preference for the login form.
   static Future<void> clearAccessToken() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_tokenKey);
@@ -49,6 +49,6 @@ abstract final class AuthSessionStorage {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_tokenKey);
     await prefs.remove(_rememberKey);
-    await prefs.remove(_emailKey);
+    await prefs.remove(_phoneKey);
   }
 }

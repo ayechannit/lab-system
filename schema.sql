@@ -16,22 +16,22 @@ Features:
 CREATE TABLE users (
     id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
     name NVARCHAR(255) NOT NULL,
-    email NVARCHAR(255) NOT NULL UNIQUE,
     phone NVARCHAR(50) NOT NULL,
     password_hash NVARCHAR(MAX) NOT NULL,
-    role NVARCHAR(20) NOT NULL CHECK (role IN ('clinic', 'doctor', 'patient', 'phlebotomist')),
     address NVARCHAR(MAX),
     latitude FLOAT,
     longitude FLOAT,
     total_points INT DEFAULT 0,
-    license_number NVARCHAR(100) NULL,
-    is_approved BIT DEFAULT 1,
+    total_spent_mmk DECIMAL(18, 2) NOT NULL DEFAULT 0,
     created_user UNIQUEIDENTIFIER,
     updated_user UNIQUEIDENTIFIER,
     is_deleted BIT DEFAULT 0, -- Soft Delete
     created_at DATETIME2 DEFAULT GETDATE(),
     updated_at DATETIME2 DEFAULT GETDATE()
 );
+
+-- Filtered so a soft-deleted account's old phone number can be reused by a new signup.
+CREATE UNIQUE INDEX UQ_users_phone ON users(phone) WHERE is_deleted = 0;
 
 -- LAB STAFF
 CREATE TABLE lab_staff (
@@ -172,6 +172,8 @@ CREATE TABLE payments (
     method NVARCHAR(20) CHECK (method IN ('cash', 'bank_transfer', 'mobile_pay')),
     reference_no NVARCHAR(255),
     verified_by UNIQUEIDENTIFIER FOREIGN KEY REFERENCES lab_staff(id),
+    points_redeemed INT NOT NULL DEFAULT 0,
+    points_value_mmk DECIMAL(18, 2) NOT NULL DEFAULT 0,
     paid_at DATETIME2,
     verified_at DATETIME2,
     created_user UNIQUEIDENTIFIER,
@@ -180,11 +182,24 @@ CREATE TABLE payments (
     updated_at DATETIME2 DEFAULT GETDATE()
 );
 
+-- TEST SPECIFIC REFERRAL 
+CREATE TABLE test_referral_fees (
+    id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+    test_id UNIQUEIDENTIFIER NOT NULL FOREIGN KEY REFERENCES lab_test_catalog(id),
+    referral_percent DECIMAL(5, 2) NOT NULL DEFAULT 0,
+    is_active BIT DEFAULT 1,
+    created_user UNIQUEIDENTIFIER,
+    updated_user UNIQUEIDENTIFIER,
+    is_deleted BIT DEFAULT 0, -- Soft Delete
+    created_at DATETIME2 DEFAULT GETDATE(),
+    updated_at DATETIME2 DEFAULT GETDATE(),
+    CONSTRAINT UQ_Referral_Test UNIQUE (test_id)
+);
+
 -- TEST SPECIFIC DISCOUNTS
 CREATE TABLE test_specific_discounts (
     id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
     test_id UNIQUEIDENTIFIER NOT NULL FOREIGN KEY REFERENCES lab_test_catalog(id),
-    role NVARCHAR(20) NOT NULL CHECK (role IN ('clinic', 'doctor', 'patient', 'phlebotomist')),
     discount_percent DECIMAL(5, 2) NOT NULL,
     is_active BIT DEFAULT 1,
     start_date DATETIME2 NULL,
@@ -194,22 +209,7 @@ CREATE TABLE test_specific_discounts (
     is_deleted BIT DEFAULT 0, -- Soft Delete
     created_at DATETIME2 DEFAULT GETDATE(),
     updated_at DATETIME2 DEFAULT GETDATE(),
-    CONSTRAINT UQ_Test_Role UNIQUE (test_id, role)
-);
-
--- TEST SPECIFIC REFERRAL FEES
-CREATE TABLE test_referral_fees (
-    id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
-    test_id UNIQUEIDENTIFIER NOT NULL FOREIGN KEY REFERENCES lab_test_catalog(id),
-    role NVARCHAR(20) NOT NULL CHECK (role IN ('clinic', 'doctor', 'patient', 'phlebotomist')),
-    referral_percent DECIMAL(5, 2) NOT NULL DEFAULT 0,
-    is_active BIT DEFAULT 1,
-    created_user UNIQUEIDENTIFIER,
-    updated_user UNIQUEIDENTIFIER,
-    is_deleted BIT DEFAULT 0, -- Soft Delete
-    created_at DATETIME2 DEFAULT GETDATE(),
-    updated_at DATETIME2 DEFAULT GETDATE(),
-    CONSTRAINT UQ_Referral_Test_Role UNIQUE (test_id, role)
+    CONSTRAINT UQ_Test_Discount UNIQUE (test_id)
 );
 
 -- ADVERTISEMENTS
@@ -298,6 +298,33 @@ CREATE TABLE point_settings (
 
 -- Index Point Settings
 CREATE INDEX IX_PointSettings_Active ON point_settings(is_active, is_deleted);
+
+-- MEMBERSHIP TIERS (customer tiering based on lifetime verified-payment spend)
+CREATE TABLE membership_tiers (
+    id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+    name NVARCHAR(255) NOT NULL,
+    min_spend_mmk DECIMAL(18, 2) NOT NULL DEFAULT 0,
+    discount_percent DECIMAL(5, 2) NOT NULL DEFAULT 0,
+    is_active BIT DEFAULT 1,
+    created_user UNIQUEIDENTIFIER,
+    updated_user UNIQUEIDENTIFIER,
+    is_deleted BIT DEFAULT 0,
+    created_at DATETIME2 DEFAULT GETDATE(),
+    updated_at DATETIME2 DEFAULT GETDATE()
+);
+INSERT INTO membership_tiers (name, min_spend_mmk, discount_percent) VALUES
+    ('Normal', 0, 0),
+    ('Silver', 500000, 3),
+    ('Gold', 2000000, 5);
+
+-- POINT REDEMPTION SETTINGS (singleton: global "1 point = X MMK" rate)
+CREATE TABLE point_redemption_settings (
+    id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+    mmk_per_point DECIMAL(18, 2) NOT NULL DEFAULT 0,
+    updated_user UNIQUEIDENTIFIER,
+    updated_at DATETIME2 DEFAULT GETDATE()
+);
+INSERT INTO point_redemption_settings (mmk_per_point) VALUES (0);
 
 -- SEED DATA FOR POINT SETTINGS
 INSERT INTO point_settings (name, spend_amount_mmk, points_reward, is_active)

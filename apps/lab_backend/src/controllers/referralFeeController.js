@@ -18,24 +18,13 @@ const getReferralFeesByTestId = async (req, res) => {
   }
 };
 
-const getReferralFeeByTestIdAndRole = async (req, res) => {
-  try {
-    const { test_id, role } = req.params;
-    const fee = await ReferralFee.getByTestIdAndRole(test_id, role);
-    if (!fee) return res.status(404).json({ message: 'Referral fee not found for this test and role' });
-    res.json(fee);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-};
-
 const upsertReferralFee = async (req, res) => {
   try {
-    const { test_id, role, referral_percent, is_active } = req.body;
-    if (!test_id || !role || referral_percent === undefined) {
-      return res.status(400).json({ message: 'test_id, role, and referral_percent are required' });
+    const { test_id, referral_percent, is_active } = req.body;
+    if (!test_id || referral_percent === undefined) {
+      return res.status(400).json({ message: 'test_id and referral_percent are required' });
     }
-    const referralData = { test_id, role, referral_percent, is_active };
+    const referralData = { test_id, referral_percent, is_active };
     const result = await ReferralFee.upsert(referralData, req.user?.id);
     res.json(result);
   } catch (error) {
@@ -46,15 +35,15 @@ const upsertReferralFee = async (req, res) => {
 const bulkUpsertReferralFees = async (req, res) => {
   try {
     const { referral_fees } = req.body;
-    
+
     if (!Array.isArray(referral_fees) || referral_fees.length === 0) {
       return res.status(400).json({ message: 'A non-empty referral_fees array is required' });
     }
 
     // Basic validation for each item
     for (const r of referral_fees) {
-      if (!r.test_id || !r.role || r.referral_percent === undefined) {
-        return res.status(400).json({ message: 'Each referral fee must have test_id, role, and referral_percent' });
+      if (!r.test_id || r.referral_percent === undefined) {
+        return res.status(400).json({ message: 'Each referral fee must have test_id and referral_percent' });
       }
     }
 
@@ -78,7 +67,6 @@ const deleteReferralFee = async (req, res) => {
 module.exports = {
   getAllReferralFees,
   getReferralFeesByTestId,
-  getReferralFeeByTestIdAndRole,
   upsertReferralFee,
   bulkUpsertReferralFees,
   deleteReferralFee,

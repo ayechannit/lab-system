@@ -7,6 +7,7 @@ import '../../l10n/app_localizations.dart';
 import '../../theme/theme_extensions.dart';
 import '../../services/auth_session_storage.dart';
 import '../../services/rest_lab_user_api.dart';
+import '../../utils/phone_input.dart';
 import '../../widgets/common/app_brand_mark.dart';
 import '../../widgets/common/app_toast.dart';
 import '../../widgets/auth/auth_preference_controls.dart';
@@ -23,7 +24,7 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  late final TextEditingController _email;
+  late final TextEditingController _phone;
   late final TextEditingController _password;
   bool _remember = true;
   bool _obscurePassword = true;
@@ -32,7 +33,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   void initState() {
     super.initState();
-    _email = TextEditingController();
+    _phone = TextEditingController();
     _password = TextEditingController();
     _loadRememberedLogin();
     _applyRegisterHint();
@@ -49,25 +50,25 @@ class _LoginScreenState extends State<LoginScreen> {
   void _applyRegisterHint() {
     final ex = widget.routeExtra;
     if (ex is PostRegisterLoginHint) {
-      _email.text = ex.email;
+      _phone.text = ex.phone;
     }
   }
 
   Future<void> _loadRememberedLogin() async {
     final remember = await AuthSessionStorage.readRememberPreference();
-    final email = await AuthSessionStorage.readRememberedEmail();
+    final phone = await AuthSessionStorage.readRememberedPhone();
     if (!mounted) return;
     setState(() {
       _remember = remember;
-      if (email != null && email.isNotEmpty && _email.text.isEmpty) {
-        _email.text = email;
+      if (phone != null && phone.isNotEmpty && _phone.text.isEmpty) {
+        _phone.text = phone;
       }
     });
   }
 
   @override
   void dispose() {
-    _email.dispose();
+    _phone.dispose();
     _password.dispose();
     super.dispose();
   }
@@ -115,63 +116,27 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          _FieldLabel(label: l10n.email),
+                          _FieldLabel(label: l10n.phone),
                           _InputShell(
                             child: TextFormField(
-                              controller: _email,
+                              controller: _phone,
                               autovalidateMode: AutovalidateMode.onUserInteraction,
                               decoration: const InputDecoration(
-                                prefixIcon: Icon(Icons.mail_outline),
+                                prefixIcon: Icon(Icons.call_outlined),
+                                hintText: '+959…',
                                 border: InputBorder.none,
                                 enabledBorder: InputBorder.none,
                                 focusedBorder: InputBorder.none,
                                 filled: false,
                               ),
-                              keyboardType: TextInputType.emailAddress,
+                              keyboardType: TextInputType.phone,
+                              inputFormatters: const [PhoneNumberInputFormatter()],
                               textInputAction: TextInputAction.next,
-                              validator: (v) {
-                                final t = (v ?? '').trim();
-                                if (t.isEmpty) return l10n.emailRequired;
-                                if (!t.contains('@')) return l10n.emailInvalid;
-                                return null;
-                              },
+                              validator: (v) => validatePhoneNumber(v),
                             ),
                           ),
                           const SizedBox(height: 14),
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.baseline,
-                            textBaseline: TextBaseline.alphabetic,
-                            children: [
-                              _FieldLabel(label: l10n.password, bottomPadding: 0),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Align(
-                                  alignment: Alignment.centerRight,
-                                  child: TextButton(
-                                    style: TextButton.styleFrom(
-                                      padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
-                                      minimumSize: Size.zero,
-                                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                      visualDensity: VisualDensity.compact,
-                                    ),
-                                    onPressed: () {
-                                      context.push('/forgot-password', extra: _email.text.trim());
-                                    },
-                                    child: Text(
-                                      l10n.forgotPassword,
-                                      softWrap: true,
-                                      textAlign: TextAlign.end,
-                                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                                            color: context.cs.primary,
-                                            height: 1.35,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
+                          _FieldLabel(label: l10n.password),
                           const SizedBox(height: 6),
                           _InputShell(
                             child: TextFormField(
@@ -236,7 +201,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                       setState(() => _submitting = true);
                                       try {
                                         await session.login(
-                                          email: _email.text.trim(),
+                                          phone: _phone.text.trim(),
                                           password: _password.text,
                                           remember: _remember,
                                         );
@@ -245,21 +210,11 @@ class _LoginScreenState extends State<LoginScreen> {
                                       } catch (e) {
                                         if (!context.mounted) return;
                                         final msg = e is LabApiException ? e.message : '$e';
-                                        final pending = e is LabApiException && e.statusCode == 403;
-                                        if (pending) {
-                                          AppToast.warning(
-                                            context,
-                                            '$msg\n\nAsk lab staff to approve your account in the admin portal.',
-                                            title: 'Account pending approval',
-                                            duration: const Duration(seconds: 6),
-                                          );
-                                        } else {
-                                          AppToast.error(
-                                            context,
-                                            msg,
-                                            title: 'Couldn\'t sign in',
-                                          );
-                                        }
+                                        AppToast.error(
+                                          context,
+                                          msg,
+                                          title: 'Couldn\'t sign in',
+                                        );
                                       } finally {
                                         if (mounted) setState(() => _submitting = false);
                                       }
@@ -316,15 +271,14 @@ class _LoginScreenState extends State<LoginScreen> {
 }
 
 class _FieldLabel extends StatelessWidget {
-  const _FieldLabel({required this.label, this.bottomPadding = 6});
+  const _FieldLabel({required this.label});
 
   final String label;
-  final double bottomPadding;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.only(left: 2, bottom: bottomPadding),
+      padding: const EdgeInsets.only(left: 2, bottom: 6),
       child: Text(
         label,
         style: Theme.of(context).textTheme.labelLarge?.copyWith(

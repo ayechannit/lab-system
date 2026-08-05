@@ -3,7 +3,7 @@
   "info": {
     "title": "Lab System API",
     "version": "1.0.0",
-    "description": "API documentation for the Lab System backend.\n\n### 🔔 System Notification Triggers Guide\nThe backend implements automatic background-dispatched push and in-app notifications on critical events. Below is the integration list of which endpoints automatically trigger dispatches:\n\n#### 1. Accounts & Approvals (`/api/users`)\n* **`POST /api/users`** - When professional accounts register (doctor/clinic/phlebotomist), notifies admin/staff on `staff_notifications` topic.\n* **`PUT /api/users/:id/approve`** - When approved, notifies user's device FCM token: *\"Account Approved\"*.\n* **`PUT /api/users/fcm-token`** - Registers/updates active FCM registration tokens for devices.\n\n#### 2. Order Management (`/api/orders`)\n* **`POST /api/orders`** - Notifies user (*\"Order Placed Successfully\"*) and staff (*\"New Order Received\"*).\n* **`PUT /api/orders/:id/status`** - Notifies user on status progress changes: *\"Order Status Updated\"*.\n\n#### 3. Lab Results & Quality Checks (`/api/lab-results`)\n* **`POST /api/orders/:id/test/:testId/result`** - Uploading a test result notifies user. Mark the order delivered separately via status update when staff release results.\n* **`POST /api/lab-results/:resultId/ai-check`** - Failed AI quality checks notify admin/staff topic: *\"AI Quality Check Issue\"*.\n\n#### 4. Appointments & Scheduling (`/api/schedules`)\n* **`POST /api/schedules`** - Notifies user of sample collector and time: *\"Sample Collection Scheduled\"*.\n\n#### 5. Payments Processing (`/api/payments`)\n* **`POST /api/payments`** - Notifies user: *\"Payment Submitted\"*.\n* **`PUT /api/payments/:id/status`** - Notifies user on verification (*\"Payment Verified Successfully\"*) or rejection (*\"Payment Verification Failed\"*).\n\n#### 6. Customer Feedback (`/api/ratings`)\n* **`POST /api/ratings`** - Notifies staff topic of incoming review scores: *\"New Order Rating\"*.\n\n#### 7. Campaigns & Discounts (`/api/discounts`)\n* **`POST /api/discounts`** - Launches active discounts, broadcasting to `all_users` or targeted roles (e.g. `clinic_notifications`, `patient_notifications`)."
+    "description": "API documentation for the Lab System backend.\n\n### 🔔 System Notification Triggers Guide\nThe backend implements automatic background-dispatched push and in-app notifications on critical events. Below is the integration list of which endpoints automatically trigger dispatches:\n\n#### 1. Accounts (`/api/users`)\n* **`PUT /api/users/fcm-token`** - Registers/updates active FCM registration tokens for devices.\n\n#### 2. Order Management (`/api/orders`)\n* **`POST /api/orders`** - Notifies user (*\"Order Placed Successfully\"*) and staff (*\"New Order Received\"*).\n* **`PUT /api/orders/:id/status`** - Notifies user on status progress changes: *\"Order Status Updated\"*.\n\n#### 3. Lab Results & Quality Checks (`/api/lab-results`)\n* **`POST /api/orders/:id/test/:testId/result`** - Uploading a test result notifies user. Mark the order delivered separately via status update when staff release results.\n* **`POST /api/lab-results/:resultId/ai-check`** - Failed AI quality checks notify admin/staff topic: *\"AI Quality Check Issue\"*.\n\n#### 4. Appointments & Scheduling (`/api/schedules`)\n* **`POST /api/schedules`** - Notifies user of sample collector and time: *\"Sample Collection Scheduled\"*.\n\n#### 5. Payments Processing (`/api/payments`)\n* **`POST /api/payments`** - Notifies user: *\"Payment Submitted\"*.\n* **`PUT /api/payments/:id/status`** - Notifies user on verification (*\"Payment Verified Successfully\"*) or rejection (*\"Payment Verification Failed\"*).\n\n#### 6. Customer Feedback (`/api/ratings`)\n* **`POST /api/ratings`** - Notifies staff topic of incoming review scores: *\"New Order Rating\"*."
   },
   "servers": [
     {
@@ -517,7 +517,7 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "email": {
+                  "phone": {
                     "type": "string"
                   },
                   "password": {
@@ -589,93 +589,6 @@
           },
           "401": {
             "description": "Unauthorized"
-          }
-        }
-      }
-    },
-    "/api/auth/forgot-password": {
-      "post": {
-        "summary": "Request verification code to reset password",
-        "description": "Validates user/staff email, generates a 15-minute 6-digit PIN code, and sends it via email.",
-        "tags": [
-          "Auth"
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "email"
-                ],
-                "properties": {
-                  "email": {
-                    "type": "string",
-                    "description": "Registered email address"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Code sent successfully"
-          },
-          "400": {
-            "description": "Missing email address"
-          },
-          "404": {
-            "description": "Account not found"
-          }
-        }
-      }
-    },
-    "/api/auth/reset-password": {
-      "post": {
-        "summary": "Reset password with 6-digit PIN",
-        "description": "Verifies the code against the registered email and updates the password.",
-        "tags": [
-          "Auth"
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "email",
-                  "code",
-                  "new_password"
-                ],
-                "properties": {
-                  "email": {
-                    "type": "string"
-                  },
-                  "code": {
-                    "type": "string",
-                    "description": "The 6-digit PIN code received in email"
-                  },
-                  "new_password": {
-                    "type": "string",
-                    "description": "The new secure password to set"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Password reset successful"
-          },
-          "400": {
-            "description": "Invalid or expired code"
-          },
-          "404": {
-            "description": "Account not found"
           }
         }
       }
@@ -845,376 +758,6 @@
           },
           "500": {
             "description": "Server error"
-          }
-        }
-      }
-    },
-    "/api/discounts": {
-      "get": {
-        "summary": "Get all test-specific discounts",
-        "tags": [
-          "Discounts"
-        ],
-        "parameters": [
-          {
-            "in": "query",
-            "name": "role",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "clinic",
-                "doctor",
-                "patient",
-                "phlebotomist"
-              ]
-            },
-            "description": "Filter discounts by role"
-          },
-          {
-            "in": "query",
-            "name": "is_active",
-            "schema": {
-              "type": "boolean"
-            },
-            "description": "Filter by active status"
-          },
-          {
-            "in": "query",
-            "name": "test_name",
-            "schema": {
-              "type": "string"
-            },
-            "description": "Search by partial test name"
-          },
-          {
-            "in": "query",
-            "name": "test_code",
-            "schema": {
-              "type": "string"
-            },
-            "description": "Search by partial test code"
-          },
-          {
-            "in": "query",
-            "name": "page",
-            "schema": {
-              "type": "integer",
-              "minimum": 1
-            },
-            "description": "Page number for pagination"
-          },
-          {
-            "in": "query",
-            "name": "limit",
-            "schema": {
-              "type": "integer",
-              "minimum": 1
-            },
-            "description": "Number of items per page for pagination"
-          },
-          {
-            "in": "query",
-            "name": "sortBy",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "created_at",
-                "updated_at",
-                "discount_percent",
-                "role",
-                "test_name"
-              ]
-            },
-            "description": "Sort field for discounts"
-          },
-          {
-            "in": "query",
-            "name": "sortOrder",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "asc",
-                "desc",
-                "ASC",
-                "DESC"
-              ]
-            },
-            "description": "Sort order (ASC or DESC)"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "List of all discounts",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/Discount"
-                  }
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "summary": "Create or update a discount",
-        "description": "Supports 'all' role to bulk update clinic, doctor, and patient roles.",
-        "tags": [
-          "Discounts"
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "test_id",
-                  "role",
-                  "discount_percent"
-                ],
-                "properties": {
-                  "test_id": {
-                    "type": "string",
-                    "format": "uuid"
-                  },
-                  "role": {
-                    "type": "string",
-                    "enum": [
-                      "clinic",
-                      "doctor",
-                      "patient",
-                      "phlebotomist",
-                      "all"
-                    ]
-                  },
-                  "discount_percent": {
-                    "type": "number"
-                  },
-                  "is_active": {
-                    "type": "boolean"
-                  },
-                  "start_date": {
-                    "type": "string",
-                    "format": "date-time",
-                    "nullable": true
-                  },
-                  "end_date": {
-                    "type": "string",
-                    "format": "date-time",
-                    "nullable": true
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "The created/updated discount(s)",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/Discount"
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/discounts/{test_id}": {
-      "get": {
-        "summary": "Get all discounts for a specific test",
-        "tags": [
-          "Discounts"
-        ],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "test_id",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "List of discounts for the test",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/Discount"
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/discounts/{test_id}/{role}": {
-      "get": {
-        "summary": "Get a discount for a specific test and role",
-        "tags": [
-          "Discounts"
-        ],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "test_id",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "in": "path",
-            "name": "role",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "enum": [
-                "clinic",
-                "doctor",
-                "patient",
-                "phlebotomist"
-              ]
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Discount detail including pricing",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Discount"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Discount not found"
-          }
-        }
-      }
-    },
-    "/api/discounts/bulk": {
-      "post": {
-        "summary": "Bulk create or update discounts",
-        "description": "Accepts an array of discounts and upserts them.",
-        "tags": [
-          "Discounts"
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "discounts"
-                ],
-                "properties": {
-                  "discounts": {
-                    "type": "array",
-                    "items": {
-                      "type": "object",
-                      "required": [
-                        "test_id",
-                        "role",
-                        "discount_percent"
-                      ],
-                      "properties": {
-                        "test_id": {
-                          "type": "string",
-                          "format": "uuid"
-                        },
-                        "role": {
-                          "type": "string",
-                          "enum": [
-                            "clinic",
-                            "doctor",
-                            "patient",
-                            "phlebotomist",
-                            "all"
-                          ]
-                        },
-                        "discount_percent": {
-                          "type": "number"
-                        },
-                        "is_active": {
-                          "type": "boolean"
-                        },
-                        "start_date": {
-                          "type": "string",
-                          "format": "date-time",
-                          "nullable": true
-                        },
-                        "end_date": {
-                          "type": "string",
-                          "format": "date-time",
-                          "nullable": true
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "The created/updated discounts",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/Discount"
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/discounts/{id}": {
-      "delete": {
-        "summary": "Soft delete a specific discount entry",
-        "tags": [
-          "Discounts"
-        ],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Discount deleted"
-          },
-          "404": {
-            "description": "Discount not found"
           }
         }
       }
@@ -1439,6 +982,211 @@
         "responses": {
           "201": {
             "description": "AI check added"
+          }
+        }
+      }
+    },
+    "/api/material-fees": {
+      "get": {
+        "summary": "Get all material fee configurations",
+        "tags": [
+          "MaterialFees"
+        ],
+        "responses": {
+          "200": {
+            "description": "List of all material fee configurations",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MaterialFee"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a new material fee configuration",
+        "tags": [
+          "MaterialFees"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "name",
+                  "amount_mmk"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "amount_mmk": {
+                    "type": "number"
+                  },
+                  "is_active": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Material fee created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MaterialFee"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/material-fees/active": {
+      "get": {
+        "summary": "Get all active material fee configurations",
+        "tags": [
+          "MaterialFees"
+        ],
+        "responses": {
+          "200": {
+            "description": "List of active material fee configurations",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MaterialFee"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/material-fees/{id}": {
+      "get": {
+        "summary": "Get a material fee configuration by ID",
+        "tags": [
+          "MaterialFees"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Material fee configuration details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MaterialFee"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Material fee not found"
+          }
+        }
+      },
+      "put": {
+        "summary": "Update an existing material fee configuration",
+        "tags": [
+          "MaterialFees"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "name",
+                  "amount_mmk"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "amount_mmk": {
+                    "type": "number"
+                  },
+                  "is_active": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Material fee updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MaterialFee"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Material fee not found"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Soft delete a material fee configuration",
+        "tags": [
+          "MaterialFees"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Material fee deleted successfully"
+          },
+          "404": {
+            "description": "Material fee not found"
           }
         }
       }
@@ -2410,6 +2158,9 @@
                         "collecting_person": {
                           "type": "string"
                         },
+                        "profile_image_url": {
+                          "type": "string"
+                        },
                         "collection_time": {
                           "type": "string",
                           "format": "date-time"
@@ -2626,6 +2377,102 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/api/permissions/me": {
+      "get": {
+        "summary": "Get the signed-in staff member's allowed module keys",
+        "tags": [
+          "Permissions"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Allowed module keys for the current account"
+          }
+        }
+      }
+    },
+    "/api/permissions": {
+      "get": {
+        "summary": "Get the full role/module permission matrix",
+        "tags": [
+          "Permissions"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Full permission matrix"
+          },
+          "403": {
+            "description": "Forbidden (admin only)"
+          }
+        }
+      },
+      "put": {
+        "summary": "Bulk update the role/module permission matrix",
+        "tags": [
+          "Permissions"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "entries"
+                ],
+                "properties": {
+                  "entries": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "role": {
+                          "type": "string",
+                          "enum": [
+                            "manager",
+                            "reception",
+                            "lab_technician",
+                            "collector"
+                          ]
+                        },
+                        "module_key": {
+                          "type": "string"
+                        },
+                        "is_allowed": {
+                          "type": "boolean"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated permission matrix"
+          },
+          "403": {
+            "description": "Forbidden (admin only)"
           }
         }
       }
@@ -3276,20 +3123,6 @@
         "parameters": [
           {
             "in": "query",
-            "name": "role",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "clinic",
-                "doctor",
-                "patient",
-                "phlebotomist"
-              ]
-            },
-            "description": "Filter referral fees by role"
-          },
-          {
-            "in": "query",
             "name": "is_active",
             "schema": {
               "type": "boolean"
@@ -3380,23 +3213,12 @@
                 "type": "object",
                 "required": [
                   "test_id",
-                  "role",
                   "referral_percent"
                 ],
                 "properties": {
                   "test_id": {
                     "type": "string",
                     "format": "uuid"
-                  },
-                  "role": {
-                    "type": "string",
-                    "enum": [
-                      "clinic",
-                      "doctor",
-                      "patient",
-                      "phlebotomist",
-                      "all"
-                    ]
                   },
                   "referral_percent": {
                     "type": "number"
@@ -3460,54 +3282,6 @@
         }
       }
     },
-    "/api/referral-fees/{test_id}/{role}": {
-      "get": {
-        "summary": "Get a specific referral fee config for a test and role",
-        "tags": [
-          "Referral Fees"
-        ],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "test_id",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "in": "path",
-            "name": "role",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "enum": [
-                "clinic",
-                "doctor",
-                "patient",
-                "phlebotomist"
-              ]
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Referral fee configuration details",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ReferralFee"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Referral fee config not found"
-          }
-        }
-      }
-    },
     "/api/referral-fees/bulk": {
       "post": {
         "summary": "Bulk create or update multiple referral fee configurations",
@@ -3530,23 +3304,12 @@
                       "type": "object",
                       "required": [
                         "test_id",
-                        "role",
                         "referral_percent"
                       ],
                       "properties": {
                         "test_id": {
                           "type": "string",
                           "format": "uuid"
-                        },
-                        "role": {
-                          "type": "string",
-                          "enum": [
-                            "clinic",
-                            "doctor",
-                            "patient",
-                            "phlebotomist",
-                            "all"
-                          ]
                         },
                         "referral_percent": {
                           "type": "number"
@@ -3811,61 +3574,6 @@
         }
       }
     },
-    "/api/reports/revenue-by-channel": {
-      "get": {
-        "summary": "Get revenue breakdown by user role (channel)",
-        "tags": [
-          "Reports"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "query",
-            "name": "startDate",
-            "schema": {
-              "type": "string",
-              "format": "date-time"
-            }
-          },
-          {
-            "in": "query",
-            "name": "endDate",
-            "schema": {
-              "type": "string",
-              "format": "date-time"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Revenue by channel data",
-            "content": {
-              "application/json": {
-                "example": {
-                  "success": true,
-                  "data": [
-                    {
-                      "role": "clinic",
-                      "revenue": 5000000,
-                      "order_count": 40
-                    },
-                    {
-                      "role": "patient",
-                      "revenue": 1200000,
-                      "order_count": 15
-                    }
-                  ]
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/reports/pending-queue": {
       "get": {
         "summary": "Get list of pending orders that require action",
@@ -4063,18 +3771,6 @@
             "schema": {
               "type": "string",
               "format": "date-time"
-            }
-          },
-          {
-            "in": "query",
-            "name": "role",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "clinic",
-                "doctor",
-                "patient"
-              ]
             }
           }
         ],
@@ -4452,6 +4148,305 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/api/service-geofences": {
+      "get": {
+        "summary": "Get all service geofences",
+        "tags": [
+          "ServiceGeofences"
+        ],
+        "responses": {
+          "200": {
+            "description": "List of all service geofences",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ServiceGeofence"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a new service geofence",
+        "tags": [
+          "ServiceGeofences"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "name",
+                  "west_longitude",
+                  "east_longitude",
+                  "north_latitude",
+                  "south_latitude",
+                  "service_fee_mmk"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "west_longitude": {
+                    "type": "number"
+                  },
+                  "east_longitude": {
+                    "type": "number"
+                  },
+                  "north_latitude": {
+                    "type": "number"
+                  },
+                  "south_latitude": {
+                    "type": "number"
+                  },
+                  "service_fee_mmk": {
+                    "type": "number"
+                  },
+                  "priority": {
+                    "type": "integer"
+                  },
+                  "is_active": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Service geofence created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceGeofence"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/service-geofences/active": {
+      "get": {
+        "summary": "Get all active service geofences",
+        "tags": [
+          "ServiceGeofences"
+        ],
+        "responses": {
+          "200": {
+            "description": "List of active service geofences",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ServiceGeofence"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/service-geofences/calculate-fee": {
+      "get": {
+        "summary": "Calculate service fee dynamically from lat/lng coordinates",
+        "tags": [
+          "ServiceGeofences"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "lat",
+            "required": true,
+            "schema": {
+              "type": "number"
+            },
+            "description": "Latitude coordinate of the order location"
+          },
+          {
+            "in": "query",
+            "name": "lng",
+            "required": true,
+            "schema": {
+              "type": "number"
+            },
+            "description": "Longitude coordinate of the order location"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Service fee result based on cardinal bounding box check",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "service_geofence_id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "nullable": true
+                    },
+                    "zone_name": {
+                      "type": "string"
+                    },
+                    "service_fee_mmk": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing or invalid lat/lng coordinates"
+          }
+        }
+      }
+    },
+    "/api/service-geofences/{id}": {
+      "get": {
+        "summary": "Get a service geofence by ID",
+        "tags": [
+          "ServiceGeofences"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Service geofence configuration details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceGeofence"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Service geofence not found"
+          }
+        }
+      },
+      "put": {
+        "summary": "Update an existing service geofence",
+        "tags": [
+          "ServiceGeofences"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "name",
+                  "west_longitude",
+                  "east_longitude",
+                  "north_latitude",
+                  "south_latitude",
+                  "service_fee_mmk"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "west_longitude": {
+                    "type": "number"
+                  },
+                  "east_longitude": {
+                    "type": "number"
+                  },
+                  "north_latitude": {
+                    "type": "number"
+                  },
+                  "south_latitude": {
+                    "type": "number"
+                  },
+                  "service_fee_mmk": {
+                    "type": "number"
+                  },
+                  "priority": {
+                    "type": "integer"
+                  },
+                  "is_active": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Service geofence updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceGeofence"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Service geofence not found"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Soft delete a service geofence",
+        "tags": [
+          "ServiceGeofences"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Service geofence deleted successfully"
+          },
+          "404": {
+            "description": "Service geofence not found"
           }
         }
       }
@@ -4988,9 +4983,22 @@
         }
       }
     },
+    "/api/system-settings/ui-locale": {
+      "patch": {
+        "summary": "Update shared UI locale for admin web and mobile app",
+        "tags": [
+          "SystemSettings"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/tests": {
       "get": {
-        "summary": "Returns the list of all lab tests with their associated discounts",
+        "summary": "Returns the list of all lab tests",
         "tags": [
           "Tests"
         ],
@@ -5307,20 +5315,6 @@
         "parameters": [
           {
             "in": "query",
-            "name": "role",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "clinic",
-                "doctor",
-                "patient",
-                "phlebotomist"
-              ]
-            },
-            "description": "Filter users by role"
-          },
-          {
-            "in": "query",
             "name": "name",
             "schema": {
               "type": "string"
@@ -5334,14 +5328,6 @@
               "type": "string"
             },
             "description": "Search by partial phone number"
-          },
-          {
-            "in": "query",
-            "name": "is_approved",
-            "schema": {
-              "type": "boolean"
-            },
-            "description": "Filter by approval status"
           },
           {
             "in": "query",
@@ -5370,8 +5356,6 @@
                 "created_at",
                 "updated_at",
                 "name",
-                "email",
-                "role",
                 "total_points"
               ]
             },
@@ -5421,16 +5405,11 @@
                 "type": "object",
                 "required": [
                   "name",
-                  "email",
                   "phone",
-                  "password_hash",
-                  "role"
+                  "password_hash"
                 ],
                 "properties": {
                   "name": {
-                    "type": "string"
-                  },
-                  "email": {
                     "type": "string"
                   },
                   "phone": {
@@ -5438,15 +5417,6 @@
                   },
                   "password_hash": {
                     "type": "string"
-                  },
-                  "role": {
-                    "type": "string",
-                    "enum": [
-                      "clinic",
-                      "doctor",
-                      "patient",
-                      "phlebotomist"
-                    ]
                   },
                   "address": {
                     "type": "string"
@@ -5456,9 +5426,6 @@
                   },
                   "longitude": {
                     "type": "number"
-                  },
-                  "license_number": {
-                    "type": "string"
                   }
                 }
               }
@@ -5557,9 +5524,6 @@
                   },
                   "longitude": {
                     "type": "number"
-                  },
-                  "license_number": {
-                    "type": "string"
                   }
                 }
               }
@@ -5602,34 +5566,6 @@
         "responses": {
           "200": {
             "description": "User deleted"
-          },
-          "404": {
-            "description": "User not found"
-          }
-        }
-      }
-    },
-    "/api/users/{id}/approve": {
-      "put": {
-        "summary": "Approve a pending doctor or clinic user",
-        "tags": [
-          "Users"
-        ],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "description": "The unique identifier of the user to approve"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "User approved successfully"
           },
           "404": {
             "description": "User not found"
@@ -5848,62 +5784,36 @@
           }
         }
       },
-      "Discount": {
+      "MaterialFee": {
         "type": "object",
         "required": [
-          "test_id",
-          "role",
-          "discount_percent"
+          "name",
+          "amount_mmk"
         ],
         "properties": {
           "id": {
             "type": "string",
             "format": "uuid"
           },
-          "test_id": {
-            "type": "string",
-            "format": "uuid"
+          "name": {
+            "type": "string"
           },
-          "role": {
-            "type": "string",
-            "enum": [
-              "clinic",
-              "doctor",
-              "patient",
-              "phlebotomist",
-              "all"
-            ]
-          },
-          "discount_percent": {
+          "amount_mmk": {
             "type": "number"
           },
           "is_active": {
             "type": "boolean"
           },
-          "start_date": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
-          },
-          "end_date": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
-          },
           "is_deleted": {
             "type": "boolean"
           },
-          "test_name": {
-            "type": "string"
+          "created_user": {
+            "type": "string",
+            "format": "uuid"
           },
-          "test_code": {
-            "type": "string"
-          },
-          "original_price": {
-            "type": "number"
-          },
-          "after_discount_price": {
-            "type": "number"
+          "updated_user": {
+            "type": "string",
+            "format": "uuid"
           },
           "created_at": {
             "type": "string",
@@ -6374,7 +6284,6 @@
         "type": "object",
         "required": [
           "test_id",
-          "role",
           "referral_percent"
         ],
         "properties": {
@@ -6385,15 +6294,6 @@
           "test_id": {
             "type": "string",
             "format": "uuid"
-          },
-          "role": {
-            "type": "string",
-            "enum": [
-              "clinic",
-              "doctor",
-              "patient",
-              "phlebotomist"
-            ]
           },
           "referral_percent": {
             "type": "number"
@@ -6454,6 +6354,70 @@
           },
           "accepted_by_user": {
             "type": "boolean"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ServiceGeofence": {
+        "type": "object",
+        "required": [
+          "name",
+          "west_longitude",
+          "east_longitude",
+          "north_latitude",
+          "south_latitude",
+          "service_fee_mmk"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "west_longitude": {
+            "type": "number",
+            "format": "float"
+          },
+          "east_longitude": {
+            "type": "number",
+            "format": "float"
+          },
+          "north_latitude": {
+            "type": "number",
+            "format": "float"
+          },
+          "south_latitude": {
+            "type": "number",
+            "format": "float"
+          },
+          "service_fee_mmk": {
+            "type": "number"
+          },
+          "priority": {
+            "type": "integer"
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "is_deleted": {
+            "type": "boolean"
+          },
+          "created_user": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "updated_user": {
+            "type": "string",
+            "format": "uuid"
           },
           "created_at": {
             "type": "string",
@@ -6559,25 +6523,6 @@
           "created_at": {
             "type": "string",
             "format": "date-time"
-          },
-          "discounts": {
-            "type": "array",
-            "description": "List of active role-based discounts for this test",
-            "items": {
-              "type": "object",
-              "properties": {
-                "id": {
-                  "type": "string",
-                  "format": "uuid"
-                },
-                "role": {
-                  "type": "string"
-                },
-                "discount_percent": {
-                  "type": "number"
-                }
-              }
-            }
           }
         }
       },
@@ -6585,10 +6530,8 @@
         "type": "object",
         "required": [
           "name",
-          "email",
           "phone",
-          "password_hash",
-          "role"
+          "password_hash"
         ],
         "properties": {
           "id": {
@@ -6598,23 +6541,12 @@
           "name": {
             "type": "string"
           },
-          "email": {
-            "type": "string"
-          },
           "phone": {
-            "type": "string"
+            "type": "string",
+            "description": "Unique identifying field used for login"
           },
           "password_hash": {
             "type": "string"
-          },
-          "role": {
-            "type": "string",
-            "enum": [
-              "clinic",
-              "doctor",
-              "patient",
-              "phlebotomist"
-            ]
           },
           "address": {
             "type": "string"
@@ -6627,12 +6559,6 @@
           },
           "total_points": {
             "type": "integer"
-          },
-          "license_number": {
-            "type": "string"
-          },
-          "is_approved": {
-            "type": "boolean"
           },
           "is_deleted": {
             "type": "boolean"
@@ -6667,16 +6593,16 @@
       "description": "AI chat and conversations supporting streaming and non-streaming responses"
     },
     {
-      "name": "Discounts",
-      "description": "Test-specific role-based discount management"
-    },
-    {
       "name": "Health",
       "description": "System health and status checks"
     },
     {
       "name": "LabResults",
       "description": "Laboratory result management and AI quality checks"
+    },
+    {
+      "name": "MaterialFees",
+      "description": "Material Fee Configuration Management"
     },
     {
       "name": "Notifications",
@@ -6689,6 +6615,10 @@
     {
       "name": "Payments",
       "description": "Payment processing and verification (Supports partial/reserve payments)"
+    },
+    {
+      "name": "Permissions",
+      "description": "Per-role module access control for lab_admin_web"
     },
     {
       "name": "PointSettings",
@@ -6708,7 +6638,7 @@
     },
     {
       "name": "Referral Fees",
-      "description": "Test-specific role-based referral fee management"
+      "description": "Test-specific referral fee management"
     },
     {
       "name": "Reports",
@@ -6717,6 +6647,10 @@
     {
       "name": "Schedules",
       "description": "Order scheduling and collection tracking"
+    },
+    {
+      "name": "ServiceGeofences",
+      "description": "Cardinal Bounding-Box Geofencing and Service Fee Calculation"
     },
     {
       "name": "Staff",

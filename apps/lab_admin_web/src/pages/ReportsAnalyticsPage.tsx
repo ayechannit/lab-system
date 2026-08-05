@@ -25,7 +25,6 @@ import {
   fetchDiscountImpactAnalysis,
   fetchPendingResultsQueue,
   fetchRatingsSummary,
-  fetchRevenueByChannel,
   fetchStaffActivityAudit,
   fetchTestCategoryDistribution,
   fetchTurnaroundTimeReport,
@@ -35,7 +34,6 @@ import {
   type DiscountImpact,
   type PendingQueueRow,
   type RatingsSummaryResponse,
-  type RevenueByChannelRow,
   type RevenueTrendRow,
   type StaffActivityRow,
   type TatReportRow,
@@ -160,7 +158,6 @@ export function ReportsAnalyticsPage() {
   const [rangeDays, setRangeDays] = useState<ReportRangeDays>(14)
   const [kpis, setKpis] = useState<DashboardKpis | null>(null)
   const [revenueTrend, setRevenueTrend] = useState<RevenueTrendRow[]>([])
-  const [revenueByChannel, setRevenueByChannel] = useState<RevenueByChannelRow[]>([])
   const [testCategories, setTestCategories] = useState<TestCategoryRow[]>([])
   const [ratings, setRatings] = useState<RatingsSummaryResponse | null>(null)
   const [tatRows, setTatRows] = useState<TatReportRow[] | null>(null)
@@ -178,7 +175,6 @@ export function ReportsAnalyticsPage() {
     const range = reportDateRange(days)
     const results = await Promise.allSettled([
       fetchDashboardKpis(range),
-      fetchRevenueByChannel(range),
       fetchTestCategoryDistribution(range),
       fetchRatingsSummary(range),
       fetchTurnaroundTimeReport(range),
@@ -201,39 +197,45 @@ export function ReportsAnalyticsPage() {
 
     setKpis(dashboard?.kpis ?? null)
     setRevenueTrend(dashboard?.revenueTrend ?? [])
-    setRevenueByChannel(results[1].status === 'fulfilled' ? results[1].value : [])
-    setTestCategories(results[2].status === 'fulfilled' ? results[2].value : [])
-    setRatings(results[3].status === 'fulfilled' ? results[3].value : null)
-    setTatRows(results[4].status === 'fulfilled' ? results[4].value : null)
-    setPendingQueue(results[5].status === 'fulfilled' ? results[5].value : null)
-    setStaffActivity(results[6].status === 'fulfilled' ? results[6].value : null)
-    setCollectionReport(results[7].status === 'fulfilled' ? results[7].value : null)
-    setDiscountImpact(results[8].status === 'fulfilled' ? results[8].value : null)
-    setUserReport(results[9].status === 'fulfilled' ? results[9].value : null)
+    setTestCategories(results[1].status === 'fulfilled' ? results[1].value : [])
+    setRatings(results[2].status === 'fulfilled' ? results[2].value : null)
+    setTatRows(results[3].status === 'fulfilled' ? results[3].value : null)
+    setPendingQueue(results[4].status === 'fulfilled' ? results[4].value : null)
+    setStaffActivity(results[5].status === 'fulfilled' ? results[5].value : null)
+    setCollectionReport(results[6].status === 'fulfilled' ? results[6].value : null)
+    setDiscountImpact(results[7].status === 'fulfilled' ? results[7].value : null)
+    setUserReport(results[8].status === 'fulfilled' ? results[8].value : null)
   }, [t])
 
   useEffect(() => {
     if (!hasApi) {
-      setKpis(null)
-      setRevenueTrend([])
-      setRevenueByChannel([])
-      setTestCategories([])
-      setRatings(null)
-      setTatRows(null)
-      setPendingQueue(null)
-      setStaffActivity(null)
-      setCollectionReport(null)
-      setDiscountImpact(null)
-      setUserReport(null)
-      setLoading(false)
+      queueMicrotask(() => {
+        setKpis(null)
+        setRevenueTrend([])
+        setTestCategories([])
+        setRatings(null)
+        setTatRows(null)
+        setPendingQueue(null)
+        setStaffActivity(null)
+        setCollectionReport(null)
+        setDiscountImpact(null)
+        setUserReport(null)
+        setLoading(false)
+      })
       return
     }
     let cancelled = false
-    setLoading(true)
-    setLoadError(null)
-    void loadReports(rangeDays, () => cancelled).finally(() => {
-      if (!cancelled) setLoading(false)
+    queueMicrotask(() => {
+      setLoading(true)
+      setLoadError(null)
     })
+    void (async () => {
+      try {
+        await loadReports(rangeDays, () => cancelled)
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    })()
     return () => {
       cancelled = true
     }
@@ -400,47 +402,23 @@ export function ReportsAnalyticsPage() {
         </div>
       </div>
 
-      <div className="grid-2">
-        <div className="card chart-card">
-          <h3 className="card-title">{t('reports.charts.revenueByChannel')}</h3>
-          <div style={{ width: '100%', height: 240 }}>
-            {loading ? (
-              <LoadingSpinner label={t('reports.loadingChart')} />
-            ) : (
-              <ResponsiveContainer>
-                <BarChart
-                  data={revenueByChannel.map((r) => ({ ...r, roleLabel: roleLabel(r.role) }))}
-                  layout="vertical"
-                  margin={{ left: 8 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                  <XAxis type="number" tickFormatter={(v) => `${(v / 1_000_000).toFixed(1)}M`} />
-                  <YAxis dataKey="roleLabel" type="category" width={88} tick={{ fontSize: 11 }} />
-                  <Tooltip formatter={(v: number) => [`${v.toLocaleString()} MMK`, t('reports.charts.revenue')]} />
-                  <Bar dataKey="revenue" name={t('reports.charts.revenue')} fill={chartColors.primary} radius={[0, 6, 6, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </div>
-        </div>
-        <div className="card chart-card">
-          <h3 className="card-title">{t('reports.charts.testsByCategory')}</h3>
-          <div style={{ width: '100%', height: 240 }}>
-            {loading ? (
-              <LoadingSpinner label={t('reports.loadingChart')} />
-            ) : (
-              <ResponsiveContainer>
-                <BarChart data={testCategories}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                  <XAxis dataKey="category" tick={{ fontSize: 11 }} />
-                  <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
-                  <Tooltip />
-                  <Legend />
-                  <Bar dataKey="test_count" name={t('reports.charts.tests')} fill={chartColors.primaryLight} radius={[6, 6, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </div>
+      <div className="card chart-card">
+        <h3 className="card-title">{t('reports.charts.testsByCategory')}</h3>
+        <div style={{ width: '100%', height: 240 }}>
+          {loading ? (
+            <LoadingSpinner label={t('reports.loadingChart')} />
+          ) : (
+            <ResponsiveContainer>
+              <BarChart data={testCategories}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                <XAxis dataKey="category" tick={{ fontSize: 11 }} />
+                <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="test_count" name={t('reports.charts.tests')} fill={chartColors.primaryLight} radius={[6, 6, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
         </div>
       </div>
 

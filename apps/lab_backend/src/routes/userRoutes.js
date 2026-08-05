@@ -4,7 +4,7 @@ const { authMiddleware, modulePermission } = require('../middlewares/authMiddlew
 const { uploadProfile } = require('../middlewares/upload');
 const userController = require('../controllers/userController');
 
-/** Governs staff browsing/approving other end-users' accounts (Users page in lab_admin_web). */
+/** Governs staff browsing other end-users' accounts (Users page in lab_admin_web). */
 const manageUsers = modulePermission('users');
 
 
@@ -16,25 +16,19 @@ const manageUsers = modulePermission('users');
  *       type: object
  *       required:
  *         - name
- *         - email
  *         - phone
  *         - password_hash
- *         - role
  *       properties:
  *         id:
  *           type: string
  *           format: uuid
  *         name:
  *           type: string
- *         email:
- *           type: string
  *         phone:
  *           type: string
+ *           description: Unique identifying field used for login
  *         password_hash:
  *           type: string
- *         role:
- *           type: string
- *           enum: [clinic, doctor, patient, phlebotomist]
  *         address:
  *           type: string
  *         latitude:
@@ -43,10 +37,6 @@ const manageUsers = modulePermission('users');
  *           type: number
  *         total_points:
  *           type: integer
- *         license_number:
- *           type: string
- *         is_approved:
- *           type: boolean
  *         is_deleted:
  *           type: boolean
  *         created_at:
@@ -72,12 +62,6 @@ const manageUsers = modulePermission('users');
  *     tags: [Users]
  *     parameters:
  *       - in: query
- *         name: role
- *         schema:
- *           type: string
- *           enum: [clinic, doctor, patient, phlebotomist]
- *         description: Filter users by role
- *       - in: query
  *         name: name
  *         schema:
  *           type: string
@@ -87,11 +71,6 @@ const manageUsers = modulePermission('users');
  *         schema:
  *           type: string
  *         description: Search by partial phone number
- *       - in: query
- *         name: is_approved
- *         schema:
- *           type: boolean
- *         description: Filter by approval status
  *       - in: query
  *         name: page
  *         schema:
@@ -108,7 +87,7 @@ const manageUsers = modulePermission('users');
  *         name: sortBy
  *         schema:
  *           type: string
- *           enum: [created_at, updated_at, name, email, role, total_points]
+ *           enum: [created_at, updated_at, name, total_points]
  *         description: Sort field for users
  *       - in: query
  *         name: sortOrder
@@ -166,30 +145,21 @@ const manageUsers = modulePermission('users');
  *             type: object
  *             required:
  *               - name
- *               - email
  *               - phone
  *               - password_hash
- *               - role
  *             properties:
  *               name:
- *                 type: string
- *               email:
  *                 type: string
  *               phone:
  *                 type: string
  *               password_hash:
  *                 type: string
- *               role:
- *                 type: string
- *                 enum: [clinic, doctor, patient, phlebotomist]
  *               address:
  *                 type: string
  *               latitude:
  *                 type: number
  *               longitude:
  *                 type: number
- *               license_number:
- *                 type: string
  *     responses:
  *       201:
  *         description: User created
@@ -234,8 +204,6 @@ const manageUsers = modulePermission('users');
  *                 type: number
  *               longitude:
  *                 type: number
- *               license_number:
- *                 type: string
  *     responses:
  *       200:
  *         description: User updated
@@ -243,27 +211,6 @@ const manageUsers = modulePermission('users');
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/User'
- *       404:
- *         description: User not found
- */
-
-/**
- * @swagger
- * /api/users/{id}/approve:
- *   put:
- *     summary: Approve a pending doctor or clinic user
- *     tags: [Users]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *           format: uuid
- *         description: The unique identifier of the user to approve
- *     responses:
- *       200:
- *         description: User approved successfully
  *       404:
  *         description: User not found
  */
@@ -379,7 +326,6 @@ router.post('/', uploadProfile.single('image'), userController.createUser);
 router.put('/fcm-token', authMiddleware, userController.registerFcmToken);
 router.post('/:id/profile-image', authMiddleware, uploadProfile.single('image'), userController.uploadProfileImage);
 router.put('/:id', authMiddleware, userController.updateUser);
-router.put('/:id/approve', authMiddleware, manageUsers, userController.approveUser);
 router.delete('/:id', authMiddleware, userController.deleteUser);
 
 module.exports = router;

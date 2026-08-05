@@ -57,28 +57,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get signingIn => 'Signing in…';
 
   @override
-  String get email => 'Email';
-
-  @override
   String get password => 'Password';
 
   @override
   String get rememberMe => 'Keep me signed in';
 
   @override
-  String get forgotPassword => 'Forgot password?';
-
-  @override
   String get noAccountPrompt => 'Don\'t have an account?';
 
   @override
   String get createNewAccount => 'Create New Account';
-
-  @override
-  String get emailRequired => 'Enter your email';
-
-  @override
-  String get emailInvalid => 'Enter a valid email';
 
   @override
   String get passwordRequired => 'Enter your password';
@@ -110,6 +98,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String membershipTierLabel(String tierName, int percent) {
+    return '$tierName member · $percent% off';
+  }
+
+  @override
   String get phone => 'Phone';
 
   @override
@@ -125,8 +118,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get deleteAccountTitle => 'Delete account?';
 
   @override
-  String get deleteAccountMessage =>
-      'This will deactivate your account. You will be signed out and will not be able to sign in again with this email.';
+  String get deleteAccountMessage => 'This will deactivate your account. You will be signed out and will not be able to sign in again with this phone number.';
 
   @override
   String get deleteAccountConfirm => 'Delete account';

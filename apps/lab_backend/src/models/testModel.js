@@ -1,61 +1,6 @@
 const { sql, poolPromise } = require('../config/db');
 
 class LabTest {
-  static async getAll(filters = {}) {
-    const pool = await poolPromise;
-    const request = pool.request();
-    let query = 'SELECT *, created_user, updated_user FROM lab_test_catalog WHERE is_deleted = 0';
-
-    if (filters.category) {
-      query += ' AND category = @category';
-      request.input('category', sql.VarChar, filters.category);
-    }
-    if (filters.is_active !== undefined) {
-      query += ' AND is_active = @is_active';
-      request.input('is_active', sql.Bit, filters.is_active === 'true' || filters.is_active === true ? 1 : 0);
-    }
-    if (filters.is_package !== undefined) {
-      query += ' AND is_package = @is_package';
-      request.input('is_package', sql.Bit, filters.is_package === 'true' || filters.is_package === true ? 1 : 0);
-    }
-    if (filters.test_name) {
-      query += ' AND test_name LIKE @test_name';
-      request.input('test_name', sql.VarChar, `%${filters.test_name}%`);
-    }
-    if (filters.test_code) {
-      query += ' AND test_code LIKE @test_code';
-      request.input('test_code', sql.VarChar, `%${filters.test_code}%`);
-    }
-
-    const validSortFields = ['created_at', 'updated_at', 'test_name', 'test_code', 'base_price_mmk', 'category'];
-    const sortBy = validSortFields.includes(filters.sortBy) ? filters.sortBy : 'created_at';
-    const sortOrder = filters.sortOrder === 'ASC' || filters.sortOrder === 'asc' ? 'ASC' : 'DESC';
-    query += ` ORDER BY ${sortBy} ${sortOrder}`;
-
-    if (filters.page && filters.limit) {
-      const page = parseInt(filters.page, 10);
-      const limit = parseInt(filters.limit, 10);
-      const offset = (page - 1) * limit;
-      query += ' OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY';
-      request.input('offset', sql.Int, offset);
-      request.input('limit', sql.Int, limit);
-    }
-
-    const result = await request.query(query);
-    return result.recordset.map(row => {
-      if (row.package_items) {
-        try {
-          row.package_items = JSON.parse(row.package_items);
-        } catch (e) {
-          row.package_items = [];
-        }
-      } else {
-        row.package_items = [];
-      }
-      return row;
-    });
-  }
-
   static async getById(id) {
     const pool = await poolPromise;
     const result = await pool.request()
@@ -165,23 +110,17 @@ class LabTest {
     return result.rowsAffected[0] > 0;
   }
 
-  /**
-   * Fetches all tests and includes an array of all active discounts for each test.
-   */
-  static async getAllWithAllDiscounts(filters = {}) {
+  static async getAll(filters = {}) {
     const pool = await poolPromise;
     const request = pool.request();
 
     let query = `
       SELECT t.*,
-             (
-                SELECT sd.id, sd.role, sd.discount_percent, sd.start_date, sd.end_date
-                FROM test_specific_discounts sd
-                WHERE sd.test_id = t.id AND sd.is_active = 1 AND sd.is_deleted = 0
-                  AND (sd.start_date IS NULL OR sd.start_date <= GETDATE())
-                  AND (sd.end_date IS NULL OR sd.end_date >= GETDATE())
-                FOR JSON PATH
-             ) as discounts_json
+        (SELECT TOP 1 sd.discount_percent FROM test_specific_discounts sd
+         WHERE sd.test_id = t.id AND sd.is_active = 1 AND sd.is_deleted = 0
+           AND (sd.start_date IS NULL OR sd.start_date <= GETDATE())
+           AND (sd.end_date IS NULL OR sd.end_date >= GETDATE())
+         ORDER BY sd.updated_at DESC) AS discount_percent
       FROM lab_test_catalog t
       WHERE t.is_deleted = 0
     `;
@@ -222,16 +161,8 @@ class LabTest {
     }
 
     const result = await request.query(query);
-    
-    // Parse the JSON string from SQL Server into an actual array
+
     return result.recordset.map(row => {
-      if (row.discounts_json) {
-        row.discounts = JSON.parse(row.discounts_json);
-      } else {
-        row.discounts = [];
-      }
-      delete row.discounts_json;
-      
       if (row.package_items) {
         try {
           row.package_items = JSON.parse(row.package_items);
@@ -241,6 +172,10 @@ class LabTest {
       } else {
         row.package_items = [];
       }
+
+      row.discounted_price_mmk = row.discount_percent != null
+        ? Math.round(row.base_price_mmk * (1 - row.discount_percent / 100) * 100) / 100
+        : null;
 
       return row;
     });

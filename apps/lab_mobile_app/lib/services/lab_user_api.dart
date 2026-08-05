@@ -7,36 +7,19 @@ import '../models/lab_test_pick.dart';
 import '../models/loyalty.dart';
 import '../models/rating.dart';
 import '../models/user_report.dart';
-import '../models/user_role.dart';
 
 class RegisterRequest {
   const RegisterRequest({
     required this.name,
     required this.phone,
-    required this.email,
     required this.password,
-    required this.role,
-    this.address = '',
-    this.licenseNumber = '',
-    required this.latitude,
-    required this.longitude,
     this.profileImageBytes,
     this.profileImageFilename,
   });
 
   final String name;
   final String phone;
-  final String email;
   final String password;
-  final UserRole role;
-
-  /// Home / clinic address line (`POST /api/users`).
-  final String address;
-
-  /// Required for doctor, clinic, and phlebotomist (`POST /api/users`).
-  final String licenseNumber;
-  final double latitude;
-  final double longitude;
 
   /// Optional avatar uploaded with registration (multipart `image`).
   final List<int>? profileImageBytes;
@@ -45,12 +28,12 @@ class RegisterRequest {
 
 class LoginRequest {
   const LoginRequest({
-    required this.email,
+    required this.phone,
     required this.password,
     this.remember = true,
   });
 
-  final String email;
+  final String phone;
   final String password;
   final bool remember;
 }
@@ -72,21 +55,10 @@ abstract class LabUserApi {
   Future<void> register(RegisterRequest request);
   Future<AppUser> login(LoginRequest request);
 
-  /// `POST /api/auth/forgot-password` — sends a 6-digit code to email.
-  Future<String> requestPasswordReset(String email);
-
-  /// `POST /api/auth/reset-password` — verifies code and sets a new password.
-  Future<String> resetPasswordWithCode({
-    required String email,
-    required String code,
-    required String newPassword,
-  });
-
   Future<AppUser> updateProfile({
     required String userId,
     String? name,
     String? phone,
-    String? email,
     String? address,
     double? latitude,
     double? longitude,

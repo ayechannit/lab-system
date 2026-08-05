@@ -12,11 +12,12 @@ const MODULES = [
   'collections',
   'results',
   'ratings',
-  'discounts',
   'referral-fees',
+  'discounts',
   'service-geofences',
   'advertisements',
   'loyalty',
+  'membership-tiers',
   'system-settings',
   'reports',
 ];

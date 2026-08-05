@@ -7,24 +7,16 @@
 Table users {
   id uuid [pk]
   name varchar [not null]
-  email varchar [unique, not null]
-  phone varchar [not null]
+  phone varchar [unique, not null]
   password_hash varchar [not null]
-  role user_role [not null, note: 'clinic | doctor | patient | phlebotomist']
   address text
   latitude float
   longitude float
   total_points int [default: 0]
+  total_spent_mmk decimal [not null, default: 0, note: 'Lifetime verified-payment spend; drives membership tier resolution']
   is_deleted boolean [default: false]
   created_at timestamp [default: `now()`]
   updated_at timestamp [default: `now()`]
-}
-
-Enum user_role {
-  clinic
-  doctor
-  patient
-  phlebotomist
 }
 
 // =====================
@@ -157,6 +149,8 @@ Table payments {
   method payment_method
   reference_no varchar
   verified_by uuid [ref: > lab_staff.id]
+  points_redeemed int [not null, default: 0, note: 'Loyalty points redeemed toward this payment']
+  points_value_mmk decimal [not null, default: 0, note: 'MMK value of points_redeemed at time of payment']
   paid_at timestamp
   verified_at timestamp
   created_at timestamp [default: `now()`]
@@ -265,6 +259,24 @@ Table point_settings {
   updated_at timestamp [default: `now()`]
 }
 
+Table membership_tiers {
+  id uuid [pk]
+  name varchar [not null, note: 'e.g. Normal, Silver, Gold']
+  min_spend_mmk decimal [not null, default: 0, note: 'Lifetime verified-payment spend required to qualify']
+  discount_percent decimal [not null, default: 0, note: 'Added on top of a test''s own discount']
+  is_active boolean [default: true]
+  is_deleted boolean [default: false]
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+}
+
+Table point_redemption_settings {
+  id uuid [pk]
+  mmk_per_point decimal [not null, default: 0, note: 'Global rate: 1 point = mmk_per_point MMK']
+  updated_user uuid
+  updated_at timestamp [default: `now()`]
+}
+
 Table material_fees {
   id uuid [pk]
   name varchar [not null]
@@ -300,27 +312,9 @@ Table user_points {
   created_at timestamp [default: `now()`]
 }
 
-Table test_specific_discounts {
-  id uuid [pk]
-  test_id uuid [not null, ref: > lab_test_catalog.id]
-  role user_role [not null]
-  discount_percent decimal [not null]
-  is_active boolean [default: true]
-  start_date timestamp
-  end_date timestamp
-  is_deleted boolean [default: false]
-  created_at timestamp [default: `now()`]
-  updated_at timestamp [default: `now()`]
-
-  indexes {
-    (test_id, role) [unique]
-  }
-}
-
 Table test_referral_fees {
   id uuid [pk]
   test_id uuid [not null, ref: > lab_test_catalog.id]
-  role user_role [not null]
   referral_percent decimal [not null]
   is_active boolean [default: true]
   is_deleted boolean [default: false]
@@ -328,7 +322,25 @@ Table test_referral_fees {
   updated_at timestamp [default: `now()`]
 
   indexes {
-    (test_id, role) [unique]
+    (test_id) [unique]
+  }
+}
+
+Table test_specific_discounts {
+  id uuid [pk]
+  test_id uuid [not null, ref: > lab_test_catalog.id]
+  discount_percent decimal [not null]
+  is_active boolean [default: true]
+  start_date timestamp
+  end_date timestamp
+  created_user uuid
+  updated_user uuid
+  is_deleted boolean [default: false]
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+
+  indexes {
+    (test_id) [unique]
   }
 }
 

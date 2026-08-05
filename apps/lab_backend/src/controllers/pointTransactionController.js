@@ -16,9 +16,16 @@ const getAllTransactions = async (req, res) => {
       }
     }
 
-    const transactions = targetUserId 
-      ? await PointTransaction.getByUserId(targetUserId)
-      : await PointTransaction.getAll();
+    const { transaction_type } = req.query;
+    const allowedTypes = ['earn', 'redeem', 'adjustment'];
+    if (transaction_type && !allowedTypes.includes(transaction_type)) {
+      return res.status(400).json({ message: 'transaction_type must be one of: earn, redeem, adjustment' });
+    }
+    const filters = transaction_type ? { transaction_type } : {};
+
+    const transactions = targetUserId
+      ? await PointTransaction.getByUserId(targetUserId, filters)
+      : await PointTransaction.getAll(filters);
 
     res.json(transactions);
   } catch (error) {
@@ -71,7 +78,7 @@ const createManualAdjustment = async (req, res) => {
       user: {
         id: updatedUser.id,
         name: updatedUser.name,
-        email: updatedUser.email,
+        phone: updatedUser.phone,
         total_points: updatedUser.total_points
       }
     });

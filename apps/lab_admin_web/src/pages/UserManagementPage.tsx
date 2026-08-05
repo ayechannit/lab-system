@@ -10,18 +10,10 @@ import { useToast } from '../hooks/ToastContext'
 import { messageFromError, useErrorToast } from '../hooks/usePageNotify'
 import { DEFAULT_TABLE_PAGE_SIZE, TablePagination } from '../components/common/TablePagination'
 import { TableActionMenu } from '../components/common/TableActionMenu'
-import type { EndUserRole, UserListRow } from '../model/types'
+import type { UserListRow } from '../model/types'
 import { isApiMode } from '../services/apiBase'
-import {
-  approveUser,
-  deleteUser,
-  fetchUserList,
-  type FetchUserListParams,
-} from '../services/userService'
-import { roleLabel } from '../utils/roleLabels'
+import { deleteUser, fetchUserList, type FetchUserListParams } from '../services/userService'
 import '../components/common/ui.css'
-
-const USER_ROLES: EndUserRole[] = ['clinic', 'doctor', 'patient', 'phlebotomist']
 
 export function UserManagementPage() {
   const { t } = useTranslation()
@@ -38,8 +30,6 @@ export function UserManagementPage() {
   const [userFilterName, setUserFilterName] = useState('')
   const [userFilterPhoneInput, setUserFilterPhoneInput] = useState('')
   const [userFilterPhone, setUserFilterPhone] = useState('')
-  const [userFilterRole, setUserFilterRole] = useState<'' | EndUserRole>('')
-  const [userFilterApproval, setUserFilterApproval] = useState<'' | 'pending' | 'approved'>('')
 
   const [userPage, setUserPage] = useState(1)
   const [userPageSize, setUserPageSize] = useState(DEFAULT_TABLE_PAGE_SIZE)
@@ -49,15 +39,6 @@ export function UserManagementPage() {
   const [editInitial, setEditInitial] = useState<UserListRow | null>(null)
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<UserListRow | null>(null)
-
-  const approvalFilterOptions = useMemo(
-    () =>
-      [
-        { value: 'pending' as const, label: t('users.filters.approvalPending') },
-        { value: 'approved' as const, label: t('users.filters.approvalApproved') },
-      ] as const,
-    [t],
-  )
 
   useEffect(() => {
     const id = window.setTimeout(() => {
@@ -71,11 +52,8 @@ export function UserManagementPage() {
     const p: FetchUserListParams = {}
     if (userFilterName) p.name = userFilterName
     if (userFilterPhone) p.phone = userFilterPhone
-    if (userFilterRole) p.role = userFilterRole
-    if (userFilterApproval === 'pending') p.is_approved = false
-    if (userFilterApproval === 'approved') p.is_approved = true
     return Object.keys(p).length ? p : undefined
-  }, [userFilterName, userFilterPhone, userFilterRole, userFilterApproval])
+  }, [userFilterName, userFilterPhone])
 
   const userListQuery = useMemo(
     (): FetchUserListParams => ({
@@ -88,17 +66,21 @@ export function UserManagementPage() {
 
   useEffect(() => {
     queueMicrotask(() => setUserPage(1))
-  }, [userFilterName, userFilterPhone, userFilterRole, userFilterApproval])
+  }, [userFilterName, userFilterPhone])
 
   useEffect(() => {
     if (!hasApi) {
-      setLoading(false)
-      setRows([])
+      queueMicrotask(() => {
+        setLoading(false)
+        setRows([])
+      })
       return
     }
     let cancelled = false
-    setLoading(true)
-    setLoadError(null)
+    queueMicrotask(() => {
+      setLoading(true)
+      setLoadError(null)
+    })
     void (async () => {
       try {
         const list = await fetchUserList(userListQuery)
@@ -154,29 +136,15 @@ export function UserManagementPage() {
     }
   }
 
-  async function confirmApprove(row: UserListRow) {
-    if (!hasApi) return
-    setOpenMenuId(null)
-    try {
-      await approveUser(row.id)
-      showSuccess(t('users.toasts.approved', { name: row.name }))
-      setRefreshTick((tick) => tick + 1)
-    } catch (e) {
-      showError(messageFromError(e, t('users.toasts.approveFailed')))
-    }
-  }
-
   function clearUserFilters() {
     setUserFilterNameInput('')
     setUserFilterName('')
     setUserFilterPhoneInput('')
     setUserFilterPhone('')
-    setUserFilterRole('')
-    setUserFilterApproval('')
     setUserPage(1)
   }
 
-  const colSpan = 9
+  const colSpan = 7
 
   return (
     <div className="stack">
@@ -201,46 +169,6 @@ export function UserManagementPage() {
               onChange={(e) => setUserFilterPhoneInput(e.target.value)}
               disabled={loading || !hasApi}
             />
-            <div className="list-filters-bar__group">
-              <label className="list-filters-bar__label" htmlFor="user-filter-role">
-                {t('common.role')}
-              </label>
-              <select
-                id="user-filter-role"
-                className="list-filters-bar__select"
-                value={userFilterRole}
-                onChange={(e) => setUserFilterRole(e.target.value as '' | EndUserRole)}
-                disabled={loading || !hasApi}
-              >
-                <option value="">{t('common.all')}</option>
-                {USER_ROLES.map((r) => (
-                  <option key={r} value={r}>
-                    {roleLabel(r)}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="list-filters-bar__group">
-              <label className="list-filters-bar__label" htmlFor="user-filter-approval">
-                {t('common.status')}
-              </label>
-              <select
-                id="user-filter-approval"
-                className="list-filters-bar__select"
-                value={userFilterApproval}
-                onChange={(e) =>
-                  setUserFilterApproval(e.target.value as '' | 'pending' | 'approved')
-                }
-                disabled={loading || !hasApi}
-              >
-                <option value="">{t('common.all')}</option>
-                {approvalFilterOptions.map((o) => (
-                  <option key={o.value} value={o.value}>
-                    {o.label}
-                  </option>
-                ))}
-              </select>
-            </div>
             <button
               type="button"
               className="btn btn-ghost btn-sm list-filters-bar__clear"
@@ -272,13 +200,11 @@ export function UserManagementPage() {
             <thead>
               <tr>
                 <th>{t('users.table.name')}</th>
-                <th>{t('users.table.email')}</th>
                 <th>{t('users.table.phone')}</th>
-                <th>{t('users.table.role')}</th>
-                <th>{t('users.table.status')}</th>
                 <th>{t('users.table.address')}</th>
                 <th>{t('users.table.coords')}</th>
                 <th>{t('users.table.points')}</th>
+                <th>{t('common.tier')}</th>
                 <th className="action-col">{t('users.table.actions')}</th>
               </tr>
             </thead>
@@ -299,34 +225,24 @@ export function UserManagementPage() {
                 sorted.map((r) => (
                   <tr key={r.id}>
                     <td>{r.name}</td>
-                    <td>{r.email}</td>
                     <td style={{ whiteSpace: 'nowrap' }}>{r.phone || t('common.none')}</td>
-                    <td>{roleLabel(r.role)}</td>
-                    <td>
-                      {r.is_approved ? (
-                        <span className="badge badge--ok">{t('users.status.approved')}</span>
-                      ) : (
-                        <span className="badge badge--warn">{t('users.status.pending')}</span>
-                      )}
-                    </td>
                     <td style={{ maxWidth: 180, whiteSpace: 'normal' }}>{r.address || t('common.none')}</td>
                     <td style={{ fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
                       {r.latitude}, {r.longitude}
                     </td>
                     <td>{r.total_points.toLocaleString()}</td>
+                    <td>
+                      {r.tier_name ? (
+                        <span className="badge badge--neutral">{r.tier_name}</span>
+                      ) : (
+                        t('common.none')
+                      )}
+                    </td>
                     <td className="action-cell">
                       <TableActionMenu
                         open={openMenuId === r.id}
                         onOpenChange={(next) => setOpenMenuId(next ? r.id : null)}
                         items={[
-                          ...(!r.is_approved
-                            ? [
-                                {
-                                  label: t('users.actions.approve'),
-                                  onSelect: () => void confirmApprove(r),
-                                },
-                              ]
-                            : []),
                           { label: t('users.actions.edit'), onSelect: () => openEdit(r) },
                           {
                             label: t('common.delete'),

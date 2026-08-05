@@ -19,14 +19,10 @@
   "themeIdhc": "IDHC",
   "signIn": "Sign in",
   "signingIn": "Signing in…",
-  "email": "Email",
   "password": "Password",
   "rememberMe": "Keep me signed in",
-  "forgotPassword": "Forgot password?",
   "noAccountPrompt": "Don't have an account?",
   "createNewAccount": "Create New Account",
-  "emailRequired": "Enter your email",
-  "emailInvalid": "Enter a valid email",
   "passwordRequired": "Enter your password",
   "accountSettings": "ACCOUNT SETTINGS",
   "editProfile": "Edit Profile",
@@ -43,12 +39,23 @@
       }
     }
   },
+  "membershipTierLabel": "{tierName} member · {percent}% off",
+  "@membershipTierLabel": {
+    "placeholders": {
+      "tierName": {
+        "type": "String"
+      },
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
   "phone": "Phone",
   "signOut": "Sign out",
   "deleteAccount": "Delete account",
   "deleteAccountSubtitle": "Permanently deactivate this account",
   "deleteAccountTitle": "Delete account?",
-  "deleteAccountMessage": "This will deactivate your account. You will be signed out and will not be able to sign in again with this email.",
+  "deleteAccountMessage": "This will deactivate your account. You will be signed out and will not be able to sign in again with this phone number.",
   "deleteAccountConfirm": "Delete account",
   "deleteAccountSuccess": "Your account has been deleted.",
   "deleteAccountFailed": "Could not delete account",

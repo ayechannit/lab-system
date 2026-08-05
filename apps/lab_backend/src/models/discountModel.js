@@ -2,71 +2,47 @@ const { sql, poolPromise } = require('../config/db');
 
 class Discount {
   /**
-   * Upsert a discount for a specific test and role.
-   * If role is 'all', it applies to clinic, doctor, and patient.
+   * Upsert a discount percentage for a specific test.
    */
   static async upsert(data, updatedBy = null) {
     const pool = await poolPromise;
-    const roles = data.role === 'all' ? ['clinic', 'doctor', 'patient', 'phlebotomist'] : [data.role];
-    const results = [];
-
-    for (const role of roles) {
-      const result = await pool.request()
-        .input('test_id', sql.UniqueIdentifier, data.test_id)
-        .input('role', sql.VarChar, role)
-        .input('discount_percent', sql.Decimal(5, 2), data.discount_percent)
-        .input('is_active', sql.Bit, data.is_active !== undefined ? data.is_active : 1)
-        .input('start_date', sql.DateTime, data.start_date || null)
-        .input('end_date', sql.DateTime, data.end_date || null)
-        .input('updated_user', sql.UniqueIdentifier, updatedBy)
-        .query(`
-          IF EXISTS (SELECT 1 FROM test_specific_discounts WHERE test_id = @test_id AND role = @role)
-          BEGIN
-              UPDATE test_specific_discounts 
-              SET discount_percent = @discount_percent, is_active = @is_active, is_deleted = 0, 
-                  start_date = @start_date, end_date = @end_date,
-                  updated_user = @updated_user, updated_at = GETDATE()
-              OUTPUT INSERTED.*
-              WHERE test_id = @test_id AND role = @role
-          END
-          ELSE
-          BEGIN
-              INSERT INTO test_specific_discounts (id, test_id, role, discount_percent, is_active, is_deleted, start_date, end_date, created_user, updated_user)
-              OUTPUT INSERTED.*
-              VALUES (NEWID(), @test_id, @role, @discount_percent, @is_active, 0, @start_date, @end_date, @updated_user, @updated_user)
-          END
-        `);
-      results.push(result.recordset[0]);
-    }
-    return results;
+    const result = await pool.request()
+      .input('test_id', sql.UniqueIdentifier, data.test_id)
+      .input('discount_percent', sql.Decimal(5, 2), data.discount_percent)
+      .input('is_active', sql.Bit, data.is_active !== undefined ? data.is_active : 1)
+      .input('start_date', sql.DateTime2, data.start_date || null)
+      .input('end_date', sql.DateTime2, data.end_date || null)
+      .input('updated_user', sql.UniqueIdentifier, updatedBy)
+      .query(`
+        IF EXISTS (SELECT 1 FROM test_specific_discounts WHERE test_id = @test_id)
+        BEGIN
+            UPDATE test_specific_discounts
+            SET discount_percent = @discount_percent, is_active = @is_active, is_deleted = 0,
+                start_date = @start_date, end_date = @end_date,
+                updated_user = @updated_user, updated_at = GETDATE()
+            OUTPUT INSERTED.*
+            WHERE test_id = @test_id
+        END
+        ELSE
+        BEGIN
+            INSERT INTO test_specific_discounts (id, test_id, discount_percent, is_active, start_date, end_date, is_deleted, created_user, updated_user)
+            OUTPUT INSERTED.*
+            VALUES (NEWID(), @test_id, @discount_percent, @is_active, @start_date, @end_date, 0, @updated_user, @updated_user)
+        END
+      `);
+    return result.recordset[0];
   }
 
   /**
-   * Bulk upsert multiple discounts.
+   * Bulk upsert multiple discount percentages, one per test_id.
    */
   static async bulkUpsert(discountsArray, updatedBy = null) {
     const results = [];
     for (const data of discountsArray) {
       const res = await this.upsert(data, updatedBy);
-      results.push(...res);
+      results.push(res);
     }
     return results;
-  }
-
-  static async getByTestIdAndRole(test_id, role) {
-    const pool = await poolPromise;
-    const result = await pool.request()
-      .input('test_id', sql.UniqueIdentifier, test_id)
-      .input('role', sql.VarChar, role)
-      .query(`
-        SELECT sd.*, t.test_name, t.test_code, t.base_price_mmk as original_price,
-               (t.base_price_mmk * (1 - sd.discount_percent / 100)) as after_discount_price,
-               sd.created_user, sd.updated_user
-        FROM test_specific_discounts sd
-        JOIN lab_test_catalog t ON sd.test_id = t.id
-        WHERE sd.test_id = @test_id AND sd.role = @role AND sd.is_deleted = 0 AND t.is_deleted = 0
-      `);
-    return result.recordset[0]; // Return a single object or undefined
   }
 
   static async getByTestId(test_id) {
@@ -75,8 +51,7 @@ class Discount {
       .input('test_id', sql.UniqueIdentifier, test_id)
       .query(`
         SELECT sd.*, t.test_name, t.test_code, t.base_price_mmk as original_price,
-               (t.base_price_mmk * (1 - sd.discount_percent / 100)) as after_discount_price,
-               sd.created_user, sd.updated_user
+               (t.base_price_mmk * (1 - sd.discount_percent / 100)) as after_discount_price
         FROM test_specific_discounts sd
         JOIN lab_test_catalog t ON sd.test_id = t.id
         WHERE sd.test_id = @test_id AND sd.is_deleted = 0 AND t.is_deleted = 0
@@ -90,52 +65,50 @@ class Discount {
 
     let query = `
       SELECT sd.*, t.test_name, t.test_code, t.base_price_mmk as original_price,
-             (t.base_price_mmk * (1 - sd.discount_percent / 100)) as after_discount_price,
-             sd.created_user, sd.updated_user
+             (t.base_price_mmk * (1 - sd.discount_percent / 100)) as after_discount_price
       FROM test_specific_discounts sd
       JOIN lab_test_catalog t ON sd.test_id = t.id
       WHERE sd.is_deleted = 0 AND t.is_deleted = 0
     `;
 
-    if (filters.role) {
-      query += ` AND sd.role = @role`;
-      request.input('role', sql.VarChar, filters.role);
-    }
-    if (filters.test_id) {
-      query += ` AND sd.test_id = @test_id`;
-      request.input('test_id', sql.UniqueIdentifier, filters.test_id);
-    }
     if (filters.is_active !== undefined) {
+      const activeVal = filters.is_active === 'true' || filters.is_active === true || filters.is_active === '1' ? 1 : 0;
+      request.input('is_active', sql.Bit, activeVal);
       query += ` AND sd.is_active = @is_active`;
-      request.input('is_active', sql.Bit, filters.is_active === 'true' || filters.is_active === true ? 1 : 0);
     }
+
     if (filters.test_name) {
+      request.input('test_name', sql.NVarChar, `%${filters.test_name}%`);
       query += ` AND t.test_name LIKE @test_name`;
-      request.input('test_name', sql.VarChar, `%${filters.test_name}%`);
     }
+
     if (filters.test_code) {
+      request.input('test_code', sql.NVarChar, `%${filters.test_code}%`);
       query += ` AND t.test_code LIKE @test_code`;
-      request.input('test_code', sql.VarChar, `%${filters.test_code}%`);
     }
 
-    const validSortFields = ['created_at', 'updated_at', 'discount_percent', 'role', 'test_name'];
-    let sortBy = 'sd.created_at';
-    if (filters.sortBy === 'test_name') {
-      sortBy = 't.test_name';
-    } else if (validSortFields.includes(filters.sortBy)) {
-      sortBy = `sd.${filters.sortBy}`;
-    }
-    const sortOrder = filters.sortOrder === 'ASC' || filters.sortOrder === 'asc' ? 'ASC' : 'DESC';
-    query += ` ORDER BY ${sortBy} ${sortOrder}`;
+    // Pagination
+    const page = parseInt(filters.page) || 1;
+    const limit = parseInt(filters.limit) || 50;
+    const offset = (page - 1) * limit;
 
-    if (filters.page && filters.limit) {
-      const page = parseInt(filters.page, 10);
-      const limit = parseInt(filters.limit, 10);
-      const offset = (page - 1) * limit;
-      query += ` OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY`;
-      request.input('offset', sql.Int, offset);
-      request.input('limit', sql.Int, limit);
+    request.input('offset', sql.Int, offset);
+    request.input('limit', sql.Int, limit);
+
+    // Sorting
+    let sortBy = 't.test_name';
+    let sortOrder = 'ASC';
+    if (filters.sortBy) {
+      const allowedSortFields = ['created_at', 'updated_at', 'discount_percent', 'test_name'];
+      if (allowedSortFields.includes(filters.sortBy)) {
+        sortBy = filters.sortBy === 'test_name' ? `t.${filters.sortBy}` : `sd.${filters.sortBy}`;
+      }
     }
+    if (filters.sortOrder && ['ASC', 'DESC'].includes(filters.sortOrder.toUpperCase())) {
+      sortOrder = filters.sortOrder.toUpperCase();
+    }
+
+    query += ` ORDER BY ${sortBy} ${sortOrder} OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY`;
 
     const result = await request.query(query);
     return result.recordset;

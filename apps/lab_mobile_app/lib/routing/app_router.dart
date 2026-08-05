@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../screens/auth/forgot_password_screen.dart';
 import '../screens/auth/login_screen.dart';
 import '../screens/auth/register_screen.dart';
-import '../screens/auth/role_selection_screen.dart';
 import '../screens/auth/splash_screen.dart';
 import '../screens/feedback/rating_feedback_screen.dart';
 import '../screens/home/home_dashboard_screen.dart';
@@ -20,7 +18,6 @@ import '../screens/settings/lab_info_screen.dart';
 import '../screens/results/ai_analysis_screen.dart';
 import '../screens/results/lab_result_detail_screen.dart';
 import '../screens/results/results_list_screen.dart';
-import '../models/user_role.dart';
 import '../services/session_controller.dart';
 
 const _legacyHomePaths = <String>{
@@ -48,10 +45,7 @@ GoRouter createAppRouter(SessionController session) {
         return loggedIn ? session.homeRoute : '/login';
       }
 
-      final authOnly = loc == '/login' ||
-          loc == '/register' ||
-          loc == '/role-select' ||
-          loc == '/forgot-password';
+      final authOnly = loc == '/login' || loc == '/register';
       if (!loggedIn && !authOnly) return '/login';
       if (loggedIn && authOnly) return session.homeRoute;
       if (loggedIn && _legacyHomePaths.contains(loc)) return '/home';
@@ -60,20 +54,7 @@ GoRouter createAppRouter(SessionController session) {
     routes: [
       GoRoute(path: '/splash', builder: (_, __) => const SplashScreen()),
       GoRoute(path: '/login', builder: (context, state) => LoginScreen(routeExtra: state.extra)),
-      GoRoute(
-        path: '/forgot-password',
-        builder: (context, state) {
-          final extra = state.extra;
-          final email = extra is String ? extra : null;
-          return ForgotPasswordScreen(initialEmail: email);
-        },
-      ),
-      GoRoute(path: '/register', builder: (context, state) {
-        final extra = state.extra;
-        final role = extra is UserRole ? extra : null;
-        return RegisterScreen(initialRole: role);
-      }),
-      GoRoute(path: '/role-select', builder: (_, __) => const RoleSelectionScreen()),
+      GoRoute(path: '/register', builder: (_, __) => const RegisterScreen()),
       GoRoute(path: '/home', builder: (_, __) => const HomeDashboardScreen()),
       GoRoute(path: '/notifications', builder: (_, __) => const NotificationsScreen()),
       GoRoute(path: '/orders', builder: (_, __) => const OrdersListScreen()),

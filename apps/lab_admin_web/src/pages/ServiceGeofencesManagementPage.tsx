@@ -91,13 +91,17 @@ export function ServiceGeofencesManagementPage() {
 
   useEffect(() => {
     if (!hasApi) {
-      setLoading(false)
-      setRows([])
+      queueMicrotask(() => {
+        setLoading(false)
+        setRows([])
+      })
       return
     }
     let cancelled = false
-    setLoading(true)
-    setLoadError(null)
+    queueMicrotask(() => {
+      setLoading(true)
+      setLoadError(null)
+    })
     void (async () => {
       try {
         const list = await fetchServiceGeofences()

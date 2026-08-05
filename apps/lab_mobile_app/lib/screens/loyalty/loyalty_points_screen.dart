@@ -89,7 +89,11 @@ class _LoyaltyPointsScreenState extends State<LoyaltyPointsScreen> {
                       ],
                     ),
                   ),
-                _BalanceHeroCard(loyalty: loyalty),
+                _BalanceHeroCard(
+                  loyalty: loyalty,
+                  tierName: session.user?.tierName,
+                  tierDiscountPercent: session.user?.tierDiscountPercent ?? 0,
+                ),
                 const SizedBox(height: 16),
                 _StatsRow(loyalty: loyalty),
                 if (loyalty.earnRules.isNotEmpty) ...[
@@ -134,9 +138,15 @@ class _LoyaltyPointsScreenState extends State<LoyaltyPointsScreen> {
 }
 
 class _BalanceHeroCard extends StatelessWidget {
-  const _BalanceHeroCard({required this.loyalty});
+  const _BalanceHeroCard({
+    required this.loyalty,
+    this.tierName,
+    this.tierDiscountPercent = 0,
+  });
 
   final LoyaltySnapshot loyalty;
+  final String? tierName;
+  final int tierDiscountPercent;
 
   @override
   Widget build(BuildContext context) {
@@ -217,6 +227,16 @@ class _BalanceHeroCard extends StatelessWidget {
                   height: 1.45,
                 ),
           ),
+          if (tierName != null && tierName!.trim().isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              l10n.membershipTierLabel(tierName!, tierDiscountPercent),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Colors.white.withValues(alpha: 0.95),
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
+          ],
         ],
       ),
     );

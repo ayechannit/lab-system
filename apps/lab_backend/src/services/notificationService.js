@@ -200,18 +200,6 @@ class NotificationService {
       return result.recordset.map((row) => ({ id: row.id, type: 'user' }));
     }
 
-    if (topic.endsWith('_notifications')) {
-      const role = topic.slice(0, -'_notifications'.length);
-      const result = await pool.request()
-        .input('role', sql.NVarChar(50), role)
-        .query(`
-          SELECT id
-          FROM users
-          WHERE is_deleted = 0 AND is_active = 1 AND role = @role
-        `);
-      return result.recordset.map((row) => ({ id: row.id, type: 'user' }));
-    }
-
     return [];
   }
 
