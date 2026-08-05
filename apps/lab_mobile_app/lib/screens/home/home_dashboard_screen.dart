@@ -7,6 +7,7 @@ import '../../models/lab_order.dart';
 import '../../models/user_report.dart';
 import '../../theme/theme_extensions.dart';
 import '../../widgets/common/app_branding_row.dart';
+import '../../widgets/common/membership_tier_badge.dart';
 import '../../widgets/common/notification_bell_button.dart';
 import '../../widgets/home/home_advertisement_section.dart';
 import '../../widgets/navigation/lab_main_bottom_nav.dart';
@@ -72,7 +73,12 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
                   padding: pad,
                   physics: const AlwaysScrollableScrollPhysics(),
                   children: [
-                    _WelcomeHeader(name: name),
+                    _WelcomeHeader(
+                      name: name,
+                      tierName: user.tierName,
+                      tierDiscountPercent: user.tierDiscountPercent,
+                      onTierTap: () => context.push('/loyalty'),
+                    ),
                     if (session.homeSummaryError != null) ...[
                       const SizedBox(height: 12),
                       _ErrorBanner(message: session.homeSummaryError!),
@@ -667,9 +673,17 @@ class _TopTestsCard extends StatelessWidget {
 }
 
 class _WelcomeHeader extends StatelessWidget {
-  const _WelcomeHeader({required this.name});
+  const _WelcomeHeader({
+    required this.name,
+    this.tierName,
+    this.tierDiscountPercent = 0,
+    this.onTierTap,
+  });
 
   final String name;
+  final String? tierName;
+  final int tierDiscountPercent;
+  final VoidCallback? onTierTap;
 
   @override
   Widget build(BuildContext context) {
@@ -677,7 +691,7 @@ class _WelcomeHeader extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(18, 18, 18, 20),
+      padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
       decoration: BoxDecoration(
         color: context.cardFill,
         borderRadius: BorderRadius.circular(18),
@@ -701,7 +715,14 @@ class _WelcomeHeader extends StatelessWidget {
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                   color: cs.primary,
                   fontWeight: FontWeight.w700,
+                  height: 1.2,
                 ),
+          ),
+          const SizedBox(height: 12),
+          MembershipTierCard(
+            tierName: tierName?.trim() ?? '',
+            discountPercent: tierDiscountPercent,
+            onTap: onTierTap,
           ),
           const SizedBox(height: 10),
           Text(

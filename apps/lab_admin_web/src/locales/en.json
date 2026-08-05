@@ -1088,6 +1088,12 @@
       "saving": "Saving…",
       "saveChanges": "Save changes",
       "createTier": "Create tier"
+    },
+    "names": {
+      "normal": "Normal",
+      "silver": "Silver",
+      "gold": "Gold",
+      "bronze": "Bronze"
     }
   },
   "serviceGeofences": {

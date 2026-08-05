@@ -1,17 +1,23 @@
 const { sql, poolPromise } = require('../config/db');
 const bcrypt = require('bcryptjs');
 
+/** Tier columns resolved from lifetime spend (NULL spend treated as 0). */
+const USER_TIER_SELECT = `
+  (SELECT TOP 1 mt.discount_percent FROM membership_tiers mt
+   WHERE mt.is_active = 1 AND mt.is_deleted = 0
+     AND mt.min_spend_mmk <= ISNULL(u.total_spent_mmk, 0)
+   ORDER BY mt.min_spend_mmk DESC) AS tier_discount_percent,
+  (SELECT TOP 1 mt.name FROM membership_tiers mt
+   WHERE mt.is_active = 1 AND mt.is_deleted = 0
+     AND mt.min_spend_mmk <= ISNULL(u.total_spent_mmk, 0)
+   ORDER BY mt.min_spend_mmk DESC) AS tier_name`;
+
 class User {
   static async getAll(filters = {}) {
     const pool = await poolPromise;
     const request = pool.request();
     let query = `SELECT u.id, u.name, u.phone, u.address, u.latitude, u.longitude, u.total_points, u.total_spent_mmk, u.profile_image_url, u.created_user, u.updated_user, u.created_at, u.updated_at,
-      (SELECT TOP 1 mt.discount_percent FROM membership_tiers mt
-       WHERE mt.is_active = 1 AND mt.is_deleted = 0 AND mt.min_spend_mmk <= u.total_spent_mmk
-       ORDER BY mt.min_spend_mmk DESC) AS tier_discount_percent,
-      (SELECT TOP 1 mt.name FROM membership_tiers mt
-       WHERE mt.is_active = 1 AND mt.is_deleted = 0 AND mt.min_spend_mmk <= u.total_spent_mmk
-       ORDER BY mt.min_spend_mmk DESC) AS tier_name
+      ${USER_TIER_SELECT}
       FROM users u WHERE u.is_deleted = 0`;
 
     if (filters.name) {
@@ -46,12 +52,7 @@ class User {
     const result = await pool.request()
       .input('id', sql.UniqueIdentifier, id)
       .query(`SELECT u.id, u.name, u.phone, u.address, u.latitude, u.longitude, u.total_points, u.total_spent_mmk, u.profile_image_url, u.created_user, u.updated_user, u.created_at, u.updated_at,
-        (SELECT TOP 1 mt.discount_percent FROM membership_tiers mt
-         WHERE mt.is_active = 1 AND mt.is_deleted = 0 AND mt.min_spend_mmk <= u.total_spent_mmk
-         ORDER BY mt.min_spend_mmk DESC) AS tier_discount_percent,
-        (SELECT TOP 1 mt.name FROM membership_tiers mt
-         WHERE mt.is_active = 1 AND mt.is_deleted = 0 AND mt.min_spend_mmk <= u.total_spent_mmk
-         ORDER BY mt.min_spend_mmk DESC) AS tier_name
+        ${USER_TIER_SELECT}
         FROM users u WHERE u.id = @id AND u.is_deleted = 0`);
     return result.recordset[0];
   }
@@ -60,7 +61,9 @@ class User {
     const pool = await poolPromise;
     const result = await pool.request()
       .input('phone', sql.VarChar, phone)
-      .query('SELECT * FROM users WHERE phone = @phone AND is_deleted = 0');
+      .query(`SELECT u.*,
+        ${USER_TIER_SELECT}
+        FROM users u WHERE u.phone = @phone AND u.is_deleted = 0`);
     return result.recordset[0];
   }
 
@@ -77,11 +80,11 @@ class User {
       .input('longitude', sql.Float, data.longitude)
       .input('created_user', sql.UniqueIdentifier, createdBy)
       .query(`
-        INSERT INTO users (id, name, phone, password_hash, address, latitude, longitude, total_points, created_user, updated_user, is_deleted)
-        OUTPUT INSERTED.id, INSERTED.name, INSERTED.phone, INSERTED.address, INSERTED.latitude, INSERTED.longitude, INSERTED.total_points, INSERTED.total_spent_mmk, INSERTED.profile_image_url, INSERTED.created_user, INSERTED.updated_user, INSERTED.created_at, INSERTED.updated_at
-        VALUES (NEWID(), @name, @phone, @password_hash, @address, @latitude, @longitude, 0, @created_user, @created_user, 0)
+        INSERT INTO users (id, name, phone, password_hash, address, latitude, longitude, total_points, total_spent_mmk, created_user, updated_user, is_deleted)
+        OUTPUT INSERTED.id
+        VALUES (NEWID(), @name, @phone, @password_hash, @address, @latitude, @longitude, 0, 0, @created_user, @created_user, 0)
       `);
-    return result.recordset[0];
+    return this.getById(result.recordset[0].id);
   }
 
   static async update(id, data, updatedBy = null) {
@@ -110,10 +113,10 @@ class User {
           address = @address, latitude = @latitude, longitude = @longitude,
           updated_user = @updated_user, updated_at = GETDATE()
           ${passwordFragment}
-      OUTPUT INSERTED.id, INSERTED.name, INSERTED.phone, INSERTED.address, INSERTED.latitude, INSERTED.longitude, INSERTED.total_points, INSERTED.total_spent_mmk, INSERTED.profile_image_url, INSERTED.created_user, INSERTED.updated_user, INSERTED.created_at, INSERTED.updated_at
       WHERE id = @id AND is_deleted = 0
     `);
-    return result.recordset[0];
+    if (!result.rowsAffected[0]) return undefined;
+    return this.getById(id);
   }
 
   static async updateProfileImage(id, profileImageUrl, updatedBy = null) {
@@ -125,10 +128,10 @@ class User {
       .query(`
         UPDATE users
         SET profile_image_url = @profile_image_url, updated_user = @updated_user, updated_at = GETDATE()
-        OUTPUT INSERTED.id, INSERTED.name, INSERTED.phone, INSERTED.address, INSERTED.latitude, INSERTED.longitude, INSERTED.total_points, INSERTED.total_spent_mmk, INSERTED.profile_image_url, INSERTED.created_user, INSERTED.updated_user, INSERTED.created_at, INSERTED.updated_at
         WHERE id = @id AND is_deleted = 0
       `);
-    return result.recordset[0];
+    if (!result.rowsAffected[0]) return undefined;
+    return this.getById(id);
   }
 
   static async addPoints(id, pointsToAdd, updatedBy = null, transactionType = 'earn', description = null, referenceId = null) {
@@ -140,24 +143,22 @@ class User {
       .query(`
         UPDATE users
         SET total_points = total_points + @points, updated_user = @updated_user, updated_at = GETDATE()
-        OUTPUT INSERTED.id, INSERTED.name, INSERTED.phone, INSERTED.address, INSERTED.latitude, INSERTED.longitude, INSERTED.total_points, INSERTED.total_spent_mmk, INSERTED.profile_image_url, INSERTED.created_user, INSERTED.updated_user, INSERTED.created_at, INSERTED.updated_at
         WHERE id = @id AND is_deleted = 0
       `);
 
-    const updatedUser = result.recordset[0];
-    if (updatedUser) {
-      const PointTransaction = require('./pointTransactionModel');
-      await PointTransaction.create({
-        user_id: id,
-        points: pointsToAdd,
-        transaction_type: transactionType,
-        description: description || `Points adjustment: ${pointsToAdd >= 0 ? '+' : ''}${pointsToAdd}`,
-        reference_id: referenceId,
-        created_user: updatedBy
-      });
-    }
+    if (!result.rowsAffected[0]) return undefined;
 
-    return updatedUser;
+    const PointTransaction = require('./pointTransactionModel');
+    await PointTransaction.create({
+      user_id: id,
+      points: pointsToAdd,
+      transaction_type: transactionType,
+      description: description || `Points adjustment: ${pointsToAdd >= 0 ? '+' : ''}${pointsToAdd}`,
+      reference_id: referenceId,
+      created_user: updatedBy
+    });
+
+    return this.getById(id);
   }
 
   static async addSpend(id, amountMmk, updatedBy = null) {
@@ -168,12 +169,12 @@ class User {
       .input('updated_user', sql.UniqueIdentifier, updatedBy)
       .query(`
         UPDATE users
-        SET total_spent_mmk = total_spent_mmk + @amount, updated_user = @updated_user, updated_at = GETDATE()
-        OUTPUT INSERTED.id, INSERTED.name, INSERTED.phone, INSERTED.address, INSERTED.latitude, INSERTED.longitude, INSERTED.total_points, INSERTED.total_spent_mmk, INSERTED.profile_image_url, INSERTED.created_user, INSERTED.updated_user, INSERTED.created_at, INSERTED.updated_at
+        SET total_spent_mmk = ISNULL(total_spent_mmk, 0) + @amount,
+            updated_user = @updated_user, updated_at = GETDATE()
         WHERE id = @id AND is_deleted = 0
       `);
-
-    return result.recordset[0];
+    if (!result.rowsAffected[0]) return undefined;
+    return this.getById(id);
   }
 
   static async delete(id, updatedBy = null) {

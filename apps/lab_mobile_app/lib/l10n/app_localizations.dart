@@ -275,6 +275,17 @@ abstract class AppLocalizations {
   /// **'{tierName} member · {percent}% off'**
   String membershipTierLabel(String tierName, int percent);
 
+  String get membershipTierTitle;
+  String get membershipTierDefaultName;
+  String get membershipTierNameNormal;
+  String get membershipTierNameSilver;
+  String get membershipTierNameGold;
+  String get membershipTierNameBronze;
+  String membershipTierPercentOff(int percent);
+  String membershipTierDiscountBenefit(int percent);
+  String get membershipTierMemberBenefit;
+  String orderCreateMembershipDiscount(String tier, String percent);
+
   /// No description provided for @phone.
   ///
   /// In en, this message translates to:

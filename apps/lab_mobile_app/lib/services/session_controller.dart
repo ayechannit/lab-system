@@ -608,8 +608,17 @@ class SessionController extends ChangeNotifier {
   }
 
   Future<void> _hydrateUserData() async {
-    final u = _user;
-    if (u == null) return;
+    final current = _user;
+    if (current == null) return;
+
+    // Refresh /me so membership tier and spend stay current after login/restore.
+    AppUser u = current;
+    try {
+      u = await _api.getCurrentUser();
+      _user = u;
+    } catch (e) {
+      debugPrint('Session user refresh warning: $e');
+    }
 
     // Initialize Firebase and register FCM device token in background
     MobileNotificationService.initializeAndRegister(_api).catchError((e) {

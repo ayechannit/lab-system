@@ -13,6 +13,7 @@ import { TableActionMenu } from '../components/common/TableActionMenu'
 import type { UserListRow } from '../model/types'
 import { isApiMode } from '../services/apiBase'
 import { deleteUser, fetchUserList, type FetchUserListParams } from '../services/userService'
+import { membershipTierLabel } from '../utils/membershipTierLabels'
 import '../components/common/ui.css'
 
 export function UserManagementPage() {
@@ -233,7 +234,7 @@ export function UserManagementPage() {
                     <td>{r.total_points.toLocaleString()}</td>
                     <td>
                       {r.tier_name ? (
-                        <span className="badge badge--neutral">{r.tier_name}</span>
+                        <span className="badge badge--neutral">{membershipTierLabel(r.tier_name)}</span>
                       ) : (
                         t('common.none')
                       )}

@@ -103,6 +103,41 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get membershipTierTitle => 'Membership';
+
+  @override
+  String get membershipTierDefaultName => 'Normal';
+
+  @override
+  String get membershipTierNameNormal => 'Normal';
+
+  @override
+  String get membershipTierNameSilver => 'Silver';
+
+  @override
+  String get membershipTierNameGold => 'Gold';
+
+  @override
+  String get membershipTierNameBronze => 'Bronze';
+
+  @override
+  String membershipTierPercentOff(int percent) => '$percent% off';
+
+  @override
+  String membershipTierDiscountBenefit(int percent) {
+    return '$percent% off applies to your lab test prices';
+  }
+
+  @override
+  String get membershipTierMemberBenefit =>
+      'Your membership benefits apply on eligible orders';
+
+  @override
+  String orderCreateMembershipDiscount(String tier, String percent) {
+    return 'Membership ($tier): $percent% off';
+  }
+
+  @override
   String get phone => 'Phone';
 
   @override

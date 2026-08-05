@@ -8,6 +8,7 @@ import '../../theme/theme_extensions.dart';
 import '../../widgets/common/app_branding_row.dart';
 import '../../widgets/common/app_surface_card.dart';
 import '../../widgets/common/app_toast.dart';
+import '../../widgets/common/membership_tier_badge.dart';
 import '../../widgets/common/notification_bell_button.dart';
 import '../../widgets/common/user_profile_avatar.dart';
 import '../../widgets/navigation/lab_main_bottom_nav.dart';
@@ -227,15 +228,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             fontWeight: FontWeight.w700,
                           ),
                     ),
-                    if (user.tierName != null && user.tierName!.trim().isNotEmpty) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        l10n.membershipTierLabel(user.tierName!, user.tierDiscountPercent),
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: cs.onPrimary.withValues(alpha: 0.85),
-                            ),
-                      ),
-                    ],
+                    const SizedBox(height: 10),
+                    MembershipTierBadge(
+                      tierName: user.tierName?.trim() ?? '',
+                      discountPercent: user.tierDiscountPercent,
+                      onDark: true,
+                    ),
                   ],
                 ),
               ),

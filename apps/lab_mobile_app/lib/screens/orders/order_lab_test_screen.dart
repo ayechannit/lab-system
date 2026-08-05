@@ -20,6 +20,7 @@ import '../../widgets/common/app_branding_row.dart';
 import '../../widgets/common/app_toast.dart';
 import '../../widgets/common/app_dropdown_form_field.dart';
 import '../../widgets/common/app_field_decoration.dart';
+import '../../widgets/common/membership_tier_badge.dart';
 import '../../widgets/location/address_location_fields.dart';
 import '../../utils/phone_input.dart';
 import '../../widgets/navigation/lab_main_bottom_nav.dart';
@@ -331,6 +332,9 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     final cs = context.cs;
+    final session = SessionScope.of(context);
+    final tierName = session.user?.tierName?.trim() ?? '';
+    final tierPct = session.user?.tierDiscountPercent ?? 0;
     final discountPct = _blendedDiscountPercent(lines);
     final testsTotal = _sumFinal(lines);
     final showTotal = !_serviceFeeOutOfCoverage && _serviceFeeQuote != null;
@@ -350,16 +354,37 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
             children: [
               Icon(Icons.receipt_long_outlined, size: 18, color: cs.primary),
               const SizedBox(width: 6),
-              Text(
-                l10n.orderCreatePricingSummary.toUpperCase(),
-                style: theme.textTheme.labelSmall?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 0.6,
-                  color: cs.onSurfaceVariant,
+              Expanded(
+                child: Text(
+                  l10n.orderCreatePricingSummary.toUpperCase(),
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.6,
+                    color: cs.onSurfaceVariant,
+                  ),
                 ),
               ),
             ],
           ),
+          const SizedBox(height: 10),
+          MembershipTierBadge(
+            tierName: tierName,
+            discountPercent: tierPct,
+            dense: true,
+          ),
+          if (tierPct > 0) ...[
+            const SizedBox(height: 6),
+            Text(
+              l10n.orderCreateMembershipDiscount(
+                localizedMembershipTierName(l10n, tierName),
+                '$tierPct',
+              ),
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: cs.onSurfaceVariant,
+                height: 1.35,
+              ),
+            ),
+          ],
           const SizedBox(height: 12),
           if (includeTestsLine && lines.isNotEmpty)
             _buildPricingLine(

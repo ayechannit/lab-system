@@ -15,6 +15,7 @@ import {
   fetchMembershipTiers,
   type MembershipTierRow,
 } from '../services/membershipTierService'
+import { membershipTierLabel } from '../utils/membershipTierLabels'
 import '../components/common/ui.css'
 
 const colSpan = 5
@@ -169,7 +170,7 @@ export function MembershipTiersManagementPage() {
               ) : (
                 paged.map((row) => (
                   <tr key={row.id}>
-                    <td style={{ fontWeight: 600 }}>{row.name}</td>
+                    <td style={{ fontWeight: 600 }}>{membershipTierLabel(row.name)}</td>
                     <td className="col-num">
                       {row.min_spend_mmk.toLocaleString()} {t('orders.currency')}
                     </td>
@@ -224,7 +225,7 @@ export function MembershipTiersManagementPage() {
       <ConfirmDialog
         open={deleteTarget !== null}
         title={t('membershipTiers.delete.title')}
-        message={deleteTarget ? t('membershipTiers.delete.message', { name: deleteTarget.name }) : ''}
+        message={deleteTarget ? t('membershipTiers.delete.message', { name: membershipTierLabel(deleteTarget.name) }) : ''}
         confirmLabel={t('common.delete')}
         cancelLabel={t('common.cancel')}
         danger

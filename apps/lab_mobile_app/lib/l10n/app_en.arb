@@ -50,6 +50,28 @@
       }
     }
   },
+  "membershipTierTitle": "Membership",
+  "membershipTierDefaultName": "Normal",
+  "membershipTierNameNormal": "Normal",
+  "membershipTierNameSilver": "Silver",
+  "membershipTierNameGold": "Gold",
+  "membershipTierNameBronze": "Bronze",
+  "membershipTierPercentOff": "{percent}% off",
+  "@membershipTierPercentOff": {
+    "placeholders": { "percent": { "type": "int" } }
+  },
+  "membershipTierDiscountBenefit": "{percent}% off applies to your lab test prices",
+  "@membershipTierDiscountBenefit": {
+    "placeholders": { "percent": { "type": "int" } }
+  },
+  "membershipTierMemberBenefit": "Your membership benefits apply on eligible orders",
+  "orderCreateMembershipDiscount": "Membership ({tier}): {percent}% off",
+  "@orderCreateMembershipDiscount": {
+    "placeholders": {
+      "tier": { "type": "String" },
+      "percent": { "type": "String" }
+    }
+  },
   "phone": "Phone",
   "signOut": "Sign out",
   "deleteAccount": "Delete account",

@@ -7,6 +7,7 @@ import '../../models/loyalty.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/theme_extensions.dart';
 import '../../widgets/common/app_branding_row.dart';
+import '../../widgets/common/membership_tier_badge.dart';
 import '../../widgets/common/notification_bell_button.dart';
 import '../../widgets/navigation/lab_main_bottom_nav.dart';
 
@@ -227,16 +228,12 @@ class _BalanceHeroCard extends StatelessWidget {
                   height: 1.45,
                 ),
           ),
-          if (tierName != null && tierName!.trim().isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Text(
-              l10n.membershipTierLabel(tierName!, tierDiscountPercent),
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Colors.white.withValues(alpha: 0.95),
-                    fontWeight: FontWeight.w600,
-                  ),
-            ),
-          ],
+          const SizedBox(height: 12),
+          MembershipTierBadge(
+            tierName: tierName?.trim() ?? '',
+            discountPercent: tierDiscountPercent,
+            onDark: true,
+          ),
         ],
       ),
     );

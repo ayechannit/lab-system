@@ -103,6 +103,41 @@ class AppLocalizationsMy extends AppLocalizations {
   }
 
   @override
+  String get membershipTierTitle => 'အသင်းဝင်အဆင့်';
+
+  @override
+  String get membershipTierDefaultName => 'ပုံမှန်';
+
+  @override
+  String get membershipTierNameNormal => 'ပုံမှန်';
+
+  @override
+  String get membershipTierNameSilver => 'ငွေ';
+
+  @override
+  String get membershipTierNameGold => 'ရွှေ';
+
+  @override
+  String get membershipTierNameBronze => 'ကြေး';
+
+  @override
+  String membershipTierPercentOff(int percent) => '$percent% လျှော့';
+
+  @override
+  String membershipTierDiscountBenefit(int percent) {
+    return 'ဓာတ်ခွဲစစ်ဆေးခတွင် $percent% လျှော့ပေးပါသည်';
+  }
+
+  @override
+  String get membershipTierMemberBenefit =>
+      'သင့်အသင်းဝင်အခွင့်အရေးများကို သက်ဆိုင်သော မှာယူမှုများတွင် အသုံးပြုနိုင်ပါသည်';
+
+  @override
+  String orderCreateMembershipDiscount(String tier, String percent) {
+    return 'အသင်းဝင် ($tier): $percent% လျှော့';
+  }
+
+  @override
   String get phone => 'ဖုန်း';
 
   @override

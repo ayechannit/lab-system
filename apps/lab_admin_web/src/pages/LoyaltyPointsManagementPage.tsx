@@ -33,6 +33,7 @@ import {
 } from '../services/pointTransactionService'
 import { getIntlLocale } from '../i18n'
 import { formatIsoDatetime } from '../utils/dateIntl'
+import { membershipTierLabel } from '../utils/membershipTierLabels'
 import '../components/common/ui.css'
 
 function formatRulePeriod(
@@ -553,7 +554,7 @@ export function LoyaltyPointsManagementPage() {
                         </td>
                         <td>
                           {u.tier_name ? (
-                            <span className="badge badge--neutral">{u.tier_name}</span>
+                            <span className="badge badge--neutral">{membershipTierLabel(u.tier_name)}</span>
                           ) : (
                             t('common.none')
                           )}
