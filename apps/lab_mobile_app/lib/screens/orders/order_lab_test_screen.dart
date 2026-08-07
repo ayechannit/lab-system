@@ -946,6 +946,130 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
             ),
             const SizedBox(height: 12),
             _SectionCard(
+              icon: Icons.route_outlined,
+              title: l10n.orderCreateProcessOrderTitle,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  SegmentedButton<_OrderMode>(
+                    style: SegmentedButton.styleFrom(
+                      backgroundColor: context.appExtras.surfaceContainer,
+                      selectedBackgroundColor: context.cardFill,
+                      foregroundColor: context.cs.onSurfaceVariant,
+                      selectedForegroundColor: context.cs.primary,
+                      side: BorderSide(color: AppColors.outline.withValues(alpha: 0.35)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                    ),
+                    segments: [
+                      ButtonSegment(
+                        value: _OrderMode.catalogTests,
+                        label: Text(
+                          l10n.orderCreateTestsFromList,
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w400),
+                        ),
+                        icon: const Icon(Icons.checklist_outlined),
+                      ),
+                      ButtonSegment(
+                        value: _OrderMode.prescriptionOnly,
+                        label: Text(
+                          l10n.orderCreatePrescriptionFile,
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w400),
+                        ),
+                        icon: const Icon(Icons.upload_file_outlined),
+                      ),
+                    ],
+                    selected: {_mode},
+                    onSelectionChanged: (s) {
+                      setState(() {
+                        _mode = s.first;
+                        if (_mode == _OrderMode.prescriptionOnly) {
+                          _selectedTestIds.clear();
+                        } else {
+                          _prescriptionBytes = null;
+                          _prescriptionName = null;
+                        }
+                      });
+                      _revalidateProcessOrder();
+                    },
+                  ),
+                  const SizedBox(height: 14),
+                  FormField<void>(
+                    key: _processOrderKey,
+                    validator: (_) => _validateProcessOrder(l10n),
+                    builder: (field) {
+                      final err = field.errorText;
+                      if (_mode == _OrderMode.catalogTests) {
+                        return FutureBuilder<List<LabTestPick>>(
+                          future: _testsFuture,
+                          builder: (context, snap) {
+                            if (snap.connectionState == ConnectionState.waiting) {
+                              return const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 12),
+                                child: Center(child: CircularProgressIndicator()),
+                              );
+                            }
+                            if (_tests.isEmpty) {
+                              return Text(
+                                l10n.orderCreateCatalogEmpty,
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.error),
+                              );
+                            }
+                            final n = _selectedTestIds.length;
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                _stackedFieldLabel(context, l10n.orderCreateTestsFromCatalog, required: true),
+                                AppDropdownTapField(
+                                  label: n == 0
+                                      ? l10n.orderCreateSelectTestsPlaceholder
+                                      : l10n.orderCreateTestsSelected(n),
+                                  onTap: _openTestCatalogSheet,
+                                  hasError: err != null,
+                                ),
+                                if (err != null) _fieldErrorText(context, err),
+                              ],
+                            );
+                          },
+                        );
+                      }
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _stackedFieldLabel(context, l10n.orderCreatePrescriptionFile, required: true),
+                          AppDropdownTapField(
+                            label: _prescriptionName == null
+                                ? l10n.orderCreateAddPrescriptionMedia
+                                : l10n.orderCreateChangeFile,
+                            onTap: _pickPrescription,
+                            hasError: err != null,
+                          ),
+                          if (err != null) _fieldErrorText(context, err),
+                          if (_prescriptionName != null) ...[
+                            const SizedBox(height: 8),
+                            Text(
+                              _prescriptionName!,
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: context.cs.onSurfaceVariant,
+                                  ),
+                            ),
+                          ],
+                          const SizedBox(height: 8),
+                          Text(
+                            l10n.orderCreatePrescriptionReviewHint,
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: context.cs.onSurfaceVariant,
+                                ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            _SectionCard(
               icon: Icons.flag_outlined,
               title: l10n.orderCreatePriorityDelivery,
               trailing: Switch(
@@ -1096,130 +1220,6 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
                       ),
                   ],
                 ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            _SectionCard(
-              icon: Icons.route_outlined,
-              title: l10n.orderCreateProcessOrderTitle,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  SegmentedButton<_OrderMode>(
-                    style: SegmentedButton.styleFrom(
-                      backgroundColor: context.appExtras.surfaceContainer,
-                      selectedBackgroundColor: context.cardFill,
-                      foregroundColor: context.cs.onSurfaceVariant,
-                      selectedForegroundColor: context.cs.primary,
-                      side: BorderSide(color: AppColors.outline.withValues(alpha: 0.35)),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                    ),
-                    segments: [
-                      ButtonSegment(
-                        value: _OrderMode.catalogTests,
-                        label: Text(
-                          l10n.orderCreateTestsFromList,
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w400),
-                        ),
-                        icon: const Icon(Icons.checklist_outlined),
-                      ),
-                      ButtonSegment(
-                        value: _OrderMode.prescriptionOnly,
-                        label: Text(
-                          l10n.orderCreatePrescriptionFile,
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w400),
-                        ),
-                        icon: const Icon(Icons.upload_file_outlined),
-                      ),
-                    ],
-                    selected: {_mode},
-                    onSelectionChanged: (s) {
-                      setState(() {
-                        _mode = s.first;
-                        if (_mode == _OrderMode.prescriptionOnly) {
-                          _selectedTestIds.clear();
-                        } else {
-                          _prescriptionBytes = null;
-                          _prescriptionName = null;
-                        }
-                      });
-                      _revalidateProcessOrder();
-                    },
-                  ),
-                  const SizedBox(height: 14),
-                  FormField<void>(
-                    key: _processOrderKey,
-                    validator: (_) => _validateProcessOrder(l10n),
-                    builder: (field) {
-                      final err = field.errorText;
-                      if (_mode == _OrderMode.catalogTests) {
-                        return FutureBuilder<List<LabTestPick>>(
-                          future: _testsFuture,
-                          builder: (context, snap) {
-                            if (snap.connectionState == ConnectionState.waiting) {
-                              return const Padding(
-                                padding: EdgeInsets.symmetric(vertical: 12),
-                                child: Center(child: CircularProgressIndicator()),
-                              );
-                            }
-                            if (_tests.isEmpty) {
-                              return Text(
-                                l10n.orderCreateCatalogEmpty,
-                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.error),
-                              );
-                            }
-                            final n = _selectedTestIds.length;
-                            return Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                _stackedFieldLabel(context, l10n.orderCreateTestsFromCatalog, required: true),
-                                AppDropdownTapField(
-                                  label: n == 0
-                                      ? l10n.orderCreateSelectTestsPlaceholder
-                                      : l10n.orderCreateTestsSelected(n),
-                                  onTap: _openTestCatalogSheet,
-                                  hasError: err != null,
-                                ),
-                                if (err != null) _fieldErrorText(context, err),
-                              ],
-                            );
-                          },
-                        );
-                      }
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          _stackedFieldLabel(context, l10n.orderCreatePrescriptionFile, required: true),
-                          AppDropdownTapField(
-                            label: _prescriptionName == null
-                                ? l10n.orderCreateAddPrescriptionMedia
-                                : l10n.orderCreateChangeFile,
-                            onTap: _pickPrescription,
-                            hasError: err != null,
-                          ),
-                          if (err != null) _fieldErrorText(context, err),
-                          if (_prescriptionName != null) ...[
-                            const SizedBox(height: 8),
-                            Text(
-                              _prescriptionName!,
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: context.cs.onSurfaceVariant,
-                                  ),
-                            ),
-                          ],
-                          const SizedBox(height: 8),
-                          Text(
-                            l10n.orderCreatePrescriptionReviewHint,
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: context.cs.onSurfaceVariant,
-                                ),
-                          ),
-                        ],
-                      );
-                    },
-                  ),
-                ],
               ),
             ),
             const SizedBox(height: 12),
