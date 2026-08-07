@@ -66,7 +66,7 @@ class SessionController extends ChangeNotifier {
     final u = _user;
     if (u == null || _membershipTiers.isEmpty) return null;
     return MembershipTierProgress.resolve(
-      pointsBalance: u.pointsBalance,
+      spentMmk: u.totalSpentMmk,
       tiers: _membershipTiers,
       fallbackTierName: u.tierName,
       fallbackDiscountPercent: u.tierDiscountPercent,

@@ -28,7 +28,7 @@ export function MembershipTierFormModal({
   const titleId = useId()
   const activeFieldId = useId()
   const [name, setName] = useState('')
-  const [minPoints, setMinPoints] = useState<number | ''>(0)
+  const [minSpendMmk, setMinSpendMmk] = useState<number | ''>(0)
   const [discountPercent, setDiscountPercent] = useState<number | ''>(0)
   const [isActive, setIsActive] = useState(true)
   const [formError, setFormError] = useState<string | null>(null)
@@ -40,12 +40,12 @@ export function MembershipTierFormModal({
     setSubmitting(false)
     if (mode === 'edit' && initial) {
       setName(initial.name)
-      setMinPoints(initial.min_points)
+      setMinSpendMmk(initial.min_spend_mmk)
       setDiscountPercent(initial.discount_percent)
       setIsActive(initial.is_active)
     } else {
       setName('')
-      setMinPoints(0)
+      setMinSpendMmk(0)
       setDiscountPercent(0)
       setIsActive(true)
     }
@@ -77,10 +77,10 @@ export function MembershipTierFormModal({
       setFormError(t('membershipTiers.form.errorName'))
       return
     }
-    const points =
-      typeof minPoints === 'number' ? minPoints : Number.parseInt(String(minPoints), 10)
-    if (!Number.isFinite(points) || !Number.isInteger(points) || points < 0) {
-      setFormError(t('membershipTiers.form.errorMinPoints'))
+    const minSpend =
+      typeof minSpendMmk === 'number' ? minSpendMmk : Number.parseFloat(String(minSpendMmk))
+    if (!Number.isFinite(minSpend) || minSpend < 0) {
+      setFormError(t('membershipTiers.form.errorMinSpend'))
       return
     }
     const discount =
@@ -91,7 +91,7 @@ export function MembershipTierFormModal({
     }
     const body: MembershipTierUpsertBody = {
       name: nameTrim,
-      min_points: points,
+      min_spend_mmk: minSpend,
       discount_percent: Math.round(discount * 100) / 100,
       is_active: isActive,
     }
@@ -157,16 +157,16 @@ export function MembershipTierFormModal({
                 />
               </div>
               <div className="field">
-                <label htmlFor="mt-min-points">{t('membershipTiers.form.minPoints')}</label>
+                <label htmlFor="mt-min-spend">{t('membershipTiers.form.minSpend')}</label>
                 <input
-                  id="mt-min-points"
+                  id="mt-min-spend"
                   type="number"
                   min={0}
-                  step={1}
-                  value={minPoints === '' ? '' : minPoints}
+                  step={1000}
+                  value={minSpendMmk === '' ? '' : minSpendMmk}
                   onChange={(e) => {
                     const v = e.target.value
-                    setMinPoints(v === '' ? '' : Number.parseInt(v, 10))
+                    setMinSpendMmk(v === '' ? '' : Number.parseFloat(v))
                   }}
                   disabled={submitting}
                 />

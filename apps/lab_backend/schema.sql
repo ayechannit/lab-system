@@ -422,13 +422,14 @@ BEGIN
 END
 
 -- ==========================================================
--- 9. MEMBERSHIP TIERS (customer tiering based on loyalty points)
+-- 9. MEMBERSHIP TIERS (customer tiering based on lifetime spend)
 -- ==========================================================
 -- Customers are auto-classified into staff-configurable tiers (Normal/Silver/Gold/...)
--- based on their loyalty points balance (users.total_points).
--- Column `min_spend_mmk` is a legacy name; it stores minimum points.
+-- based on their lifetime spend (users.total_spent_mmk). This is independent of the
+-- redeemable loyalty-points balance (users.total_points) — see point_settings /
+-- point_redemption_settings for that separate program.
 
--- Keep spend total for reporting / other features (not used for tier qualification).
+-- Spend total used for tier qualification, kept in sync on every verified payment.
 IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[users]') AND name = N'total_spent_mmk')
 BEGIN
     ALTER TABLE dbo.users ADD total_spent_mmk DECIMAL(18, 2) NOT NULL CONSTRAINT DF_users_total_spent_mmk DEFAULT 0;
@@ -440,7 +441,7 @@ BEGIN
     CREATE TABLE dbo.membership_tiers (
         id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
         name NVARCHAR(255) NOT NULL,
-        min_spend_mmk DECIMAL(18, 2) NOT NULL DEFAULT 0, -- stores min loyalty points
+        min_spend_mmk DECIMAL(18, 2) NOT NULL DEFAULT 0, -- lifetime spend (MMK) required for this tier
         discount_percent DECIMAL(5, 2) NOT NULL DEFAULT 0,
         is_active BIT DEFAULT 1,
         created_user UNIQUEIDENTIFIER,
@@ -452,8 +453,8 @@ BEGIN
 
     INSERT INTO dbo.membership_tiers (name, min_spend_mmk, discount_percent) VALUES
         ('Normal', 0, 0),
-        ('Silver', 100, 3),
-        ('Gold', 500, 5);
+        ('Silver', 100000, 3),
+        ('Gold', 500000, 5);
 END
 
 -- Defensive seed: if the table already existed (e.g. created by a prior partial run)
@@ -462,13 +463,17 @@ IF NOT EXISTS (SELECT 1 FROM dbo.membership_tiers)
 BEGIN
     INSERT INTO dbo.membership_tiers (name, min_spend_mmk, discount_percent) VALUES
         ('Normal', 0, 0),
-        ('Silver', 100, 3),
-        ('Gold', 500, 5);
+        ('Silver', 100000, 3),
+        ('Gold', 500000, 5);
 END
 
--- Convert old MMK seed thresholds to point thresholds.
-UPDATE dbo.membership_tiers SET min_spend_mmk = 100
-WHERE is_deleted = 0 AND name = 'Silver' AND min_spend_mmk >= 1000;
-UPDATE dbo.membership_tiers SET min_spend_mmk = 500
-WHERE is_deleted = 0 AND name = 'Gold' AND min_spend_mmk >= 1000;
+-- One-time reversal: a prior migration converted these seed rows from MMK spend
+-- thresholds down to points thresholds (100 / 500). Convert them back up to real
+-- MMK spend thresholds now that tiers are spend-based again. Guarded to only touch
+-- rows still holding the old small points-era values, so it's a no-op once applied
+-- (or if an admin has since set their own real MMK threshold above 1000).
+UPDATE dbo.membership_tiers SET min_spend_mmk = 100000
+WHERE is_deleted = 0 AND name = 'Silver' AND min_spend_mmk < 1000;
+UPDATE dbo.membership_tiers SET min_spend_mmk = 500000
+WHERE is_deleted = 0 AND name = 'Gold' AND min_spend_mmk < 1000;
 

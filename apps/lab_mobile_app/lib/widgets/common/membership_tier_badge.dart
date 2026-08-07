@@ -138,8 +138,8 @@ class MembershipTierBadge extends StatelessWidget {
   }
 }
 
-String _formatTierPoints(int value) {
-  final n = value.abs();
+String _formatTierAmount(num value) {
+  final n = value.abs().round();
   if (n >= 1000) {
     final s = n.toString();
     final buf = StringBuffer();
@@ -240,13 +240,13 @@ class MembershipTierCard extends StatelessWidget {
     final nextName = progress?.nextTier == null
         ? null
         : localizedMembershipTierName(l10n, progress!.nextTier!.name);
-    final pointsLabel = _formatTierPoints(progress?.pointsBalance ?? 0);
+    final spendLabel = _formatTierAmount(progress?.spentMmk ?? 0);
     final targetLabel = progress?.nextTier == null
         ? null
-        : _formatTierPoints(progress!.nextTier!.minPoints);
+        : _formatTierAmount(progress!.nextTier!.minSpendMmk);
     final remainingLabel = progress == null || progress!.isMaxTier
         ? null
-        : _formatTierPoints(progress!.remainingPoints);
+        : _formatTierAmount(progress!.remainingSpendMmk);
     final barValue = progress?.progress ?? 0.0;
     final percentLabel = '${(barValue.clamp(0.0, 1.0) * 100).round()}%';
 
@@ -379,7 +379,7 @@ class MembershipTierCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    l10n.membershipTierPointsOfNext(pointsLabel, targetLabel!),
+                    l10n.membershipTierSpendOfNext(spendLabel, targetLabel!),
                     style: Theme.of(context).textTheme.labelLarge?.copyWith(
                           color: cs.onSurface,
                           fontWeight: FontWeight.w700,
@@ -387,7 +387,7 @@ class MembershipTierCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    l10n.membershipTierProgressToNext(remainingLabel!, nextName),
+                    l10n.membershipTierSpendToNext(remainingLabel!, nextName),
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: cs.onSurfaceVariant,
                           height: 1.35,

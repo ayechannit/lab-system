@@ -275,18 +275,82 @@ abstract class AppLocalizations {
   /// **'{tierName} member · {percent}% off'**
   String membershipTierLabel(String tierName, int percent);
 
+  /// No description provided for @membershipTierTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Membership'**
   String get membershipTierTitle;
+
+  /// No description provided for @membershipTierDefaultName.
+  ///
+  /// In en, this message translates to:
+  /// **'Normal'**
   String get membershipTierDefaultName;
+
+  /// No description provided for @membershipTierNameNormal.
+  ///
+  /// In en, this message translates to:
+  /// **'Normal'**
   String get membershipTierNameNormal;
+
+  /// No description provided for @membershipTierNameSilver.
+  ///
+  /// In en, this message translates to:
+  /// **'Silver'**
   String get membershipTierNameSilver;
+
+  /// No description provided for @membershipTierNameGold.
+  ///
+  /// In en, this message translates to:
+  /// **'Gold'**
   String get membershipTierNameGold;
+
+  /// No description provided for @membershipTierNameBronze.
+  ///
+  /// In en, this message translates to:
+  /// **'Bronze'**
   String get membershipTierNameBronze;
+
+  /// No description provided for @membershipTierPercentOff.
+  ///
+  /// In en, this message translates to:
+  /// **'{percent}% off'**
   String membershipTierPercentOff(int percent);
+
+  /// No description provided for @membershipTierDiscountBenefit.
+  ///
+  /// In en, this message translates to:
+  /// **'{percent}% off applies to your lab test prices'**
   String membershipTierDiscountBenefit(int percent);
+
+  /// No description provided for @membershipTierMemberBenefit.
+  ///
+  /// In en, this message translates to:
+  /// **'Your membership benefits apply on eligible orders'**
   String get membershipTierMemberBenefit;
-  String membershipTierProgressToNext(String points, String tier);
+
+  /// No description provided for @membershipTierSpendToNext.
+  ///
+  /// In en, this message translates to:
+  /// **'Spend {amount} MMK more to reach {tier}'**
+  String membershipTierSpendToNext(String amount, String tier);
+
+  /// No description provided for @membershipTierProgressMax.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'ve reached the top membership tier'**
   String get membershipTierProgressMax;
-  String membershipTierPointsOfNext(String current, String target);
+
+  /// No description provided for @membershipTierSpendOfNext.
+  ///
+  /// In en, this message translates to:
+  /// **'{current} of {target} MMK'**
+  String membershipTierSpendOfNext(String current, String target);
+
+  /// No description provided for @orderCreateMembershipDiscount.
+  ///
+  /// In en, this message translates to:
+  /// **'Membership ({tier}): {percent}% off'**
   String orderCreateMembershipDiscount(String tier, String percent);
 
   /// No description provided for @phone.
@@ -487,38 +551,196 @@ abstract class AppLocalizations {
   /// **'Report out'**
   String get trackingStepReportOut;
 
-  String trackingAge(int age);
-  String trackingPhone(String phone);
-  String trackingPriority(String priority);
-  String trackingReportDelivery(String method);
+  /// No description provided for @trackingPatientSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Patient details'**
   String get trackingPatientSection;
+
+  /// No description provided for @trackingAge.
+  ///
+  /// In en, this message translates to:
+  /// **'Age: {age}'**
+  String trackingAge(int age);
+
+  /// No description provided for @trackingPhone.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone: {phone}'**
+  String trackingPhone(String phone);
+
+  /// No description provided for @trackingPriority.
+  ///
+  /// In en, this message translates to:
+  /// **'Priority: {priority}'**
+  String trackingPriority(String priority);
+
+  /// No description provided for @trackingReportDelivery.
+  ///
+  /// In en, this message translates to:
+  /// **'Report delivery: {method}'**
+  String trackingReportDelivery(String method);
+
+  /// No description provided for @trackingTestsSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Tests'**
   String get trackingTestsSection;
+
+  /// No description provided for @trackingNoTestsYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No catalog tests assigned yet. The lab may still be reviewing a prescription.'**
   String get trackingNoTestsYet;
+
+  /// No description provided for @trackingTestLine.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} ({code})'**
   String trackingTestLine(String name, String code);
+
+  /// No description provided for @trackingTestLineNoCode.
+  ///
+  /// In en, this message translates to:
+  /// **'{name}'**
   String trackingTestLineNoCode(String name);
+
+  /// No description provided for @trackingPricingSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Pricing'**
   String get trackingPricingSection;
+
+  /// No description provided for @trackingTestsSubtotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Tests'**
   String get trackingTestsSubtotal;
+
+  /// No description provided for @trackingMaterialFee.
+  ///
+  /// In en, this message translates to:
+  /// **'Material fee'**
   String get trackingMaterialFee;
+
+  /// No description provided for @trackingServiceFee.
+  ///
+  /// In en, this message translates to:
+  /// **'Service fee'**
   String get trackingServiceFee;
+
+  /// No description provided for @trackingDiscount.
+  ///
+  /// In en, this message translates to:
+  /// **'Discount ({percent}%)'**
   String trackingDiscount(String percent);
+
+  /// No description provided for @trackingOriginalPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Original'**
   String get trackingOriginalPrice;
+
+  /// No description provided for @trackingAmountDue.
+  ///
+  /// In en, this message translates to:
+  /// **'Amount due'**
   String get trackingAmountDue;
+
+  /// No description provided for @trackingPaid.
+  ///
+  /// In en, this message translates to:
+  /// **'Paid'**
   String get trackingPaid;
+
+  /// No description provided for @trackingBalance.
+  ///
+  /// In en, this message translates to:
+  /// **'Balance'**
   String get trackingBalance;
+
+  /// No description provided for @trackingNotesSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Notes'**
   String get trackingNotesSection;
+
+  /// No description provided for @trackingPrescriptionAttached.
+  ///
+  /// In en, this message translates to:
+  /// **'Prescription file attached'**
   String get trackingPrescriptionAttached;
+
+  /// No description provided for @trackingMmk.
+  ///
+  /// In en, this message translates to:
+  /// **'{amount} MMK'**
   String trackingMmk(String amount);
 
+  /// No description provided for @trackingLabelPriority.
+  ///
+  /// In en, this message translates to:
+  /// **'Priority'**
   String get trackingLabelPriority;
+
+  /// No description provided for @trackingLabelDelivery.
+  ///
+  /// In en, this message translates to:
+  /// **'Report delivery'**
   String get trackingLabelDelivery;
+
+  /// No description provided for @trackingLabelAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'Collection address'**
   String get trackingLabelAddress;
+
+  /// No description provided for @trackingLabelName.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
   String get trackingLabelName;
+
+  /// No description provided for @trackingLabelAge.
+  ///
+  /// In en, this message translates to:
+  /// **'Age'**
   String get trackingLabelAge;
+
+  /// No description provided for @trackingLabelPhone.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone'**
   String get trackingLabelPhone;
+
+  /// No description provided for @trackingPlacedOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Placed {date}'**
   String trackingPlacedOn(String date);
+
+  /// No description provided for @trackingOrderRef.
+  ///
+  /// In en, this message translates to:
+  /// **'Order reference'**
   String get trackingOrderRef;
+
+  /// No description provided for @trackingCopyId.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy'**
   String get trackingCopyId;
+
+  /// No description provided for @trackingIdCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Order ID copied'**
   String get trackingIdCopied;
+
+  /// No description provided for @trackingTestsTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Tests subtotal'**
   String get trackingTestsTotal;
 
   /// No description provided for @collectorPending.
@@ -1079,79 +1301,448 @@ abstract class AppLocalizations {
   /// **'Prescription attached. Totals will be set when the lab assigns tests.'**
   String get orderCreatePrescriptionAttached;
 
+  /// No description provided for @orderCreatePatientDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Patient details'**
   String get orderCreatePatientDetails;
+
+  /// No description provided for @orderCreatePatientFullName.
+  ///
+  /// In en, this message translates to:
+  /// **'Patient full name'**
   String get orderCreatePatientFullName;
+
+  /// No description provided for @orderCreateRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Required'**
   String get orderCreateRequired;
+
+  /// No description provided for @orderCreatePhoneHint.
+  ///
+  /// In en, this message translates to:
+  /// **'+959…'**
   String get orderCreatePhoneHint;
+
+  /// No description provided for @orderCreatePhoneInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Use + and digits only (e.g. +959…)'**
   String get orderCreatePhoneInvalid;
+
+  /// No description provided for @orderCreateAge.
+  ///
+  /// In en, this message translates to:
+  /// **'Age'**
   String get orderCreateAge;
+
+  /// No description provided for @orderCreateValidAge.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a valid age'**
   String get orderCreateValidAge;
+
+  /// No description provided for @orderCreateValidAgeWhole.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a valid age (whole number).'**
   String get orderCreateValidAgeWhole;
+
+  /// No description provided for @orderCreateGender.
+  ///
+  /// In en, this message translates to:
+  /// **'Gender'**
   String get orderCreateGender;
+
+  /// No description provided for @orderCreateGenderMale.
+  ///
+  /// In en, this message translates to:
+  /// **'Male'**
   String get orderCreateGenderMale;
+
+  /// No description provided for @orderCreateGenderFemale.
+  ///
+  /// In en, this message translates to:
+  /// **'Female'**
   String get orderCreateGenderFemale;
+
+  /// No description provided for @orderCreateGenderOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Other'**
   String get orderCreateGenderOther;
+
+  /// No description provided for @orderCreateBloodTypeOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Blood type (optional)'**
   String get orderCreateBloodTypeOptional;
+
+  /// No description provided for @orderCreateClinicalNotesOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Clinical notes (optional)'**
   String get orderCreateClinicalNotesOptional;
+
+  /// No description provided for @orderCreatePriorityDelivery.
+  ///
+  /// In en, this message translates to:
+  /// **'Priority & delivery'**
   String get orderCreatePriorityDelivery;
+
+  /// No description provided for @orderCreateUrgent.
+  ///
+  /// In en, this message translates to:
+  /// **'Urgent'**
   String get orderCreateUrgent;
+
+  /// No description provided for @orderCreateElective.
+  ///
+  /// In en, this message translates to:
+  /// **'Elective'**
   String get orderCreateElective;
+
+  /// No description provided for @orderCreateReportDelivery.
+  ///
+  /// In en, this message translates to:
+  /// **'Report delivery'**
   String get orderCreateReportDelivery;
+
+  /// No description provided for @orderCreateSoftCopy.
+  ///
+  /// In en, this message translates to:
+  /// **'Soft copy (app/PDF)'**
   String get orderCreateSoftCopy;
+
+  /// No description provided for @orderCreateHardCopy.
+  ///
+  /// In en, this message translates to:
+  /// **'Hard copy'**
   String get orderCreateHardCopy;
+
+  /// No description provided for @orderCreateBoth.
+  ///
+  /// In en, this message translates to:
+  /// **'Both'**
   String get orderCreateBoth;
+
+  /// No description provided for @orderCreateFacilityNotesOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Collection / facility notes (optional)'**
   String get orderCreateFacilityNotesOptional;
+
+  /// No description provided for @orderCreateFacilityNotesHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Notes for collector or lab…'**
   String get orderCreateFacilityNotesHint;
+
+  /// No description provided for @orderCreatePreferredDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Preferred collection date'**
   String get orderCreatePreferredDate;
+
+  /// No description provided for @orderCreateTimeNoteOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Time note (optional)'**
   String get orderCreateTimeNoteOptional;
+
+  /// No description provided for @orderCreateTimeNoteHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Morning, after 2pm'**
   String get orderCreateTimeNoteHint;
+
+  /// No description provided for @orderCreatePreferredCollectorOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Preferred collector (optional)'**
   String get orderCreatePreferredCollectorOptional;
+
+  /// No description provided for @orderCreateCollectorsAssignedByLab.
+  ///
+  /// In en, this message translates to:
+  /// **'Collectors will be assigned by the lab.'**
   String get orderCreateCollectorsAssignedByLab;
+
+  /// No description provided for @orderCreateCollectionAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'Collection address'**
   String get orderCreateCollectionAddress;
+
+  /// No description provided for @orderCreateEnterCollectionAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter collection address'**
   String get orderCreateEnterCollectionAddress;
+
+  /// No description provided for @orderCreateFullCollectionAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'Full address for sample collection'**
   String get orderCreateFullCollectionAddress;
+
+  /// No description provided for @orderCreateProcessOrderTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'How should we process this order?'**
   String get orderCreateProcessOrderTitle;
+
+  /// No description provided for @orderCreateTestsFromList.
+  ///
+  /// In en, this message translates to:
+  /// **'Tests from list'**
   String get orderCreateTestsFromList;
+
+  /// No description provided for @orderCreatePrescriptionFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Prescription file'**
   String get orderCreatePrescriptionFile;
+
+  /// No description provided for @orderCreateCatalogEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No lab tests in the catalog. Use “Prescription file” or ask the lab to publish tests.'**
   String get orderCreateCatalogEmpty;
+
+  /// No description provided for @orderCreateTestsFromCatalog.
+  ///
+  /// In en, this message translates to:
+  /// **'Tests from catalog'**
   String get orderCreateTestsFromCatalog;
+
+  /// No description provided for @orderCreateSelectTestsPlaceholder.
+  ///
+  /// In en, this message translates to:
+  /// **'Select tests from catalog…'**
   String get orderCreateSelectTestsPlaceholder;
+
+  /// No description provided for @orderCreateTestsSelected.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 test selected — tap to add or remove}other{{count} tests selected — tap to add or remove}}'**
   String orderCreateTestsSelected(int count);
+
+  /// No description provided for @orderCreateAddPrescriptionMedia.
+  ///
+  /// In en, this message translates to:
+  /// **'Add PDF, image, or take photo'**
   String get orderCreateAddPrescriptionMedia;
+
+  /// No description provided for @orderCreateChangeFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Change file'**
   String get orderCreateChangeFile;
+
+  /// No description provided for @orderCreatePrescriptionReviewHint.
+  ///
+  /// In en, this message translates to:
+  /// **'The lab will review your file and assign tests. Order status stays pending until they add catalog lines.'**
   String get orderCreatePrescriptionReviewHint;
+
+  /// No description provided for @orderCreateSetCoordinates.
+  ///
+  /// In en, this message translates to:
+  /// **'Set collection coordinates — type the address or choose on the map.'**
   String get orderCreateSetCoordinates;
+
+  /// No description provided for @orderCreateStillCheckingCoverage.
+  ///
+  /// In en, this message translates to:
+  /// **'Still checking service coverage for this address.'**
   String get orderCreateStillCheckingCoverage;
+
+  /// No description provided for @orderCreateTestsLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Selected tests could not be loaded. Wait for the catalog or pick tests again.'**
   String get orderCreateTestsLoadFailed;
+
+  /// No description provided for @orderCreateSubmittedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Order submitted'**
   String get orderCreateSubmittedTitle;
+
+  /// No description provided for @orderCreateSubmittedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Status is pending — the lab will review your request.'**
   String get orderCreateSubmittedBody;
+
+  /// No description provided for @orderCreateFailedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Order failed'**
   String get orderCreateFailedTitle;
+
+  /// No description provided for @orderCreateSaveOrder.
+  ///
+  /// In en, this message translates to:
+  /// **'Save order'**
   String get orderCreateSaveOrder;
+
+  /// No description provided for @orderCreateSaving.
+  ///
+  /// In en, this message translates to:
+  /// **'Saving…'**
   String get orderCreateSaving;
+
+  /// No description provided for @orderCreateSelectAtLeastOneTest.
+  ///
+  /// In en, this message translates to:
+  /// **'Select at least one test from the catalog.'**
   String get orderCreateSelectAtLeastOneTest;
+
+  /// No description provided for @orderCreateChoosePrescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a prescription PDF or image.'**
   String get orderCreateChoosePrescription;
+
+  /// No description provided for @orderCreatePrescriptionUpload.
+  ///
+  /// In en, this message translates to:
+  /// **'Prescription upload'**
   String get orderCreatePrescriptionUpload;
+
+  /// No description provided for @orderCreateSelectedTestsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} selected tests'**
   String orderCreateSelectedTestsCount(int count);
+
+  /// No description provided for @orderCreateAddPrescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Add prescription'**
   String get orderCreateAddPrescription;
+
+  /// No description provided for @orderCreateAddPrescriptionHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Take a photo, pick from gallery, or upload a PDF/image file.'**
   String get orderCreateAddPrescriptionHint;
+
+  /// No description provided for @orderCreateTakePhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'Take photo'**
   String get orderCreateTakePhoto;
+
+  /// No description provided for @orderCreateUseCamera.
+  ///
+  /// In en, this message translates to:
+  /// **'Use camera'**
   String get orderCreateUseCamera;
+
+  /// No description provided for @orderCreateChooseFromGallery.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose from gallery'**
   String get orderCreateChooseFromGallery;
+
+  /// No description provided for @orderCreateGalleryFormats.
+  ///
+  /// In en, this message translates to:
+  /// **'JPG, PNG, or other image'**
   String get orderCreateGalleryFormats;
+
+  /// No description provided for @orderCreateChooseFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose file'**
   String get orderCreateChooseFile;
+
+  /// No description provided for @orderCreateFileFromDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'PDF or image from device'**
   String get orderCreateFileFromDevice;
+
+  /// No description provided for @orderCreateCouldNotCaptureImage.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not capture image: {error}'**
   String orderCreateCouldNotCaptureImage(String error);
+
+  /// No description provided for @orderCreateCouldNotLoadImage.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load image: {error}'**
   String orderCreateCouldNotLoadImage(String error);
+
+  /// No description provided for @orderCreateCouldNotReadFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not read the selected file.'**
   String get orderCreateCouldNotReadFile;
+
+  /// No description provided for @orderCreateSelectTests.
+  ///
+  /// In en, this message translates to:
+  /// **'Select tests'**
   String get orderCreateSelectTests;
+
+  /// No description provided for @orderCreateDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
   String get orderCreateDone;
+
+  /// No description provided for @orderCreateSearchTestsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search by test name or code'**
   String get orderCreateSearchTestsHint;
+
+  /// No description provided for @orderCreateTestMatchSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'{matches, plural, =1{1 match · {selected} selected}other{{matches} matches · {selected} selected}}'**
   String orderCreateTestMatchSummary(int matches, int selected);
+
+  /// No description provided for @orderCreateNoTestsMatchSearch.
+  ///
+  /// In en, this message translates to:
+  /// **'No tests match your search.'**
   String get orderCreateNoTestsMatchSearch;
+
+  /// No description provided for @orderCreatePreferredCollector.
+  ///
+  /// In en, this message translates to:
+  /// **'Preferred collector'**
   String get orderCreatePreferredCollector;
+
+  /// No description provided for @orderCreateNoPreference.
+  ///
+  /// In en, this message translates to:
+  /// **'No preference'**
   String get orderCreateNoPreference;
+
+  /// No description provided for @orderCreateLabWillAssign.
+  ///
+  /// In en, this message translates to:
+  /// **'Lab will assign a collector'**
   String get orderCreateLabWillAssign;
+
+  /// No description provided for @orderCreateNoPreferenceLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'No preference — lab assigns'**
   String get orderCreateNoPreferenceLabel;
+
+  /// No description provided for @orderCreateCollectorOptionalHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Optional — same collector when planning routes'**
   String get orderCreateCollectorOptionalHint;
 
   /// No description provided for @resultsTitle.
@@ -1433,7 +2024,7 @@ abstract class AppLocalizations {
   /// No description provided for @loyaltyBalanceHint.
   ///
   /// In en, this message translates to:
-  /// **'Balance comes from your account total_points. Points are earned when the lab verifies a payment, using the rules below.'**
+  /// **'Points are earned when the lab verifies a payment, using the rules below. Your membership tier is separate and is based on lifetime spend.'**
   String get loyaltyBalanceHint;
 
   /// No description provided for @loyaltyHowToEarn.

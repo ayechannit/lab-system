@@ -1,66 +1,69 @@
-/// One rung on the loyalty-points membership ladder (`membership_tiers`).
+/// One rung on the lifetime-spend membership ladder (`membership_tiers`).
 class MembershipTierLevel {
   const MembershipTierLevel({
     required this.id,
     required this.name,
-    required this.minPoints,
+    required this.minSpendMmk,
     required this.discountPercent,
   });
 
   final String id;
   final String name;
-  final int minPoints;
+  final double minSpendMmk;
   final int discountPercent;
 }
 
-/// Progress from the current tier toward the next (points-based).
+/// Progress from the current tier toward the next (lifetime-spend based).
 class MembershipTierProgress {
   const MembershipTierProgress({
     required this.currentTier,
     required this.nextTier,
-    required this.pointsBalance,
+    required this.spentMmk,
     required this.progress,
-    required this.remainingPoints,
+    required this.remainingSpendMmk,
   });
 
   final MembershipTierLevel currentTier;
   final MembershipTierLevel? nextTier;
-  final int pointsBalance;
+  final double spentMmk;
 
   /// 0..1 within the current → next band (1 when at top tier).
   final double progress;
-  final int remainingPoints;
+  final double remainingSpendMmk;
 
   bool get isMaxTier => nextTier == null;
 
+  /// 0..100, rounded for display (e.g. "64%").
+  int get progressPercent => (progress * 100).round();
+
   static MembershipTierProgress resolve({
-    required int pointsBalance,
+    required double spentMmk,
     required List<MembershipTierLevel> tiers,
     String? fallbackTierName,
     int fallbackDiscountPercent = 0,
   }) {
-    final points = pointsBalance < 0 ? 0 : pointsBalance;
-    final sorted = [...tiers]..sort((a, b) => a.minPoints.compareTo(b.minPoints));
+    final spent = spentMmk < 0 ? 0.0 : spentMmk;
+    final sorted = [...tiers]..sort((a, b) => a.minSpendMmk.compareTo(b.minSpendMmk));
 
     if (sorted.isEmpty) {
       final fallback = MembershipTierLevel(
         id: '',
         name: (fallbackTierName ?? '').trim().isEmpty ? 'Normal' : fallbackTierName!.trim(),
-        minPoints: 0,
+        minSpendMmk: 0,
         discountPercent: fallbackDiscountPercent,
       );
       return MembershipTierProgress(
         currentTier: fallback,
         nextTier: null,
-        pointsBalance: points,
+        spentMmk: spent,
         progress: 1,
-        remainingPoints: 0,
+        remainingSpendMmk: 0,
       );
     }
 
     var currentIndex = 0;
     for (var i = 0; i < sorted.length; i++) {
-      if (sorted[i].minPoints <= points) {
+      if (sorted[i].minSpendMmk <= spent) {
         currentIndex = i;
       }
     }
@@ -71,25 +74,25 @@ class MembershipTierProgress {
       return MembershipTierProgress(
         currentTier: current,
         nextTier: null,
-        pointsBalance: points,
+        spentMmk: spent,
         progress: 1,
-        remainingPoints: 0,
+        remainingSpendMmk: 0,
       );
     }
 
-    final floor = current.minPoints;
-    final ceil = next.minPoints;
+    final floor = current.minSpendMmk;
+    final ceil = next.minSpendMmk;
     final span = ceil - floor;
-    final raw = span <= 0 ? 1.0 : (points - floor) / span;
+    final raw = span <= 0 ? 1.0 : (spent - floor) / span;
     final progress = raw.clamp(0.0, 1.0).toDouble();
-    final remaining = (ceil - points).clamp(0, ceil);
+    final remaining = (ceil - spent).clamp(0.0, ceil).toDouble();
 
     return MembershipTierProgress(
       currentTier: current,
       nextTier: next,
-      pointsBalance: points,
+      spentMmk: spent,
       progress: progress,
-      remainingPoints: remaining,
+      remainingSpendMmk: remaining,
     );
   }
 }

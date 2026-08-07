@@ -121,7 +121,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get membershipTierNameBronze => 'Bronze';
 
   @override
-  String membershipTierPercentOff(int percent) => '$percent% off';
+  String membershipTierPercentOff(int percent) {
+    return '$percent% off';
+  }
 
   @override
   String membershipTierDiscountBenefit(int percent) {
@@ -129,21 +131,19 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get membershipTierMemberBenefit =>
-      'Your membership benefits apply on eligible orders';
+  String get membershipTierMemberBenefit => 'Your membership benefits apply on eligible orders';
 
   @override
-  String membershipTierProgressToNext(String points, String tier) {
-    return 'Earn $points more points to reach $tier';
+  String membershipTierSpendToNext(String amount, String tier) {
+    return 'Spend $amount MMK more to reach $tier';
   }
 
   @override
-  String get membershipTierProgressMax =>
-      'You\'ve reached the top membership tier';
+  String get membershipTierProgressMax => 'You\'ve reached the top membership tier';
 
   @override
-  String membershipTierPointsOfNext(String current, String target) {
-    return '$current of $target points';
+  String membershipTierSpendOfNext(String current, String target) {
+    return '$current of $target MMK';
   }
 
   @override
@@ -276,29 +276,40 @@ class AppLocalizationsEn extends AppLocalizations {
   String get trackingPatientSection => 'Patient details';
 
   @override
-  String trackingAge(int age) => 'Age: $age';
+  String trackingAge(int age) {
+    return 'Age: $age';
+  }
 
   @override
-  String trackingPhone(String phone) => 'Phone: $phone';
+  String trackingPhone(String phone) {
+    return 'Phone: $phone';
+  }
 
   @override
-  String trackingPriority(String priority) => 'Priority: $priority';
+  String trackingPriority(String priority) {
+    return 'Priority: $priority';
+  }
 
   @override
-  String trackingReportDelivery(String method) => 'Report delivery: $method';
+  String trackingReportDelivery(String method) {
+    return 'Report delivery: $method';
+  }
 
   @override
   String get trackingTestsSection => 'Tests';
 
   @override
-  String get trackingNoTestsYet =>
-      'No catalog tests assigned yet. The lab may still be reviewing a prescription.';
+  String get trackingNoTestsYet => 'No catalog tests assigned yet. The lab may still be reviewing a prescription.';
 
   @override
-  String trackingTestLine(String name, String code) => '$name ($code)';
+  String trackingTestLine(String name, String code) {
+    return '$name ($code)';
+  }
 
   @override
-  String trackingTestLineNoCode(String name) => name;
+  String trackingTestLineNoCode(String name) {
+    return '$name';
+  }
 
   @override
   String get trackingPricingSection => 'Pricing';
@@ -313,7 +324,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get trackingServiceFee => 'Service fee';
 
   @override
-  String trackingDiscount(String percent) => 'Discount ($percent%)';
+  String trackingDiscount(String percent) {
+    return 'Discount ($percent%)';
+  }
 
   @override
   String get trackingOriginalPrice => 'Original';
@@ -334,7 +347,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get trackingPrescriptionAttached => 'Prescription file attached';
 
   @override
-  String trackingMmk(String amount) => '$amount MMK';
+  String trackingMmk(String amount) {
+    return '$amount MMK';
+  }
 
   @override
   String get trackingLabelPriority => 'Priority';
@@ -355,7 +370,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get trackingLabelPhone => 'Phone';
 
   @override
-  String trackingPlacedOn(String date) => 'Placed $date';
+  String trackingPlacedOn(String date) {
+    return 'Placed $date';
+  }
 
   @override
   String get trackingOrderRef => 'Order reference';
@@ -769,8 +786,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get orderCreatePrescriptionFile => 'Prescription file';
 
   @override
-  String get orderCreateCatalogEmpty =>
-      'No lab tests in the catalog. Use “Prescription file” or ask the lab to publish tests.';
+  String get orderCreateCatalogEmpty => 'No lab tests in the catalog. Use “Prescription file” or ask the lab to publish tests.';
 
   @override
   String get orderCreateTestsFromCatalog => 'Tests from catalog';
@@ -796,19 +812,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get orderCreateChangeFile => 'Change file';
 
   @override
-  String get orderCreatePrescriptionReviewHint =>
-      'The lab will review your file and assign tests. Order status stays pending until they add catalog lines.';
+  String get orderCreatePrescriptionReviewHint => 'The lab will review your file and assign tests. Order status stays pending until they add catalog lines.';
 
   @override
-  String get orderCreateSetCoordinates =>
-      'Set collection coordinates — type the address or choose on the map.';
+  String get orderCreateSetCoordinates => 'Set collection coordinates — type the address or choose on the map.';
 
   @override
   String get orderCreateStillCheckingCoverage => 'Still checking service coverage for this address.';
 
   @override
-  String get orderCreateTestsLoadFailed =>
-      'Selected tests could not be loaded. Wait for the catalog or pick tests again.';
+  String get orderCreateTestsLoadFailed => 'Selected tests could not be loaded. Wait for the catalog or pick tests again.';
 
   @override
   String get orderCreateSubmittedTitle => 'Order submitted';
@@ -843,8 +856,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get orderCreateAddPrescription => 'Add prescription';
 
   @override
-  String get orderCreateAddPrescriptionHint =>
-      'Take a photo, pick from gallery, or upload a PDF/image file.';
+  String get orderCreateAddPrescriptionHint => 'Take a photo, pick from gallery, or upload a PDF/image file.';
 
   @override
   String get orderCreateTakePhoto => 'Take photo';
@@ -1084,7 +1096,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get loyaltyPointsUnit => 'pts';
 
   @override
-  String get loyaltyBalanceHint => 'Balance comes from your account total_points. Points are earned when the lab verifies a payment, using the rules below.';
+  String get loyaltyBalanceHint => 'Points are earned when the lab verifies a payment, using the rules below. Your membership tier is separate and is based on lifetime spend.';
 
   @override
   String get loyaltyHowToEarn => 'How to earn';

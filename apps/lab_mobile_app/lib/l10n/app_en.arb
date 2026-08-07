@@ -65,16 +65,16 @@
     "placeholders": { "percent": { "type": "int" } }
   },
   "membershipTierMemberBenefit": "Your membership benefits apply on eligible orders",
-  "membershipTierProgressToNext": "Earn {points} more points to reach {tier}",
-  "@membershipTierProgressToNext": {
+  "membershipTierSpendToNext": "Spend {amount} MMK more to reach {tier}",
+  "@membershipTierSpendToNext": {
     "placeholders": {
-      "points": { "type": "String" },
+      "amount": { "type": "String" },
       "tier": { "type": "String" }
     }
   },
   "membershipTierProgressMax": "You've reached the top membership tier",
-  "membershipTierPointsOfNext": "{current} of {target} points",
-  "@membershipTierPointsOfNext": {
+  "membershipTierSpendOfNext": "{current} of {target} MMK",
+  "@membershipTierSpendOfNext": {
     "placeholders": {
       "current": { "type": "String" },
       "target": { "type": "String" }
@@ -516,7 +516,7 @@
   "loyaltyLoadError": "Could not load point history. Pull down to retry.",
   "loyaltyAvailableBalance": "Available balance",
   "loyaltyPointsUnit": "pts",
-  "loyaltyBalanceHint": "Balance comes from your account total_points. Points are earned when the lab verifies a payment, using the rules below.",
+  "loyaltyBalanceHint": "Points are earned when the lab verifies a payment, using the rules below. Your membership tier is separate and is based on lifetime spend.",
   "loyaltyHowToEarn": "How to earn",
   "loyaltyEarnRulesHint": "Active rules from your lab (point_settings).",
   "loyaltySpendRule": "Spend {amount} MMK → +{points} pts",

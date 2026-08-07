@@ -153,8 +153,8 @@ class _BalanceHeroCard extends StatelessWidget {
   final int tierDiscountPercent;
   final MembershipTierProgress? tierProgress;
 
-  String _formatPoints(int value) {
-    final n = value.abs();
+  String _formatAmount(num value) {
+    final n = value.abs().round();
     if (n >= 1000) {
       final s = n.toString();
       final buf = StringBuffer();
@@ -181,12 +181,12 @@ class _BalanceHeroCard extends StatelessWidget {
         : localizedMembershipTierName(l10n, progress!.nextTier!.name);
     final barValue = progress?.progress ?? 0.0;
     final percentLabel = '${(barValue.clamp(0.0, 1.0) * 100).round()}%';
-    final pointsLabel = _formatPoints(progress?.pointsBalance ?? loyalty.balance);
+    final spendLabel = _formatAmount(progress?.spentMmk ?? 0);
     final targetLabel =
-        progress?.nextTier == null ? null : _formatPoints(progress!.nextTier!.minPoints);
+        progress?.nextTier == null ? null : _formatAmount(progress!.nextTier!.minSpendMmk);
     final remainingLabel = progress == null || progress.isMaxTier
         ? null
-        : _formatPoints(progress.remainingPoints);
+        : _formatAmount(progress.remainingSpendMmk);
 
     return Container(
       width: double.infinity,
@@ -321,7 +321,7 @@ class _BalanceHeroCard extends StatelessWidget {
               ),
               const SizedBox(height: 10),
               Text(
-                l10n.membershipTierPointsOfNext(pointsLabel, targetLabel!),
+                l10n.membershipTierSpendOfNext(spendLabel, targetLabel!),
                 style: Theme.of(context).textTheme.labelLarge?.copyWith(
                       color: Colors.white,
                       fontWeight: FontWeight.w700,
@@ -329,7 +329,7 @@ class _BalanceHeroCard extends StatelessWidget {
               ),
               const SizedBox(height: 2),
               Text(
-                l10n.membershipTierProgressToNext(remainingLabel!, nextName),
+                l10n.membershipTierSpendToNext(remainingLabel!, nextName),
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: Colors.white.withValues(alpha: 0.85),
                       height: 1.35,

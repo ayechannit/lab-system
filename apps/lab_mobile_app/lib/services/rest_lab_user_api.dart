@@ -281,12 +281,12 @@ class RestLabUserApi implements LabUserApi {
         MembershipTierLevel(
           id: id,
           name: name,
-          minPoints: _asInt(_gv(m, 'min_points') ?? _gv(m, 'minPoints') ?? _gv(m, 'min_spend_mmk')),
+          minSpendMmk: _asDouble(_gv(m, 'min_spend_mmk') ?? _gv(m, 'minSpendMmk')),
           discountPercent: _asInt(_gv(m, 'discount_percent') ?? _gv(m, 'discountPercent')),
         ),
       );
     }
-    out.sort((a, b) => a.minPoints.compareTo(b.minPoints));
+    out.sort((a, b) => a.minSpendMmk.compareTo(b.minSpendMmk));
     return out;
   }
 

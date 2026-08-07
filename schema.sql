@@ -299,11 +299,11 @@ CREATE TABLE point_settings (
 -- Index Point Settings
 CREATE INDEX IX_PointSettings_Active ON point_settings(is_active, is_deleted);
 
--- MEMBERSHIP TIERS (loyalty-points ladder; column name min_spend_mmk is legacy)
+-- MEMBERSHIP TIERS (lifetime-spend ladder, independent of redeemable loyalty points)
 CREATE TABLE membership_tiers (
     id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
     name NVARCHAR(255) NOT NULL,
-    min_spend_mmk DECIMAL(18, 2) NOT NULL DEFAULT 0, -- stores min loyalty points
+    min_spend_mmk DECIMAL(18, 2) NOT NULL DEFAULT 0, -- lifetime spend (MMK) required for this tier
     discount_percent DECIMAL(5, 2) NOT NULL DEFAULT 0,
     is_active BIT DEFAULT 1,
     created_user UNIQUEIDENTIFIER,
@@ -314,8 +314,8 @@ CREATE TABLE membership_tiers (
 );
 INSERT INTO membership_tiers (name, min_spend_mmk, discount_percent) VALUES
     ('Normal', 0, 0),
-    ('Silver', 100, 3),
-    ('Gold', 500, 5);
+    ('Silver', 100000, 3),
+    ('Gold', 500000, 5);
 
 -- POINT REDEMPTION SETTINGS (singleton: global "1 point = X MMK" rate)
 CREATE TABLE point_redemption_settings (

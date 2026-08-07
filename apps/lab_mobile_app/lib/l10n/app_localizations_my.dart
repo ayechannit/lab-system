@@ -121,7 +121,9 @@ class AppLocalizationsMy extends AppLocalizations {
   String get membershipTierNameBronze => 'ကြေး';
 
   @override
-  String membershipTierPercentOff(int percent) => '$percent% လျှော့';
+  String membershipTierPercentOff(int percent) {
+    return '$percent% လျှော့';
+  }
 
   @override
   String membershipTierDiscountBenefit(int percent) {
@@ -129,21 +131,19 @@ class AppLocalizationsMy extends AppLocalizations {
   }
 
   @override
-  String get membershipTierMemberBenefit =>
-      'သင့်အသင်းဝင်အခွင့်အရေးများကို သက်ဆိုင်သော မှာယူမှုများတွင် အသုံးပြုနိုင်ပါသည်';
+  String get membershipTierMemberBenefit => 'သင့်အသင်းဝင်အခွင့်အရေးများကို သက်ဆိုင်သော မှာယူမှုများတွင် အသုံးပြုနိုင်ပါသည်';
 
   @override
-  String membershipTierProgressToNext(String points, String tier) {
-    return '$tier ရောက်ရန် နောက်ထပ် $points မှတ် ရယူရန် လိုပါသည်';
+  String membershipTierSpendToNext(String amount, String tier) {
+    return '$tier ရောက်ရန် နောက်ထပ် $amount MMK ကုန်ကျရန် လိုပါသည်';
   }
 
   @override
-  String get membershipTierProgressMax =>
-      'အမြင့်ဆုံး အသင်းဝင်အဆင့်သို့ ရောက်ရှိပြီးပါပြီ';
+  String get membershipTierProgressMax => 'အမြင့်ဆုံး အသင်းဝင်အဆင့်သို့ ရောက်ရှိပြီးပါပြီ';
 
   @override
-  String membershipTierPointsOfNext(String current, String target) {
-    return '$current / $target မှတ်';
+  String membershipTierSpendOfNext(String current, String target) {
+    return '$current / $target MMK';
   }
 
   @override
@@ -276,29 +276,40 @@ class AppLocalizationsMy extends AppLocalizations {
   String get trackingPatientSection => 'လူနာ အချက်အလက်';
 
   @override
-  String trackingAge(int age) => 'အသက်: $age';
+  String trackingAge(int age) {
+    return 'အသက်: $age';
+  }
 
   @override
-  String trackingPhone(String phone) => 'ဖုန်း: $phone';
+  String trackingPhone(String phone) {
+    return 'ဖုန်း: $phone';
+  }
 
   @override
-  String trackingPriority(String priority) => 'ဦးစားပေး: $priority';
+  String trackingPriority(String priority) {
+    return 'ဦးစားပေး: $priority';
+  }
 
   @override
-  String trackingReportDelivery(String method) => 'အစီရင်ခံစာ ပေးပို့ပုံ: $method';
+  String trackingReportDelivery(String method) {
+    return 'အစီရင်ခံစာ ပေးပို့ပုံ: $method';
+  }
 
   @override
   String get trackingTestsSection => 'ဓာတ်ခွဲစစ်ဆေးမှုများ';
 
   @override
-  String get trackingNoTestsYet =>
-      'ကတ်တလောက် စစ်ဆေးမှုများ မသတ်မှတ်ရသေးပါ။ ဓာတ်ခွဲခန်းက ဆေးညွှန်းကို စစ်ဆေးနေနိုင်ပါသည်။';
+  String get trackingNoTestsYet => 'ကတ်တလောက် စစ်ဆေးမှုများ မသတ်မှတ်ရသေးပါ။ ဓာတ်ခွဲခန်းက ဆေးညွှန်းကို စစ်ဆေးနေနိုင်ပါသည်။';
 
   @override
-  String trackingTestLine(String name, String code) => '$name ($code)';
+  String trackingTestLine(String name, String code) {
+    return '$name ($code)';
+  }
 
   @override
-  String trackingTestLineNoCode(String name) => name;
+  String trackingTestLineNoCode(String name) {
+    return '$name';
+  }
 
   @override
   String get trackingPricingSection => 'စျေးနှုန်း';
@@ -313,7 +324,9 @@ class AppLocalizationsMy extends AppLocalizations {
   String get trackingServiceFee => 'ဝန်ဆောင်ခ';
 
   @override
-  String trackingDiscount(String percent) => 'လျှော့ဈေး ($percent%)';
+  String trackingDiscount(String percent) {
+    return 'လျှော့ဈေး ($percent%)';
+  }
 
   @override
   String get trackingOriginalPrice => 'မူလဈေး';
@@ -334,7 +347,9 @@ class AppLocalizationsMy extends AppLocalizations {
   String get trackingPrescriptionAttached => 'ဆေးညွှန်းဖိုင် ပူးတွဲထားပါသည်';
 
   @override
-  String trackingMmk(String amount) => '$amount ကျပ်';
+  String trackingMmk(String amount) {
+    return '$amount ကျပ်';
+  }
 
   @override
   String get trackingLabelPriority => 'ဦးစားပေး';
@@ -355,7 +370,9 @@ class AppLocalizationsMy extends AppLocalizations {
   String get trackingLabelPhone => 'ဖုန်း';
 
   @override
-  String trackingPlacedOn(String date) => 'မှာယူသည့်ရက် $date';
+  String trackingPlacedOn(String date) {
+    return 'မှာယူသည့်ရက် $date';
+  }
 
   @override
   String get trackingOrderRef => 'မှာယူမှု ကိုးကားချက်';
@@ -769,8 +786,7 @@ class AppLocalizationsMy extends AppLocalizations {
   String get orderCreatePrescriptionFile => 'ဆေးညွှန်းဖိုင်';
 
   @override
-  String get orderCreateCatalogEmpty =>
-      'ကတ်တလောက်တွင် ဓာတ်ခွဲစစ်ဆေးမှု မရှိပါ။ “ဆေးညွှန်းဖိုင်” ကို သုံးပါ သို့မဟုတ် ဓာတ်ခွဲခန်းကို စစ်ဆေးမှုများ ထည့်ရန် တောင်းဆိုပါ။';
+  String get orderCreateCatalogEmpty => 'ကတ်တလောက်တွင် ဓာတ်ခွဲစစ်ဆေးမှု မရှိပါ။ “ဆေးညွှန်းဖိုင်” ကို သုံးပါ သို့မဟုတ် ဓာတ်ခွဲခန်းကို စစ်ဆေးမှုများ ထည့်ရန် တောင်းဆိုပါ။';
 
   @override
   String get orderCreateTestsFromCatalog => 'ကတ်တလောက်မှ စစ်ဆေးမှုများ';
@@ -796,19 +812,16 @@ class AppLocalizationsMy extends AppLocalizations {
   String get orderCreateChangeFile => 'ဖိုင် ပြောင်းရန်';
 
   @override
-  String get orderCreatePrescriptionReviewHint =>
-      'ဓာတ်ခွဲခန်းမှ သင့်ဖိုင်ကို စစ်ဆေးပြီး စစ်ဆေးမှုများ သတ်မှတ်ပါမည်။ ကတ်တလောက်စာကြောင်းများ ထည့်သည့်အထိ အခြေအနေသည် ဆိုင်းငံ့အဖြစ် ရှိနေမည်။';
+  String get orderCreatePrescriptionReviewHint => 'ဓာတ်ခွဲခန်းမှ သင့်ဖိုင်ကို စစ်ဆေးပြီး စစ်ဆေးမှုများ သတ်မှတ်ပါမည်။ ကတ်တလောက်စာကြောင်းများ ထည့်သည့်အထိ အခြေအနေသည် ဆိုင်းငံ့အဖြစ် ရှိနေမည်။';
 
   @override
-  String get orderCreateSetCoordinates =>
-      'ကောက်ယူမည့် တည်နေရာ သတ်မှတ်ပါ — လိပ်စာရိုက်ပါ သို့မဟုတ် မြေပုံပေါ်တွင် ရွေးပါ။';
+  String get orderCreateSetCoordinates => 'ကောက်ယူမည့် တည်နေရာ သတ်မှတ်ပါ — လိပ်စာရိုက်ပါ သို့မဟုတ် မြေပုံပေါ်တွင် ရွေးပါ။';
 
   @override
   String get orderCreateStillCheckingCoverage => 'ဤလိပ်စာအတွက် ဝန်ဆောင်မှု ဧရိယာကို ဆက်လက် စစ်ဆေးနေသည်။';
 
   @override
-  String get orderCreateTestsLoadFailed =>
-      'ရွေးထားသော စစ်ဆေးမှုများကို မရယူနိုင်ပါ။ ကတ်တလောက်ကို စောင့်ပါ သို့မဟုတ် ထပ်မံ ရွေးချယ်ပါ။';
+  String get orderCreateTestsLoadFailed => 'ရွေးထားသော စစ်ဆေးမှုများကို မရယူနိုင်ပါ။ ကတ်တလောက်ကို စောင့်ပါ သို့မဟုတ် ထပ်မံ ရွေးချယ်ပါ။';
 
   @override
   String get orderCreateSubmittedTitle => 'မှာယူမှု တင်သွင်းပြီးပါပြီ';
@@ -1077,7 +1090,7 @@ class AppLocalizationsMy extends AppLocalizations {
   String get loyaltyPointsUnit => 'မှတ်';
 
   @override
-  String get loyaltyBalanceHint => 'လက်ကျန်သည် သင့်အကောင့်ရှိ စုစုပေါင်းအမှတ်မှ ဖြစ်သည်။ ငွေပေးချေမှု အတည်ပြုပြီးပါက အောက်ပါစည်းမျဉ်းများအရ အမှတ်များ ရရှိပါမည်။';
+  String get loyaltyBalanceHint => 'ငွေပေးချေမှု အတည်ပြုပြီးပါက အောက်ပါစည်းမျဉ်းများအရ အမှတ်များ ရရှိပါမည်။ သင့်အသင်းဝင်အဆင့်မှာ သီးခြားဖြစ်ပြီး လက်ရှိစုစုပေါင်း ကုန်ကျငွေအပေါ် အခြေခံပါသည်။';
 
   @override
   String get loyaltyHowToEarn => 'အမှတ်ရယူနည်း';

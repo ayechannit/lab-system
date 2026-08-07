@@ -3,7 +3,7 @@ import { apiFetch } from './apiClient'
 export type MembershipTierRow = {
   id: string
   name: string
-  min_points: number
+  min_spend_mmk: number
   discount_percent: number
   is_active: boolean
   is_deleted: boolean
@@ -13,7 +13,7 @@ export type MembershipTierRow = {
 
 export type MembershipTierUpsertBody = {
   name: string
-  min_points: number
+  min_spend_mmk: number
   discount_percent: number
   is_active: boolean
 }
@@ -22,7 +22,7 @@ function normalizeRow(raw: Record<string, unknown>): MembershipTierRow {
   return {
     id: String(raw.id ?? ''),
     name: String(raw.name ?? ''),
-    min_points: Number(raw.min_points ?? raw.min_spend_mmk ?? 0),
+    min_spend_mmk: Number(raw.min_spend_mmk ?? 0),
     discount_percent: Number(raw.discount_percent ?? 0),
     is_active: Boolean(raw.is_active ?? true),
     is_deleted: Boolean(raw.is_deleted ?? false),
