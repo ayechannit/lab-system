@@ -39,19 +39,29 @@ class Payment {
 
   static async create(data, createdBy = null) {
     const pool = await poolPromise;
-    const result = await pool.request()
+    const status = data.status || 'received'; // Defaulting to received per user suggestion
+    const request = pool.request()
       .input('order_id', sql.UniqueIdentifier, data.order_id)
       .input('amount_mmk', sql.Decimal(18, 2), data.amount_mmk)
-      .input('status', sql.VarChar, data.status || 'received') // Defaulting to received per user suggestion
+      .input('status', sql.VarChar, status)
       .input('method', sql.VarChar, data.method)
       .input('reference_no', sql.VarChar, data.reference_no)
       .input('points_redeemed', sql.Int, data.points_redeemed || 0)
       .input('points_value_mmk', sql.Decimal(18, 2), data.points_value_mmk || 0)
-      .input('created_user', sql.UniqueIdentifier, createdBy)
-      .query(`
-        INSERT INTO payments (id, order_id, amount_mmk, status, method, reference_no, points_redeemed, points_value_mmk, paid_at, created_user, updated_user)
+      .input('created_user', sql.UniqueIdentifier, createdBy);
+
+    let verifiedColumns = '';
+    let verifiedValues = '';
+    if (status === 'verified') {
+      request.input('verified_by', sql.UniqueIdentifier, data.staff_id);
+      verifiedColumns = ', verified_by, verified_at';
+      verifiedValues = ', @verified_by, GETDATE()';
+    }
+
+    const result = await request.query(`
+        INSERT INTO payments (id, order_id, amount_mmk, status, method, reference_no, points_redeemed, points_value_mmk, paid_at, created_user, updated_user${verifiedColumns})
         OUTPUT INSERTED.*
-        VALUES (NEWID(), @order_id, @amount_mmk, @status, @method, @reference_no, @points_redeemed, @points_value_mmk, GETDATE(), @created_user, @created_user)
+        VALUES (NEWID(), @order_id, @amount_mmk, @status, @method, @reference_no, @points_redeemed, @points_value_mmk, GETDATE(), @created_user, @created_user${verifiedValues})
       `);
     return result.recordset[0];
   }

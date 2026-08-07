@@ -43,6 +43,8 @@ export type ApiPaymentCreateBody = {
   amount_mmk: number
   method: ApiPaymentMethod
   status?: ApiPaymentStatus
+  /** Required when status is 'verified' — the staff member recording/verifying the payment. */
+  staff_id?: string
   reference_no?: string | null
   points_redeemed?: number
 }

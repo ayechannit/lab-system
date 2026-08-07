@@ -16,9 +16,12 @@ const getPaymentByOrderId = async (req, res) => {
 };
 
 const createPayment = async (req, res) => {
-  const { order_id, amount_mmk, method, status, reference_no, points_redeemed } = req.body;
+  const { order_id, amount_mmk, method, status, staff_id, reference_no, points_redeemed } = req.body;
   if (!order_id || !amount_mmk || !method) {
     return res.status(400).json({ message: 'order_id, amount_mmk, and method are required' });
+  }
+  if (status === 'verified' && !staff_id) {
+    return res.status(400).json({ message: 'staff_id is required when status is verified' });
   }
 
   let pointsRedeemed = 0;
@@ -62,6 +65,7 @@ const createPayment = async (req, res) => {
       amount_mmk,
       method,
       status,
+      staff_id,
       reference_no,
       points_redeemed: pointsRedeemed,
       points_value_mmk: pointsValueMmk,
@@ -78,6 +82,8 @@ const createPayment = async (req, res) => {
         payment.id
       );
     }
+
+    await awardPointsForVerifiedPayment(payment, req.user?.id);
 
     // Notify user of payment submission
     if (order && order.user_id) {

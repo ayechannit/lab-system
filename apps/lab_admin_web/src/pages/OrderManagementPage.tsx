@@ -38,6 +38,7 @@ import {
   type ReportDeliveryMethod,
 } from '../services/orderService'
 import { useAddressGeocode } from '../hooks/useAddressGeocode'
+import { useAuth } from '../hooks/AuthContext'
 import { fetchUserList } from '../services/userService'
 import {
   calculateServiceFee,
@@ -608,6 +609,7 @@ function OrderTestCheckboxPicker({
 export function OrderManagementPage() {
   const { t } = useTranslation()
   const hasApi = isApiMode()
+  const { account } = useAuth()
   const { showSuccess, showError } = useToast()
   const [rows, setRows] = useState<ApiOrderListRow[]>([])
   const [users, setUsers] = useState<UserListRow[]>([])
@@ -1104,7 +1106,8 @@ export function OrderManagementPage() {
         order_id: paymentUpdateOrder.id,
         amount_mmk: amount,
         method: paymentUpdateMethod,
-        status: 'received',
+        status: 'verified',
+        staff_id: account?.id,
         reference_no: paymentUpdateReference.trim() || null,
         points_redeemed: pointsToRedeem > 0 ? pointsToRedeem : undefined,
       })

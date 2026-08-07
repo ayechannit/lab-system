@@ -115,6 +115,10 @@ router.use(authMiddleware);
  *               status:
  *                 type: string
  *                 enum: [pending, received, verified, failed]
+ *               staff_id:
+ *                 type: string
+ *                 format: uuid
+ *                 description: Required when status is verified — credits lifetime spend/points/tier immediately
  *               method:
  *                 type: string
  *                 enum: [cash, bank_transfer, mobile_pay]
