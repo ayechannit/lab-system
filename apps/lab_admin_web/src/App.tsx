@@ -21,7 +21,7 @@ import { SampleCollectionPage } from './pages/SampleCollectionPage'
 import { StaffManagementPage } from './pages/StaffManagementPage'
 import { UserManagementPage } from './pages/UserManagementPage'
 import { SystemSettingsPage } from './pages/SystemSettingsPage'
-//make deployment new (2026-08-07)
+//make deployment (2026-08-07)
 function RequireAuth() {
   const { t } = useTranslation()
   const { signedIn, initializing } = useAuth()

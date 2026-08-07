@@ -96,7 +96,7 @@ app.use('/api/media', mediaRoutes);
 // Base route
 app.get('/', (req, res) => {
   res.send('Lab System API is running...');
-  //make deployment new (2026-08-07)
+  //make deployment (2026-08-07)
 });
 
 // Error Handling Middleware (must be last)
