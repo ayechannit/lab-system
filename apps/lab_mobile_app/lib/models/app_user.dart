@@ -10,6 +10,7 @@ class AppUser {
     this.profileImageUrl,
     this.tierName,
     this.tierDiscountPercent = 0,
+    this.totalSpentMmk = 0,
   });
 
   final String id;
@@ -23,11 +24,14 @@ class AppUser {
   final double longitude;
   final String? profileImageUrl;
 
-  /// Current membership tier (e.g. "Normal", "Silver", "Gold"), resolved server-side from lifetime spend.
+  /// Current membership tier (e.g. "Normal", "Silver", "Gold"), resolved server-side from loyalty points.
   final String? tierName;
 
   /// Tier discount, stacked additively with a test's own `discountPercent` when pricing an order line.
   final int tierDiscountPercent;
+
+  /// Lifetime verified-payment spend used for membership tier (`users.total_spent_mmk`).
+  final double totalSpentMmk;
 
   AppUser copyWith({
     String? name,
@@ -39,6 +43,7 @@ class AppUser {
     String? profileImageUrl,
     String? tierName,
     int? tierDiscountPercent,
+    double? totalSpentMmk,
   }) {
     return AppUser(
       id: id,
@@ -51,6 +56,7 @@ class AppUser {
       profileImageUrl: profileImageUrl ?? this.profileImageUrl,
       tierName: tierName ?? this.tierName,
       tierDiscountPercent: tierDiscountPercent ?? this.tierDiscountPercent,
+      totalSpentMmk: totalSpentMmk ?? this.totalSpentMmk,
     );
   }
 }

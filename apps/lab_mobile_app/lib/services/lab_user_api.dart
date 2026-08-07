@@ -5,6 +5,7 @@ import '../models/lab_order.dart';
 import '../models/lab_result.dart';
 import '../models/lab_test_pick.dart';
 import '../models/loyalty.dart';
+import '../models/membership_tier.dart';
 import '../models/rating.dart';
 import '../models/user_report.dart';
 
@@ -140,6 +141,9 @@ abstract class LabUserApi {
     required RatingDraft rating,
   });
   Future<LoyaltySnapshot> getLoyaltySnapshot(String userId);
+
+  /// Active membership ladder for progress UI (`GET /api/membership-tiers/active`).
+  Future<List<MembershipTierLevel>> listActiveMembershipTiers();
 
   /// Personalized home metrics from `GET /api/reports/user-summary`.
   Future<UserReportSummary> fetchUserReportSummary({

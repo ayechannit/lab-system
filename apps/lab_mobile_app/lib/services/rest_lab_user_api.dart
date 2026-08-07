@@ -11,6 +11,7 @@ import '../models/lab_order.dart';
 import '../models/lab_result.dart';
 import '../models/lab_test_pick.dart';
 import '../models/loyalty.dart';
+import '../models/membership_tier.dart';
 import '../models/rating.dart';
 import '../models/user_report.dart';
 import 'lab_user_api.dart';
@@ -257,7 +258,36 @@ class RestLabUserApi implements LabUserApi {
         return s.isEmpty ? null : s;
       }(),
       tierDiscountPercent: _asInt(_gv(m, 'tier_discount_percent') ?? _gv(m, 'tierDiscountPercent')),
+      totalSpentMmk: _asDouble(_gv(m, 'total_spent_mmk') ?? _gv(m, 'totalSpentMmk')),
     );
+  }
+
+  @override
+  Future<List<MembershipTierLevel>> listActiveMembershipTiers() async {
+    final r = await http.get(
+      Uri.parse('$_base/api/membership-tiers/active'),
+      headers: _jsonHeaders(),
+    );
+    if (r.statusCode >= 400) _throwFromResponse(r);
+    final data = _decodeResponseJson(r);
+    if (data is! List) return const [];
+    final out = <MembershipTierLevel>[];
+    for (final entry in data) {
+      final m = _asObj(entry);
+      final id = '${_gv(m, 'id') ?? ''}'.trim();
+      final name = '${_gv(m, 'name') ?? ''}'.trim();
+      if (name.isEmpty) continue;
+      out.add(
+        MembershipTierLevel(
+          id: id,
+          name: name,
+          minPoints: _asInt(_gv(m, 'min_points') ?? _gv(m, 'minPoints') ?? _gv(m, 'min_spend_mmk')),
+          discountPercent: _asInt(_gv(m, 'discount_percent') ?? _gv(m, 'discountPercent')),
+        ),
+      );
+    }
+    out.sort((a, b) => a.minPoints.compareTo(b.minPoints));
+    return out;
   }
 
   @override

@@ -73,7 +73,7 @@ export function MembershipTiersManagementPage() {
   }, [refreshTick, rows.length])
 
   const sorted = useMemo(
-    () => [...rows].sort((a, b) => a.min_spend_mmk - b.min_spend_mmk),
+    () => [...rows].sort((a, b) => a.min_points - b.min_points),
     [rows],
   )
 
@@ -142,7 +142,7 @@ export function MembershipTiersManagementPage() {
             <thead>
               <tr>
                 <th>{t('common.name')}</th>
-                <th className="col-num">{t('membershipTiers.table.minSpend')}</th>
+                <th className="col-num">{t('membershipTiers.table.minPoints')}</th>
                 <th className="col-num">{t('membershipTiers.table.discountPercent')}</th>
                 <th>{t('common.active')}</th>
                 <th className="action-col">{t('common.actions')}</th>
@@ -172,7 +172,7 @@ export function MembershipTiersManagementPage() {
                   <tr key={row.id}>
                     <td style={{ fontWeight: 600 }}>{membershipTierLabel(row.name)}</td>
                     <td className="col-num">
-                      {row.min_spend_mmk.toLocaleString()} {t('orders.currency')}
+                      {row.min_points.toLocaleString()} {t('membershipTiers.pointsUnit')}
                     </td>
                     <td className="col-num">{row.discount_percent}%</td>
                     <td>

@@ -1,15 +1,15 @@
 const { sql, poolPromise } = require('../config/db');
 const bcrypt = require('bcryptjs');
 
-/** Tier columns resolved from lifetime spend (NULL spend treated as 0). */
+/** Tier columns resolved from loyalty points (DB column still named min_spend_mmk). */
 const USER_TIER_SELECT = `
   (SELECT TOP 1 mt.discount_percent FROM membership_tiers mt
    WHERE mt.is_active = 1 AND mt.is_deleted = 0
-     AND mt.min_spend_mmk <= ISNULL(u.total_spent_mmk, 0)
+     AND mt.min_spend_mmk <= ISNULL(u.total_points, 0)
    ORDER BY mt.min_spend_mmk DESC) AS tier_discount_percent,
   (SELECT TOP 1 mt.name FROM membership_tiers mt
    WHERE mt.is_active = 1 AND mt.is_deleted = 0
-     AND mt.min_spend_mmk <= ISNULL(u.total_spent_mmk, 0)
+     AND mt.min_spend_mmk <= ISNULL(u.total_points, 0)
    ORDER BY mt.min_spend_mmk DESC) AS tier_name`;
 
 class User {

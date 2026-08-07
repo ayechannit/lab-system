@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../../models/membership_tier.dart';
 import '../../theme/theme_extensions.dart';
 
 enum MembershipTierTone { gold, silver, bronze, standard }
@@ -137,26 +138,117 @@ class MembershipTierBadge extends StatelessWidget {
   }
 }
 
-/// Home / profile membership card — clearer hierarchy and benefit copy.
+String _formatTierPoints(int value) {
+  final n = value.abs();
+  if (n >= 1000) {
+    final s = n.toString();
+    final buf = StringBuffer();
+    for (var i = 0; i < s.length; i++) {
+      if (i > 0 && (s.length - i) % 3 == 0) buf.write(',');
+      buf.write(s[i]);
+    }
+    return buf.toString();
+  }
+  return '$n';
+}
+
+/// Custom chunky progress track — Material's [LinearProgressIndicator] looks like a hairline on web.
+class MembershipTierProgressBar extends StatelessWidget {
+  const MembershipTierProgressBar({
+    super.key,
+    required this.value,
+    required this.accent,
+    required this.track,
+  });
+
+  final double value;
+  final Color accent;
+  final Color track;
+
+  @override
+  Widget build(BuildContext context) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: value.clamp(0.0, 1.0)),
+      duration: const Duration(milliseconds: 750),
+      curve: Curves.easeOutCubic,
+      builder: (context, animated, _) {
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            const height = 12.0;
+            final width = constraints.maxWidth;
+            // Keep a visible nub when the user has any progress but % is tiny.
+            final fill = animated <= 0
+                ? 0.0
+                : (animated * width).clamp(10.0, width);
+            return Container(
+              height: height,
+              width: width,
+              decoration: BoxDecoration(
+                color: track,
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(color: accent.withValues(alpha: 0.18)),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Container(
+                  width: fill,
+                  height: height,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(999),
+                    gradient: LinearGradient(
+                      colors: [
+                        accent.withValues(alpha: 0.85),
+                        accent,
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+/// Home membership card with points progress toward the next tier.
 class MembershipTierCard extends StatelessWidget {
   const MembershipTierCard({
     super.key,
     required this.tierName,
     this.discountPercent = 0,
+    this.progress,
     this.onTap,
   });
 
   final String tierName;
   final int discountPercent;
+  final MembershipTierProgress? progress;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final name = localizedMembershipTierName(l10n, tierName);
+    final resolvedName = progress?.currentTier.name ?? tierName;
+    final name = localizedMembershipTierName(l10n, resolvedName);
+    final discount = progress?.currentTier.discountPercent ?? discountPercent;
     final cs = context.cs;
-    final tone = membershipTierToneFor(tierName.trim().isEmpty ? name : tierName);
+    final tone = membershipTierToneFor(resolvedName.trim().isEmpty ? name : resolvedName);
     final palette = _paletteFor(tone, cs);
+    final nextName = progress?.nextTier == null
+        ? null
+        : localizedMembershipTierName(l10n, progress!.nextTier!.name);
+    final pointsLabel = _formatTierPoints(progress?.pointsBalance ?? 0);
+    final targetLabel = progress?.nextTier == null
+        ? null
+        : _formatTierPoints(progress!.nextTier!.minPoints);
+    final remainingLabel = progress == null || progress!.isMaxTier
+        ? null
+        : _formatTierPoints(progress!.remainingPoints);
+    final barValue = progress?.progress ?? 0.0;
+    final percentLabel = '${(barValue.clamp(0.0, 1.0) * 100).round()}%';
 
     return Material(
       color: palette.background,
@@ -166,77 +258,168 @@ class MembershipTierCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         child: Container(
           width: double.infinity,
-          padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+          padding: const EdgeInsets.fromLTRB(14, 14, 12, 14),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: palette.border),
           ),
-          child: Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 46,
-                height: 46,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.72),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: palette.border.withValues(alpha: 0.7)),
-                ),
-                child: Icon(palette.icon, color: palette.accent, size: 24),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      l10n.membershipTierTitle,
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                            color: cs.onSurfaceVariant,
-                            letterSpacing: 0.4,
-                            height: 1.2,
-                          ),
+              Row(
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.85),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: palette.border.withValues(alpha: 0.7)),
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      name,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: palette.accent,
-                            fontWeight: FontWeight.w800,
-                            height: 1.25,
-                          ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      discountPercent > 0
-                          ? l10n.membershipTierDiscountBenefit(discountPercent)
-                          : l10n.membershipTierMemberBenefit,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: cs.onSurfaceVariant,
-                            height: 1.35,
-                          ),
-                    ),
-                  ],
-                ),
-              ),
-              if (discountPercent > 0)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-                  decoration: BoxDecoration(
-                    color: palette.accent.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(999),
+                    child: Icon(palette.icon, color: palette.accent, size: 22),
                   ),
-                  child: Text(
-                    l10n.membershipTierPercentOff(discountPercent),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          l10n.membershipTierTitle,
+                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                color: cs.onSurfaceVariant,
+                                letterSpacing: 0.4,
+                                height: 1.2,
+                              ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          name,
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                color: palette.accent,
+                                fontWeight: FontWeight.w800,
+                                height: 1.2,
+                              ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (discount > 0)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                      decoration: BoxDecoration(
+                        color: palette.accent.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        l10n.membershipTierPercentOff(discount),
+                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                              color: palette.accent,
+                              fontWeight: FontWeight.w800,
+                              height: 1.2,
+                            ),
+                      ),
+                    ),
+                  if (onTap != null) ...[
+                    const SizedBox(width: 2),
+                    Icon(Icons.chevron_right_rounded, color: palette.accent.withValues(alpha: 0.7)),
+                  ],
+                ],
+              ),
+              if (progress != null) ...[
+                const SizedBox(height: 16),
+                if (!progress!.isMaxTier && nextName != null) ...[
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          name,
+                          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                color: palette.accent,
+                                fontWeight: FontWeight.w800,
+                              ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.9),
+                          borderRadius: BorderRadius.circular(999),
+                          border: Border.all(color: palette.border),
+                        ),
+                        child: Text(
+                          percentLabel,
+                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                color: palette.accent,
+                                fontWeight: FontWeight.w800,
+                              ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          nextName,
+                          textAlign: TextAlign.end,
+                          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                color: cs.onSurfaceVariant,
+                                fontWeight: FontWeight.w700,
+                              ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  MembershipTierProgressBar(
+                    value: barValue,
+                    accent: palette.accent,
+                    track: Colors.white.withValues(alpha: 0.92),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    l10n.membershipTierPointsOfNext(pointsLabel, targetLabel!),
                     style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          color: palette.accent,
-                          fontWeight: FontWeight.w800,
-                          height: 1.2,
+                          color: cs.onSurface,
+                          fontWeight: FontWeight.w700,
                         ),
                   ),
+                  const SizedBox(height: 2),
+                  Text(
+                    l10n.membershipTierProgressToNext(remainingLabel!, nextName),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: cs.onSurfaceVariant,
+                          height: 1.35,
+                        ),
+                  ),
+                ] else ...[
+                  MembershipTierProgressBar(
+                    value: 1,
+                    accent: palette.accent,
+                    track: Colors.white.withValues(alpha: 0.92),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    l10n.membershipTierProgressMax,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: cs.onSurfaceVariant,
+                          height: 1.35,
+                          fontWeight: FontWeight.w600,
+                        ),
+                  ),
+                ],
+              ] else ...[
+                const SizedBox(height: 6),
+                Text(
+                  discount > 0
+                      ? l10n.membershipTierDiscountBenefit(discount)
+                      : l10n.membershipTierMemberBenefit,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: cs.onSurfaceVariant,
+                        height: 1.35,
+                      ),
                 ),
-              if (onTap != null) ...[
-                const SizedBox(width: 4),
-                Icon(Icons.chevron_right_rounded, color: palette.accent.withValues(alpha: 0.7)),
               ],
             ],
           ),

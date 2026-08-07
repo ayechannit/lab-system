@@ -133,6 +133,20 @@ class AppLocalizationsEn extends AppLocalizations {
       'Your membership benefits apply on eligible orders';
 
   @override
+  String membershipTierProgressToNext(String points, String tier) {
+    return 'Earn $points more points to reach $tier';
+  }
+
+  @override
+  String get membershipTierProgressMax =>
+      'You\'ve reached the top membership tier';
+
+  @override
+  String membershipTierPointsOfNext(String current, String target) {
+    return '$current of $target points';
+  }
+
+  @override
   String orderCreateMembershipDiscount(String tier, String percent) {
     return 'Membership ($tier): $percent% off';
   }

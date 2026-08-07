@@ -133,6 +133,20 @@ class AppLocalizationsMy extends AppLocalizations {
       'သင့်အသင်းဝင်အခွင့်အရေးများကို သက်ဆိုင်သော မှာယူမှုများတွင် အသုံးပြုနိုင်ပါသည်';
 
   @override
+  String membershipTierProgressToNext(String points, String tier) {
+    return '$tier ရောက်ရန် နောက်ထပ် $points မှတ် ရယူရန် လိုပါသည်';
+  }
+
+  @override
+  String get membershipTierProgressMax =>
+      'အမြင့်ဆုံး အသင်းဝင်အဆင့်သို့ ရောက်ရှိပြီးပါပြီ';
+
+  @override
+  String membershipTierPointsOfNext(String current, String target) {
+    return '$current / $target မှတ်';
+  }
+
+  @override
   String orderCreateMembershipDiscount(String tier, String percent) {
     return 'အသင်းဝင် ($tier): $percent% လျှော့';
   }

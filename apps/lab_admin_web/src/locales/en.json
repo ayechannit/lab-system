@@ -263,7 +263,7 @@
     },
     "membershipTiers": {
       "title": "Membership tiers",
-      "description": "Classify customers into spend-based tiers (e.g. Normal, Silver, Gold), each with a discount that stacks on top of a test's own discount."
+      "description": "Classify customers into points-based tiers (e.g. Normal, Silver, Gold), each with a discount that stacks on top of a test's own discount."
     },
     "serviceGeofences": {
       "title": "Service geofences",
@@ -1057,12 +1057,13 @@
     "loading": "Loading membership tiers",
     "noApi": "Connect the API to manage membership tiers.",
     "add": "Add tier",
-    "hint": "Customers are classified into the highest tier they qualify for by lifetime spend. Each tier's discount stacks additively with a test's own discount, clamped at 100% combined.",
+    "hint": "Customers are classified into the highest tier they qualify for by loyalty points balance. Each tier's discount stacks additively with a test's own discount, clamped at 100% combined.",
+    "pointsUnit": "pts",
     "table": {
-      "minSpend": "Min spend (MMK)",
+      "minPoints": "Min points",
       "discountPercent": "Discount %"
     },
-    "empty": "No membership tiers yet. Add one to start classifying customers by spend.",
+    "empty": "No membership tiers yet. Add one to start classifying customers by points.",
     "delete": {
       "title": "Delete membership tier?",
       "message": "Delete \"{{name}}\"? Customers who qualified for this tier will fall back to the next eligible tier.",
@@ -1076,13 +1077,13 @@
       "createTitle": "Add membership tier",
       "editTitle": "Edit membership tier",
       "tierName": "Tier name",
-      "minSpendMmk": "Minimum spend (MMK)",
+      "minPoints": "Minimum points",
       "discountPercent": "Discount percent",
       "activeTitle": "Tier is active",
       "inactiveTitle": "Tier is inactive",
       "activeDesc": "When inactive, the tier stays in the list but customers can no longer qualify for it.",
       "errorName": "Enter a name for this tier (e.g. Silver).",
-      "errorMinSpend": "Minimum spend must be 0 or more.",
+      "errorMinPoints": "Minimum points must be a whole number of 0 or more.",
       "errorDiscount": "Discount percent must be between 0 and 100.",
       "requestFailed": "Request failed",
       "saving": "Saving…",

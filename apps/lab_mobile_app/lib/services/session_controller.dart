@@ -9,6 +9,7 @@ import '../models/lab_order.dart';
 import '../models/lab_result.dart';
 import '../models/lab_test_pick.dart';
 import '../models/loyalty.dart';
+import '../models/membership_tier.dart';
 import '../models/rating.dart';
 import '../models/user_report.dart';
 import 'lab_user_api.dart';
@@ -33,6 +34,7 @@ class SessionController extends ChangeNotifier {
   AiAnalysisResult? _aiAnalysis;
   String? _aiAnalysisTestId;
   LoyaltySnapshot _loyalty = const LoyaltySnapshot(balance: 0, entries: <LoyaltyEntry>[], earnRules: <PointEarnRule>[]);
+  List<MembershipTierLevel> _membershipTiers = const [];
   UserReportSummary? _userReport;
   List<LabAdvertisement> _advertisements = const [];
   bool _homeSummaryLoading = false;
@@ -59,6 +61,17 @@ class SessionController extends ChangeNotifier {
   AiAnalysisResult? get aiAnalysis => _aiAnalysis;
   String? get aiAnalysisTestId => _aiAnalysisTestId;
   LoyaltySnapshot get loyalty => _loyalty;
+  List<MembershipTierLevel> get membershipTiers => List.unmodifiable(_membershipTiers);
+  MembershipTierProgress? get membershipTierProgress {
+    final u = _user;
+    if (u == null || _membershipTiers.isEmpty) return null;
+    return MembershipTierProgress.resolve(
+      pointsBalance: u.pointsBalance,
+      tiers: _membershipTiers,
+      fallbackTierName: u.tierName,
+      fallbackDiscountPercent: u.tierDiscountPercent,
+    );
+  }
   UserReportSummary? get userReport => _userReport;
   List<LabAdvertisement> get advertisements => List.unmodifiable(_advertisements);
   bool get homeSummaryLoading => _homeSummaryLoading;
@@ -163,6 +176,7 @@ class SessionController extends ChangeNotifier {
     _aiAnalysis = null;
     _aiAnalysisTestId = null;
     _loyalty = const LoyaltySnapshot(balance: 0, entries: <LoyaltyEntry>[], earnRules: <PointEarnRule>[]);
+    _membershipTiers = const [];
     _userReport = null;
     _advertisements = const [];
     _homeSummaryLoading = false;
@@ -383,7 +397,13 @@ class SessionController extends ChangeNotifier {
   Future<void> refreshLoyalty() async {
     final u = _user;
     if (u == null) return;
-    _loyalty = await _api.getLoyaltySnapshot(u.id);
+    try {
+      _user = await _api.getCurrentUser();
+    } catch (_) {}
+    try {
+      _membershipTiers = await _api.listActiveMembershipTiers();
+    } catch (_) {}
+    _loyalty = await _api.getLoyaltySnapshot((_user ?? u).id);
     notifyListeners();
   }
 
@@ -405,6 +425,14 @@ class SessionController extends ChangeNotifier {
     try {
       final reportFuture = _api.fetchUserReportSummary();
       final adsFuture = _api.fetchActiveAdvertisements();
+      final meFuture = _api.getCurrentUser();
+      final tiersFuture = _api.listActiveMembershipTiers();
+      try {
+        _user = await meFuture;
+      } catch (_) {}
+      try {
+        _membershipTiers = await tiersFuture;
+      } catch (_) {}
       _userReport = await reportFuture;
       _homeSummaryError = null;
       try {
@@ -631,6 +659,11 @@ class SessionController extends ChangeNotifier {
     _trackingOrder = await _api.getTrackingOrder(u.id);
     _latestResult = await _api.getLatestResult(u.id);
     _loyalty = await _api.getLoyaltySnapshot(u.id);
+    try {
+      _membershipTiers = await _api.listActiveMembershipTiers();
+    } catch (_) {
+      _membershipTiers = const [];
+    }
     try {
       _userReport = await _api.fetchUserReportSummary();
       _homeSummaryError = null;

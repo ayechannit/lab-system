@@ -65,6 +65,21 @@
     "placeholders": { "percent": { "type": "int" } }
   },
   "membershipTierMemberBenefit": "Your membership benefits apply on eligible orders",
+  "membershipTierProgressToNext": "Earn {points} more points to reach {tier}",
+  "@membershipTierProgressToNext": {
+    "placeholders": {
+      "points": { "type": "String" },
+      "tier": { "type": "String" }
+    }
+  },
+  "membershipTierProgressMax": "You've reached the top membership tier",
+  "membershipTierPointsOfNext": "{current} of {target} points",
+  "@membershipTierPointsOfNext": {
+    "placeholders": {
+      "current": { "type": "String" },
+      "target": { "type": "String" }
+    }
+  },
   "orderCreateMembershipDiscount": "Membership ({tier}): {percent}% off",
   "@orderCreateMembershipDiscount": {
     "placeholders": {

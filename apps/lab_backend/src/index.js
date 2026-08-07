@@ -42,7 +42,16 @@ app.use(
     origin: true,
     credentials: true,
     methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Accept-Language', 'Accept'],
+    // Include Cache-Control / Pragma — Flutter web loyalty/auth refresh sends them
+    // and browsers preflight; omitting them surfaces as ClientException: Failed to fetch.
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'Accept-Language',
+      'Accept',
+      'Cache-Control',
+      'Pragma',
+    ],
   }),
 );
 app.use(express.json({ limit: '2mb' }));

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../app/session_scope.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/lab_order.dart';
+import '../../models/membership_tier.dart';
 import '../../models/user_report.dart';
 import '../../theme/theme_extensions.dart';
 import '../../widgets/common/app_branding_row.dart';
@@ -77,6 +78,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
                       name: name,
                       tierName: user.tierName,
                       tierDiscountPercent: user.tierDiscountPercent,
+                      tierProgress: session.membershipTierProgress,
                       onTierTap: () => context.push('/loyalty'),
                     ),
                     if (session.homeSummaryError != null) ...[
@@ -677,12 +679,14 @@ class _WelcomeHeader extends StatelessWidget {
     required this.name,
     this.tierName,
     this.tierDiscountPercent = 0,
+    this.tierProgress,
     this.onTierTap,
   });
 
   final String name;
   final String? tierName;
   final int tierDiscountPercent;
+  final MembershipTierProgress? tierProgress;
   final VoidCallback? onTierTap;
 
   @override
@@ -722,6 +726,7 @@ class _WelcomeHeader extends StatelessWidget {
           MembershipTierCard(
             tierName: tierName?.trim() ?? '',
             discountPercent: tierDiscountPercent,
+            progress: tierProgress,
             onTap: onTierTap,
           ),
           const SizedBox(height: 10),

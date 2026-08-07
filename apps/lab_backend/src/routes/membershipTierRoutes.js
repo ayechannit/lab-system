@@ -3,6 +3,9 @@ const router = express.Router();
 const { authMiddleware, modulePermission } = require('../middlewares/authMiddleware');
 const membershipTierController = require('../controllers/membershipTierController');
 
+// Patients need the active ladder for home membership progress (not staff CRUD).
+router.get('/active', authMiddleware, membershipTierController.getActiveTiers);
+
 router.use(authMiddleware, modulePermission('membership-tiers'));
 
 /**
@@ -13,7 +16,7 @@ router.use(authMiddleware, modulePermission('membership-tiers'));
  *       type: object
  *       required:
  *         - name
- *         - min_spend_mmk
+ *         - min_points
  *         - discount_percent
  *       properties:
  *         id:
@@ -22,9 +25,9 @@ router.use(authMiddleware, modulePermission('membership-tiers'));
  *         name:
  *           type: string
  *           description: Name of the membership tier (e.g. Normal, Silver, Gold)
- *         min_spend_mmk:
- *           type: number
- *           description: Lifetime verified-payment spend (MMK) required to qualify for this tier
+ *         min_points:
+ *           type: integer
+ *           description: Loyalty points balance required to qualify for this tier
  *         discount_percent:
  *           type: number
  *           description: Discount percentage granted to customers in this tier (0-100), added on top of a test's own discount
@@ -42,7 +45,7 @@ router.use(authMiddleware, modulePermission('membership-tiers'));
  * @swagger
  * tags:
  *   name: MembershipTiers
- *   description: Management of customer membership tiers based on lifetime spend
+ *   description: Management of customer membership tiers based on loyalty points
  */
 
 /**
@@ -76,13 +79,13 @@ router.use(authMiddleware, modulePermission('membership-tiers'));
  *             type: object
  *             required:
  *               - name
- *               - min_spend_mmk
+ *               - min_points
  *               - discount_percent
  *             properties:
  *               name:
  *                 type: string
- *               min_spend_mmk:
- *                 type: number
+ *               min_points:
+ *                 type: integer
  *               discount_percent:
  *                 type: number
  *               is_active:
@@ -120,8 +123,8 @@ router.use(authMiddleware, modulePermission('membership-tiers'));
  *             properties:
  *               name:
  *                 type: string
- *               min_spend_mmk:
- *                 type: number
+ *               min_points:
+ *                 type: integer
  *               discount_percent:
  *                 type: number
  *               is_active:

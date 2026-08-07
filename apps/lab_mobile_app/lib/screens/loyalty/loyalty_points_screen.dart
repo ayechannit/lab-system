@@ -4,6 +4,7 @@ import '../../l10n/app_localizations.dart';
 import '../../l10n/loyalty_l10n.dart';
 import '../../app/session_scope.dart';
 import '../../models/loyalty.dart';
+import '../../models/membership_tier.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/theme_extensions.dart';
 import '../../widgets/common/app_branding_row.dart';
@@ -94,6 +95,7 @@ class _LoyaltyPointsScreenState extends State<LoyaltyPointsScreen> {
                   loyalty: loyalty,
                   tierName: session.user?.tierName,
                   tierDiscountPercent: session.user?.tierDiscountPercent ?? 0,
+                  tierProgress: session.membershipTierProgress,
                 ),
                 const SizedBox(height: 16),
                 _StatsRow(loyalty: loyalty),
@@ -143,16 +145,49 @@ class _BalanceHeroCard extends StatelessWidget {
     required this.loyalty,
     this.tierName,
     this.tierDiscountPercent = 0,
+    this.tierProgress,
   });
 
   final LoyaltySnapshot loyalty;
   final String? tierName;
   final int tierDiscountPercent;
+  final MembershipTierProgress? tierProgress;
+
+  String _formatPoints(int value) {
+    final n = value.abs();
+    if (n >= 1000) {
+      final s = n.toString();
+      final buf = StringBuffer();
+      for (var i = 0; i < s.length; i++) {
+        if (i > 0 && (s.length - i) % 3 == 0) buf.write(',');
+        buf.write(s[i]);
+      }
+      return buf.toString();
+    }
+    return '$n';
+  }
 
   @override
   Widget build(BuildContext context) {
     final cs = context.cs;
     final l10n = AppLocalizations.of(context)!;
+    final progress = tierProgress;
+    final currentName = localizedMembershipTierName(
+      l10n,
+      progress?.currentTier.name ?? tierName,
+    );
+    final nextName = progress?.nextTier == null
+        ? null
+        : localizedMembershipTierName(l10n, progress!.nextTier!.name);
+    final barValue = progress?.progress ?? 0.0;
+    final percentLabel = '${(barValue.clamp(0.0, 1.0) * 100).round()}%';
+    final pointsLabel = _formatPoints(progress?.pointsBalance ?? loyalty.balance);
+    final targetLabel =
+        progress?.nextTier == null ? null : _formatPoints(progress!.nextTier!.minPoints);
+    final remainingLabel = progress == null || progress.isMaxTier
+        ? null
+        : _formatPoints(progress.remainingPoints);
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(22),
@@ -174,13 +209,25 @@ class _BalanceHeroCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.16),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: const Icon(Icons.workspace_premium_rounded, color: Colors.white, size: 26),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.16),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(Icons.workspace_premium_rounded, color: Colors.white, size: 26),
+              ),
+              const Spacer(),
+              MembershipTierBadge(
+                tierName: tierName?.trim() ?? '',
+                discountPercent: tierDiscountPercent,
+                onDark: true,
+                dense: true,
+              ),
+            ],
           ),
           const SizedBox(height: 16),
           Text(
@@ -220,20 +267,100 @@ class _BalanceHeroCard extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 10),
-          Text(
-            l10n.loyaltyBalanceHint,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Colors.white.withValues(alpha: 0.82),
-                  height: 1.45,
-                ),
-          ),
-          const SizedBox(height: 12),
-          MembershipTierBadge(
-            tierName: tierName?.trim() ?? '',
-            discountPercent: tierDiscountPercent,
-            onDark: true,
-          ),
+          if (progress != null) ...[
+            const SizedBox(height: 18),
+            if (!progress.isMaxTier && nextName != null) ...[
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      currentName,
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w800,
+                          ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.18),
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.35)),
+                    ),
+                    child: Text(
+                      percentLabel,
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w800,
+                          ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      nextName,
+                      textAlign: TextAlign.end,
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                            color: Colors.white.withValues(alpha: 0.85),
+                            fontWeight: FontWeight.w700,
+                          ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              MembershipTierProgressBar(
+                value: barValue,
+                accent: Colors.white,
+                track: Colors.white.withValues(alpha: 0.22),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                l10n.membershipTierPointsOfNext(pointsLabel, targetLabel!),
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                l10n.membershipTierProgressToNext(remainingLabel!, nextName),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Colors.white.withValues(alpha: 0.85),
+                      height: 1.35,
+                    ),
+              ),
+            ] else ...[
+              MembershipTierProgressBar(
+                value: 1,
+                accent: Colors.white,
+                track: Colors.white.withValues(alpha: 0.22),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                l10n.membershipTierProgressMax,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Colors.white.withValues(alpha: 0.88),
+                      height: 1.35,
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
+            ],
+          ] else ...[
+            const SizedBox(height: 10),
+            Text(
+              l10n.loyaltyBalanceHint,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Colors.white.withValues(alpha: 0.82),
+                    height: 1.45,
+                  ),
+            ),
+          ],
         ],
       ),
     );
@@ -325,7 +452,7 @@ class _StatsRow extends StatelessWidget {
           label: l10n.loyaltyEarned,
           value: '+${loyalty.totalEarned}',
           icon: Icons.trending_up_rounded,
-          color: AppColors.accentGreen,
+          color: context.cs.primary,
         );
         final redeemed = _StatTile(
           label: l10n.loyaltyRedeemed,
@@ -337,7 +464,7 @@ class _StatsRow extends StatelessWidget {
           label: narrow ? l10n.loyaltyTxnsShort : l10n.loyaltyTransactions,
           value: '${loyalty.entries.length}',
           icon: Icons.receipt_long_rounded,
-          color: AppColors.warningLow,
+          color: context.cs.primary,
         );
 
         if (narrow) {
@@ -443,7 +570,6 @@ class _ActivityFilterBar extends StatelessWidget {
         label: l10n.loyaltyEarned,
         icon: Icons.trending_up_rounded,
         count: _countFor(PointTransactionType.earn),
-        accent: AppColors.accentGreen,
       ),
       _ActivityFilterOption(
         value: PointTransactionType.redeem,
@@ -456,7 +582,6 @@ class _ActivityFilterBar extends StatelessWidget {
         label: l10n.loyaltyFilterAdjustments,
         icon: Icons.tune_rounded,
         count: _countFor(PointTransactionType.adjustment),
-        accent: AppColors.warningLow,
       ),
     ];
 
@@ -498,14 +623,12 @@ class _ActivityFilterOption {
     required this.label,
     required this.icon,
     required this.count,
-    this.accent,
   });
 
   final PointTransactionType? value;
   final String label;
   final IconData icon;
   final int count;
-  final Color? accent;
 }
 
 class _ActivityFilterSegment extends StatelessWidget {
@@ -522,8 +645,8 @@ class _ActivityFilterSegment extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = context.cs;
-    final accent = option.accent ?? cs.primary;
-    final fg = active ? accent : cs.onSurfaceVariant;
+    // Match bottom-nav active treatment: soft primary wash + primary ink.
+    final fg = active ? cs.primary : cs.onSurfaceVariant;
 
     return Semantics(
       button: true,
@@ -539,10 +662,10 @@ class _ActivityFilterSegment extends StatelessWidget {
             curve: Curves.easeOutCubic,
             padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
             decoration: BoxDecoration(
-              color: active ? accent.withValues(alpha: 0.1) : Colors.transparent,
+              color: active ? cs.primary.withValues(alpha: 0.12) : Colors.transparent,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: active ? accent.withValues(alpha: 0.35) : Colors.transparent,
+                color: active ? cs.primary.withValues(alpha: 0.28) : Colors.transparent,
               ),
             ),
             child: Column(
@@ -567,7 +690,7 @@ class _ActivityFilterSegment extends StatelessWidget {
                 Text(
                   '${option.count}',
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: active ? accent : cs.onSurfaceVariant.withValues(alpha: 0.75),
+                        color: active ? cs.primary : cs.onSurfaceVariant.withValues(alpha: 0.75),
                         fontWeight: FontWeight.w700,
                         fontSize: 11,
                         height: 1,

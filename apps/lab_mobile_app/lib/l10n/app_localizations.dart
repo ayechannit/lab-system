@@ -284,6 +284,9 @@ abstract class AppLocalizations {
   String membershipTierPercentOff(int percent);
   String membershipTierDiscountBenefit(int percent);
   String get membershipTierMemberBenefit;
+  String membershipTierProgressToNext(String points, String tier);
+  String get membershipTierProgressMax;
+  String membershipTierPointsOfNext(String current, String target);
   String orderCreateMembershipDiscount(String tier, String percent);
 
   /// No description provided for @phone.
