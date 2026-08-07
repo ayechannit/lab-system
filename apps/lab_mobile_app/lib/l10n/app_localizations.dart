@@ -1283,6 +1283,12 @@ abstract class AppLocalizations {
   /// **'This address is outside our service coverage areas.'**
   String get orderCreateServiceFeeOutOfCoverage;
 
+  /// No description provided for @orderCreateReferralFee.
+  ///
+  /// In en, this message translates to:
+  /// **'Referral fee'**
+  String get orderCreateReferralFee;
+
   /// No description provided for @orderCreateEstimatedAmountDue.
   ///
   /// In en, this message translates to:

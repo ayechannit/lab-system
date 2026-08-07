@@ -86,7 +86,8 @@
   "filters": {
     "clearFilters": "Filter များရှင်းမည်",
     "search": "ရှာပါ…",
-    "searchSubject": "{{subject}} ရှာပါ…"
+    "searchSubject": "{{subject}} ရှာပါ…",
+    "apply": "အတည်ပြုမည်"
   },
   "datetime": {
     "defaultPlaceholder": "ရက်စွဲနှင့် အချိန် ရွေးပါ",
@@ -489,6 +490,8 @@
       "tests": "ဓာတ်ခွဲစစ်ဆေးမှုများ",
       "original": "မူလ",
       "final": "နောက်ဆုံး",
+      "referralFee": "ရည်ညွှန်းကြေး",
+      "referralFeeTitle": "ဤမှာယူမှု၏ ဓာတ်ခွဲစစ်ဆေးမှုများမှ ရရှိသော ရည်ညွှန်းကော်မရှင်",
       "testCount": "ဓာတ်ခွဲစစ်ဆေးမှု {{count}} ခု",
       "testCount_other": "ဓာတ်ခွဲစစ်ဆေးမှု {{count}} ခု",
       "percentPaid": "{{pct}}% ပေးချေပြီး",
@@ -563,6 +566,9 @@
       "reportDelivery": "Report ပေးပို့မှု",
       "originalPrice": "မူလစျေးနှုန်း",
       "discountPercent": "လျှော့စျေး %",
+      "materialFee": "ပစ္စည်းခ",
+      "serviceFee": "ဝန်ဆောင်ခ",
+      "referralFeeDeducted": "ရည်ညွှန်းကြေး (နှုတ်ယူထား)",
       "finalPrice": "နောက်ဆုံးစျေးနှုန်း",
       "paymentStatus": "ငွေပေးချေမှု အခြေအနေ",
       "payments": "ငွေပေးချေမှုများ",
@@ -991,6 +997,22 @@
   },
   "referralFees": {
     "loadFailed": "ရည်ညွှန်းကြေးများကို ရယူ၍မရပါ",
+    "noApi": "ရည်ညွှန်းကြေးများကို စီမံရန် API ကို ချိတ်ဆက်ပါ။",
+    "tabsAria": "ရည်ညွှန်းကြေး အပိုင်းများ",
+    "tabSettings": "သတ်မှတ်ချက်",
+    "tabReport": "အစီရင်ခံစာ",
+    "report": {
+      "filtersAria": "ရည်ညွှန်းကြေး အစီရင်ခံစာ စစ်ထုတ်ရန်",
+      "startDate": "စတင်ရက်",
+      "endDate": "ကုန်ဆုံးရက်",
+      "summary": "မှာယူမှု {{orders}} ခုမှ ရည်ညွှန်းကြေး {{fee}} MMK ရရှိခဲ့သည်",
+      "orderId": "မှာယူမှု",
+      "date": "ရက်စွဲ",
+      "fee": "ရည်ညွှန်းကြေး (MMK)",
+      "loading": "ရည်ညွှန်းကြေး အစီရင်ခံစာကို ရယူနေသည်…",
+      "loadFailed": "ရည်ညွှန်းကြေး အစီရင်ခံစာကို ရယူ၍မရပါ",
+      "empty": "ဤကာလအတွင်း ရည်ညွှန်းကြေးရရှိသော မှာယူမှု မရှိပါ။"
+    },
     "filters": {
       "ariaLabel": "ရည်ညွှန်းကြေးများကို စစ်ထုတ်ရန်",
       "searchDetail": "အမည် သို့မဟုတ် ကုဒ်"

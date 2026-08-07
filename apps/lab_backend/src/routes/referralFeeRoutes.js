@@ -3,6 +3,9 @@ const router = express.Router();
 const { authMiddleware, modulePermission } = require('../middlewares/authMiddleware');
 const referralFeeController = require('../controllers/referralFeeController');
 
+// Patients need active rates for live order pricing (not staff CRUD).
+router.get('/active', authMiddleware, referralFeeController.getActiveReferralRates);
+
 router.use(authMiddleware, modulePermission('referral-fees'));
 
 /**
@@ -104,6 +107,89 @@ router.use(authMiddleware, modulePermission('referral-fees'));
  *               type: array
  *               items:
  *                 $ref: '#/components/schemas/ReferralFee'
+ */
+
+/**
+ * @swagger
+ * /api/referral-fees/active:
+ *   get:
+ *     summary: Active referral rates by test (patients + staff, for live order pricing)
+ *     tags: [Referral Fees]
+ *     responses:
+ *       200:
+ *         description: List of { test_id, referral_percent } for active, non-deleted rates
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   test_id:
+ *                     type: string
+ *                     format: uuid
+ *                   referral_percent:
+ *                     type: number
+ */
+
+/**
+ * @swagger
+ * /api/referral-fees/report:
+ *   get:
+ *     summary: Orders that generated a referral fee, for accounting/reporting
+ *     tags: [Referral Fees]
+ *     parameters:
+ *       - in: query
+ *         name: start_date
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *       - in: query
+ *         name: end_date
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *     responses:
+ *       200:
+ *         description: Paginated orders with their computed referral fee total, plus a range summary
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 rows:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       order_id:
+ *                         type: string
+ *                         format: uuid
+ *                       patient_name:
+ *                         type: string
+ *                       status:
+ *                         type: string
+ *                       created_at:
+ *                         type: string
+ *                         format: date-time
+ *                       final_price_mmk:
+ *                         type: number
+ *                       referral_fee_total_mmk:
+ *                         type: number
+ *                 total_orders:
+ *                   type: integer
+ *                 total_referral_fee_mmk:
+ *                   type: number
  */
 
 /**
@@ -226,6 +312,7 @@ router.use(authMiddleware, modulePermission('referral-fees'));
  */
 
 router.get('/', referralFeeController.getAllReferralFees);
+router.get('/report', referralFeeController.getReferralFeeReport);
 router.get('/:test_id', referralFeeController.getReferralFeesByTestId);
 router.post('/bulk', referralFeeController.bulkUpsertReferralFees);
 router.post('/', referralFeeController.upsertReferralFee);

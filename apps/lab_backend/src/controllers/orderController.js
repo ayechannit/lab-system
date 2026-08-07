@@ -6,6 +6,7 @@ const QRCode = require('qrcode');
 const StorageService = require('../utils/storageService');
 const NotificationService = require('../services/notificationService');
 const ServiceGeofence = require('../models/serviceGeofenceModel');
+const MaterialFee = require('../models/materialFeeModel');
 
 async function resolvePreferredCollectorId(collector_id) {
   if (collector_id == null || collector_id === '') return null;
@@ -76,6 +77,16 @@ function respondOutOfCoverage(res, message = OUT_OF_COVERAGE_MESSAGE) {
   });
 }
 
+/**
+ * Server-resolved active material fee — never trust the client's material_fee_mmk,
+ * mirroring how service_fee_mmk is resolved from the geofence match rather than the client.
+ */
+async function resolveActiveMaterialFee() {
+  const fees = await MaterialFee.getActive();
+  const match = fees.find((f) => Number(f.amount_mmk) > 0);
+  return match ? Number(match.amount_mmk) : 0;
+}
+
 const getAllOrders = async (req, res) => {
   const orders = await Order.getAll(req.query);
   res.json(orders);
@@ -127,6 +138,8 @@ const createOrder = async (req, res) => {
       }
       throw error;
     }
+
+    orderData.material_fee_mmk = await resolveActiveMaterialFee();
 
     // Parse items if it's a string (from multipart/form-data)
     if (typeof orderData.items === 'string') {
@@ -190,7 +203,7 @@ const createOrder = async (req, res) => {
 const addOrderItems = async (req, res) => {
   try {
     const { id } = req.params;
-    const { items, original_price_mmk, discount_percent, final_price_mmk, material_fee_mmk } = req.body;
+    const { items, original_price_mmk, discount_percent, final_price_mmk } = req.body;
 
     if (!items || items.length === 0) {
       return res.status(400).json({ message: 'Items array is required' });
@@ -200,7 +213,7 @@ const addOrderItems = async (req, res) => {
       original_price_mmk: original_price_mmk || 0,
       discount_percent: discount_percent || 0,
       final_price_mmk: final_price_mmk || 0,
-      material_fee_mmk: material_fee_mmk || 0
+      material_fee_mmk: await resolveActiveMaterialFee(),
     };
 
     const updatedOrder = await Order.addItemsAndUpdateTotals(id, items, totals, req.user?.id);
@@ -217,7 +230,7 @@ const addOrderItems = async (req, res) => {
 const replaceOrderItems = async (req, res) => {
   try {
     const { id } = req.params;
-    const { items, original_price_mmk, discount_percent, final_price_mmk, material_fee_mmk } = req.body;
+    const { items, original_price_mmk, discount_percent, final_price_mmk } = req.body;
 
     if (!Array.isArray(items)) {
       return res.status(400).json({ message: 'Items array is required' });
@@ -227,7 +240,7 @@ const replaceOrderItems = async (req, res) => {
       original_price_mmk: original_price_mmk || 0,
       discount_percent: discount_percent || 0,
       final_price_mmk: final_price_mmk || 0,
-      material_fee_mmk: material_fee_mmk || 0,
+      material_fee_mmk: await resolveActiveMaterialFee(),
     };
 
     const updatedOrder = await Order.replaceItemsAndUpdateTotals(id, items, totals, req.user?.id);
@@ -259,7 +272,6 @@ const syncPendingOrder = async (req, res) => {
       original_price_mmk,
       discount_percent,
       final_price_mmk,
-      material_fee_mmk,
       items,
     } = req.body;
 
@@ -294,7 +306,6 @@ const syncPendingOrder = async (req, res) => {
       original_price_mmk,
       discount_percent,
       final_price_mmk,
-      material_fee_mmk,
       items,
     };
 
@@ -310,6 +321,8 @@ const syncPendingOrder = async (req, res) => {
       }
       throw error;
     }
+
+    syncPayload.material_fee_mmk = await resolveActiveMaterialFee();
 
     const updatedOrder = await Order.syncPendingOrder(
       id,

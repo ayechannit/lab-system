@@ -18,6 +18,8 @@ import { isApiMode } from '../services/apiBase'
 import {
   deleteReferralFeeById,
   fetchAllReferralFees,
+  fetchReferralFeeReport,
+  type ReferralFeeReportRow,
   type TestReferralFeeListRow,
 } from '../services/referralFeeService'
 import { fetchLabTestsList } from '../services/labTestCatalogService'
@@ -48,6 +50,71 @@ export function ReferralFeesManagementPage() {
 
   const [searchInput, setSearchInput] = useState('')
   const [search, setSearch] = useState('')
+
+  const [referralTab, setReferralTab] = useState<'settings' | 'report'>('settings')
+
+  const [reportRows, setReportRows] = useState<ReferralFeeReportRow[]>([])
+  const [reportLoading, setReportLoading] = useState(false)
+  const [reportError, setReportError] = useState<string | null>(null)
+  const [reportTotalOrders, setReportTotalOrders] = useState(0)
+  const [reportTotalFee, setReportTotalFee] = useState(0)
+  const [reportStartDateInput, setReportStartDateInput] = useState('')
+  const [reportEndDateInput, setReportEndDateInput] = useState('')
+  const [reportStartDate, setReportStartDate] = useState('')
+  const [reportEndDate, setReportEndDate] = useState('')
+  const [reportPage, setReportPage] = useState(1)
+  const [reportPageSize] = useState(DEFAULT_TABLE_PAGE_SIZE)
+  const [reportRefreshTick, setReportRefreshTick] = useState(0)
+
+  useErrorToast(reportError)
+
+  useEffect(() => {
+    if (referralTab !== 'report' || !hasApi) {
+      queueMicrotask(() => setReportLoading(false))
+      return
+    }
+    let cancelled = false
+    queueMicrotask(() => {
+      setReportLoading(true)
+      setReportError(null)
+    })
+    void (async () => {
+      try {
+        const report = await fetchReferralFeeReport({
+          start_date: reportStartDate || undefined,
+          end_date: reportEndDate || undefined,
+          page: reportPage,
+          limit: reportPageSize,
+        })
+        if (!cancelled) {
+          setReportRows(report.rows)
+          setReportTotalOrders(report.total_orders)
+          setReportTotalFee(report.total_referral_fee_mmk)
+        }
+      } catch (e) {
+        if (!cancelled) setReportError(e instanceof Error ? e.message : t('referralFees.report.loadFailed'))
+      } finally {
+        if (!cancelled) setReportLoading(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [referralTab, hasApi, reportStartDate, reportEndDate, reportPage, reportPageSize, reportRefreshTick, t])
+
+  function applyReportDateFilter() {
+    setReportPage(1)
+    setReportStartDate(reportStartDateInput)
+    setReportEndDate(reportEndDateInput)
+  }
+
+  function clearReportDateFilter() {
+    setReportStartDateInput('')
+    setReportEndDateInput('')
+    setReportStartDate('')
+    setReportEndDate('')
+    setReportPage(1)
+  }
 
   useEffect(() => {
     if (!hasApi) {
@@ -153,6 +220,32 @@ export function ReferralFeesManagementPage() {
 
       {!hasApi ? <ApiConfigBanner /> : null}
 
+      <div className="segment-tabs" role="tablist" aria-label={t('referralFees.tabsAria')}>
+        <button
+          type="button"
+          className={`segment-tabs__tab${referralTab === 'settings' ? ' segment-tabs__tab--active' : ''}`}
+          role="tab"
+          aria-selected={referralTab === 'settings'}
+          id="referral-tab-settings"
+          aria-controls="referral-panel-settings"
+          onClick={() => setReferralTab('settings')}
+        >
+          {t('referralFees.tabSettings')}
+        </button>
+        <button
+          type="button"
+          className={`segment-tabs__tab${referralTab === 'report' ? ' segment-tabs__tab--active' : ''}`}
+          role="tab"
+          aria-selected={referralTab === 'report'}
+          id="referral-tab-report"
+          aria-controls="referral-panel-report"
+          onClick={() => setReferralTab('report')}
+        >
+          {t('referralFees.tabReport')}
+        </button>
+      </div>
+
+      <div role="tabpanel" id="referral-panel-settings" aria-labelledby="referral-tab-settings" hidden={referralTab !== 'settings'}>
       <div className="card">
         <div className="list-tools-row">
           <div className="list-filters-bar" aria-label={t('referralFees.filters.ariaLabel')}>
@@ -293,6 +386,125 @@ export function ReferralFeesManagementPage() {
             }}
           />
         ) : null}
+      </div>
+      </div>
+
+      <div role="tabpanel" id="referral-panel-report" aria-labelledby="referral-tab-report" hidden={referralTab !== 'report'}>
+        <div className="card">
+          <div className="list-tools-row">
+            <div className="list-filters-bar" aria-label={t('referralFees.report.filtersAria')}>
+              <div className="field">
+                <label htmlFor="rf-report-start">{t('referralFees.report.startDate')}</label>
+                <input
+                  id="rf-report-start"
+                  type="date"
+                  value={reportStartDateInput}
+                  onChange={(e) => setReportStartDateInput(e.target.value)}
+                  disabled={reportLoading || !hasApi}
+                />
+              </div>
+              <div className="field">
+                <label htmlFor="rf-report-end">{t('referralFees.report.endDate')}</label>
+                <input
+                  id="rf-report-end"
+                  type="date"
+                  value={reportEndDateInput}
+                  onChange={(e) => setReportEndDateInput(e.target.value)}
+                  disabled={reportLoading || !hasApi}
+                />
+              </div>
+              <button
+                type="button"
+                className="btn btn-primary btn-sm"
+                onClick={applyReportDateFilter}
+                disabled={reportLoading || !hasApi}
+              >
+                {t('filters.apply')}
+              </button>
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm list-filters-bar__clear"
+                onClick={clearReportDateFilter}
+                disabled={reportLoading || !hasApi || (!reportStartDateInput && !reportEndDateInput)}
+              >
+                {t('filters.clearFilters')}
+              </button>
+            </div>
+            <div className="list-tools-row__actions">
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => setReportRefreshTick((tick) => tick + 1)}
+                disabled={reportLoading || !hasApi}
+              >
+                {reportLoading ? t('common.refreshing') : t('common.refresh')}
+              </button>
+            </div>
+          </div>
+          <p className="catalog-mode-hint">
+            {t('referralFees.report.summary', {
+              orders: reportTotalOrders,
+              fee: reportTotalFee.toLocaleString(),
+            })}
+          </p>
+          <div className="table-wrap">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>{t('referralFees.report.orderId')}</th>
+                  <th>{t('common.patient')}</th>
+                  <th>{t('common.status')}</th>
+                  <th>{t('referralFees.report.date')}</th>
+                  <th className="col-num">{t('orders.table.final')}</th>
+                  <th className="col-num">{t('referralFees.report.fee')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {reportLoading ? (
+                  <tr>
+                    <td colSpan={6} className="data-table__state data-table__state--loading">
+                      <LoadingSpinner label={t('referralFees.report.loading')} />
+                    </td>
+                  </tr>
+                ) : !hasApi ? (
+                  <tr>
+                    <td colSpan={6} className="data-table__state">
+                      {t('referralFees.noApi')}
+                    </td>
+                  </tr>
+                ) : reportRows.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="data-table__state">
+                      {t('referralFees.report.empty')}
+                    </td>
+                  </tr>
+                ) : (
+                  reportRows.map((row) => (
+                    <tr key={row.order_id}>
+                      <td>
+                        <code>{row.order_id.slice(0, 8)}</code>
+                      </td>
+                      <td>{row.patient_name || t('common.none')}</td>
+                      <td>{row.status}</td>
+                      <td>{row.created_at ? new Date(row.created_at).toLocaleDateString() : t('common.none')}</td>
+                      <td className="col-num">{row.final_price_mmk.toLocaleString()}</td>
+                      <td className="col-num">{row.referral_fee_total_mmk.toLocaleString()}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+          {!reportLoading && hasApi && reportRows.length > 0 ? (
+            <TablePagination
+              mode="server"
+              page={reportPage}
+              pageSize={reportPageSize}
+              itemsOnPage={reportRows.length}
+              onPageChange={setReportPage}
+            />
+          ) : null}
+        </div>
       </div>
 
       <ConfirmDialog

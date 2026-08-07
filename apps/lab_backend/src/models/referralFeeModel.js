@@ -111,6 +111,76 @@ class ReferralFee {
     return result.recordset;
   }
 
+  /**
+   * Public (any authenticated user, not just staff) — active referral rates by test,
+   * for live pricing display in patient-facing order screens.
+   */
+  static async getActive() {
+    const pool = await poolPromise;
+    const result = await pool.request()
+      .query('SELECT test_id, referral_percent FROM test_referral_fees WHERE is_active = 1 AND is_deleted = 0');
+    return result.recordset;
+  }
+
+  /**
+   * Orders that actually generated a referral fee (sum of each item's
+   * subtotal_mmk * the test's referral_percent), for accounting/reporting.
+   * Orders with zero referral fee are excluded.
+   */
+  static async getOrderReport(filters = {}) {
+    const pool = await poolPromise;
+    const request = pool.request();
+
+    let where = 'WHERE o.is_deleted = 0';
+    if (filters.start_date) {
+      request.input('start_date', sql.DateTime2, new Date(filters.start_date));
+      where += ' AND o.created_at >= @start_date';
+    }
+    if (filters.end_date) {
+      request.input('end_date', sql.DateTime2, new Date(filters.end_date));
+      where += ' AND o.created_at <= @end_date';
+    }
+
+    const page = parseInt(filters.page) || 1;
+    const limit = parseInt(filters.limit) || 50;
+    const offset = (page - 1) * limit;
+    request.input('offset', sql.Int, offset);
+    request.input('limit', sql.Int, limit);
+
+    const rowsResult = await request.query(`
+      SELECT o.id AS order_id, o.patient_name, o.status, o.created_at, o.final_price_mmk,
+             SUM(oi.subtotal_mmk * ISNULL(rf.referral_percent, 0) / 100) AS referral_fee_total_mmk
+      FROM lab_orders o
+      JOIN lab_order_items oi ON oi.order_id = o.id
+      LEFT JOIN test_referral_fees rf ON rf.test_id = oi.test_id AND rf.is_active = 1 AND rf.is_deleted = 0
+      ${where}
+      GROUP BY o.id, o.patient_name, o.status, o.created_at, o.final_price_mmk
+      HAVING SUM(oi.subtotal_mmk * ISNULL(rf.referral_percent, 0) / 100) > 0
+      ORDER BY o.created_at DESC
+      OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY
+    `);
+
+    const summaryRequest = pool.request();
+    if (filters.start_date) summaryRequest.input('start_date', sql.DateTime2, new Date(filters.start_date));
+    if (filters.end_date) summaryRequest.input('end_date', sql.DateTime2, new Date(filters.end_date));
+    const summaryResult = await summaryRequest.query(`
+      SELECT
+        COUNT(DISTINCT o.id) AS total_orders,
+        ISNULL(SUM(oi.subtotal_mmk * ISNULL(rf.referral_percent, 0) / 100), 0) AS total_referral_fee_mmk
+      FROM lab_orders o
+      JOIN lab_order_items oi ON oi.order_id = o.id
+      LEFT JOIN test_referral_fees rf ON rf.test_id = oi.test_id AND rf.is_active = 1 AND rf.is_deleted = 0
+      ${where}
+      AND (oi.subtotal_mmk * ISNULL(rf.referral_percent, 0) / 100) > 0
+    `);
+
+    return {
+      rows: rowsResult.recordset,
+      total_orders: summaryResult.recordset[0]?.total_orders || 0,
+      total_referral_fee_mmk: summaryResult.recordset[0]?.total_referral_fee_mmk || 0,
+    };
+  }
+
   static async delete(id, updatedBy = null) {
     const pool = await poolPromise;
     const result = await pool.request()

@@ -40,6 +40,10 @@ export type ApiOrderListRow = {
   status: ApiOrderStatus
   original_price_mmk: number
   final_price_mmk: number
+  material_fee_mmk?: number
+  service_fee_mmk?: number
+  /** Computed from item subtotals * each test's referral_percent; not stored on the row. */
+  referral_fee_total_mmk?: number
   created_at: string
   prescription_url?: string | null
   is_tests_assigned?: boolean | number | null
@@ -123,6 +127,10 @@ export type ApiOrderDetail = {
   original_price_mmk: number
   discount_percent: number
   final_price_mmk: number
+  material_fee_mmk?: number
+  service_fee_mmk?: number
+  /** Computed from item subtotals * each test's referral_percent; not stored on the row. */
+  referral_fee_total_mmk?: number
   created_at: string
   updated_at?: string
   total_paid_mmk?: number

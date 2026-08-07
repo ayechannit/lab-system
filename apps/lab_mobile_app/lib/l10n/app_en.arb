@@ -339,6 +339,7 @@
   "orderCreateServiceFee": "Service fee",
   "orderCreateServiceFeeChecking": "Checking service zone…",
   "orderCreateServiceFeeOutOfCoverage": "This address is outside our service coverage areas.",
+  "orderCreateReferralFee": "Referral fee",
   "orderCreateEstimatedAmountDue": "Estimated amount due",
   "orderCreatePrescriptionEmpty": "Add a prescription file to submit.",
   "orderCreatePrescriptionAttached": "Prescription attached. Totals will be set when the lab assigns tests.",

@@ -1599,6 +1599,9 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
                 <th scope="col" className="col-num">
                   {t('orders.table.final')}
                 </th>
+                <th scope="col" className="col-num" title={t('orders.table.referralFeeTitle')}>
+                  {t('orders.table.referralFee')}
+                </th>
                 <th scope="col" className="action-col">
                   {t('common.actions')}
                 </th>
@@ -1607,13 +1610,13 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={12} className="data-table__state data-table__state--loading">
+                  <td colSpan={13} className="data-table__state data-table__state--loading">
                     <LoadingSpinner label={t('common.loading')} />
                   </td>
                 </tr>
               ) : sorted.length === 0 ? (
                 <tr>
-                  <td colSpan={12} className="data-table__state">
+                  <td colSpan={13} className="data-table__state">
                     <div className="data-table__empty-panel">
                       <div className="data-table__empty-icon" aria-hidden>
                         <span className="material-symbols-outlined">receipt_long</span>
@@ -1746,6 +1749,7 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
                     </td>
                     <td className="col-num">{o.original_price_mmk.toLocaleString()}</td>
                     <td className="col-num">{o.final_price_mmk.toLocaleString()}</td>
+                    <td className="col-num">{(o.referral_fee_total_mmk ?? 0).toLocaleString()}</td>
                     <td className="action-cell">
                       <TableActionMenu
                         open={openMenuId === o.id}
@@ -2738,6 +2742,30 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
                       <span className="order-detail-label">{t('orders.detail.discountPercent')}</span>
                       <span className="order-detail-value">{detailOrder.discount_percent}%</span>
                     </div>
+                    {(detailOrder.material_fee_mmk ?? 0) > 0 ? (
+                      <div className="order-detail-item">
+                        <span className="order-detail-label">{t('orders.detail.materialFee')}</span>
+                        <span className="order-detail-value">
+                          {(detailOrder.material_fee_mmk ?? 0).toLocaleString()} {t('orders.currency')}
+                        </span>
+                      </div>
+                    ) : null}
+                    {(detailOrder.service_fee_mmk ?? 0) > 0 ? (
+                      <div className="order-detail-item">
+                        <span className="order-detail-label">{t('orders.detail.serviceFee')}</span>
+                        <span className="order-detail-value">
+                          {(detailOrder.service_fee_mmk ?? 0).toLocaleString()} {t('orders.currency')}
+                        </span>
+                      </div>
+                    ) : null}
+                    {(detailOrder.referral_fee_total_mmk ?? 0) > 0 ? (
+                      <div className="order-detail-item">
+                        <span className="order-detail-label">{t('orders.detail.referralFeeDeducted')}</span>
+                        <span className="order-detail-value">
+                          −{(detailOrder.referral_fee_total_mmk ?? 0).toLocaleString()} {t('orders.currency')}
+                        </span>
+                      </div>
+                    ) : null}
                     <div className="order-detail-item">
                       <span className="order-detail-label">{t('orders.detail.finalPrice')}</span>
                       <span className="order-detail-value order-detail-value--emphasis">

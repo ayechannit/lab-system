@@ -99,3 +99,56 @@ export async function deleteReferralFeeById(id: string): Promise<void> {
   const res = await apiFetch(`/api/referral-fees/${encodeURIComponent(id)}`, { method: 'DELETE' })
   if (!res.ok) throw new Error(await readApiErrorBody(res))
 }
+
+export type ReferralFeeReportRow = {
+  order_id: string
+  patient_name: string
+  status: string
+  created_at: string
+  final_price_mmk: number
+  referral_fee_total_mmk: number
+}
+
+export type ReferralFeeReport = {
+  rows: ReferralFeeReportRow[]
+  total_orders: number
+  total_referral_fee_mmk: number
+}
+
+export type FetchReferralFeeReportParams = {
+  start_date?: string
+  end_date?: string
+  page?: number
+  limit?: number
+}
+
+function normalizeReferralFeeReportRow(raw: Record<string, unknown>): ReferralFeeReportRow {
+  return {
+    order_id: String(raw.order_id ?? ''),
+    patient_name: raw.patient_name != null ? String(raw.patient_name) : '',
+    status: raw.status != null ? String(raw.status) : '',
+    created_at: raw.created_at != null ? String(raw.created_at) : '',
+    final_price_mmk: Number(raw.final_price_mmk ?? 0),
+    referral_fee_total_mmk: Number(raw.referral_fee_total_mmk ?? 0),
+  }
+}
+
+export async function fetchReferralFeeReport(
+  params?: FetchReferralFeeReportParams,
+): Promise<ReferralFeeReport> {
+  const q = new URLSearchParams()
+  if (params?.start_date) q.set('start_date', params.start_date)
+  if (params?.end_date) q.set('end_date', params.end_date)
+  if (params?.page != null) q.set('page', String(params.page))
+  if (params?.limit != null) q.set('limit', String(params.limit))
+  const qs = q.toString()
+  const res = await apiFetch(`/api/referral-fees/report${qs ? `?${qs}` : ''}`)
+  if (!res.ok) throw new Error(await readApiErrorBody(res))
+  const data = (await res.json()) as Record<string, unknown>
+  const rows = Array.isArray(data.rows) ? (data.rows as Record<string, unknown>[]) : []
+  return {
+    rows: rows.map(normalizeReferralFeeReportRow),
+    total_orders: Number(data.total_orders ?? 0),
+    total_referral_fee_mmk: Number(data.total_referral_fee_mmk ?? 0),
+  }
+}

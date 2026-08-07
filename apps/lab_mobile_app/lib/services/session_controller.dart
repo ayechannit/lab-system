@@ -271,6 +271,8 @@ class SessionController extends ChangeNotifier {
 
   Future<MaterialFeeQuote?> fetchActiveMaterialFee() => _api.fetchActiveMaterialFee();
 
+  Future<Map<String, double>> fetchActiveReferralRates() => _api.fetchActiveReferralRates();
+
   Future<void> acceptProposedSchedule() async {
     final u = _user;
     final o = _trackingOrder;

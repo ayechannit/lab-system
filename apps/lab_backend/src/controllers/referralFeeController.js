@@ -9,6 +9,25 @@ const getAllReferralFees = async (req, res) => {
   }
 };
 
+/** Authenticated patients + staff — active rates for live order pricing (not staff CRUD). */
+const getActiveReferralRates = async (req, res) => {
+  try {
+    const rates = await ReferralFee.getActive();
+    res.json(rates);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+const getReferralFeeReport = async (req, res) => {
+  try {
+    const report = await ReferralFee.getOrderReport(req.query);
+    res.json(report);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 const getReferralFeesByTestId = async (req, res) => {
   try {
     const fees = await ReferralFee.getByTestId(req.params.test_id);
@@ -66,6 +85,8 @@ const deleteReferralFee = async (req, res) => {
 
 module.exports = {
   getAllReferralFees,
+  getActiveReferralRates,
+  getReferralFeeReport,
   getReferralFeesByTestId,
   upsertReferralFee,
   bulkUpsertReferralFees,

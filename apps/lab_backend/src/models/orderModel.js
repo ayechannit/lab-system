@@ -63,7 +63,13 @@ class Order {
                FROM order_schedules s
                WHERE s.order_id = lab_orders.id
                FOR JSON PATH
-             ) as schedule
+             ) as schedule,
+             (
+               SELECT ISNULL(SUM(oi.subtotal_mmk * ISNULL(rf.referral_percent, 0) / 100), 0)
+               FROM lab_order_items oi
+               LEFT JOIN test_referral_fees rf ON rf.test_id = oi.test_id AND rf.is_active = 1 AND rf.is_deleted = 0
+               WHERE oi.order_id = lab_orders.id
+             ) AS referral_fee_total_mmk
       FROM lab_orders
       WHERE is_deleted = 0
     `;
@@ -142,10 +148,13 @@ class Order {
         SELECT o.*,
                u.name AS ordering_user_name,
                (
-                 SELECT oi.*, tc.test_name, tc.test_code
+                 SELECT oi.*, tc.test_name, tc.test_code,
+                        rf.referral_percent,
+                        (oi.subtotal_mmk * ISNULL(rf.referral_percent, 0) / 100) AS referral_fee_mmk
                  FROM lab_order_items oi
                  JOIN lab_test_catalog tc ON oi.test_id = tc.id
-                 WHERE oi.order_id = o.id 
+                 LEFT JOIN test_referral_fees rf ON rf.test_id = oi.test_id AND rf.is_active = 1 AND rf.is_deleted = 0
+                 WHERE oi.order_id = o.id
                  FOR JSON PATH
                ) as items,
                (
@@ -174,6 +183,10 @@ class Order {
       order.schedule = order.schedule ? JSON.parse(order.schedule)[0] : null;
       order.payments = order.payments ? JSON.parse(order.payments) : [];
       order.balance_mmk = order.final_price_mmk - order.total_paid_mmk;
+      order.referral_fee_total_mmk = order.items.reduce(
+        (sum, item) => sum + (Number(item.referral_fee_mmk) || 0),
+        0
+      );
 
       const StorageService = require('../utils/storageService');
       if (order.schedule && order.schedule.profile_image_url) {
@@ -273,8 +286,15 @@ class Order {
         }
       }
 
+      await this._recalculateFinalPrice(newOrder.id, transaction);
+
+      const refetchReq = new sql.Request(transaction);
+      const refetched = await refetchReq
+        .input('id', sql.UniqueIdentifier, newOrder.id)
+        .query('SELECT * FROM lab_orders WHERE id = @id');
+
       await transaction.commit();
-      return newOrder;
+      return refetched.recordset[0];
     } catch (err) {
       await transaction.rollback();
       throw err;
@@ -288,25 +308,22 @@ class Order {
     try {
       await transaction.begin();
       
-      // Update order totals
+      // Update order totals. service_fee_mmk is intentionally untouched here — this
+      // method has no location context to re-resolve it, so the existing value stands.
       const updateOrderReq = new sql.Request(transaction);
       await updateOrderReq
         .input('id', sql.UniqueIdentifier, orderId)
         .input('original_price_mmk', sql.Decimal(18, 2), totals.original_price_mmk)
         .input('discount_percent', sql.Decimal(5, 2), totals.discount_percent || 0)
-        .input('final_price_mmk', sql.Decimal(18, 2), totals.final_price_mmk)
         .input('material_fee_mmk', sql.Decimal(18, 2), totals.material_fee_mmk || 0)
-        .input('service_fee_mmk', sql.Decimal(18, 2), totals.service_fee_mmk || 0)
         .input('updated_user', sql.UniqueIdentifier, updatedBy)
         .query(`
-          UPDATE lab_orders 
-          SET original_price_mmk = @original_price_mmk, 
-              discount_percent = @discount_percent, 
-              final_price_mmk = @final_price_mmk, 
+          UPDATE lab_orders
+          SET original_price_mmk = @original_price_mmk,
+              discount_percent = @discount_percent,
               material_fee_mmk = @material_fee_mmk,
-              service_fee_mmk = @service_fee_mmk,
               is_tests_assigned = 1,
-              updated_user = @updated_user, 
+              updated_user = @updated_user,
               updated_at = GETDATE()
           WHERE id = @id AND is_deleted = 0
         `);
@@ -338,19 +355,45 @@ class Order {
         }
       }
 
+      await this._recalculateFinalPrice(orderId, transaction);
       await transaction.commit();
-      
+
       // Fetch and return the updated order
       const getOrderReq = new sql.Request(pool);
       const orderResult = await getOrderReq
         .input('id', sql.UniqueIdentifier, orderId)
         .query('SELECT * FROM lab_orders WHERE id = @id');
-      
+
       return orderResult.recordset[0];
     } catch (err) {
       await transaction.rollback();
       throw err;
     }
+  }
+
+  /**
+   * Authoritative final_price_mmk = items subtotal + material_fee_mmk + service_fee_mmk
+   * (the order's own columns, as already set earlier in this transaction) − the referral
+   * fee earned on this order's tests (subtotal_mmk * each test's referral_percent).
+   * Never trust a client-sent final_price_mmk — always derive it from DB state.
+   */
+  static async _recalculateFinalPrice(orderId, transaction) {
+    const req = new sql.Request(transaction);
+    await req
+      .input('id', sql.UniqueIdentifier, orderId)
+      .query(`
+        UPDATE lab_orders
+        SET final_price_mmk = ISNULL((SELECT SUM(subtotal_mmk) FROM lab_order_items WHERE order_id = @id), 0)
+                               + ISNULL(material_fee_mmk, 0) + ISNULL(service_fee_mmk, 0)
+                               - ISNULL((
+                                   SELECT SUM(oi.subtotal_mmk * ISNULL(rf.referral_percent, 0) / 100)
+                                   FROM lab_order_items oi
+                                   LEFT JOIN test_referral_fees rf
+                                     ON rf.test_id = oi.test_id AND rf.is_active = 1 AND rf.is_deleted = 0
+                                   WHERE oi.order_id = @id
+                                 ), 0)
+        WHERE id = @id
+      `);
   }
 
   static async _resolveOrderItemPrices(items, discountPercent, transaction) {
@@ -455,7 +498,6 @@ class Order {
         .input('report_delivery_method', sql.VarChar, data.report_delivery_method)
         .input('original_price_mmk', sql.Decimal(18, 2), data.original_price_mmk || 0)
         .input('discount_percent', sql.Decimal(5, 2), discountPercent)
-        .input('final_price_mmk', sql.Decimal(18, 2), data.final_price_mmk || 0)
         .input('material_fee_mmk', sql.Decimal(18, 2), data.material_fee_mmk || 0)
         .input('service_geofence_id', sql.UniqueIdentifier, data.service_geofence_id || null)
         .input('service_fee_mmk', sql.Decimal(18, 2), data.service_fee_mmk || 0)
@@ -475,7 +517,6 @@ class Order {
               report_delivery_method = @report_delivery_method,
               original_price_mmk = @original_price_mmk,
               discount_percent = @discount_percent,
-              final_price_mmk = @final_price_mmk,
               material_fee_mmk = @material_fee_mmk,
               service_geofence_id = @service_geofence_id,
               service_fee_mmk = @service_fee_mmk,
@@ -509,6 +550,7 @@ class Order {
         }
       }
 
+      await this._recalculateFinalPrice(orderId, transaction);
       await transaction.commit();
       return this.getById(orderId);
     } catch (err) {
@@ -554,12 +596,13 @@ class Order {
         .input('order_id', sql.UniqueIdentifier, orderId)
         .query('DELETE FROM lab_order_items WHERE order_id = @order_id');
 
+      // service_fee_mmk is intentionally untouched here — this method has no location
+      // context to re-resolve it, so the existing value stands.
       const updateOrderReq = new sql.Request(transaction);
       await updateOrderReq
         .input('id', sql.UniqueIdentifier, orderId)
         .input('original_price_mmk', sql.Decimal(18, 2), totals.original_price_mmk)
         .input('discount_percent', sql.Decimal(5, 2), totals.discount_percent || 0)
-        .input('final_price_mmk', sql.Decimal(18, 2), totals.final_price_mmk)
         .input('material_fee_mmk', sql.Decimal(18, 2), totals.material_fee_mmk || 0)
         .input('is_tests_assigned', sql.Bit, items && items.length > 0 ? 1 : 0)
         .input('updated_user', sql.UniqueIdentifier, updatedBy)
@@ -567,7 +610,6 @@ class Order {
           UPDATE lab_orders
           SET original_price_mmk = @original_price_mmk,
               discount_percent = @discount_percent,
-              final_price_mmk = @final_price_mmk,
               material_fee_mmk = @material_fee_mmk,
               is_tests_assigned = @is_tests_assigned,
               updated_user = @updated_user,
@@ -594,6 +636,7 @@ class Order {
         }
       }
 
+      await this._recalculateFinalPrice(orderId, transaction);
       await transaction.commit();
 
       const getOrderReq = new sql.Request(pool);

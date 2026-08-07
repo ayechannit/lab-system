@@ -80,6 +80,8 @@ abstract class LabUserApi {
     required double longitude,
   });
   Future<MaterialFeeQuote?> fetchActiveMaterialFee();
+  /// Active referral rates by test id (0..100), for live pricing display at test selection.
+  Future<Map<String, double>> fetchActiveReferralRates();
   Future<LabOrderSummary> createOrder({
     required String userId,
     required LabOrderRequest request,

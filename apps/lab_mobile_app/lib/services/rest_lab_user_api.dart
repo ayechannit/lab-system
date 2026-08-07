@@ -495,6 +495,26 @@ class RestLabUserApi implements LabUserApi {
     );
   }
 
+  @override
+  Future<Map<String, double>> fetchActiveReferralRates() async {
+    final r = await http.get(
+      Uri.parse('$_base/api/referral-fees/active'),
+      headers: _jsonHeaders(),
+    );
+    if (r.statusCode >= 400) _throwFromResponse(r);
+    final decoded = jsonDecode(r.body);
+    if (decoded is! List) return const {};
+    final out = <String, double>{};
+    for (final entry in decoded) {
+      if (entry is! Map) continue;
+      final data = Map<String, dynamic>.from(entry);
+      final testId = '${_gv(data, 'test_id') ?? ''}'.trim();
+      if (testId.isEmpty) continue;
+      out[testId] = _asDouble(_gv(data, 'referral_percent'));
+    }
+    return out;
+  }
+
   /// Body for `POST /api/orders` — matches `orderController.createOrder` / admin web `createOrder`.
   Map<String, dynamic> _orderCreateBody({
     required String userId,

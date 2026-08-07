@@ -675,6 +675,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get orderCreateServiceFeeOutOfCoverage => 'This address is outside our service coverage areas.';
 
   @override
+  String get orderCreateReferralFee => 'Referral fee';
+
+  @override
   String get orderCreateEstimatedAmountDue => 'Estimated amount due';
 
   @override

@@ -83,6 +83,10 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
   bool _materialFeeLoading = false;
   bool _materialFeeInit = false;
 
+  Map<String, double> _referralRates = const {};
+  bool _referralRatesLoading = false;
+  bool _referralRatesInit = false;
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -117,6 +121,10 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
       _materialFeeInit = true;
       unawaited(_loadMaterialFee());
     }
+    if (!_referralRatesInit) {
+      _referralRatesInit = true;
+      unawaited(_loadReferralRates());
+    }
   }
 
   Future<void> _loadMaterialFee() async {
@@ -135,6 +143,36 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
         _materialFeeLoading = false;
       });
     }
+  }
+
+  Future<void> _loadReferralRates() async {
+    setState(() => _referralRatesLoading = true);
+    try {
+      final rates = await SessionScope.of(context).fetchActiveReferralRates();
+      if (!mounted) return;
+      setState(() {
+        _referralRates = rates;
+        _referralRatesLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _referralRates = const {};
+        _referralRatesLoading = false;
+      });
+    }
+  }
+
+  /// Sum of each selected line's subtotal * its test's referral rate (0 if none apply).
+  double _referralFeeTotal(List<CatalogOrderLine> lines) {
+    var total = 0.0;
+    for (final line in lines) {
+      final pct = _referralRates[line.testId];
+      if (pct != null && pct > 0) {
+        total += line.subtotalMmk * (pct / 100);
+      }
+    }
+    return total;
   }
 
   @override
@@ -433,6 +471,13 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
             captionLoading: _serviceFeeLoading,
             captionError: _serviceFeeOutOfCoverage || _serviceFeeError != null,
           ),
+          if (_referralRatesLoading || _referralFeeTotal(lines) > 0)
+            _buildPricingLine(
+              context,
+              label: l10n.orderCreateReferralFee,
+              amount: _referralRatesLoading ? '…' : '−${_formatMmk(_referralFeeTotal(lines))}',
+              captionLoading: _referralRatesLoading,
+            ),
           if (showTotal) ...[
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 4),
@@ -471,7 +516,8 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
     final tests = _sumFinal(lines);
     final service = _serviceFeeQuote?.serviceFeeMmk ?? 0;
     final material = _materialFeeQuote?.amountMmk ?? 0;
-    return tests + service + material;
+    final referral = _referralFeeTotal(lines);
+    return tests + service + material - referral;
   }
 
   bool get _orderSubmitBlocked {
@@ -730,6 +776,10 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
                                 final checked = _selectedTestIds.contains(t.id);
                                 final body = Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w400);
                                 final small = Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w400);
+                                final referralPct = _referralRates[t.id];
+                                final subtitle = (referralPct != null && referralPct > 0)
+                                    ? '${t.code} · ${t.basePriceMmk} MMK · ${l10n.orderCreateReferralFee} ${referralPct.toStringAsFixed(0)}%'
+                                    : '${t.code} · ${t.basePriceMmk} MMK';
                                 return Card(
                                   margin: const EdgeInsets.only(bottom: 6),
                                   child: CheckboxListTile(
@@ -747,10 +797,7 @@ class _OrderLabTestScreenState extends State<OrderLabTestScreen> {
                                       _revalidateProcessOrder();
                                     },
                                     title: Text(t.name, maxLines: 2, overflow: TextOverflow.ellipsis, style: body),
-                                    subtitle: Text(
-                                      '${t.code} · ${t.basePriceMmk} MMK',
-                                      style: small,
-                                    ),
+                                    subtitle: Text(subtitle, style: small),
                                     controlAffinity: ListTileControlAffinity.leading,
                                   ),
                                 );

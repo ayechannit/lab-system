@@ -675,6 +675,9 @@ class AppLocalizationsMy extends AppLocalizations {
   String get orderCreateServiceFeeOutOfCoverage => 'ဤလိပ်စာသည် ဝန်ဆောင်မှု ဧရိယာပြင်ပတွင် ရှိနေပါသည်။';
 
   @override
+  String get orderCreateReferralFee => 'ရည်ညွှန်းကြေး';
+
+  @override
   String get orderCreateEstimatedAmountDue => 'ခန့်မှန်းပေးချေရမည့် ပမာဏ';
 
   @override
