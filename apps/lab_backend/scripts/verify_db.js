@@ -1,4 +1,4 @@
-const { sql, poolPromise } = require('../src/config/db');
+const { poolPromise } = require('../src/config/db');
 
 async function run() {
   const pool = await poolPromise;
@@ -6,32 +6,32 @@ async function run() {
 
   // 1. Verify material_fees rows
   try {
-    const materialFeesResult = await pool.request().query('SELECT * FROM material_fees');
+    const materialFeesResult = await pool.query('SELECT * FROM material_fees');
     console.log('\n[material_fees] Table Content:');
-    console.table(materialFeesResult.recordset);
+    console.table(materialFeesResult.rows);
   } catch (err) {
     console.error('Error fetching material_fees:', err.message);
   }
 
   // 2. Verify service_geofences rows
   try {
-    const geofencesResult = await pool.request().query('SELECT id, name, west_longitude, east_longitude, north_latitude, south_latitude, service_fee_mmk, priority FROM service_geofences');
+    const geofencesResult = await pool.query('SELECT id, name, west_longitude, east_longitude, north_latitude, south_latitude, service_fee_mmk, priority FROM service_geofences');
     console.log('\n[service_geofences] Table Content:');
-    console.table(geofencesResult.recordset);
+    console.table(geofencesResult.rows);
   } catch (err) {
     console.error('Error fetching service_geofences:', err.message);
   }
 
   // 3. Verify columns of lab_orders
   try {
-    const columnsResult = await pool.request().query(`
-      SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE
-      FROM INFORMATION_SCHEMA.COLUMNS
-      WHERE TABLE_NAME = 'lab_orders'
-        AND COLUMN_NAME IN ('material_fee_mmk', 'service_geofence_id', 'service_fee_mmk')
+    const columnsResult = await pool.query(`
+      SELECT column_name, data_type, is_nullable
+      FROM information_schema.columns
+      WHERE table_name = 'lab_orders'
+        AND column_name IN ('material_fee_mmk', 'service_geofence_id', 'service_fee_mmk')
     `);
     console.log('\n[lab_orders] New Tracking Columns:');
-    console.table(columnsResult.recordset);
+    console.table(columnsResult.rows);
   } catch (err) {
     console.error('Error fetching lab_orders columns:', err.message);
   }

@@ -1,72 +1,56 @@
-const { sql, poolPromise } = require('../config/db');
+const { poolPromise } = require('../config/db');
 
 class AiConfig {
   static async getAll() {
     const pool = await poolPromise;
-    const request = pool.request();
-    const query = 'SELECT * FROM ai_configs WHERE is_deleted = 0 ORDER BY created_at DESC';
-    const result = await request.query(query);
-    return result.recordset;
+    const result = await pool.query(
+      'SELECT * FROM ai_configs WHERE is_deleted = false ORDER BY created_at DESC'
+    );
+    return result.rows;
   }
 
   static async getById(id) {
     const pool = await poolPromise;
-    const request = pool.request();
-    request.input('id', sql.UniqueIdentifier, id);
-    const result = await request.query('SELECT * FROM ai_configs WHERE id = @id AND is_deleted = 0');
-    return result.recordset[0];
+    const result = await pool.query(
+      'SELECT * FROM ai_configs WHERE id = $1 AND is_deleted = false',
+      [id]
+    );
+    return result.rows[0];
   }
 
   static async create(data, createdBy = null) {
     const pool = await poolPromise;
-    const request = pool.request();
-    request.input('model_name', sql.NVarChar(255), data.model_name);
-    request.input('api_key', sql.NVarChar(sql.MAX), data.api_key);
-    request.input('type', sql.NVarChar(50), data.type);
-    request.input('created_user', sql.UniqueIdentifier, createdBy);
-
-    const query = `
-      INSERT INTO ai_configs (model_name, api_key, type, created_user, updated_user)
-      OUTPUT INSERTED.*
-      VALUES (@model_name, @api_key, @type, @created_user, @created_user)
-    `;
-    const result = await request.query(query);
-    return result.recordset[0];
+    const result = await pool.query(
+      `INSERT INTO ai_configs (model_name, api_key, type, created_user, updated_user)
+       VALUES ($1, $2, $3, $4, $4)
+       RETURNING *`,
+      [data.model_name, data.api_key, data.type, createdBy]
+    );
+    return result.rows[0];
   }
 
   static async update(id, data, updatedBy = null) {
     const pool = await poolPromise;
-    const request = pool.request();
-    request.input('id', sql.UniqueIdentifier, id);
-    request.input('model_name', sql.NVarChar(255), data.model_name);
-    request.input('api_key', sql.NVarChar(sql.MAX), data.api_key);
-    request.input('type', sql.NVarChar(50), data.type);
-    request.input('updated_user', sql.UniqueIdentifier, updatedBy);
-
-    const query = `
-      UPDATE ai_configs
-      SET model_name = @model_name, api_key = @api_key, type = @type,
-          updated_user = @updated_user, updated_at = GETDATE()
-      OUTPUT INSERTED.*
-      WHERE id = @id AND is_deleted = 0
-    `;
-    const result = await request.query(query);
-    return result.recordset[0];
+    const result = await pool.query(
+      `UPDATE ai_configs
+       SET model_name = $2, api_key = $3, type = $4,
+           updated_user = $5, updated_at = now()
+       WHERE id = $1 AND is_deleted = false
+       RETURNING *`,
+      [id, data.model_name, data.api_key, data.type, updatedBy]
+    );
+    return result.rows[0];
   }
 
   static async delete(id, updatedBy = null) {
     const pool = await poolPromise;
-    const request = pool.request();
-    request.input('id', sql.UniqueIdentifier, id);
-    request.input('updated_user', sql.UniqueIdentifier, updatedBy);
-    
-    const query = `
-      UPDATE ai_configs 
-      SET is_deleted = 1, updated_user = @updated_user, updated_at = GETDATE() 
-      WHERE id = @id
-    `;
-    const result = await request.query(query);
-    return result.rowsAffected[0] > 0;
+    const result = await pool.query(
+      `UPDATE ai_configs
+       SET is_deleted = true, updated_user = $2, updated_at = now()
+       WHERE id = $1`,
+      [id, updatedBy]
+    );
+    return result.rowCount > 0;
   }
 }
 

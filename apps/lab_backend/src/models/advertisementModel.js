@@ -1,52 +1,54 @@
-const { sql, poolPromise } = require('../config/db');
+const { poolPromise } = require('../config/db');
 
 class Advertisement {
   static async create(data, createdBy = null) {
     const pool = await poolPromise;
-    const result = await pool.request()
-      .input('title', sql.NVarChar(255), data.title)
-      .input('description', sql.NVarChar, data.description || null)
-      .input('image_url', sql.NVarChar(2048), data.image_url || null)
-      .input('start_date', sql.DateTime2, data.start_date || null)
-      .input('end_date', sql.DateTime2, data.end_date || null)
-      .input('is_active', sql.Bit, data.is_active !== undefined ? data.is_active : 1)
-      .input('created_user', sql.UniqueIdentifier, createdBy)
-      .query(`
-        INSERT INTO advertisements (id, title, description, image_url, start_date, end_date, is_active, created_user, updated_user, is_deleted)
-        OUTPUT INSERTED.*
-        VALUES (NEWID(), @title, @description, @image_url, @start_date, @end_date, @is_active, @created_user, @created_user, 0)
-      `);
-    return result.recordset[0];
+    const result = await pool.query(
+      `INSERT INTO advertisements (id, title, description, image_url, start_date, end_date, is_active, created_user, updated_user, is_deleted)
+       VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $7, false)
+       RETURNING *`,
+      [
+        data.title,
+        data.description || null,
+        data.image_url || null,
+        data.start_date || null,
+        data.end_date || null,
+        data.is_active !== undefined ? data.is_active : true,
+        createdBy,
+      ]
+    );
+    return result.rows[0];
   }
 
   static async getById(id) {
     const pool = await poolPromise;
-    const result = await pool.request()
-      .input('id', sql.UniqueIdentifier, id)
-      .query('SELECT * FROM advertisements WHERE id = @id AND is_deleted = 0');
-    return result.recordset[0] ?? null;
+    const result = await pool.query(
+      'SELECT * FROM advertisements WHERE id = $1 AND is_deleted = false',
+      [id]
+    );
+    return result.rows[0] ?? null;
   }
 
   static async getAll(filters = {}) {
     const pool = await poolPromise;
-    const request = pool.request();
-    let query = 'SELECT * FROM advertisements WHERE is_deleted = 0';
+    const params = [];
+    let query = 'SELECT * FROM advertisements WHERE is_deleted = false';
 
     if (filters.is_active !== undefined) {
-      const activeVal = filters.is_active === 'true' || filters.is_active === true || filters.is_active === '1' ? 1 : 0;
-      request.input('is_active', sql.Bit, activeVal);
-      query += ' AND is_active = @is_active';
+      const activeVal = filters.is_active === 'true' || filters.is_active === true || filters.is_active === '1';
+      params.push(activeVal);
+      query += ` AND is_active = $${params.length}`;
     }
 
     if (filters.title) {
-      request.input('title', sql.NVarChar(255), `%${filters.title}%`);
-      query += ' AND title LIKE @title';
+      params.push(`%${filters.title}%`);
+      query += ` AND title ILIKE $${params.length}`;
     }
 
     if (filters.current_date) {
       // Fetch only advertisements valid on this date
-      request.input('current_date', sql.DateTime2, filters.current_date);
-      query += ' AND (start_date IS NULL OR start_date <= @current_date) AND (end_date IS NULL OR end_date >= @current_date)';
+      params.push(filters.current_date);
+      query += ` AND (start_date IS NULL OR start_date <= $${params.length}) AND (end_date IS NULL OR end_date >= $${params.length})`;
     }
 
     // Sorting
@@ -68,49 +70,51 @@ class Advertisement {
       const page = parseInt(filters.page) || 1;
       const limit = parseInt(filters.limit) || 10;
       const offset = (page - 1) * limit;
-      request.input('offset', sql.Int, offset);
-      request.input('limit', sql.Int, limit);
-      query += ' OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY';
+      params.push(limit);
+      query += ` LIMIT $${params.length}`;
+      params.push(offset);
+      query += ` OFFSET $${params.length}`;
     }
 
-    const result = await request.query(query);
-    return result.recordset;
+    const result = await pool.query(query, params);
+    return result.rows;
   }
 
   static async update(id, data, updatedBy = null) {
     const pool = await poolPromise;
-    const result = await pool.request()
-      .input('id', sql.UniqueIdentifier, id)
-      .input('title', sql.NVarChar(255), data.title)
-      .input('description', sql.NVarChar, data.description || null)
-      .input('image_url', sql.NVarChar(2048), data.image_url || null)
-      .input('start_date', sql.DateTime2, data.start_date || null)
-      .input('end_date', sql.DateTime2, data.end_date || null)
-      .input('is_active', sql.Bit, data.is_active !== undefined ? data.is_active : 1)
-      .input('updated_user', sql.UniqueIdentifier, updatedBy)
-      .query(`
-        UPDATE advertisements
-        SET title = @title,
-            description = @description,
-            image_url = @image_url,
-            start_date = @start_date,
-            end_date = @end_date,
-            is_active = @is_active,
-            updated_user = @updated_user,
-            updated_at = GETDATE()
-        OUTPUT INSERTED.*
-        WHERE id = @id AND is_deleted = 0
-      `);
-    return result.recordset[0] ?? null;
+    const result = await pool.query(
+      `UPDATE advertisements
+       SET title = $2,
+           description = $3,
+           image_url = $4,
+           start_date = $5,
+           end_date = $6,
+           is_active = $7,
+           updated_user = $8,
+           updated_at = now()
+       WHERE id = $1 AND is_deleted = false
+       RETURNING *`,
+      [
+        id,
+        data.title,
+        data.description || null,
+        data.image_url || null,
+        data.start_date || null,
+        data.end_date || null,
+        data.is_active !== undefined ? data.is_active : true,
+        updatedBy,
+      ]
+    );
+    return result.rows[0] ?? null;
   }
 
   static async delete(id, updatedBy = null) {
     const pool = await poolPromise;
-    const result = await pool.request()
-      .input('id', sql.UniqueIdentifier, id)
-      .input('updated_user', sql.UniqueIdentifier, updatedBy)
-      .query('UPDATE advertisements SET is_deleted = 1, updated_user = @updated_user, updated_at = GETDATE() WHERE id = @id AND is_deleted = 0');
-    return result.rowsAffected[0] > 0;
+    const result = await pool.query(
+      'UPDATE advertisements SET is_deleted = true, updated_user = $2, updated_at = now() WHERE id = $1 AND is_deleted = false',
+      [id, updatedBy]
+    );
+    return result.rowCount > 0;
   }
 }
 

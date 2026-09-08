@@ -1,4 +1,4 @@
-const { sql, poolPromise } = require('../config/db');
+const { poolPromise } = require('../config/db');
 
 class PointTransaction {
   /**
@@ -8,19 +8,20 @@ class PointTransaction {
    */
   static async create(data) {
     const pool = await poolPromise;
-    const result = await pool.request()
-      .input('user_id', sql.UniqueIdentifier, data.user_id)
-      .input('points', sql.Int, data.points)
-      .input('transaction_type', sql.NVarChar(50), data.transaction_type)
-      .input('description', sql.NVarChar(255), data.description || null)
-      .input('reference_id', sql.UniqueIdentifier, data.reference_id || null)
-      .input('created_user', sql.UniqueIdentifier, data.created_user || null)
-      .query(`
-        INSERT INTO point_transactions (id, user_id, points, transaction_type, description, reference_id, created_user, created_at)
-        OUTPUT INSERTED.*
-        VALUES (NEWID(), @user_id, @points, @transaction_type, @description, @reference_id, @created_user, GETDATE())
-      `);
-    return result.recordset[0];
+    const result = await pool.query(
+      `INSERT INTO point_transactions (id, user_id, points, transaction_type, description, reference_id, created_user, created_at)
+       VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, now())
+       RETURNING *`,
+      [
+        data.user_id,
+        data.points,
+        data.transaction_type,
+        data.description || null,
+        data.reference_id || null,
+        data.created_user || null,
+      ]
+    );
+    return result.rows[0];
   }
 
   /**
@@ -31,20 +32,20 @@ class PointTransaction {
    */
   static async getByUserId(userId, filters = {}) {
     const pool = await poolPromise;
-    const request = pool.request().input('user_id', sql.UniqueIdentifier, userId);
+    const params = [userId];
     let query = `
       SELECT pt.*, u.name as user_name, u.phone as user_phone
       FROM point_transactions pt
       LEFT JOIN users u ON pt.user_id = u.id
-      WHERE pt.user_id = @user_id
+      WHERE pt.user_id = $1
     `;
     if (filters.transaction_type) {
-      request.input('transaction_type', sql.NVarChar(50), filters.transaction_type);
-      query += ' AND pt.transaction_type = @transaction_type';
+      params.push(filters.transaction_type);
+      query += ` AND pt.transaction_type = $${params.length}`;
     }
     query += ' ORDER BY pt.created_at DESC';
-    const result = await request.query(query);
-    return result.recordset;
+    const result = await pool.query(query, params);
+    return result.rows;
   }
 
   /**
@@ -54,19 +55,19 @@ class PointTransaction {
    */
   static async getAll(filters = {}) {
     const pool = await poolPromise;
-    const request = pool.request();
+    const params = [];
     let query = `
       SELECT pt.*, u.name as user_name, u.phone as user_phone
       FROM point_transactions pt
       LEFT JOIN users u ON pt.user_id = u.id
     `;
     if (filters.transaction_type) {
-      request.input('transaction_type', sql.NVarChar(50), filters.transaction_type);
-      query += ' WHERE pt.transaction_type = @transaction_type';
+      params.push(filters.transaction_type);
+      query += ` WHERE pt.transaction_type = $${params.length}`;
     }
     query += ' ORDER BY pt.created_at DESC';
-    const result = await request.query(query);
-    return result.recordset;
+    const result = await pool.query(query, params);
+    return result.rows;
   }
 }
 

@@ -1,4 +1,4 @@
-const { sql, poolPromise } = require('../config/db');
+const { poolPromise } = require('../config/db');
 
 class Conversation {
   /**
@@ -9,20 +9,19 @@ class Conversation {
    */
   static async getHistoryByUserId(userId, limit = 20) {
     const pool = await poolPromise;
-    const request = pool.request();
-    request.input('user_id', sql.UniqueIdentifier, userId);
-    request.input('limit', sql.Int, limit);
 
     // Retrieve the most recent pairs first, ordered by created_at DESC to get the latest ones
-    const result = await request.query(`
-      SELECT TOP (@limit) id, user_id, user_message, ai_response, created_at
-      FROM conversation_history
-      WHERE user_id = @user_id AND is_deleted = 0
-      ORDER BY created_at DESC
-    `);
+    const result = await pool.query(
+      `SELECT id, user_id, user_message, ai_response, created_at
+       FROM conversation_history
+       WHERE user_id = $1 AND is_deleted = false
+       ORDER BY created_at DESC
+       LIMIT $2`,
+      [userId, limit]
+    );
 
     // Reverse the array to put it in chronological order (oldest to newest)
-    return result.recordset.reverse();
+    return result.rows.reverse();
   }
 
   /**
@@ -34,19 +33,13 @@ class Conversation {
    */
   static async create(userId, userMessage, aiResponse) {
     const pool = await poolPromise;
-    const request = pool.request();
-    request.input('user_id', sql.UniqueIdentifier, userId);
-    request.input('user_message', sql.NVarChar(sql.MAX), userMessage);
-    request.input('ai_response', sql.NVarChar(sql.MAX), aiResponse);
-
-    const query = `
-      INSERT INTO conversation_history (id, user_id, user_message, ai_response, is_deleted)
-      OUTPUT INSERTED.*
-      VALUES (NEWID(), @user_id, @user_message, @ai_response, 0)
-    `;
-
-    const result = await request.query(query);
-    return result.recordset[0];
+    const result = await pool.query(
+      `INSERT INTO conversation_history (id, user_id, user_message, ai_response, is_deleted)
+       VALUES (gen_random_uuid(), $1, $2, $3, false)
+       RETURNING *`,
+      [userId, userMessage, aiResponse]
+    );
+    return result.rows[0];
   }
 
   /**
@@ -56,16 +49,13 @@ class Conversation {
    */
   static async clearHistoryByUserId(userId) {
     const pool = await poolPromise;
-    const request = pool.request();
-    request.input('user_id', sql.UniqueIdentifier, userId);
-
-    const result = await request.query(`
-      UPDATE conversation_history
-      SET is_deleted = 1
-      WHERE user_id = @user_id AND is_deleted = 0
-    `);
-
-    return result.rowsAffected[0] > 0;
+    const result = await pool.query(
+      `UPDATE conversation_history
+       SET is_deleted = true
+       WHERE user_id = $1 AND is_deleted = false`,
+      [userId]
+    );
+    return result.rowCount > 0;
   }
 }
 

@@ -1,70 +1,56 @@
-const { sql, poolPromise } = require('../config/db');
+const { poolPromise } = require('../config/db');
 
 class Prompt {
   static async getAll() {
     const pool = await poolPromise;
-    const request = pool.request();
-    const query = 'SELECT * FROM ai_prompts WHERE is_deleted = 0 ORDER BY created_at DESC';
-    const result = await request.query(query);
-    return result.recordset;
+    const result = await pool.query(
+      'SELECT * FROM ai_prompts WHERE is_deleted = false ORDER BY created_at DESC'
+    );
+    return result.rows;
   }
 
   static async getById(id) {
     const pool = await poolPromise;
-    const request = pool.request();
-    request.input('id', sql.UniqueIdentifier, id);
-    const result = await request.query('SELECT * FROM ai_prompts WHERE id = @id AND is_deleted = 0');
-    return result.recordset[0];
+    const result = await pool.query(
+      'SELECT * FROM ai_prompts WHERE id = $1 AND is_deleted = false',
+      [id]
+    );
+    return result.rows[0];
   }
 
   static async create(data, createdBy = null) {
     const pool = await poolPromise;
-    const request = pool.request();
-    request.input('name', sql.NVarChar(255), data.name);
-    request.input('prompt_text', sql.NVarChar(sql.MAX), data.prompt_text);
-    request.input('created_user', sql.UniqueIdentifier, createdBy);
-
-    const query = `
-      INSERT INTO ai_prompts (name, prompt_text, created_user, updated_user)
-      OUTPUT INSERTED.*
-      VALUES (@name, @prompt_text, @created_user, @created_user)
-    `;
-    const result = await request.query(query);
-    return result.recordset[0];
+    const result = await pool.query(
+      `INSERT INTO ai_prompts (name, prompt_text, created_user, updated_user)
+       VALUES ($1, $2, $3, $3)
+       RETURNING *`,
+      [data.name, data.prompt_text, createdBy]
+    );
+    return result.rows[0];
   }
 
   static async update(id, data, updatedBy = null) {
     const pool = await poolPromise;
-    const request = pool.request();
-    request.input('id', sql.UniqueIdentifier, id);
-    request.input('name', sql.NVarChar(255), data.name);
-    request.input('prompt_text', sql.NVarChar(sql.MAX), data.prompt_text);
-    request.input('updated_user', sql.UniqueIdentifier, updatedBy);
-
-    const query = `
-      UPDATE ai_prompts
-      SET name = @name, prompt_text = @prompt_text,
-          updated_user = @updated_user, updated_at = GETDATE()
-      OUTPUT INSERTED.*
-      WHERE id = @id AND is_deleted = 0
-    `;
-    const result = await request.query(query);
-    return result.recordset[0];
+    const result = await pool.query(
+      `UPDATE ai_prompts
+       SET name = $2, prompt_text = $3,
+           updated_user = $4, updated_at = now()
+       WHERE id = $1 AND is_deleted = false
+       RETURNING *`,
+      [id, data.name, data.prompt_text, updatedBy]
+    );
+    return result.rows[0];
   }
 
   static async delete(id, updatedBy = null) {
     const pool = await poolPromise;
-    const request = pool.request();
-    request.input('id', sql.UniqueIdentifier, id);
-    request.input('updated_user', sql.UniqueIdentifier, updatedBy);
-    
-    const query = `
-      UPDATE ai_prompts 
-      SET is_deleted = 1, updated_user = @updated_user, updated_at = GETDATE() 
-      WHERE id = @id
-    `;
-    const result = await request.query(query);
-    return result.rowsAffected[0] > 0;
+    const result = await pool.query(
+      `UPDATE ai_prompts
+       SET is_deleted = true, updated_user = $2, updated_at = now()
+       WHERE id = $1`,
+      [id, updatedBy]
+    );
+    return result.rowCount > 0;
   }
 }
 

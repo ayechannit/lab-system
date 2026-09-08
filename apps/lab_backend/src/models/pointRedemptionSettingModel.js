@@ -1,35 +1,32 @@
-const { sql, poolPromise } = require('../config/db');
+const { poolPromise } = require('../config/db');
 
 class PointRedemptionSetting {
   static async get() {
     const pool = await poolPromise;
-    const result = await pool.request().query('SELECT TOP 1 * FROM point_redemption_settings');
-    if (result.recordset[0]) {
-      return result.recordset[0];
+    const result = await pool.query('SELECT * FROM point_redemption_settings LIMIT 1');
+    if (result.rows[0]) {
+      return result.rows[0];
     }
 
-    const inserted = await pool.request().query(`
+    const inserted = await pool.query(`
       INSERT INTO point_redemption_settings (mmk_per_point)
-      OUTPUT INSERTED.*
       VALUES (0)
+      RETURNING *
     `);
-    return inserted.recordset[0];
+    return inserted.rows[0];
   }
 
   static async update(mmkPerPoint, updatedBy = null) {
     const existing = await this.get();
     const pool = await poolPromise;
-    const result = await pool.request()
-      .input('id', sql.UniqueIdentifier, existing.id)
-      .input('mmk_per_point', sql.Decimal(18, 2), mmkPerPoint)
-      .input('updated_user', sql.UniqueIdentifier, updatedBy)
-      .query(`
-        UPDATE point_redemption_settings
-        SET mmk_per_point = @mmk_per_point, updated_user = @updated_user, updated_at = GETDATE()
-        OUTPUT INSERTED.*
-        WHERE id = @id
-      `);
-    return result.recordset[0];
+    const result = await pool.query(
+      `UPDATE point_redemption_settings
+       SET mmk_per_point = $2, updated_user = $3, updated_at = now()
+       WHERE id = $1
+       RETURNING *`,
+      [existing.id, mmkPerPoint, updatedBy]
+    );
+    return result.rows[0];
   }
 }
 

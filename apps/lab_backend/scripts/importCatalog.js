@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const { sql, poolPromise } = require('../src/config/db');
+const { poolPromise } = require('../src/config/db');
 
 async function run() {
   const jsonPath = path.join(__dirname, '../../../parsed_tests.json');
@@ -11,17 +11,17 @@ async function run() {
   const testsData = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
   console.log(`Loaded ${testsData.length} tests from JSON.`);
 
-  console.log('Connecting to MSSQL Database...');
+  console.log('Connecting to PostgreSQL Database...');
   const pool = await poolPromise;
 
   // 1. Double check / empty catalog first to ensure clean import
   console.log('Clearing existing entries in lab_test_catalog...');
   try {
     // Temporarily disable foreign keys referring to lab_test_catalog if any
-    await pool.request().query('ALTER TABLE lab_order_items NOCHECK CONSTRAINT ALL');
-    await pool.request().query('ALTER TABLE test_referral_fees NOCHECK CONSTRAINT ALL');
-    
-    await pool.request().query('DELETE FROM lab_test_catalog');
+    await pool.query('ALTER TABLE lab_order_items DISABLE TRIGGER ALL');
+    await pool.query('ALTER TABLE test_referral_fees DISABLE TRIGGER ALL');
+
+    await pool.query('DELETE FROM lab_test_catalog');
     console.log('Existing catalog data cleared successfully!');
   } catch (err) {
     console.error('Error clearing existing catalog:', err.message);
@@ -32,20 +32,21 @@ async function run() {
   let count = 0;
   for (const test of testsData) {
     try {
-      await pool.request()
-        .input('test_name', sql.NVarChar, test.test_name)
-        .input('test_code', sql.VarChar, test.test_code)
-        .input('description', sql.NVarChar, test.description)
-        .input('base_price_mmk', sql.Decimal(18, 2), test.base_price_mmk)
-        .input('category', sql.NVarChar, test.category)
-        .input('is_package', sql.Bit, test.is_package ? 1 : 0)
-        .query(`
-          INSERT INTO lab_test_catalog (
-            id, test_name, test_code, description, base_price_mmk, category, is_package, package_items, is_active, is_deleted, created_at, updated_at
-          ) VALUES (
-            NEWID(), @test_name, @test_code, @description, @base_price_mmk, @category, @is_package, NULL, 1, 0, GETDATE(), GETDATE()
-          )
-        `);
+      await pool.query(
+        `INSERT INTO lab_test_catalog (
+          id, test_name, test_code, description, base_price_mmk, category, is_package, package_items, is_active, is_deleted, created_at, updated_at
+        ) VALUES (
+          gen_random_uuid(), $1, $2, $3, $4, $5, $6, NULL, true, false, now(), now()
+        )`,
+        [
+          test.test_name,
+          test.test_code,
+          test.description,
+          test.base_price_mmk,
+          test.category,
+          !!test.is_package,
+        ]
+      );
       count++;
       if (count % 50 === 0) {
         console.log(`Inserted ${count}/${testsData.length} tests...`);
@@ -58,8 +59,8 @@ async function run() {
   // 3. Re-enable foreign key constraints
   console.log('\nRe-enabling foreign key constraints...');
   try {
-    await pool.request().query('ALTER TABLE lab_order_items CHECK CONSTRAINT ALL');
-    await pool.request().query('ALTER TABLE test_referral_fees CHECK CONSTRAINT ALL');
+    await pool.query('ALTER TABLE lab_order_items ENABLE TRIGGER ALL');
+    await pool.query('ALTER TABLE test_referral_fees ENABLE TRIGGER ALL');
   } catch (err) {
     console.warn('Warning: Could not re-enable some constraints:', err.message);
   }

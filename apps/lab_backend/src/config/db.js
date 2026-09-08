@@ -1,48 +1,25 @@
-const sql = require('mssql');
+const { Pool } = require('pg');
 require('dotenv').config();
 
-function isIpAddress(host) {
-  if (!host) return false;
-  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(host)) return true;
-  return host.includes(':');
-}
+const useSsl = process.env.DB_SSL === 'true';
+const ssl = useSsl
+  ? { rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false' }
+  : false;
 
-const server = process.env.DB_SERVER;
-const encrypt = process.env.DB_ENCRYPT !== 'false';
-const trustServerCertificate =
-  process.env.DB_TRUST_SERVER_CERTIFICATE === 'true';
-
-const options = {
-  encrypt,
-  trustServerCertificate,
-};
-
-// Node.js 20+ rejects an IP as TLS servername; tedious defaults to DB_SERVER.
-const tlsServerName = process.env.DB_TLS_SERVER_NAME;
-if (tlsServerName) {
-  options.serverName = tlsServerName;
-} else if (encrypt && isIpAddress(server)) {
-  options.serverName = 'sqlserver';
-  if (!trustServerCertificate) {
-    console.warn(
-      'DB_SERVER is an IP address: set DB_TLS_SERVER_NAME to the certificate hostname ' +
-        'and/or DB_TRUST_SERVER_CERTIFICATE=true for encrypted connections.',
-    );
-  }
-}
-
-const dbConfig = {
+const pool = new Pool({
+  host: process.env.DB_HOST,
+  port: process.env.DB_PORT ? Number(process.env.DB_PORT) : 5432,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
-  server,
   database: process.env.DB_DATABASE,
-  options,
-};
+  ssl,
+});
 
-const poolPromise = new sql.ConnectionPool(dbConfig)
+const poolPromise = pool
   .connect()
-  .then((pool) => {
-    console.log('Connected to MSSQL');
+  .then((client) => {
+    client.release();
+    console.log('Connected to PostgreSQL');
     return pool;
   })
   .catch((err) => {
@@ -51,6 +28,6 @@ const poolPromise = new sql.ConnectionPool(dbConfig)
   });
 
 module.exports = {
-  sql,
+  pool,
   poolPromise,
 };

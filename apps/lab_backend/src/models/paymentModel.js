@@ -1,12 +1,13 @@
-const { sql, poolPromise } = require('../config/db');
+const { poolPromise } = require('../config/db');
 
 class Payment {
   static async getByOrderId(orderId) {
     const pool = await poolPromise;
-    const result = await pool.request()
-      .input('order_id', sql.UniqueIdentifier, orderId)
-      .query('SELECT *, created_user, updated_user FROM payments WHERE order_id = @order_id ORDER BY created_at ASC');
-    return result.recordset;
+    const result = await pool.query(
+      'SELECT *, created_user, updated_user FROM payments WHERE order_id = $1 ORDER BY created_at ASC',
+      [orderId]
+    );
+    return result.rows;
   }
 
   /**
@@ -14,56 +15,56 @@ class Payment {
    */
   static async getSummaryByOrderId(orderId) {
     const pool = await poolPromise;
-    const result = await pool.request()
-      .input('order_id', sql.UniqueIdentifier, orderId)
-      .query(`
-        SELECT
-          o.final_price_mmk as total_price,
-          ISNULL(SUM(p.amount_mmk), 0) + ISNULL(SUM(p.points_value_mmk), 0) as total_paid,
-          (o.final_price_mmk - (ISNULL(SUM(p.amount_mmk), 0) + ISNULL(SUM(p.points_value_mmk), 0))) as balance
-        FROM lab_orders o
-        LEFT JOIN payments p ON o.id = p.order_id AND p.status IN ('pending', 'received', 'verified')
-        WHERE o.id = @order_id
-        GROUP BY o.final_price_mmk
-      `);
-    return result.recordset[0];
+    const result = await pool.query(
+      `SELECT
+         o.final_price_mmk as total_price,
+         COALESCE(SUM(p.amount_mmk), 0) + COALESCE(SUM(p.points_value_mmk), 0) as total_paid,
+         (o.final_price_mmk - (COALESCE(SUM(p.amount_mmk), 0) + COALESCE(SUM(p.points_value_mmk), 0))) as balance
+       FROM lab_orders o
+       LEFT JOIN payments p ON o.id = p.order_id AND p.status IN ('pending', 'received', 'verified')
+       WHERE o.id = $1
+       GROUP BY o.final_price_mmk`,
+      [orderId]
+    );
+    return result.rows[0];
   }
 
   static async getById(id) {
     const pool = await poolPromise;
-    const result = await pool.request()
-      .input('id', sql.UniqueIdentifier, id)
-      .query('SELECT * FROM payments WHERE id = @id');
-    return result.recordset[0];
+    const result = await pool.query('SELECT * FROM payments WHERE id = $1', [id]);
+    return result.rows[0];
   }
 
   static async create(data, createdBy = null) {
     const pool = await poolPromise;
     const status = data.status || 'received'; // Defaulting to received per user suggestion
-    const request = pool.request()
-      .input('order_id', sql.UniqueIdentifier, data.order_id)
-      .input('amount_mmk', sql.Decimal(18, 2), data.amount_mmk)
-      .input('status', sql.VarChar, status)
-      .input('method', sql.VarChar, data.method)
-      .input('reference_no', sql.VarChar, data.reference_no)
-      .input('points_redeemed', sql.Int, data.points_redeemed || 0)
-      .input('points_value_mmk', sql.Decimal(18, 2), data.points_value_mmk || 0)
-      .input('created_user', sql.UniqueIdentifier, createdBy);
+
+    const params = [
+      data.order_id,
+      data.amount_mmk,
+      status,
+      data.method,
+      data.reference_no,
+      data.points_redeemed || 0,
+      data.points_value_mmk || 0,
+      createdBy,
+    ];
 
     let verifiedColumns = '';
     let verifiedValues = '';
     if (status === 'verified') {
-      request.input('verified_by', sql.UniqueIdentifier, data.staff_id);
+      params.push(data.staff_id);
       verifiedColumns = ', verified_by, verified_at';
-      verifiedValues = ', @verified_by, GETDATE()';
+      verifiedValues = `, $${params.length}, now()`;
     }
 
-    const result = await request.query(`
-        INSERT INTO payments (id, order_id, amount_mmk, status, method, reference_no, points_redeemed, points_value_mmk, paid_at, created_user, updated_user${verifiedColumns})
-        OUTPUT INSERTED.*
-        VALUES (NEWID(), @order_id, @amount_mmk, @status, @method, @reference_no, @points_redeemed, @points_value_mmk, GETDATE(), @created_user, @created_user${verifiedValues})
-      `);
-    return result.recordset[0];
+    const result = await pool.query(
+      `INSERT INTO payments (id, order_id, amount_mmk, status, method, reference_no, points_redeemed, points_value_mmk, paid_at, created_user, updated_user${verifiedColumns})
+       VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, now(), $8, $8${verifiedValues})
+       RETURNING *`,
+      params
+    );
+    return result.rows[0];
   }
 
   static async verify(id, staffId, updatedBy = null) {
@@ -72,26 +73,24 @@ class Payment {
 
   static async updateStatus(id, status, staffId = null, updatedBy = null) {
     const pool = await poolPromise;
-    const request = pool.request()
-      .input('id', sql.UniqueIdentifier, id)
-      .input('status', sql.VarChar, status)
-      .input('updated_user', sql.UniqueIdentifier, updatedBy || staffId);
+    const params = [id, status, updatedBy || staffId];
 
-    let setClause = 'status = @status, updated_user = @updated_user, updated_at = GETDATE()';
+    let setClause = 'status = $2, updated_user = $3, updated_at = now()';
     if (status === 'verified') {
-      request.input('verified_by', sql.UniqueIdentifier, staffId);
-      setClause += ', verified_by = @verified_by, verified_at = GETDATE()';
+      params.push(staffId);
+      setClause += `, verified_by = $${params.length}, verified_at = now()`;
     } else {
       setClause += ', verified_by = NULL, verified_at = NULL';
     }
 
-    const result = await request.query(`
-      UPDATE payments
-      SET ${setClause}
-      OUTPUT INSERTED.*
-      WHERE id = @id
-    `);
-    return result.recordset[0];
+    const result = await pool.query(
+      `UPDATE payments
+       SET ${setClause}
+       WHERE id = $1
+       RETURNING *`,
+      params
+    );
+    return result.rows[0];
   }
 }
 

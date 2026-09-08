@@ -1,24 +1,24 @@
 const { poolPromise } = require('../src/config/db');
 
 async function run() {
-  console.log('Connecting to MSSQL Database...');
+  console.log('Connecting to PostgreSQL Database...');
   const pool = await poolPromise;
 
   // 1. Get all base tables
   console.log('Fetching database tables...');
-  const tablesResult = await pool.request().query(`
-    SELECT TABLE_SCHEMA, TABLE_NAME 
-    FROM INFORMATION_SCHEMA.TABLES 
-    WHERE TABLE_TYPE = 'BASE TABLE' AND TABLE_NAME != 'sysdiagrams'
+  const tablesResult = await pool.query(`
+    SELECT table_schema, table_name
+    FROM information_schema.tables
+    WHERE table_type = 'BASE TABLE' AND table_schema = 'public'
   `);
 
-  const allTables = tablesResult.recordset.map(row => ({
-    schema: row.TABLE_SCHEMA,
-    name: row.TABLE_NAME,
-    fullName: `[${row.TABLE_SCHEMA}].[${row.TABLE_NAME}]`
+  const allTables = tablesResult.rows.map(row => ({
+    schema: row.table_schema,
+    name: row.table_name,
+    fullName: `"${row.table_schema}"."${row.table_name}"`
   }));
 
-  const tablesToKeep = ['users', 'lab_staff', 'theme_settings','ai_configs','ai_prompts','lab-test-catalog'];
+  const tablesToKeep = ['users', 'lab_staff', 'theme_settings', 'ai_configs', 'ai_prompts', 'lab_test_catalog'];
   const tablesToTruncate = allTables.filter(t => !tablesToKeep.includes(t.name.toLowerCase()));
 
   console.log(`Found ${allTables.length} total base tables.`);
@@ -30,34 +30,15 @@ async function run() {
     return;
   }
 
-  // 2. Disable constraints on ALL base tables to avoid FK errors during delete
-  console.log('\nDisabling foreign key constraints on all tables...');
-  for (const table of allTables) {
-    try {
-      await pool.request().query(`ALTER TABLE ${table.fullName} NOCHECK CONSTRAINT ALL`);
-    } catch (err) {
-      console.warn(`Warning: Could not disable constraints on table ${table.fullName}:`, err.message);
-    }
-  }
-
-  // 3. Delete all records from specified tables
-  console.log('\nDeleting records from target tables...');
+  // TRUNCATE ... CASCADE handles FK dependencies in one atomic step, so there's no
+  // need to disable/re-enable constraints the way MSSQL's NOCHECK dance required.
+  console.log('\nTruncating target tables...');
   for (const table of tablesToTruncate) {
     try {
-      const result = await pool.request().query(`DELETE FROM ${table.fullName}`);
-      console.log(`Successfully deleted data from ${table.fullName}`);
+      await pool.query(`TRUNCATE TABLE ${table.fullName} CASCADE`);
+      console.log(`Successfully truncated ${table.fullName}`);
     } catch (err) {
-      console.error(`Error deleting from ${table.fullName}:`, err.message);
-    }
-  }
-
-  // 4. Re-enable constraints on ALL base tables
-  console.log('\nRe-enabling foreign key constraints on all tables...');
-  for (const table of allTables) {
-    try {
-      await pool.request().query(`ALTER TABLE ${table.fullName} CHECK CONSTRAINT ALL`);
-    } catch (err) {
-      console.warn(`Warning: Could not re-enable constraints on table ${table.fullName}:`, err.message);
+      console.error(`Error truncating ${table.fullName}:`, err.message);
     }
   }
 

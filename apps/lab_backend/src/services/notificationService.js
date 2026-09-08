@@ -1,6 +1,6 @@
 const admin = require('../config/firebase');
 const Notification = require('../models/notificationModel');
-const { sql, poolPromise } = require('../config/db');
+const { poolPromise } = require('../config/db');
 
 class NotificationService {
   /**
@@ -183,21 +183,21 @@ class NotificationService {
     const pool = await poolPromise;
 
     if (topic === 'staff_notifications') {
-      const result = await pool.request().query(`
+      const result = await pool.query(`
         SELECT id
         FROM lab_staff
-        WHERE is_deleted = 0 AND is_active = 1
+        WHERE is_deleted = false AND is_active = true
       `);
-      return result.recordset.map((row) => ({ id: row.id, type: 'staff' }));
+      return result.rows.map((row) => ({ id: row.id, type: 'staff' }));
     }
 
     if (topic === 'all_users') {
-      const result = await pool.request().query(`
+      const result = await pool.query(`
         SELECT id
         FROM users
-        WHERE is_deleted = 0 AND is_active = 1
+        WHERE is_deleted = false AND is_active = true
       `);
-      return result.recordset.map((row) => ({ id: row.id, type: 'user' }));
+      return result.rows.map((row) => ({ id: row.id, type: 'user' }));
     }
 
     return [];
@@ -205,27 +205,27 @@ class NotificationService {
 
   static async _findRecipientByFcmToken(token) {
     const pool = await poolPromise;
-    const request = pool.request();
-    request.input('token', sql.NVarChar(500), token);
 
-    const staffResult = await request.query(`
-      SELECT TOP 1 id
-      FROM lab_staff
-      WHERE is_deleted = 0 AND fcm_token = @token
-    `);
-    if (staffResult.recordset[0]?.id) {
-      return { id: staffResult.recordset[0].id, type: 'staff' };
+    const staffResult = await pool.query(
+      `SELECT id
+       FROM lab_staff
+       WHERE is_deleted = false AND fcm_token = $1
+       LIMIT 1`,
+      [token]
+    );
+    if (staffResult.rows[0]?.id) {
+      return { id: staffResult.rows[0].id, type: 'staff' };
     }
 
-    const userResult = await pool.request()
-      .input('token', sql.NVarChar(500), token)
-      .query(`
-        SELECT TOP 1 id
-        FROM users
-        WHERE is_deleted = 0 AND fcm_token = @token
-      `);
-    if (userResult.recordset[0]?.id) {
-      return { id: userResult.recordset[0].id, type: 'user' };
+    const userResult = await pool.query(
+      `SELECT id
+       FROM users
+       WHERE is_deleted = false AND fcm_token = $1
+       LIMIT 1`,
+      [token]
+    );
+    if (userResult.rows[0]?.id) {
+      return { id: userResult.rows[0].id, type: 'user' };
     }
 
     return null;
@@ -237,12 +237,9 @@ class NotificationService {
   static async _getFcmToken(userId, userType) {
     try {
       const pool = await poolPromise;
-      const request = pool.request();
-      request.input('id', sql.UniqueIdentifier, userId);
-
       const table = userType === 'staff' ? 'lab_staff' : 'users';
-      const result = await request.query(`SELECT fcm_token FROM ${table} WHERE id = @id`);
-      return result.recordset[0]?.fcm_token || null;
+      const result = await pool.query(`SELECT fcm_token FROM ${table} WHERE id = $1`, [userId]);
+      return result.rows[0]?.fcm_token || null;
     } catch (err) {
       console.error(`Error fetching FCM token for ${userType} ID ${userId}:`, err.message);
       return null;

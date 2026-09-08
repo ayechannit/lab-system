@@ -1,4 +1,4 @@
-const { sql, poolPromise } = require('../config/db');
+const { poolPromise } = require('../config/db');
 
 /** Staff roles that can be granted per-module permissions. `admin` is intentionally excluded — it always has full access, hardcoded, so a bad edit here can never lock every admin out. */
 const CONFIGURABLE_ROLES = ['manager', 'reception', 'lab_technician', 'collector'];
@@ -42,7 +42,7 @@ class Permission {
   /** Full matrix for the Permissions admin page: { [role]: { [module_key]: boolean } }. `admin` is always all-true. */
   static async getMatrix() {
     const pool = await poolPromise;
-    const result = await pool.request().query('SELECT role, module_key, is_allowed FROM role_permissions');
+    const result = await pool.query('SELECT role, module_key, is_allowed FROM role_permissions');
 
     const matrix = {};
     for (const role of CONFIGURABLE_ROLES) {
@@ -51,7 +51,7 @@ class Permission {
         matrix[role][moduleKey] = DEFAULTS[role].includes(moduleKey);
       }
     }
-    for (const row of result.recordset) {
+    for (const row of result.rows) {
       if (matrix[row.role] && MODULES.includes(row.module_key)) {
         matrix[row.role][row.module_key] = !!row.is_allowed;
       }
@@ -67,12 +67,12 @@ class Permission {
     if (!CONFIGURABLE_ROLES.includes(role)) return [];
 
     const pool = await poolPromise;
-    const result = await pool
-      .request()
-      .input('role', sql.VarChar, role)
-      .query('SELECT module_key, is_allowed FROM role_permissions WHERE role = @role');
+    const result = await pool.query(
+      'SELECT module_key, is_allowed FROM role_permissions WHERE role = $1',
+      [role]
+    );
 
-    const overrides = new Map(result.recordset.map((r) => [r.module_key, !!r.is_allowed]));
+    const overrides = new Map(result.rows.map((r) => [r.module_key, !!r.is_allowed]));
     return MODULES.filter((moduleKey) =>
       overrides.has(moduleKey) ? overrides.get(moduleKey) : DEFAULTS[role].includes(moduleKey),
     );
@@ -87,32 +87,27 @@ class Permission {
   /** Bulk upsert `{ role, module_key, is_allowed }` entries. Entries for `admin` or unknown module keys are ignored. */
   static async setMatrix(entries, updatedBy = null) {
     const pool = await poolPromise;
-    const transaction = new sql.Transaction(pool);
-    await transaction.begin();
+    const client = await pool.connect();
     try {
+      await client.query('BEGIN');
       for (const entry of entries) {
         if (!CONFIGURABLE_ROLES.includes(entry.role) || !MODULES.includes(entry.module_key)) continue;
-        const request = new sql.Request(transaction);
-        await request
-          .input('role', sql.VarChar, entry.role)
-          .input('module_key', sql.VarChar, entry.module_key)
-          .input('is_allowed', sql.Bit, entry.is_allowed ? 1 : 0)
-          .input('updated_user', sql.UniqueIdentifier, updatedBy)
-          .query(`
-            MERGE role_permissions AS target
-            USING (SELECT @role AS role, @module_key AS module_key) AS src
-              ON target.role = src.role AND target.module_key = src.module_key
-            WHEN MATCHED THEN
-              UPDATE SET is_allowed = @is_allowed, updated_user = @updated_user, updated_at = GETDATE()
-            WHEN NOT MATCHED THEN
-              INSERT (id, role, module_key, is_allowed, updated_user)
-              VALUES (NEWID(), @role, @module_key, @is_allowed, @updated_user);
-          `);
+        await client.query(
+          `INSERT INTO role_permissions (id, role, module_key, is_allowed, updated_user)
+           VALUES (gen_random_uuid(), $1, $2, $3, $4)
+           ON CONFLICT (role, module_key) DO UPDATE SET
+             is_allowed = EXCLUDED.is_allowed,
+             updated_user = EXCLUDED.updated_user,
+             updated_at = now()`,
+          [entry.role, entry.module_key, !!entry.is_allowed, updatedBy]
+        );
       }
-      await transaction.commit();
+      await client.query('COMMIT');
     } catch (err) {
-      await transaction.rollback();
+      await client.query('ROLLBACK');
       throw err;
+    } finally {
+      client.release();
     }
     return Permission.getMatrix();
   }

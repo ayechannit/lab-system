@@ -1,32 +1,32 @@
-const { sql, poolPromise } = require('../config/db');
+const { poolPromise } = require('../config/db');
 const bcrypt = require('bcryptjs');
 
 /** Tier columns resolved from lifetime spend, independent of redeemable loyalty points. */
 const USER_TIER_SELECT = `
-  (SELECT TOP 1 mt.discount_percent FROM membership_tiers mt
-   WHERE mt.is_active = 1 AND mt.is_deleted = 0
-     AND mt.min_spend_mmk <= ISNULL(u.total_spent_mmk, 0)
-   ORDER BY mt.min_spend_mmk DESC) AS tier_discount_percent,
-  (SELECT TOP 1 mt.name FROM membership_tiers mt
-   WHERE mt.is_active = 1 AND mt.is_deleted = 0
-     AND mt.min_spend_mmk <= ISNULL(u.total_spent_mmk, 0)
-   ORDER BY mt.min_spend_mmk DESC) AS tier_name`;
+  (SELECT mt.discount_percent FROM membership_tiers mt
+   WHERE mt.is_active = true AND mt.is_deleted = false
+     AND mt.min_spend_mmk <= COALESCE(u.total_spent_mmk, 0)
+   ORDER BY mt.min_spend_mmk DESC LIMIT 1) AS tier_discount_percent,
+  (SELECT mt.name FROM membership_tiers mt
+   WHERE mt.is_active = true AND mt.is_deleted = false
+     AND mt.min_spend_mmk <= COALESCE(u.total_spent_mmk, 0)
+   ORDER BY mt.min_spend_mmk DESC LIMIT 1) AS tier_name`;
 
 class User {
   static async getAll(filters = {}) {
     const pool = await poolPromise;
-    const request = pool.request();
+    const params = [];
     let query = `SELECT u.id, u.name, u.phone, u.address, u.latitude, u.longitude, u.total_points, u.total_spent_mmk, u.profile_image_url, u.created_user, u.updated_user, u.created_at, u.updated_at,
       ${USER_TIER_SELECT}
-      FROM users u WHERE u.is_deleted = 0`;
+      FROM users u WHERE u.is_deleted = false`;
 
     if (filters.name) {
-      query += ' AND u.name LIKE @name';
-      request.input('name', sql.VarChar, `%${filters.name}%`);
+      params.push(`%${filters.name}%`);
+      query += ` AND u.name ILIKE $${params.length}`;
     }
     if (filters.phone) {
-      query += ' AND u.phone LIKE @phone';
-      request.input('phone', sql.VarChar, `%${filters.phone}%`);
+      params.push(`%${filters.phone}%`);
+      query += ` AND u.phone ILIKE $${params.length}`;
     }
 
     const validSortFields = ['created_at', 'updated_at', 'name', 'total_points'];
@@ -38,115 +38,99 @@ class User {
       const page = parseInt(filters.page, 10);
       const limit = parseInt(filters.limit, 10);
       const offset = (page - 1) * limit;
-      query += ' OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY';
-      request.input('offset', sql.Int, offset);
-      request.input('limit', sql.Int, limit);
+      params.push(limit);
+      query += ` LIMIT $${params.length}`;
+      params.push(offset);
+      query += ` OFFSET $${params.length}`;
     }
 
-    const result = await request.query(query);
-    return result.recordset;
+    const result = await pool.query(query, params);
+    return result.rows;
   }
 
   static async getById(id) {
     const pool = await poolPromise;
-    const result = await pool.request()
-      .input('id', sql.UniqueIdentifier, id)
-      .query(`SELECT u.id, u.name, u.phone, u.address, u.latitude, u.longitude, u.total_points, u.total_spent_mmk, u.profile_image_url, u.created_user, u.updated_user, u.created_at, u.updated_at,
+    const result = await pool.query(
+      `SELECT u.id, u.name, u.phone, u.address, u.latitude, u.longitude, u.total_points, u.total_spent_mmk, u.profile_image_url, u.created_user, u.updated_user, u.created_at, u.updated_at,
         ${USER_TIER_SELECT}
-        FROM users u WHERE u.id = @id AND u.is_deleted = 0`);
-    return result.recordset[0];
+        FROM users u WHERE u.id = $1 AND u.is_deleted = false`,
+      [id]
+    );
+    return result.rows[0];
   }
 
   static async getByPhone(phone) {
     const pool = await poolPromise;
-    const result = await pool.request()
-      .input('phone', sql.VarChar, phone)
-      .query(`SELECT u.*,
+    const result = await pool.query(
+      `SELECT u.*,
         ${USER_TIER_SELECT}
-        FROM users u WHERE u.phone = @phone AND u.is_deleted = 0`);
-    return result.recordset[0];
+        FROM users u WHERE u.phone = $1 AND u.is_deleted = false`,
+      [phone]
+    );
+    return result.rows[0];
   }
 
   static async create(data, createdBy = null) {
     const pool = await poolPromise;
     const hashedPassword = await bcrypt.hash(data.password_hash || data.password, 10);
 
-    const result = await pool.request()
-      .input('name', sql.VarChar, data.name)
-      .input('phone', sql.VarChar, data.phone)
-      .input('password_hash', sql.VarChar, hashedPassword)
-      .input('address', sql.Text, data.address)
-      .input('latitude', sql.Float, data.latitude)
-      .input('longitude', sql.Float, data.longitude)
-      .input('created_user', sql.UniqueIdentifier, createdBy)
-      .query(`
-        INSERT INTO users (id, name, phone, password_hash, address, latitude, longitude, total_points, total_spent_mmk, created_user, updated_user, is_deleted)
-        OUTPUT INSERTED.id
-        VALUES (NEWID(), @name, @phone, @password_hash, @address, @latitude, @longitude, 0, 0, @created_user, @created_user, 0)
-      `);
-    return this.getById(result.recordset[0].id);
+    const result = await pool.query(
+      `INSERT INTO users (id, name, phone, password_hash, address, latitude, longitude, total_points, total_spent_mmk, created_user, updated_user, is_deleted)
+       VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, 0, 0, $7, $7, false)
+       RETURNING id`,
+      [data.name, data.phone, hashedPassword, data.address, data.latitude, data.longitude, createdBy]
+    );
+    return this.getById(result.rows[0].id);
   }
 
   static async update(id, data, updatedBy = null) {
     const pool = await poolPromise;
 
+    const params = [id, data.name, data.phone, data.address, data.latitude, data.longitude, updatedBy];
     let passwordFragment = '';
-    const request = pool.request()
-      .input('id', sql.UniqueIdentifier, id)
-      .input('name', sql.VarChar, data.name)
-      .input('phone', sql.VarChar, data.phone)
-      .input('address', sql.Text, data.address)
-      .input('latitude', sql.Float, data.latitude)
-      .input('longitude', sql.Float, data.longitude)
-      .input('updated_user', sql.UniqueIdentifier, updatedBy);
 
     const newPassword = data.password || data.password_hash;
     if (newPassword) {
       const hashedPassword = await bcrypt.hash(newPassword, 10);
-      passwordFragment = ', password_hash = @password_hash';
-      request.input('password_hash', sql.VarChar, hashedPassword);
+      params.push(hashedPassword);
+      passwordFragment = `, password_hash = $${params.length}`;
     }
 
-    const result = await request.query(`
-      UPDATE users
-      SET name = @name, phone = @phone,
-          address = @address, latitude = @latitude, longitude = @longitude,
-          updated_user = @updated_user, updated_at = GETDATE()
-          ${passwordFragment}
-      WHERE id = @id AND is_deleted = 0
-    `);
-    if (!result.rowsAffected[0]) return undefined;
+    const result = await pool.query(
+      `UPDATE users
+       SET name = $2, phone = $3,
+           address = $4, latitude = $5, longitude = $6,
+           updated_user = $7, updated_at = now()
+           ${passwordFragment}
+       WHERE id = $1 AND is_deleted = false`,
+      params
+    );
+    if (!result.rowCount) return undefined;
     return this.getById(id);
   }
 
   static async updateProfileImage(id, profileImageUrl, updatedBy = null) {
     const pool = await poolPromise;
-    const result = await pool.request()
-      .input('id', sql.UniqueIdentifier, id)
-      .input('profile_image_url', sql.NVarChar(500), profileImageUrl)
-      .input('updated_user', sql.UniqueIdentifier, updatedBy)
-      .query(`
-        UPDATE users
-        SET profile_image_url = @profile_image_url, updated_user = @updated_user, updated_at = GETDATE()
-        WHERE id = @id AND is_deleted = 0
-      `);
-    if (!result.rowsAffected[0]) return undefined;
+    const result = await pool.query(
+      `UPDATE users
+       SET profile_image_url = $2, updated_user = $3, updated_at = now()
+       WHERE id = $1 AND is_deleted = false`,
+      [id, profileImageUrl, updatedBy]
+    );
+    if (!result.rowCount) return undefined;
     return this.getById(id);
   }
 
   static async addPoints(id, pointsToAdd, updatedBy = null, transactionType = 'earn', description = null, referenceId = null) {
     const pool = await poolPromise;
-    const result = await pool.request()
-      .input('id', sql.UniqueIdentifier, id)
-      .input('points', sql.Int, pointsToAdd)
-      .input('updated_user', sql.UniqueIdentifier, updatedBy)
-      .query(`
-        UPDATE users
-        SET total_points = total_points + @points, updated_user = @updated_user, updated_at = GETDATE()
-        WHERE id = @id AND is_deleted = 0
-      `);
+    const result = await pool.query(
+      `UPDATE users
+       SET total_points = total_points + $2, updated_user = $3, updated_at = now()
+       WHERE id = $1 AND is_deleted = false`,
+      [id, pointsToAdd, updatedBy]
+    );
 
-    if (!result.rowsAffected[0]) return undefined;
+    if (!result.rowCount) return undefined;
 
     const PointTransaction = require('./pointTransactionModel');
     await PointTransaction.create({
@@ -163,45 +147,37 @@ class User {
 
   static async addSpend(id, amountMmk, updatedBy = null) {
     const pool = await poolPromise;
-    const result = await pool.request()
-      .input('id', sql.UniqueIdentifier, id)
-      .input('amount', sql.Decimal(18, 2), amountMmk)
-      .input('updated_user', sql.UniqueIdentifier, updatedBy)
-      .query(`
-        UPDATE users
-        SET total_spent_mmk = ISNULL(total_spent_mmk, 0) + @amount,
-            updated_user = @updated_user, updated_at = GETDATE()
-        WHERE id = @id AND is_deleted = 0
-      `);
-    if (!result.rowsAffected[0]) return undefined;
+    const result = await pool.query(
+      `UPDATE users
+       SET total_spent_mmk = COALESCE(total_spent_mmk, 0) + $2,
+           updated_user = $3, updated_at = now()
+       WHERE id = $1 AND is_deleted = false`,
+      [id, amountMmk, updatedBy]
+    );
+    if (!result.rowCount) return undefined;
     return this.getById(id);
   }
 
   static async delete(id, updatedBy = null) {
     const pool = await poolPromise;
-    const result = await pool.request()
-      .input('id', sql.UniqueIdentifier, id)
-      .input('updated_user', sql.UniqueIdentifier, updatedBy)
-      .query('UPDATE users SET is_deleted = 1, updated_user = @updated_user, updated_at = GETDATE() WHERE id = @id');
-    return result.rowsAffected[0] > 0;
+    const result = await pool.query(
+      'UPDATE users SET is_deleted = true, updated_user = $2, updated_at = now() WHERE id = $1',
+      [id, updatedBy]
+    );
+    return result.rowCount > 0;
   }
 
   static async updateFcmToken(id, fcmToken, updatedBy = null) {
     const pool = await poolPromise;
-    const result = await pool.request()
-      .input('id', sql.UniqueIdentifier, id)
-      .input('fcm_token', sql.NVarChar(500), fcmToken)
-      .input('updated_user', sql.UniqueIdentifier, updatedBy)
-      .query(`
-        UPDATE users 
-        SET fcm_token = @fcm_token, updated_user = @updated_user, updated_at = GETDATE()
-        WHERE id = @id AND is_deleted = 0
-      `);
-    return result.rowsAffected[0] > 0;
+    const result = await pool.query(
+      `UPDATE users
+       SET fcm_token = $2, updated_user = $3, updated_at = now()
+       WHERE id = $1 AND is_deleted = false`,
+      [id, fcmToken, updatedBy]
+    );
+    return result.rowCount > 0;
   }
 
 }
 
 module.exports = User;
-
-

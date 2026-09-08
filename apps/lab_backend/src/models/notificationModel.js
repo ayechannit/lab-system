@@ -1,4 +1,4 @@
-const { sql, poolPromise } = require('../config/db');
+const { poolPromise } = require('../config/db');
 
 class Notification {
   /**
@@ -8,19 +8,19 @@ class Notification {
    */
   static async create(data) {
     const pool = await poolPromise;
-    const request = pool.request();
-    request.input('user_id', sql.UniqueIdentifier, data.user_id);
-    request.input('user_type', sql.NVarChar(50), data.user_type || 'user');
-    request.input('title', sql.NVarChar(255), data.title);
-    request.input('body', sql.NVarChar(sql.MAX), data.body);
-    request.input('data_payload', sql.NVarChar(sql.MAX), data.data_payload ? JSON.stringify(data.data_payload) : null);
-
-    const result = await request.query(`
-      INSERT INTO notifications (id, user_id, user_type, title, body, data_payload, is_read, is_deleted)
-      OUTPUT INSERTED.*
-      VALUES (NEWID(), @user_id, @user_type, @title, @body, @data_payload, 0, 0)
-    `);
-    return result.recordset[0];
+    const result = await pool.query(
+      `INSERT INTO notifications (id, user_id, user_type, title, body, data_payload, is_read, is_deleted)
+       VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, false, false)
+       RETURNING *`,
+      [
+        data.user_id,
+        data.user_type || 'user',
+        data.title,
+        data.body,
+        data.data_payload ? JSON.stringify(data.data_payload) : null,
+      ]
+    );
+    return result.rows[0];
   }
 
   /**
@@ -32,18 +32,15 @@ class Notification {
    */
   static async getByUserId(userId, userType = 'user', limit = 50) {
     const pool = await poolPromise;
-    const request = pool.request();
-    request.input('user_id', sql.UniqueIdentifier, userId);
-    request.input('user_type', sql.NVarChar(50), userType);
-    request.input('limit', sql.Int, limit);
-
-    const result = await request.query(`
-      SELECT TOP (@limit) *
-      FROM notifications
-      WHERE user_id = @user_id AND user_type = @user_type AND is_deleted = 0
-      ORDER BY created_at DESC
-    `);
-    return result.recordset;
+    const result = await pool.query(
+      `SELECT *
+       FROM notifications
+       WHERE user_id = $1 AND user_type = $2 AND is_deleted = false
+       ORDER BY created_at DESC
+       LIMIT $3`,
+      [userId, userType, limit]
+    );
+    return result.rows;
   }
 
   /**
@@ -54,16 +51,13 @@ class Notification {
    */
   static async markAsRead(id, userId) {
     const pool = await poolPromise;
-    const request = pool.request();
-    request.input('id', sql.UniqueIdentifier, id);
-    request.input('user_id', sql.UniqueIdentifier, userId);
-
-    const result = await request.query(`
-      UPDATE notifications
-      SET is_read = 1
-      WHERE id = @id AND user_id = @user_id
-    `);
-    return result.rowsAffected[0] > 0;
+    const result = await pool.query(
+      `UPDATE notifications
+       SET is_read = true
+       WHERE id = $1 AND user_id = $2`,
+      [id, userId]
+    );
+    return result.rowCount > 0;
   }
 
   /**
@@ -74,16 +68,13 @@ class Notification {
    */
   static async markAllAsRead(userId, userType = 'user') {
     const pool = await poolPromise;
-    const request = pool.request();
-    request.input('user_id', sql.UniqueIdentifier, userId);
-    request.input('user_type', sql.NVarChar(50), userType);
-
-    const result = await request.query(`
-      UPDATE notifications
-      SET is_read = 1
-      WHERE user_id = @user_id AND user_type = @user_type AND is_read = 0
-    `);
-    return result.rowsAffected[0] > 0;
+    const result = await pool.query(
+      `UPDATE notifications
+       SET is_read = true
+       WHERE user_id = $1 AND user_type = $2 AND is_read = false`,
+      [userId, userType]
+    );
+    return result.rowCount > 0;
   }
 }
 

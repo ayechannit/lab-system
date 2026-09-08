@@ -1,4 +1,4 @@
-const { sql, poolPromise } = require('../config/db');
+const { poolPromise } = require('../config/db');
 
 const FIXED_LAB_NAME = 'International Diagnostic & Healthcare Center';
 
@@ -97,9 +97,8 @@ class SystemSetting {
 
   static async getSettings() {
     const pool = await poolPromise;
-    const request = pool.request();
-    const result = await request.query('SELECT TOP 1 * FROM theme_settings');
-    return this.formatSettingsRow(result.recordset[0]);
+    const result = await pool.query('SELECT * FROM theme_settings LIMIT 1');
+    return this.formatSettingsRow(result.rows[0]);
   }
 
   static async updateSettings(data, updatedBy = null) {
@@ -112,44 +111,45 @@ class SystemSetting {
           ? this.normalizeUiLocale(existing.ui_locale)
           : 'my';
     const pool = await poolPromise;
-    const request = pool.request();
-    
-    request.input('lab_name', sql.NVarChar(255), themed.lab_name);
-    request.input('mode', sql.NVarChar(20), themed.mode);
-    request.input('logo_url', sql.NVarChar(2048), themed.logo_url);
-    request.input('primary_color', sql.NVarChar(50), themed.primary_color);
-    request.input('secondary_color', sql.NVarChar(50), themed.secondary_color);
-    request.input('custom_colors', sql.NVarChar(sql.MAX), themed.custom_colors);
-    request.input('latitude', sql.Float, themed.latitude);
-    request.input('longitude', sql.Float, themed.longitude);
-    request.input('address', sql.NVarChar(sql.MAX), themed.address);
-    request.input('contact_phone', sql.NVarChar(50), themed.contact_phone);
-    request.input('contact_email', sql.NVarChar(255), themed.contact_email);
-    request.input('ui_locale', sql.NVarChar(5), uiLocale);
-    request.input('updated_user', sql.UniqueIdentifier, updatedBy);
+
+    const params = [
+      themed.lab_name,
+      themed.mode,
+      themed.logo_url,
+      themed.primary_color,
+      themed.secondary_color,
+      themed.custom_colors,
+      themed.latitude,
+      themed.longitude,
+      themed.address,
+      themed.contact_phone,
+      themed.contact_email,
+      uiLocale,
+      updatedBy,
+    ];
 
     if (existing) {
-      request.input('id', sql.UniqueIdentifier, existing.id);
-      const query = `
-        UPDATE theme_settings
-        SET lab_name = @lab_name, mode = @mode, logo_url = @logo_url, primary_color = @primary_color,
-            secondary_color = @secondary_color, custom_colors = @custom_colors, latitude = @latitude, longitude = @longitude,
-            address = @address, contact_phone = @contact_phone, contact_email = @contact_email,
-            ui_locale = @ui_locale,
-            updated_user = @updated_user, updated_at = GETDATE()
-        OUTPUT INSERTED.*
-        WHERE id = @id
-      `;
-      const result = await request.query(query);
-      return this.formatSettingsRow(result.recordset[0]);
+      params.push(existing.id);
+      const result = await pool.query(
+        `UPDATE theme_settings
+         SET lab_name = $1, mode = $2, logo_url = $3, primary_color = $4,
+             secondary_color = $5, custom_colors = $6, latitude = $7, longitude = $8,
+             address = $9, contact_phone = $10, contact_email = $11,
+             ui_locale = $12,
+             updated_user = $13, updated_at = now()
+         WHERE id = $14
+         RETURNING *`,
+        params
+      );
+      return this.formatSettingsRow(result.rows[0]);
     } else {
-      const query = `
-        INSERT INTO theme_settings (lab_name, mode, logo_url, primary_color, secondary_color, custom_colors, latitude, longitude, address, contact_phone, contact_email, ui_locale, updated_user)
-        OUTPUT INSERTED.*
-        VALUES (@lab_name, @mode, @logo_url, @primary_color, @secondary_color, @custom_colors, @latitude, @longitude, @address, @contact_phone, @contact_email, @ui_locale, @updated_user)
-      `;
-      const result = await request.query(query);
-      return this.formatSettingsRow(result.recordset[0]);
+      const result = await pool.query(
+        `INSERT INTO theme_settings (lab_name, mode, logo_url, primary_color, secondary_color, custom_colors, latitude, longitude, address, contact_phone, contact_email, ui_locale, updated_user)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+         RETURNING *`,
+        params
+      );
+      return this.formatSettingsRow(result.rows[0]);
     }
   }
 

@@ -7,7 +7,10 @@
     "staff:seed": "node scripts/insertStaff.js",
     "start": "node src/index.js",
     "dev": "node --watch src/index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "db:apply-schema": "node scripts/applySchema.js",
+    "db:introspect-mssql": "node scripts/introspectMssqlSchema.js",
+    "db:migrate-data": "node scripts/migrateDataToPostgres.js"
   },
   "keywords": [],
   "author": "",
@@ -29,6 +32,7 @@
     "multer": "^2.1.1",
     "openai": "^6.37.0",
     "pdfkit": "^0.18.0",
+    "pg": "^8.23.0",
     "qrcode": "^1.5.4",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1"
