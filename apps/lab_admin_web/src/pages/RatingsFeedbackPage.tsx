@@ -12,7 +12,7 @@ import { DEFAULT_TABLE_PAGE_SIZE, TablePagination } from '../components/common/T
 import { isApiMode } from '../services/apiBase'
 import type { ApiOrderStatus } from '../services/orderService'
 import {
-  fetchAllRatings,
+  fetchRatings,
   formatRatingContact,
   formatRatingSubmittedDate,
   formatRatingTests,
@@ -92,6 +92,15 @@ export function RatingsFeedbackPage() {
   )
 
   useEffect(() => {
+    const id = window.setTimeout(() => setRatingFilter(ratingFilterInput.trim()), 300)
+    return () => window.clearTimeout(id)
+  }, [ratingFilterInput])
+
+  useEffect(() => {
+    queueMicrotask(() => setRatingPage(1))
+  }, [ratingFilter, ratingScoreFilter])
+
+  useEffect(() => {
     if (!hasApi) {
       queueMicrotask(() => {
         setLoading(false)
@@ -106,7 +115,12 @@ export function RatingsFeedbackPage() {
     })
     void (async () => {
       try {
-        const list = await fetchAllRatings()
+        const list = await fetchRatings({
+          rating: ratingScoreFilter ? (Number(ratingScoreFilter) as 1 | 2 | 3 | 4 | 5) : undefined,
+          search: ratingFilter || undefined,
+          page: ratingPage,
+          limit: ratingPageSize,
+        })
         if (!cancelled) setRows(list)
       } catch (e) {
         if (!cancelled) setLoadError(e instanceof Error ? e.message : t('ratings.loadFailed'))
@@ -117,57 +131,9 @@ export function RatingsFeedbackPage() {
     return () => {
       cancelled = true
     }
-  }, [hasApi, refreshTick, t])
+  }, [hasApi, refreshTick, ratingScoreFilter, ratingFilter, ratingPage, ratingPageSize, t])
 
-  useEffect(() => {
-    const id = window.setTimeout(() => setRatingFilter(ratingFilterInput.trim().toLowerCase()), 300)
-    return () => window.clearTimeout(id)
-  }, [ratingFilterInput])
-
-  useEffect(() => {
-    queueMicrotask(() => setRatingPage(1))
-  }, [ratingFilter, ratingScoreFilter])
-
-  const sorted = useMemo(
-    () =>
-      [...rows].sort(
-        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
-      ),
-    [rows],
-  )
-
-  const filteredRatings = useMemo(() => {
-    const q = ratingFilter
-    const scoreFilter = ratingScoreFilter ? Number(ratingScoreFilter) : null
-    return sorted.filter((r) => {
-      if (scoreFilter != null && r.rating !== scoreFilter) return false
-      if (!q) return true
-      const blob = [
-        r.patient_name,
-        r.patient_age != null ? String(r.patient_age) : '',
-        r.user_name,
-        formatRatingContact(r),
-        formatShortOrderId(r.order_id),
-        r.order_id,
-        r.order_status,
-        r.priority,
-        formatRatingTests(r.order_tests),
-        r.final_price_mmk != null ? String(r.final_price_mmk) : '',
-        String(r.rating),
-        r.remark,
-        formatRatingSubmittedDate(r.created_at),
-      ]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase()
-      return blob.includes(q)
-    })
-  }, [sorted, ratingFilter, ratingScoreFilter])
-
-  const pagedRatings = useMemo(() => {
-    const start = (ratingPage - 1) * ratingPageSize
-    return filteredRatings.slice(start, start + ratingPageSize)
-  }, [filteredRatings, ratingPage, ratingPageSize])
+  const pagedRatings = rows
 
   const hasActiveFilters = ratingFilterInput.trim() !== '' || ratingScoreFilter !== ''
 
@@ -256,13 +222,13 @@ export function RatingsFeedbackPage() {
                   <LoadingSpinner label={t('ratings.loading')} />
                 </td>
               </tr>
-            ) : sorted.length === 0 ? (
+            ) : rows.length === 0 && !hasActiveFilters ? (
               <tr>
                 <td colSpan={colSpan} className="data-table__state">
                   {hasApi ? t('ratings.empty.none') : t('ratings.empty.noApi')}
                 </td>
               </tr>
-            ) : filteredRatings.length === 0 ? (
+            ) : rows.length === 0 ? (
               <tr>
                 <td colSpan={colSpan} className="data-table__state">
                   {t('ratings.empty.noMatch')}
@@ -320,12 +286,11 @@ export function RatingsFeedbackPage() {
           </tbody>
         </table>
       </div>
-      {hasApi && filteredRatings.length > 0 ? (
+      {hasApi && !loading && pagedRatings.length > 0 ? (
         <TablePagination
-          mode="client"
+          mode="server"
           page={ratingPage}
           pageSize={ratingPageSize}
-          totalItems={filteredRatings.length}
           itemsOnPage={pagedRatings.length}
           onPageChange={setRatingPage}
           onPageSizeChange={(n) => {

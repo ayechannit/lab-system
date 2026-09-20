@@ -282,6 +282,7 @@ export function AdvertisementsManagementPage() {
                           <img
                             src={imgSrc}
                             alt=""
+                            loading="lazy"
                             className="ad-table-thumb"
                           />
                         ) : (

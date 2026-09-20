@@ -25,12 +25,7 @@ class ReferralFee {
    * Bulk upsert multiple referral fee percentages, one per test_id.
    */
   static async bulkUpsert(referralsArray, updatedBy = null) {
-    const results = [];
-    for (const data of referralsArray) {
-      const res = await this.upsert(data, updatedBy);
-      results.push(res);
-    }
-    return results;
+    return Promise.all(referralsArray.map((data) => this.upsert(data, updatedBy)));
   }
 
   static async getByTestId(test_id) {

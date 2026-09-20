@@ -72,6 +72,11 @@ const manageUsers = modulePermission('users');
  *           type: string
  *         description: Search by partial phone number
  *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Free-text search across name, phone, and id (OR-matched, unlike name/phone which are ANDed)
+ *       - in: query
  *         name: page
  *         schema:
  *           type: integer

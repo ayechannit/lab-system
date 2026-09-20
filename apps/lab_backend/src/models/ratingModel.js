@@ -56,6 +56,12 @@ class Rating {
       query += ` AND r.user_id = $${params.length}`;
     }
 
+    if (filters.search) {
+      params.push(`%${filters.search}%`);
+      const idx = params.length;
+      query += ` AND (o.patient_name ILIKE $${idx} OR u.name ILIKE $${idx} OR u.phone ILIKE $${idx} OR r.remark ILIKE $${idx})`;
+    }
+
     const validSortFields = ['created_at', 'updated_at', 'rating', 'patient_name'];
     let sortBy = 'r.created_at';
     if (filters.sortBy === 'patient_name') {

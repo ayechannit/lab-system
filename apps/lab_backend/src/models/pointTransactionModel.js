@@ -43,14 +43,29 @@ class PointTransaction {
       params.push(filters.transaction_type);
       query += ` AND pt.transaction_type = $${params.length}`;
     }
+    if (filters.search) {
+      params.push(`%${filters.search}%`);
+      query += ` AND (u.name ILIKE $${params.length} OR u.phone ILIKE $${params.length} OR pt.description ILIKE $${params.length})`;
+    }
     query += ' ORDER BY pt.created_at DESC';
+
+    if (filters.page && filters.limit) {
+      const page = parseInt(filters.page, 10);
+      const limit = parseInt(filters.limit, 10);
+      const offset = (page - 1) * limit;
+      params.push(limit);
+      query += ` LIMIT $${params.length}`;
+      params.push(offset);
+      query += ` OFFSET $${params.length}`;
+    }
+
     const result = await pool.query(query, params);
     return result.rows;
   }
 
   /**
    * Get all point transactions across all users (Admin/Manager view).
-   * @param {object} filters - Optional filters ({ transaction_type })
+   * @param {object} filters - Optional filters ({ transaction_type, search })
    * @returns {Promise<Array>} List of all transactions sorted by newest first
    */
   static async getAll(filters = {}) {
@@ -61,11 +76,30 @@ class PointTransaction {
       FROM point_transactions pt
       LEFT JOIN users u ON pt.user_id = u.id
     `;
+    const conditions = [];
     if (filters.transaction_type) {
       params.push(filters.transaction_type);
-      query += ` WHERE pt.transaction_type = $${params.length}`;
+      conditions.push(`pt.transaction_type = $${params.length}`);
+    }
+    if (filters.search) {
+      params.push(`%${filters.search}%`);
+      conditions.push(`(u.name ILIKE $${params.length} OR u.phone ILIKE $${params.length} OR pt.description ILIKE $${params.length})`);
+    }
+    if (conditions.length > 0) {
+      query += ` WHERE ${conditions.join(' AND ')}`;
     }
     query += ' ORDER BY pt.created_at DESC';
+
+    if (filters.page && filters.limit) {
+      const page = parseInt(filters.page, 10);
+      const limit = parseInt(filters.limit, 10);
+      const offset = (page - 1) * limit;
+      params.push(limit);
+      query += ` LIMIT $${params.length}`;
+      params.push(offset);
+      query += ` OFFSET $${params.length}`;
+    }
+
     const result = await pool.query(query, params);
     return result.rows;
   }

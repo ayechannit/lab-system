@@ -74,9 +74,12 @@ export function LoyaltyPointsManagementPage() {
   const { showSuccess, showError } = useToast()
   const [rules, setRules] = useState<PointSettingRow[]>([])
   const [users, setUsers] = useState<UserListRow[]>([])
+  const [usersLoading, setUsersLoading] = useState(hasApi)
+  const [usersError, setUsersError] = useState<string | null>(null)
   const [loading, setLoading] = useState(hasApi)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [refreshTick, setRefreshTick] = useState(0)
+  const [userSearchInput, setUserSearchInput] = useState('')
   const [userSearch, setUserSearch] = useState('')
 
   const [rulesPage, setRulesPage] = useState(1)
@@ -101,12 +104,64 @@ export function LoyaltyPointsManagementPage() {
   const [recordsLoading, setRecordsLoading] = useState(hasApi)
   const [recordsError, setRecordsError] = useState<string | null>(null)
   const [recordsTypeFilter, setRecordsTypeFilter] = useState<'' | PointTransactionType>('redeem')
+  const [recordsSearchInput, setRecordsSearchInput] = useState('')
   const [recordsSearch, setRecordsSearch] = useState('')
   const [recordsPage, setRecordsPage] = useState(1)
   const [recordsPageSize, setRecordsPageSize] = useState(DEFAULT_TABLE_PAGE_SIZE)
 
   useErrorToast(loadError)
+  useErrorToast(usersError)
   useErrorToast(recordsError)
+
+  useEffect(() => {
+    const id = window.setTimeout(() => setUserSearch(userSearchInput.trim()), 300)
+    return () => window.clearTimeout(id)
+  }, [userSearchInput])
+
+  useEffect(() => {
+    const id = window.setTimeout(() => setRecordsSearch(recordsSearchInput.trim()), 300)
+    return () => window.clearTimeout(id)
+  }, [recordsSearchInput])
+
+  useEffect(() => {
+    queueMicrotask(() => setUsersPage(1))
+  }, [userSearch])
+
+  useEffect(() => {
+    queueMicrotask(() => setRecordsPage(1))
+  }, [recordsTypeFilter, recordsSearch])
+
+  useEffect(() => {
+    if (!hasApi) {
+      queueMicrotask(() => {
+        setUsersLoading(false)
+        setUsers([])
+      })
+      return
+    }
+    let cancelled = false
+    queueMicrotask(() => {
+      setUsersLoading(true)
+      setUsersError(null)
+    })
+    void (async () => {
+      try {
+        const u = await fetchUserList({
+          search: userSearch || undefined,
+          page: usersPage,
+          limit: usersPageSize,
+        })
+        if (!cancelled) setUsers(u.filter((row) => !row.is_deleted))
+      } catch (e) {
+        if (!cancelled) setUsersError(e instanceof Error ? e.message : t('loyalty.loadFailed'))
+      } finally {
+        if (!cancelled) setUsersLoading(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [hasApi, refreshTick, userSearch, usersPage, usersPageSize, t])
 
   useEffect(() => {
     if (!hasApi) {
@@ -123,9 +178,12 @@ export function LoyaltyPointsManagementPage() {
     })
     void (async () => {
       try {
-        const rows = await fetchPointTransactions(
-          recordsTypeFilter ? { transaction_type: recordsTypeFilter } : undefined,
-        )
+        const rows = await fetchPointTransactions({
+          transaction_type: recordsTypeFilter || undefined,
+          search: recordsSearch || undefined,
+          page: recordsPage,
+          limit: recordsPageSize,
+        })
         if (!cancelled) setRecords(rows)
       } catch (e) {
         if (!cancelled) setRecordsError(e instanceof Error ? e.message : t('loyalty.records.loadFailed'))
@@ -136,14 +194,13 @@ export function LoyaltyPointsManagementPage() {
     return () => {
       cancelled = true
     }
-  }, [hasApi, refreshTick, recordsTypeFilter, t])
+  }, [hasApi, refreshTick, recordsTypeFilter, recordsSearch, recordsPage, recordsPageSize, t])
 
   useEffect(() => {
     if (!hasApi) {
       queueMicrotask(() => {
         setLoading(false)
         setRules([])
-        setUsers([])
         setRedemptionSetting(null)
         setRedeemRateInput('')
       })
@@ -156,14 +213,9 @@ export function LoyaltyPointsManagementPage() {
     })
     void (async () => {
       try {
-        const [r, u, redemption] = await Promise.all([
-          fetchPointSettings(),
-          fetchUserList(),
-          fetchPointRedemptionSetting(),
-        ])
+        const [r, redemption] = await Promise.all([fetchPointSettings(), fetchPointRedemptionSetting()])
         if (!cancelled) {
           setRules(r)
-          setUsers(u.filter((row) => !row.is_deleted))
           setRedemptionSetting(redemption)
           setRedeemRateInput(redemption.mmk_per_point)
         }
@@ -204,52 +256,19 @@ export function LoyaltyPointsManagementPage() {
     [rules],
   )
 
-  const filteredUsers = useMemo(() => {
-    const q = userSearch.trim().toLowerCase()
-    const list = [...users].sort((a, b) => a.name.localeCompare(b.name))
-    if (!q) return list
-    return list.filter(
-      (u) => u.name.toLowerCase().includes(q) || u.id.toLowerCase().includes(q) || u.phone.toLowerCase().includes(q),
-    )
-  }, [users, userSearch])
-
   useEffect(() => {
     queueMicrotask(() => setRulesPage(1))
   }, [refreshTick, rules.length])
-
-  useEffect(() => {
-    queueMicrotask(() => setUsersPage(1))
-  }, [userSearch])
-
-  const filteredRecords = useMemo(() => {
-    const q = recordsSearch.trim().toLowerCase()
-    if (!q) return records
-    return records.filter(
-      (r) =>
-        (r.user_name ?? '').toLowerCase().includes(q) ||
-        (r.user_phone ?? '').toLowerCase().includes(q) ||
-        (r.description ?? '').toLowerCase().includes(q),
-    )
-  }, [records, recordsSearch])
-
-  useEffect(() => {
-    queueMicrotask(() => setRecordsPage(1))
-  }, [refreshTick, recordsTypeFilter, recordsSearch])
-
-  const pagedRecords = useMemo(() => {
-    const start = (recordsPage - 1) * recordsPageSize
-    return filteredRecords.slice(start, start + recordsPageSize)
-  }, [filteredRecords, recordsPage, recordsPageSize])
 
   const pagedRules = useMemo(() => {
     const start = (rulesPage - 1) * rulesPageSize
     return sortedRules.slice(start, start + rulesPageSize)
   }, [sortedRules, rulesPage, rulesPageSize])
 
-  const pagedUsers = useMemo(() => {
-    const start = (usersPage - 1) * usersPageSize
-    return filteredUsers.slice(start, start + usersPageSize)
-  }, [filteredUsers, usersPage, usersPageSize])
+  // users/records are now server-paginated and server-filtered (see the fetch
+  // effects above) — `users`/`records` already hold just the current page.
+  const pagedUsers = users
+  const pagedRecords = records
 
   function openCreateRule() {
     setFormMode('create')
@@ -484,18 +503,19 @@ export function LoyaltyPointsManagementPage() {
                     t('common.user'),
                     t('loyalty.filters.searchDetail'),
                   )}
-                  value={userSearch}
-                  onChange={(e) => setUserSearch(e.target.value)}
-                  disabled={!hasApi || loading}
+                  value={userSearchInput}
+                  onChange={(e) => setUserSearchInput(e.target.value)}
+                  disabled={!hasApi || usersLoading}
                 />
                 <button
                   type="button"
                   className="btn btn-ghost btn-sm list-filters-bar__clear"
                   onClick={() => {
+                    setUserSearchInput('')
                     setUserSearch('')
                     setUsersPage(1)
                   }}
-                  disabled={!hasApi || loading || userSearch.trim() === ''}
+                  disabled={!hasApi || usersLoading || userSearchInput.trim() === ''}
                 >
                   {t('filters.clearFilters')}
                 </button>
@@ -505,9 +525,9 @@ export function LoyaltyPointsManagementPage() {
                   type="button"
                   className="btn btn-secondary"
                   onClick={() => setRefreshTick((t) => t + 1)}
-                  disabled={!hasApi || loading}
+                  disabled={!hasApi || usersLoading}
                 >
-                  {loading ? t('common.refreshing') : t('common.refresh')}
+                  {usersLoading ? t('common.refreshing') : t('common.refresh')}
                 </button>
               </div>
             </div>
@@ -522,7 +542,7 @@ export function LoyaltyPointsManagementPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {loading ? (
+                  {usersLoading && users.length === 0 ? (
                     <tr>
                       <td colSpan={usersColSpan} className="data-table__state data-table__state--loading">
                         <LoadingSpinner label={t('loyalty.loadingUsers')} />
@@ -534,10 +554,10 @@ export function LoyaltyPointsManagementPage() {
                         {t('loyalty.noApiUsers')}
                       </td>
                     </tr>
-                  ) : filteredUsers.length === 0 ? (
+                  ) : pagedUsers.length === 0 ? (
                     <tr>
                       <td colSpan={usersColSpan} className="data-table__state">
-                        {users.length === 0 ? t('loyalty.emptyUsers') : t('loyalty.noUserMatch')}
+                        {userSearchInput.trim() === '' ? t('loyalty.emptyUsers') : t('loyalty.noUserMatch')}
                       </td>
                     </tr>
                   ) : (
@@ -565,12 +585,11 @@ export function LoyaltyPointsManagementPage() {
                 </tbody>
               </table>
             </div>
-            {!loading && hasApi && filteredUsers.length > 0 ? (
+            {!usersLoading && hasApi && pagedUsers.length > 0 ? (
               <TablePagination
-                mode="client"
+                mode="server"
                 page={usersPage}
                 pageSize={usersPageSize}
-                totalItems={filteredUsers.length}
                 itemsOnPage={pagedUsers.length}
                 onPageChange={setUsersPage}
                 onPageSizeChange={(n) => {
@@ -671,8 +690,8 @@ export function LoyaltyPointsManagementPage() {
                     t('common.user'),
                     t('loyalty.records.searchDetail'),
                   )}
-                  value={recordsSearch}
-                  onChange={(e) => setRecordsSearch(e.target.value)}
+                  value={recordsSearchInput}
+                  onChange={(e) => setRecordsSearchInput(e.target.value)}
                   disabled={!hasApi || recordsLoading}
                 />
                 <div className="list-filters-bar__group">
@@ -697,10 +716,11 @@ export function LoyaltyPointsManagementPage() {
                   type="button"
                   className="btn btn-ghost btn-sm list-filters-bar__clear"
                   onClick={() => {
+                    setRecordsSearchInput('')
                     setRecordsSearch('')
                     setRecordsTypeFilter('')
                   }}
-                  disabled={!hasApi || recordsLoading || (recordsSearch.trim() === '' && recordsTypeFilter === '')}
+                  disabled={!hasApi || recordsLoading || (recordsSearchInput.trim() === '' && recordsTypeFilter === '')}
                 >
                   {t('filters.clearFilters')}
                 </button>
@@ -728,7 +748,7 @@ export function LoyaltyPointsManagementPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {recordsLoading ? (
+                  {recordsLoading && records.length === 0 ? (
                     <tr>
                       <td colSpan={recordsColSpan + 1} className="data-table__state data-table__state--loading">
                         <LoadingSpinner label={t('loyalty.records.loading')} />
@@ -740,10 +760,10 @@ export function LoyaltyPointsManagementPage() {
                         {t('loyalty.records.noApi')}
                       </td>
                     </tr>
-                  ) : filteredRecords.length === 0 ? (
+                  ) : pagedRecords.length === 0 ? (
                     <tr>
                       <td colSpan={recordsColSpan + 1} className="data-table__state">
-                        {records.length === 0 ? t('loyalty.records.empty') : t('loyalty.records.noMatch')}
+                        {recordsSearchInput.trim() === '' ? t('loyalty.records.empty') : t('loyalty.records.noMatch')}
                       </td>
                     </tr>
                   ) : (
@@ -775,12 +795,11 @@ export function LoyaltyPointsManagementPage() {
                 </tbody>
               </table>
             </div>
-            {!recordsLoading && hasApi && filteredRecords.length > 0 ? (
+            {!recordsLoading && hasApi && pagedRecords.length > 0 ? (
               <TablePagination
-                mode="client"
+                mode="server"
                 page={recordsPage}
                 pageSize={recordsPageSize}
-                totalItems={filteredRecords.length}
                 itemsOnPage={pagedRecords.length}
                 onPageChange={setRecordsPage}
                 onPageSizeChange={(n) => {

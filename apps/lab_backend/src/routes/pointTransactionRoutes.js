@@ -97,6 +97,26 @@ router.use(authMiddleware);
  *           type: string
  *           enum: [earn, redeem, adjustment]
  *         description: Filter by transaction type
+ *       - in: query
+ *         name: search
+ *         required: false
+ *         schema:
+ *           type: string
+ *         description: Free-text search across the transaction's user name/phone and description
+ *       - in: query
+ *         name: page
+ *         required: false
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *         description: Page number for pagination (omit for the full unpaginated list)
+ *       - in: query
+ *         name: limit
+ *         required: false
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *         description: Items per page; required alongside page to paginate
  *     responses:
  *       200:
  *         description: A list of point transactions

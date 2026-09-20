@@ -34,12 +34,7 @@ class Discount {
    * Bulk upsert multiple discount percentages, one per test_id.
    */
   static async bulkUpsert(discountsArray, updatedBy = null) {
-    const results = [];
-    for (const data of discountsArray) {
-      const res = await this.upsert(data, updatedBy);
-      results.push(res);
-    }
-    return results;
+    return Promise.all(discountsArray.map((data) => this.upsert(data, updatedBy)));
   }
 
   static async getByTestId(test_id) {

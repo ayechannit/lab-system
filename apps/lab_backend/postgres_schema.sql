@@ -37,6 +37,7 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_users_phone ON users (phone) WHERE is_deleted = false;
+CREATE INDEX IF NOT EXISTS ix_users_active ON users (is_deleted);
 
 -- ==========================================================
 -- LAB STAFF (admin_web accounts)
@@ -58,6 +59,7 @@ CREATE TABLE IF NOT EXISTS lab_staff (
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_lab_staff_email ON lab_staff (email) WHERE is_deleted = false;
+CREATE INDEX IF NOT EXISTS ix_lab_staff_active ON lab_staff (is_deleted, role);
 
 -- ==========================================================
 -- ROLE PERMISSIONS (per-role module access matrix)
@@ -91,6 +93,9 @@ CREATE TABLE IF NOT EXISTS lab_test_catalog (
     created_at timestamptz NOT NULL DEFAULT now(),
     updated_at timestamptz NOT NULL DEFAULT now()
 );
+
+CREATE INDEX IF NOT EXISTS ix_lab_test_catalog_active ON lab_test_catalog (is_deleted, is_active);
+CREATE INDEX IF NOT EXISTS ix_lab_test_catalog_category ON lab_test_catalog (category) WHERE is_deleted = false;
 
 -- ==========================================================
 -- SERVICE GEOFENCES (location-based service fee zones)
@@ -195,6 +200,7 @@ CREATE TABLE IF NOT EXISTS point_transactions (
 );
 
 CREATE INDEX IF NOT EXISTS ix_point_transactions_user_id ON point_transactions (user_id);
+CREATE INDEX IF NOT EXISTS ix_point_transactions_user_type ON point_transactions (user_id, transaction_type);
 
 -- ==========================================================
 -- ADVERTISEMENTS
@@ -269,6 +275,9 @@ CREATE TABLE IF NOT EXISTS lab_orders (
 
 CREATE INDEX IF NOT EXISTS ix_lab_orders_user_id ON lab_orders (user_id);
 CREATE INDEX IF NOT EXISTS ix_lab_orders_status ON lab_orders (status);
+CREATE INDEX IF NOT EXISTS ix_lab_orders_active_created_at ON lab_orders (is_deleted, created_at DESC);
+CREATE INDEX IF NOT EXISTS ix_lab_orders_active_status ON lab_orders (is_deleted, status);
+CREATE INDEX IF NOT EXISTS ix_lab_orders_collector_id ON lab_orders (collector_id);
 
 -- ==========================================================
 -- LAB ORDER ITEMS
@@ -291,6 +300,8 @@ CREATE TABLE IF NOT EXISTS lab_order_items (
     updated_at timestamptz NOT NULL DEFAULT now(),
     CONSTRAINT uq_order_test UNIQUE (order_id, test_id)
 );
+
+CREATE INDEX IF NOT EXISTS ix_lab_order_items_test_id ON lab_order_items (test_id);
 
 -- ==========================================================
 -- ORDER SCHEDULES (1:1 with lab_orders)
@@ -325,6 +336,7 @@ CREATE TABLE IF NOT EXISTS order_status_logs (
 );
 
 CREATE INDEX IF NOT EXISTS ix_order_status_logs_order_id ON order_status_logs (order_id);
+CREATE INDEX IF NOT EXISTS ix_order_status_logs_changed_by ON order_status_logs (changed_by);
 
 -- ==========================================================
 -- PAYMENTS
@@ -348,6 +360,7 @@ CREATE TABLE IF NOT EXISTS payments (
 );
 
 CREATE INDEX IF NOT EXISTS ix_payments_order_id ON payments (order_id);
+CREATE INDEX IF NOT EXISTS ix_payments_order_id_status ON payments (order_id, status);
 
 -- ==========================================================
 -- ORDER RATINGS (1:1 with lab_orders)
@@ -364,6 +377,8 @@ CREATE TABLE IF NOT EXISTS order_ratings (
     updated_at timestamptz NOT NULL DEFAULT now(),
     CONSTRAINT uq_order_ratings_order_id UNIQUE (order_id)
 );
+
+CREATE INDEX IF NOT EXISTS ix_order_ratings_user_id ON order_ratings (user_id);
 
 -- ==========================================================
 -- TEST-SPECIFIC DISCOUNTS / REFERRAL FEES (one row per test)
@@ -383,6 +398,8 @@ CREATE TABLE IF NOT EXISTS test_specific_discounts (
     CONSTRAINT uq_test_discount UNIQUE (test_id)
 );
 
+CREATE INDEX IF NOT EXISTS ix_test_specific_discounts_active ON test_specific_discounts (is_active, is_deleted);
+
 CREATE TABLE IF NOT EXISTS test_referral_fees (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     test_id uuid NOT NULL REFERENCES lab_test_catalog (id),
@@ -395,6 +412,8 @@ CREATE TABLE IF NOT EXISTS test_referral_fees (
     updated_at timestamptz NOT NULL DEFAULT now(),
     CONSTRAINT uq_referral_test UNIQUE (test_id)
 );
+
+CREATE INDEX IF NOT EXISTS ix_test_referral_fees_active ON test_referral_fees (is_active, is_deleted);
 
 -- ==========================================================
 -- LAB RESULTS / AI QUALITY CHECKS
@@ -413,6 +432,8 @@ CREATE TABLE IF NOT EXISTS lab_results (
     updated_at timestamptz NOT NULL DEFAULT now()
 );
 
+CREATE INDEX IF NOT EXISTS ix_lab_results_order_id ON lab_results (order_id);
+
 CREATE TABLE IF NOT EXISTS ai_quality_checks (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     result_id uuid NOT NULL REFERENCES lab_results (id),
@@ -422,6 +443,8 @@ CREATE TABLE IF NOT EXISTS ai_quality_checks (
     created_user uuid,
     checked_at timestamptz NOT NULL DEFAULT now()
 );
+
+CREATE INDEX IF NOT EXISTS ix_ai_quality_checks_result_id ON ai_quality_checks (result_id);
 
 -- ==========================================================
 -- NOTIFICATIONS / CONVERSATION HISTORY

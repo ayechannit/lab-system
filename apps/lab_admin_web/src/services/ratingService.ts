@@ -37,12 +37,15 @@ function parseOrderTests(raw: unknown): RatingOrderTest[] {
   })
 }
 
-export async function fetchAllRatings(): Promise<RatingListRow[]> {
-  const res = await apiFetch('/api/ratings')
-  if (!res.ok) throw new Error(await readApiErrorBody(res))
-  const data = (await res.json()) as Record<string, unknown>[]
-  if (!Array.isArray(data)) return []
-  return data.map((raw) => ({
+export type FetchRatingsParams = {
+  rating?: 1 | 2 | 3 | 4 | 5
+  search?: string
+  page?: number
+  limit?: number
+}
+
+function toRatingListRow(raw: Record<string, unknown>): RatingListRow {
+  return {
     id: String(raw.id),
     order_id: String(raw.order_id ?? ''),
     rating: Number(raw.rating ?? 0),
@@ -64,7 +67,21 @@ export async function fetchAllRatings(): Promise<RatingListRow[]> {
         : undefined,
     order_created_at: raw.order_created_at != null ? String(raw.order_created_at) : undefined,
     order_tests: parseOrderTests(raw.order_tests),
-  }))
+  }
+}
+
+export async function fetchRatings(params?: FetchRatingsParams): Promise<RatingListRow[]> {
+  const sp = new URLSearchParams()
+  if (params?.rating != null) sp.set('rating', String(params.rating))
+  if (params?.search) sp.set('search', params.search)
+  if (params?.page != null && params.page > 0) sp.set('page', String(params.page))
+  if (params?.limit != null && params.limit > 0) sp.set('limit', String(params.limit))
+  const qs = sp.toString()
+  const res = await apiFetch(`/api/ratings${qs ? `?${qs}` : ''}`)
+  if (!res.ok) throw new Error(await readApiErrorBody(res))
+  const data = (await res.json()) as Record<string, unknown>[]
+  if (!Array.isArray(data)) return []
+  return data.map(toRatingListRow)
 }
 
 export function formatRatingSubmittedDate(iso: string): string {

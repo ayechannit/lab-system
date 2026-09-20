@@ -27,6 +27,7 @@ export function StaffAvatar({
       <img
         src={src}
         alt=""
+        loading="lazy"
         className={`${classes} staff-avatar--image`}
         onError={() => setImageFailed(true)}
       />

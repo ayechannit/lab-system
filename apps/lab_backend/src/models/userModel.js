@@ -28,6 +28,10 @@ class User {
       params.push(`%${filters.phone}%`);
       query += ` AND u.phone ILIKE $${params.length}`;
     }
+    if (filters.search) {
+      params.push(`%${filters.search}%`);
+      query += ` AND (u.name ILIKE $${params.length} OR u.phone ILIKE $${params.length} OR u.id::text ILIKE $${params.length})`;
+    }
 
     const validSortFields = ['created_at', 'updated_at', 'name', 'total_points'];
     const sortBy = validSortFields.includes(filters.sortBy) ? filters.sortBy : 'created_at';

@@ -18,6 +18,9 @@ export type PointTransactionRow = {
 export type FetchPointTransactionsParams = {
   user_id?: string
   transaction_type?: PointTransactionType | ''
+  search?: string
+  page?: number
+  limit?: number
 }
 
 function normalizeRow(raw: Record<string, unknown>): PointTransactionRow {
@@ -39,6 +42,9 @@ function toQuery(params?: FetchPointTransactionsParams): string {
   const q = new URLSearchParams()
   if (params.user_id) q.set('user_id', params.user_id)
   if (params.transaction_type) q.set('transaction_type', params.transaction_type)
+  if (params.search) q.set('search', params.search)
+  if (params.page != null && params.page > 0) q.set('page', String(params.page))
+  if (params.limit != null && params.limit > 0) q.set('limit', String(params.limit))
   const s = q.toString()
   return s ? `?${s}` : ''
 }

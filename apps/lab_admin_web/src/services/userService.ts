@@ -53,6 +53,8 @@ export async function createUser(body: UserCreateBody): Promise<unknown> {
 export type FetchUserListParams = {
   name?: string
   phone?: string
+  /** Free-text OR-match across name/phone/id — use instead of name/phone for a single search box. */
+  search?: string
   page?: number
   limit?: number
 }
@@ -61,6 +63,7 @@ export async function fetchUserList(params?: FetchUserListParams): Promise<UserL
   const sp = new URLSearchParams()
   if (params?.name?.trim()) sp.set('name', params.name.trim())
   if (params?.phone?.trim()) sp.set('phone', params.phone.trim())
+  if (params?.search?.trim()) sp.set('search', params.search.trim())
   if (params?.page != null && params.page > 0) sp.set('page', String(params.page))
   if (params?.limit != null && params.limit > 0) sp.set('limit', String(params.limit))
   const qs = sp.toString()

@@ -119,22 +119,28 @@ class Order {
     const result = await pool.query(query, params);
     const orders = result.rows;
     const StorageService = require('../utils/storageService');
-    for (let order of orders) {
-      if (order.schedule && order.schedule.length > 0) {
-        order.schedule = order.schedule[0];
-        if (order.schedule.profile_image_url) {
-          order.schedule.profile_image_url = await StorageService.getFileUrl(order.schedule.profile_image_url);
+    await Promise.all(
+      orders.map(async (order) => {
+        order.schedule = order.schedule && order.schedule.length > 0 ? order.schedule[0] : null;
+        const urlTasks = [];
+        if (order.schedule && order.schedule.profile_image_url) {
+          urlTasks.push(
+            StorageService.getFileUrl(order.schedule.profile_image_url).then((url) => {
+              order.schedule.profile_image_url = url;
+            })
+          );
         }
-      } else {
-        order.schedule = null;
-      }
-
-      if (order.prescription_url) {
-        const fullUrl = await StorageService.getFileUrl(order.prescription_url);
-        order.prescription_url = fullUrl;
-        order.prescription_download_url = fullUrl;
-      }
-    }
+        if (order.prescription_url) {
+          urlTasks.push(
+            StorageService.getFileUrl(order.prescription_url).then((url) => {
+              order.prescription_url = url;
+              order.prescription_download_url = url;
+            })
+          );
+        }
+        await Promise.all(urlTasks);
+      })
+    );
     return orders;
   }
 
@@ -200,18 +206,18 @@ class Order {
       }
 
       if (order.items && order.items.length > 0) {
-        for (let item of order.items) {
-          if (item.result_file_url) {
+        await Promise.all(
+          order.items.map(async (item) => {
+            if (!item.result_file_url) return;
             const storageKey = item.result_file_url;
-            const viewUrl = await StorageService.getFileUrl(storageKey);
-            const downloadUrl = await StorageService.getDownloadUrl(
-              storageKey,
-              path.basename(storageKey),
-            );
+            const [viewUrl, downloadUrl] = await Promise.all([
+              StorageService.getFileUrl(storageKey),
+              StorageService.getDownloadUrl(storageKey, path.basename(storageKey)),
+            ]);
             item.result_file_url = viewUrl;
             item.download_url = downloadUrl;
-          }
-        }
+          })
+        );
       }
 
       return order;

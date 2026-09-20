@@ -3,6 +3,10 @@ const LabTest = require('../models/testModel');
 const getAllTests = async (req, res) => {
   try {
     const tests = await LabTest.getAll(req.query);
+    // Public, unauthenticated, read constantly by both the admin picker and every
+    // mobile order screen; catalog/pricing changes are infrequent, so a short
+    // edge/browser cache cuts a lot of otherwise-repeated DB round trips.
+    res.set('Cache-Control', 'public, max-age=15, stale-while-revalidate=60');
     res.json(tests);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -13,6 +17,7 @@ const getTestById = async (req, res) => {
   try {
     const test = await LabTest.getById(req.params.id);
     if (!test) return res.status(404).json({ message: 'Test not found' });
+    res.set('Cache-Control', 'public, max-age=15, stale-while-revalidate=60');
     res.json(test);
   } catch (error) {
     res.status(500).json({ error: error.message });

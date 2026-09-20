@@ -58,12 +58,7 @@ class Schedule {
   }
 
   static async bulkUpsert(schedulesArray, updatedBy = null) {
-    const results = [];
-    for (const data of schedulesArray) {
-      const res = await this.upsert(data, updatedBy);
-      results.push(res);
-    }
-    return results;
+    return Promise.all(schedulesArray.map((data) => this.upsert(data, updatedBy)));
   }
 }
 

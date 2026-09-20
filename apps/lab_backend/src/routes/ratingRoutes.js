@@ -141,6 +141,11 @@ router.use(authMiddleware);
  *           format: uuid
  *         description: Filter by specific user
  *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Free-text search across patient name, submitter name/phone, and remark
+ *       - in: query
  *         name: page
  *         schema:
  *           type: integer

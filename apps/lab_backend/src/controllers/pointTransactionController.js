@@ -16,12 +16,17 @@ const getAllTransactions = async (req, res) => {
       }
     }
 
-    const { transaction_type } = req.query;
+    const { transaction_type, search, page, limit } = req.query;
     const allowedTypes = ['earn', 'redeem', 'adjustment'];
     if (transaction_type && !allowedTypes.includes(transaction_type)) {
       return res.status(400).json({ message: 'transaction_type must be one of: earn, redeem, adjustment' });
     }
-    const filters = transaction_type ? { transaction_type } : {};
+    const filters = {
+      ...(transaction_type ? { transaction_type } : {}),
+      ...(search ? { search } : {}),
+      ...(page ? { page } : {}),
+      ...(limit ? { limit } : {}),
+    };
 
     const transactions = targetUserId
       ? await PointTransaction.getByUserId(targetUserId, filters)
