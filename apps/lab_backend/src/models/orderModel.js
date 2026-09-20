@@ -67,7 +67,7 @@ class Order {
                ) sched
              ) as schedule,
              (
-               SELECT COALESCE(SUM(oi.subtotal_mmk * COALESCE(rf.referral_percent, 0) / 100), 0)
+               SELECT COALESCE(SUM(ROUND(oi.subtotal_mmk * COALESCE(rf.referral_percent, 0) / 100, 2)), 0)
                FROM lab_order_items oi
                LEFT JOIN test_referral_fees rf ON rf.test_id = oi.test_id AND rf.is_active = true AND rf.is_deleted = false
                WHERE oi.order_id = lab_orders.id
@@ -148,7 +148,7 @@ class Order {
                 FROM (
                   SELECT oi.*, tc.test_name, tc.test_code,
                          rf.referral_percent,
-                         (oi.subtotal_mmk * COALESCE(rf.referral_percent, 0) / 100) AS referral_fee_mmk
+                         ROUND(oi.subtotal_mmk * COALESCE(rf.referral_percent, 0) / 100, 2) AS referral_fee_mmk
                   FROM lab_order_items oi
                   JOIN lab_test_catalog tc ON oi.test_id = tc.id
                   LEFT JOIN test_referral_fees rf ON rf.test_id = oi.test_id AND rf.is_active = true AND rf.is_deleted = false
@@ -357,7 +357,7 @@ class Order {
        SET final_price_mmk = COALESCE((SELECT SUM(subtotal_mmk) FROM lab_order_items WHERE order_id = $1), 0)
                               + COALESCE(material_fee_mmk, 0) + COALESCE(service_fee_mmk, 0)
                               - COALESCE((
-                                  SELECT SUM(oi.subtotal_mmk * COALESCE(rf.referral_percent, 0) / 100)
+                                  SELECT SUM(ROUND(oi.subtotal_mmk * COALESCE(rf.referral_percent, 0) / 100, 2))
                                   FROM lab_order_items oi
                                   LEFT JOIN test_referral_fees rf
                                     ON rf.test_id = oi.test_id AND rf.is_active = true AND rf.is_deleted = false

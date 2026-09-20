@@ -37,7 +37,7 @@ class ReferralFee {
     const pool = await poolPromise;
     const result = await pool.query(
       `SELECT rf.*, t.test_name, t.test_code, t.base_price_mmk as original_price,
-              (t.base_price_mmk * (rf.referral_percent / 100)) as referral_fee_amount
+              ROUND(t.base_price_mmk * (rf.referral_percent / 100), 2) as referral_fee_amount
        FROM test_referral_fees rf
        JOIN lab_test_catalog t ON rf.test_id = t.id
        WHERE rf.test_id = $1 AND rf.is_deleted = false AND t.is_deleted = false`,
@@ -52,7 +52,7 @@ class ReferralFee {
 
     let query = `
       SELECT rf.*, t.test_name, t.test_code, t.base_price_mmk as original_price,
-             (t.base_price_mmk * (rf.referral_percent / 100)) as referral_fee_amount
+             ROUND(t.base_price_mmk * (rf.referral_percent / 100), 2) as referral_fee_amount
       FROM test_referral_fees rf
       JOIN lab_test_catalog t ON rf.test_id = t.id
       WHERE rf.is_deleted = false AND t.is_deleted = false
@@ -140,7 +140,7 @@ class ReferralFee {
     const rowsParams = [...params, limit, offset];
     const rowsResult = await pool.query(
       `SELECT o.id AS order_id, o.patient_name, o.status, o.created_at, o.final_price_mmk,
-              SUM(oi.subtotal_mmk * COALESCE(rf.referral_percent, 0) / 100) AS referral_fee_total_mmk
+              ROUND(SUM(oi.subtotal_mmk * COALESCE(rf.referral_percent, 0) / 100), 2) AS referral_fee_total_mmk
        FROM lab_orders o
        JOIN lab_order_items oi ON oi.order_id = o.id
        LEFT JOIN test_referral_fees rf ON rf.test_id = oi.test_id AND rf.is_active = true AND rf.is_deleted = false
@@ -155,7 +155,7 @@ class ReferralFee {
     const summaryResult = await pool.query(
       `SELECT
          COUNT(DISTINCT o.id) AS total_orders,
-         COALESCE(SUM(oi.subtotal_mmk * COALESCE(rf.referral_percent, 0) / 100), 0) AS total_referral_fee_mmk
+         COALESCE(ROUND(SUM(oi.subtotal_mmk * COALESCE(rf.referral_percent, 0) / 100), 2), 0) AS total_referral_fee_mmk
        FROM lab_orders o
        JOIN lab_order_items oi ON oi.order_id = o.id
        LEFT JOIN test_referral_fees rf ON rf.test_id = oi.test_id AND rf.is_active = true AND rf.is_deleted = false
