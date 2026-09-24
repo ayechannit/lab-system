@@ -1,5 +1,11 @@
-const { Pool } = require('pg');
+const { Pool, types } = require('pg');
 require('dotenv').config();
+
+// pg returns NUMERIC columns (prices, fees, percents) as strings like "20500.00"
+// to avoid precision loss. Our values are numeric(18,2) MMK amounts, well within
+// double precision, and clients (e.g. the mobile app's int.tryParse) expect JSON
+// numbers — as the old MSSQL driver returned. Parse them as numbers.
+types.setTypeParser(types.builtins.NUMERIC, (v) => (v === null ? null : parseFloat(v)));
 
 const useSsl = process.env.DB_SSL === 'true';
 const ssl = useSsl

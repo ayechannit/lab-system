@@ -170,22 +170,7 @@ const createOrder = async (req, res) => {
         { order_id: order.id, event: 'order_created' }
       ).catch(err => console.error('Error sending user order notification:', err.message));
 
-      // 2. Fetch all active staff members and send in-app notifications to each of them
-      Staff.getAll({ is_active: true })
-        .then(activeStaff => {
-          for (const member of activeStaff) {
-            NotificationService.sendToUser(
-              member.id,
-              'staff',
-              'New Order Received',
-              `New ${order.priority} priority order placed for ${order.patient_name}.`,
-              { order_id: order.id, event: 'new_order_alert' }
-            ).catch(err => console.error(`Error sending staff notification to ${member.id}:`, err.message));
-          }
-        })
-        .catch(err => console.error('Error fetching staff list for notification:', err.message));
-
-      // 3. Send real-time push notification to topic 'staff_notifications'
+      // 2. Notify staff via topic 'staff_notifications' (also saves an inbox entry for each active staff member)
       NotificationService.sendToTopic(
         'staff_notifications',
         'New Order Received',
