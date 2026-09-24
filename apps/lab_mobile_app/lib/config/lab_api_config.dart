@@ -12,7 +12,7 @@
 abstract final class LabApiConfig {
   static const String baseUrl = String.fromEnvironment(
     'LAB_API_BASE_URL',
-    defaultValue: 'https://lab-system-three-gamma.vercel.app/',
+    defaultValue: 'https://api.shwehealth.com/',
   );
 
   /// Optional; if empty, the app uses the first AI config from `GET /api/ai-configs`.
