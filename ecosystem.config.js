@@ -1,5 +1,5 @@
 // PM2 process file for the EC2 deployment.
-//   api.shwehealth.com -> Nginx -> lab-backend (port 3000)
+//   api.shwehealth.com -> Nginx -> lab-backend (PORT from apps/lab_backend/.env)
 //   shwehealth.com     -> Nginx -> lab-admin-web (port 4173, static SPA build)
 //
 // Usage (from the repo root on the server):
@@ -16,9 +16,10 @@ module.exports = {
       exec_mode: 'fork',
       autorestart: true,
       max_memory_restart: '500M',
+      // PORT is deliberately not set here: dotenv never overrides an existing env var,
+      // so setting it here would silently win over PORT in apps/lab_backend/.env.
       env: {
         NODE_ENV: 'production',
-        PORT: 3000,
       },
     },
     {
