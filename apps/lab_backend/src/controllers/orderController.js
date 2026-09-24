@@ -159,24 +159,28 @@ const createOrder = async (req, res) => {
 
     const order = await Order.create(orderData, req.user?.id);
     
-    // Send background notifications
+    // Await notifications before responding: on Vercel the function is frozen once the
+    // response is sent, so fire-and-forget work gets dropped (inbox rows never saved).
+    // Each call catches its own errors, so a notification failure never fails the order.
     if (order && order.id) {
-      // 1. Send in-app notification to the user/patient
-      NotificationService.sendToUser(
-        order.user_id,
-        'user',
-        'Order Placed Successfully',
-        `Your lab order for patient "${order.patient_name}" has been created with ${order.priority} priority.`,
-        { order_id: order.id, event: 'order_created' }
-      ).catch(err => console.error('Error sending user order notification:', err.message));
+      await Promise.all([
+        // 1. Send in-app notification to the user/patient
+        NotificationService.sendToUser(
+          order.user_id,
+          'user',
+          'Order Placed Successfully',
+          `Your lab order for patient "${order.patient_name}" has been created with ${order.priority} priority.`,
+          { order_id: order.id, event: 'order_created' }
+        ).catch(err => console.error('Error sending user order notification:', err.message)),
 
-      // 2. Notify staff via topic 'staff_notifications' (also saves an inbox entry for each active staff member)
-      NotificationService.sendToTopic(
-        'staff_notifications',
-        'New Order Received',
-        `New ${order.priority} priority order placed for ${order.patient_name}.`,
-        { order_id: order.id, event: 'new_order_alert' }
-      ).catch(err => console.error('Error sending staff order notification:', err.message));
+        // 2. Notify staff via topic 'staff_notifications' (also saves an inbox entry for each active staff member)
+        NotificationService.sendToTopic(
+          'staff_notifications',
+          'New Order Received',
+          `New ${order.priority} priority order placed for ${order.patient_name}.`,
+          { order_id: order.id, event: 'new_order_alert' }
+        ).catch(err => console.error('Error sending staff order notification:', err.message)),
+      ]);
     }
 
     res.status(201).json(order);
