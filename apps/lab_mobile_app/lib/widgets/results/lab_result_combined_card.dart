@@ -46,6 +46,7 @@ class _LabResultCombinedCardState extends State<LabResultCombinedCard> {
         report: report,
       );
       if (!mounted) return;
+      if (saved == null) return; // user cancelled the save dialog
       AppToast.successInShell(
         context,
         saved,

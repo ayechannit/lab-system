@@ -473,7 +473,7 @@ class SessionController extends ChangeNotifier {
     }
   }
 
-  Future<String> downloadTestResultPdf({
+  Future<String?> downloadTestResultPdf({
     required LabResultTestItem test,
     required LabResultReport report,
   }) async {
@@ -493,7 +493,7 @@ class SessionController extends ChangeNotifier {
     return LabReportPdfService.download(url: url, filename: filename);
   }
 
-  Future<String> downloadReportPdf(LabResultReport report) async {
+  Future<String?> downloadReportPdf(LabResultReport report) async {
     LabResultTestItem? test;
     for (final t in report.tests) {
       if (t.hasPdf) {

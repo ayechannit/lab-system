@@ -28,7 +28,7 @@ abstract final class LabReportPdfService {
     return 'lab-report-$safe.pdf';
   }
 
-  static Future<String> download({
+  static Future<String?> download({
     required String url,
     required String filename,
     Map<String, String>? headers,
@@ -53,7 +53,7 @@ abstract final class LabReportPdfService {
     return saved;
   }
 
-  static Future<String> saveBytes({
+  static Future<String?> saveBytes({
     required List<int> bytes,
     required String filename,
   }) async {

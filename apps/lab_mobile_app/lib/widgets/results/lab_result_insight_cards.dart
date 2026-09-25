@@ -43,6 +43,7 @@ class _LabResultInsightCardsState extends State<LabResultInsightCards> {
       final session = SessionScope.of(context);
       final saved = await session.downloadReportPdf(r);
       if (!mounted) return;
+      if (saved == null) return; // user cancelled the save dialog
       AppToast.successInShell(
         context,
         saved,
