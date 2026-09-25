@@ -1302,19 +1302,6 @@ class RestLabUserApi implements LabUserApi {
     return null;
   }
 
-  Future<String> _resolveAiConfigId() async {
-    final fromEnv = LabApiConfig.aiConfigId.trim();
-    if (fromEnv.isNotEmpty) return fromEnv;
-    final r = await http.get(Uri.parse('$_base/api/ai-configs'), headers: _jsonHeaders());
-    if (r.statusCode >= 400) _throwFromResponse(r);
-    final list = jsonDecode(r.body);
-    if (list is! List || list.isEmpty) {
-      throw LabApiException('No AI configuration found. Ask the lab to add one or set LAB_AI_CONFIG_ID.');
-    }
-    final m = _asObj(list.first);
-    return '${_gv(m, 'id')}';
-  }
-
   @override
   Future<AiAnalysisResult> runAiAnalysis({
     required String userId,
@@ -1373,7 +1360,9 @@ class RestLabUserApi implements LabUserApi {
       'patient_name': _gv(o, 'patient_name') ?? _gv(o, 'patientName'),
       'tests': tests,
     });
-    final aiId = await _resolveAiConfigId();
+    // Optional override; otherwise the backend picks the default AI config
+    // (`GET /api/ai-configs` is admin-only, so patients can't list configs).
+    final aiId = LabApiConfig.aiConfigId.trim();
 
     List<int>? pdfBytes;
     if (selectedTestId.isNotEmpty) {
@@ -1404,7 +1393,7 @@ class RestLabUserApi implements LabUserApi {
         mp.headers['Authorization'] = 'Bearer $_token';
       }
       mp.headers['Accept'] = 'application/json';
-      mp.fields['ai_config_id'] = aiId;
+      if (aiId.isNotEmpty) mp.fields['ai_config_id'] = aiId;
       mp.fields['prompt_id'] = promptId;
       mp.fields['message'] = message;
       mp.fields['stream'] = 'false';
@@ -1423,7 +1412,7 @@ class RestLabUserApi implements LabUserApi {
         Uri.parse('$_base/api/conversations'),
         headers: _jsonHeaders(),
         body: jsonEncode({
-          'ai_config_id': aiId,
+          if (aiId.isNotEmpty) 'ai_config_id': aiId,
           'prompt_id': promptId,
           'message': message,
           'stream': false,

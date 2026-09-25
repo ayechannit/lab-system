@@ -27,13 +27,12 @@ router.use(authMiddleware);
  *           schema:
  *             type: object
  *             required:
- *               - ai_config_id
  *               - message
  *             properties:
  *               ai_config_id:
  *                 type: string
  *                 format: uuid
- *                 description: ID of the AI Config to use (API Key, Model Name, Type)
+ *                 description: Optional ID of the AI Config to use; defaults to the newest AI Config
  *               prompt_id:
  *                 type: string
  *                 format: uuid
@@ -66,7 +65,7 @@ router.use(authMiddleware);
  *             schema:
  *               type: string
  *       400:
- *         description: Validation error (missing ai_config_id or message)
+ *         description: Validation error (missing message)
  *       404:
  *         description: AI Config or Prompt not found
  */

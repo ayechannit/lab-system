@@ -15,7 +15,7 @@ abstract final class LabApiConfig {
     defaultValue: 'https://api.shwehealth.com/',
   );
 
-  /// Optional; if empty, the app uses the first AI config from `GET /api/ai-configs`.
+  /// Optional; if empty, the backend uses its default (newest) AI config.
   static const String aiConfigId = String.fromEnvironment('LAB_AI_CONFIG_ID', defaultValue: '');
 
   /// Managed prompt for patient-facing lab result summaries (`Lab Result Summarized`).

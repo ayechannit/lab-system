@@ -63,11 +63,15 @@ const chat = async (req, res) => {
     // When using multipart/form-data, boolean fields might come as strings
     if (typeof stream === 'string') stream = stream === 'true';
 
-    if (!ai_config_id || !message) {
-      return res.status(400).json({ message: 'ai_config_id and message are required' });
+    if (!message) {
+      return res.status(400).json({ message: 'message is required' });
     }
 
-    const config = await AiConfig.getById(ai_config_id);
+    // ai_config_id is optional: mobile users can't list /api/ai-configs (admin-only, holds API keys),
+    // so fall back to the newest configured AI config.
+    const config = ai_config_id
+      ? await AiConfig.getById(ai_config_id)
+      : (await AiConfig.getAll())[0];
     if (!config) {
       return res.status(404).json({ message: 'AI Config not found' });
     }
