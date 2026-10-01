@@ -156,6 +156,7 @@ class RestLabUserApi implements LabUserApi {
     String userId, {
     String? status,
     String? excludeStatus,
+    bool hasReleasedResults = false,
     String sortBy = 'created_at',
     String sortOrder = 'DESC',
     int limit = 50,
@@ -173,6 +174,7 @@ class RestLabUserApi implements LabUserApi {
     if (excludeStatus != null && excludeStatus.trim().isNotEmpty) {
       q['exclude_status'] = excludeStatus.trim().toLowerCase();
     }
+    if (hasReleasedResults) q['has_released_results'] = 'true';
     return Uri.parse('$_base/api/users/$userId/orders').replace(queryParameters: q);
   }
 
@@ -218,9 +220,10 @@ class RestLabUserApi implements LabUserApi {
     return double.tryParse(v.toString()) ?? d;
   }
 
+  /// API timestamps are UTC (`...Z`); show them in the device's local time (e.g. Myanmar, UTC+6:30).
   DateTime? _asDt(dynamic v) {
     if (v == null) return null;
-    return DateTime.tryParse(v.toString());
+    return DateTime.tryParse(v.toString())?.toLocal();
   }
 
   bool _asBool(dynamic v, [bool d = false]) {
@@ -1027,7 +1030,7 @@ class RestLabUserApi implements LabUserApi {
     final r = await http.get(
       _userOrdersUri(
         userId,
-        status: 'delivered',
+        hasReleasedResults: true,
         sortBy: sortBy,
         sortOrder: sortOrder,
         limit: limit,
@@ -1099,7 +1102,7 @@ class RestLabUserApi implements LabUserApi {
         final pdfDisplaySolo = pdfDisplaySoloRaw == true ||
             pdfDisplaySoloRaw == 1 ||
             '$pdfDisplaySoloRaw'.toLowerCase() == 'true';
-        final released = _asDt(_gv(m, 'updated_at') ?? _gv(m, 'updatedAt'));
+        final released = _asDt(_gv(m, 'released_at') ?? _gv(m, 'releasedAt'));
         if (released != null) {
           if (latestReleased == null || released.isAfter(latestReleased)) {
             latestReleased = released;
@@ -1177,13 +1180,23 @@ class RestLabUserApi implements LabUserApi {
       throw LabApiException('Order does not belong to the current user.');
     }
     final status = '${_gv(o, 'status')}'.toLowerCase();
-    if (status != 'delivered') return null;
     final deliveryMethod = '${_gv(o, 'report_delivery_method') ?? _gv(o, 'reportDeliveryMethod') ?? ''}'
         .trim()
         .toLowerCase();
     if (deliveryMethod == 'hard_copy') {
+      // Hard copy is handed over once for the whole order.
+      if (status != 'delivered') return null;
       return _mapOrderDetailToResult(o, orderId, includeDigitalPdfs: false);
     }
+    // Digital results are released test by test; unreleased tests come back without a PDF.
+    final items = o['items'];
+    final anyReleased = items is List &&
+        items.any((it) {
+          final m = _asObj(it);
+          final at = _gv(m, 'released_at') ?? _gv(m, 'releasedAt');
+          return at != null && '$at'.isNotEmpty;
+        });
+    if (!anyReleased && status != 'delivered') return null;
     return _mapOrderDetailToResult(o, orderId);
   }
 

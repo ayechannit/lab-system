@@ -123,8 +123,9 @@ export function MyProfileModal({
       setFormError('Enter a name.')
       return
     }
+    // Email may be left empty when the account signs in with a staff code.
     const em = email.trim().toLowerCase()
-    if (!em || !em.includes('@')) {
+    if (em ? !em.includes('@') : !staffRow.staff_code) {
       setFormError('Enter a valid email.')
       return
     }
@@ -234,6 +235,12 @@ export function MyProfileModal({
               disabled={submitting || !staffRow}
             />
           </div>
+          {staffRow?.staff_code ? (
+            <div className="field">
+              <label htmlFor="mp-staff-code">{t('profile.staffCode')}</label>
+              <input id="mp-staff-code" value={staffRow.staff_code} readOnly disabled />
+            </div>
+          ) : null}
           <div className="field">
             <label htmlFor="mp-role">{t('profile.role')}</label>
             <input

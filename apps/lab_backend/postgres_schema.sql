@@ -46,6 +46,7 @@ CREATE TABLE IF NOT EXISTS lab_staff (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     name varchar(255),
     email varchar(255),
+    staff_code varchar(50),
     password_hash varchar(255),
     role varchar(20) CHECK (role IN ('admin', 'manager', 'reception', 'lab_technician', 'collector')),
     is_active boolean NOT NULL DEFAULT true,
@@ -59,6 +60,10 @@ CREATE TABLE IF NOT EXISTS lab_staff (
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_lab_staff_email ON lab_staff (email) WHERE is_deleted = false;
+-- Staff can sign in with email or staff code (some staff have no email).
+ALTER TABLE lab_staff ADD COLUMN IF NOT EXISTS staff_code varchar(50);
+ALTER TABLE lab_staff ALTER COLUMN email DROP NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_lab_staff_staff_code ON lab_staff (lower(staff_code)) WHERE is_deleted = false AND staff_code IS NOT NULL;
 CREATE INDEX IF NOT EXISTS ix_lab_staff_active ON lab_staff (is_deleted, role);
 
 -- ==========================================================
@@ -302,6 +307,12 @@ CREATE TABLE IF NOT EXISTS lab_order_items (
 );
 
 CREATE INDEX IF NOT EXISTS ix_lab_order_items_test_id ON lab_order_items (test_id);
+-- Per-test progress: tests finish on different days, so each one is marked lab-complete
+-- and released (soft copy sent) to the patient on its own.
+ALTER TABLE lab_order_items ADD COLUMN IF NOT EXISTS lab_completed_at timestamptz;
+ALTER TABLE lab_order_items ADD COLUMN IF NOT EXISTS lab_completed_by uuid REFERENCES lab_staff (id);
+ALTER TABLE lab_order_items ADD COLUMN IF NOT EXISTS released_at timestamptz;
+ALTER TABLE lab_order_items ADD COLUMN IF NOT EXISTS released_by uuid REFERENCES lab_staff (id);
 
 -- ==========================================================
 -- ORDER SCHEDULES (1:1 with lab_orders)

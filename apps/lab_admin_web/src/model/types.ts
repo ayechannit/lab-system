@@ -6,7 +6,10 @@ export type SessionRole = StaffRole
 export interface StaffListRow {
   id: string
   name: string
+  /** Empty when the staff member signs in with a staff code only. */
   email: string
+  /** Empty when the staff member signs in with email only. */
+  staff_code: string
   role: StaffRole
   is_active: boolean
   is_deleted: boolean

@@ -19,7 +19,7 @@ class AppNotification {
     final createdRaw = json['created_at'];
     DateTime createdAt = DateTime.now();
     if (createdRaw is String && createdRaw.isNotEmpty) {
-      createdAt = DateTime.tryParse(createdRaw) ?? createdAt;
+      createdAt = DateTime.tryParse(createdRaw)?.toLocal() ?? createdAt;
     }
 
     final readRaw = json['is_read'];

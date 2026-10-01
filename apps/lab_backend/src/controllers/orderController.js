@@ -48,6 +48,81 @@ function stripDigitalResultAccess(order) {
   }
 }
 
+/** Patients only see result files for tests that have been released to them. */
+function stripUnreleasedResultAccess(order) {
+  if (!order?.items?.length) return;
+  for (const item of order.items) {
+    if (item.released_at) continue;
+    delete item.download_url;
+    delete item.result_file_url;
+    delete item.ai_verdict;
+    delete item.ai_raw_response;
+  }
+}
+
+function sameId(a, b) {
+  return String(a || '').toLowerCase() === String(b || '').toLowerCase();
+}
+
+function findOrderItem(order, testId) {
+  return (order.items || []).find((row) => sameId(row.test_id, testId));
+}
+
+function testLabel(item) {
+  return item?.test_name || item?.test_code || 'Test';
+}
+
+/** Note logged when the last test is released and the order becomes "delivered". */
+function deliveredStatusNote(method) {
+  const key = String(method || '').trim().toLowerCase();
+  if (key === 'hard_copy') return 'Hard copy delivered to patient in person';
+  if (key === 'both') return 'Results released to patient (digital and hard copy)';
+  return 'Results released to patient after lab review';
+}
+
+/** Notification for an order that has just become "delivered" (all results out). */
+async function notifyResultsDelivered(order) {
+  const method = String(order.report_delivery_method || '').trim().toLowerCase();
+  let title = 'Lab Results Ready';
+  let body = `All lab test results for patient "${order.patient_name}" are ready and available for download.`;
+  let event = 'results_ready';
+
+  if (method === 'hard_copy') {
+    const fullOrder = await Order.getById(order.id);
+    const schedule = fullOrder?.schedule;
+    title = 'Hard Copy Delivered';
+    event = 'hard_copy_delivered';
+    if (schedule && schedule.report_out_time) {
+      const formattedDeliveryTime = new Date(schedule.report_out_time).toLocaleString();
+      body = `Your physical lab report for patient "${order.patient_name}" has been handed over and is scheduled for delivery to your address on ${formattedDeliveryTime}.`;
+    } else {
+      body = `Your physical lab report for patient "${order.patient_name}" has been handed over in person. Digital PDFs are not available in the app for this order.`;
+    }
+  } else if (method === 'both') {
+    const fullOrder = await Order.getById(order.id);
+    const schedule = fullOrder?.schedule;
+    event = 'results_ready_with_delivery';
+    if (schedule && schedule.report_out_time) {
+      const formattedDeliveryTime = new Date(schedule.report_out_time).toLocaleString();
+      body = `Digital results for patient "${order.patient_name}" are available in the app. A physical copy is scheduled for delivery on ${formattedDeliveryTime}.`;
+    } else {
+      body = `Digital results for patient "${order.patient_name}" are available in the app. A physical copy will be delivered to your address shortly.`;
+    }
+  }
+
+  return NotificationService.sendToUser(order.user_id, 'user', title, body, { order_id: order.id, event });
+}
+
+function notifyStatusUpdated(order, status) {
+  return NotificationService.sendToUser(
+    order.user_id,
+    'user',
+    'Order Status Updated',
+    `Your order for patient "${order.patient_name}" status has been updated to "${status}".`,
+    { order_id: order.id, status, event: 'order_status_updated' }
+  );
+}
+
 const OUT_OF_COVERAGE_MESSAGE =
   'Your location is outside our service coverage areas. We cannot deliver services to this address.';
 
@@ -101,8 +176,12 @@ const getOrderById = async (req, res) => {
     order.user_id &&
     req.user?.id &&
     String(order.user_id).toLowerCase() === String(req.user.id).toLowerCase();
-  if (!isStaff && isOwner && !allowsDigitalResultDelivery(order.report_delivery_method)) {
-    stripDigitalResultAccess(order);
+  if (!isStaff && isOwner) {
+    if (!allowsDigitalResultDelivery(order.report_delivery_method)) {
+      stripDigitalResultAccess(order);
+    } else {
+      stripUnreleasedResultAccess(order);
+    }
   }
 
   res.json(order);
@@ -416,54 +495,13 @@ const updateOrderStatus = async (req, res) => {
   if (!order) return res.status(404).json({ message: 'Order not found' });
 
   if (status === 'delivered') {
-    const method = String(order.report_delivery_method || '').trim().toLowerCase();
-    let title = 'Lab Results Ready';
-    let body = `All lab test results for patient "${order.patient_name}" are ready and available for download.`;
-    let event = 'results_ready';
-
-    if (method === 'hard_copy') {
-      const fullOrder = await Order.getById(id);
-      const schedule = fullOrder?.schedule;
-      if (schedule && schedule.report_out_time) {
-        const formattedDeliveryTime = new Date(schedule.report_out_time).toLocaleString();
-        title = 'Hard Copy Delivered';
-        body = `Your physical lab report for patient "${order.patient_name}" has been handed over and is scheduled for delivery to your address on ${formattedDeliveryTime}.`;
-        event = 'hard_copy_delivered';
-      } else {
-        title = 'Hard Copy Delivered';
-        body = `Your physical lab report for patient "${order.patient_name}" has been handed over in person. Digital PDFs are not available in the app for this order.`;
-        event = 'hard_copy_delivered';
-      }
-    } else if (method === 'both') {
-      const fullOrder = await Order.getById(id);
-      const schedule = fullOrder?.schedule;
-      if (schedule && schedule.report_out_time) {
-        const formattedDeliveryTime = new Date(schedule.report_out_time).toLocaleString();
-        title = 'Lab Results Ready';
-        body = `Digital results for patient "${order.patient_name}" are available in the app. A physical copy is scheduled for delivery on ${formattedDeliveryTime}.`;
-        event = 'results_ready_with_delivery';
-      } else {
-        title = 'Lab Results Ready';
-        body = `Digital results for patient "${order.patient_name}" are available in the app. A physical copy will be delivered to your address shortly.`;
-        event = 'results_ready_with_delivery';
-      }
-    }
-
-    NotificationService.sendToUser(
-      order.user_id,
-      'user',
-      title,
-      body,
-      { order_id: order.id, event }
-    ).catch(err => console.error('Error sending lab results notification:', err.message));
+    notifyResultsDelivered(order).catch((err) =>
+      console.error('Error sending lab results notification:', err.message)
+    );
   } else {
-    NotificationService.sendToUser(
-      order.user_id,
-      'user',
-      'Order Status Updated',
-      `Your order for patient "${order.patient_name}" status has been updated to "${status}".`,
-      { order_id: order.id, status: status, event: 'order_status_updated' }
-    ).catch(err => console.error('Error sending status update notification:', err.message));
+    notifyStatusUpdated(order, status).catch((err) =>
+      console.error('Error sending status update notification:', err.message)
+    );
   }
 
   res.json(order);
@@ -533,20 +571,20 @@ const uploadTestResult = async (req, res) => {
       return res.status(404).json({ message: 'Order not found' });
     }
 
+    const item = findOrderItem(order, testId);
+    if (!item) {
+      return res.status(404).json({ message: 'Test not found in this order' });
+    }
+    if (!item.lab_completed_at) {
+      return res.status(400).json({ message: `Mark ${testLabel(item)} lab complete before uploading its result.` });
+    }
+
     const fileUrl = await StorageService.uploadFile(req.file);
     const success = await Order.uploadResult(id, testId, fileUrl, req.user?.id);
 
     if (!success) {
       return res.status(404).json({ message: 'Test not found in this order' });
     }
-
-    NotificationService.sendToUser(
-      order.user_id,
-      'user',
-      'Test Result Uploaded',
-      `A new test result has been uploaded for patient "${order.patient_name}".`,
-      { order_id: id, event: 'result_uploaded' }
-    ).catch(err => console.error('Error sending result upload notification:', err.message));
 
     const downloadUrl = await StorageService.getDownloadUrl(fileUrl, path.basename(fileUrl));
 
@@ -582,6 +620,12 @@ const bulkUploadTestResult = async (req, res) => {
     if (missing.length > 0) {
       return res.status(400).json({ message: 'One or more tests were not found on this order.' });
     }
+    const notComplete = testIds.map((testId) => findOrderItem(order, testId)).filter((it) => !it.lab_completed_at);
+    if (notComplete.length > 0) {
+      return res.status(400).json({
+        message: `Mark these tests lab complete before uploading: ${notComplete.map(testLabel).join(', ')}.`,
+      });
+    }
 
     const fileUrl = await StorageService.uploadFile(req.file);
     const groupId = crypto.randomUUID();
@@ -589,14 +633,6 @@ const bulkUploadTestResult = async (req, res) => {
     if (updated === 0) {
       return res.status(404).json({ message: 'No tests were updated on this order.' });
     }
-
-    NotificationService.sendToUser(
-      order.user_id,
-      'user',
-      'Test Result Uploaded',
-      `A new test result has been uploaded for patient "${order.patient_name}".`,
-      { order_id: id, event: 'result_uploaded' }
-    ).catch(err => console.error('Error sending result upload notification:', err.message));
 
     const downloadUrl = await StorageService.getDownloadUrl(fileUrl, path.basename(fileUrl));
 
@@ -662,18 +698,16 @@ const downloadTestResult = async (req, res) => {
     if (!isStaff && !isOwner) {
       return res.status(403).json({ message: 'Access denied' });
     }
-    if (!isStaff && order.status !== 'delivered') {
-      return res.status(403).json({ message: 'Results not released yet' });
-    }
     if (!isStaff && !allowsDigitalResultDelivery(order.report_delivery_method)) {
       return res.status(403).json({
         message: 'Digital results are not available for hard copy delivery orders.',
       });
     }
 
-    const item = (order.items || []).find(
-      (row) => String(row.test_id).toLowerCase() === String(testId).toLowerCase(),
-    );
+    const item = findOrderItem(order, testId);
+    if (!isStaff && !item?.released_at) {
+      return res.status(403).json({ message: 'Results not released yet' });
+    }
     if (!item?.result_file_url) {
       return res.status(404).json({ message: 'No result file for this test' });
     }
@@ -733,6 +767,164 @@ const bulkUpdateOrderStatus = async (req, res) => {
   }
 };
 
+/** POST /:id/tests/lab-complete — mark selected tests finished in the lab. */
+const markTestsLabComplete = async (req, res) => {
+  try {
+    if (req.user?.type !== 'staff') {
+      return res.status(403).json({ message: 'Only lab staff can update test progress.' });
+    }
+    const { id } = req.params;
+    const testIds = parseTestIds(req.body?.test_ids);
+    if (testIds.length === 0) {
+      return res.status(400).json({ message: 'Select at least one test.' });
+    }
+
+    const order = await Order.getById(id);
+    if (!order) return res.status(404).json({ message: 'Order not found' });
+    if (!['running', 'completed'].includes(order.status)) {
+      return res.status(400).json({ message: 'Start lab processing before marking tests complete.' });
+    }
+    const missing = testIds.filter((testId) => !findOrderItem(order, testId));
+    if (missing.length > 0) {
+      return res.status(400).json({ message: 'One or more tests were not found on this order.' });
+    }
+
+    const result = await Order.markTestsLabComplete(id, testIds, req.user.id, req.user.id);
+    if (!result) return res.status(404).json({ message: 'Order not found' });
+
+    if (result.statusChangedTo) {
+      notifyStatusUpdated(order, result.statusChangedTo).catch((err) =>
+        console.error('Error sending status update notification:', err.message)
+      );
+    }
+
+    res.json({
+      message: `${result.markedTestIds.length} test(s) marked lab complete.`,
+      test_ids: result.markedTestIds,
+      completed_count: result.completed,
+      item_count: result.total,
+      all_complete: result.allComplete,
+      status: result.statusChangedTo || order.status,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+/**
+ * POST /:id/tests/release — send selected tests' results (soft copy) to the patient.
+ * Tests must be lab-complete, have a PDF and have passed AI review.
+ */
+const releaseTests = async (req, res) => {
+  try {
+    if (req.user?.type !== 'staff') {
+      return res.status(403).json({ message: 'Only lab staff can release results.' });
+    }
+    const { id } = req.params;
+    const testIds = parseTestIds(req.body?.test_ids);
+    if (testIds.length === 0) {
+      return res.status(400).json({ message: 'Select at least one test.' });
+    }
+
+    const order = await Order.getById(id);
+    if (!order) return res.status(404).json({ message: 'Order not found' });
+    if (!allowsDigitalResultDelivery(order.report_delivery_method)) {
+      return res.status(400).json({
+        message: 'Hard copy orders are marked delivered as a whole after the printed report is handed over.',
+      });
+    }
+
+    const items = testIds.map((testId) => findOrderItem(order, testId));
+    if (items.some((it) => !it)) {
+      return res.status(400).json({ message: 'One or more tests were not found on this order.' });
+    }
+    const notReady = items.filter(
+      (it) =>
+        !it.released_at &&
+        (!it.lab_completed_at || !it.result_file_url || String(it.ai_verdict || '').toLowerCase() !== 'pass')
+    );
+    if (notReady.length > 0) {
+      return res.status(400).json({
+        message: `These tests need lab complete, a result PDF and a passing AI review before release: ${notReady
+          .map(testLabel)
+          .join(', ')}.`,
+      });
+    }
+
+    // Tests that share one PDF must be released together: the file holds all of their results.
+    const fileRows = await Order.getResultFileKeys(id);
+    const fileKeyByTest = new Map(fileRows.map((r) => [String(r.test_id).toLowerCase(), r.result_file_url]));
+    const selectedFiles = new Set(
+      items.map((it) => fileKeyByTest.get(String(it.test_id).toLowerCase())).filter(Boolean)
+    );
+    const leftBehind = (order.items || []).filter(
+      (it) =>
+        !it.released_at &&
+        selectedFiles.has(fileKeyByTest.get(String(it.test_id).toLowerCase())) &&
+        !items.some((sel) => sameId(sel.test_id, it.test_id))
+    );
+    if (leftBehind.length > 0) {
+      return res.status(400).json({
+        message: `These tests share the same PDF and must be released together: ${leftBehind
+          .map(testLabel)
+          .join(', ')}. Release them together, or split the PDFs and upload one per test.`,
+      });
+    }
+
+    const pendingAfter = (order.items || []).filter(
+      (it) => !it.released_at && !items.some((sel) => sameId(sel.test_id, it.test_id))
+    );
+    if (
+      pendingAfter.length === 0 &&
+      requiresHardCopyDelivery(order.report_delivery_method) &&
+      !order.schedule?.report_out_time
+    ) {
+      return res.status(400).json({
+        message: 'Set and save a handover time for the hard copy before releasing the last results.',
+      });
+    }
+
+    const result = await Order.releaseTests(
+      id,
+      testIds,
+      req.user.id,
+      deliveredStatusNote(order.report_delivery_method),
+      req.user.id
+    );
+    if (!result) return res.status(404).json({ message: 'Order not found' });
+
+    if (result.statusChangedTo === 'delivered') {
+      notifyResultsDelivered(order).catch((err) =>
+        console.error('Error sending lab results notification:', err.message)
+      );
+    } else if (result.releasedTestIds.length > 0) {
+      const names = items
+        .filter((it) => result.releasedTestIds.some((tid) => sameId(tid, it.test_id)))
+        .map(testLabel)
+        .join(', ');
+      const remaining = result.total - result.released;
+      NotificationService.sendToUser(
+        order.user_id,
+        'user',
+        'Lab Results Ready',
+        `Results for ${names} (patient "${order.patient_name}") are ready in the app. ${remaining} more test result(s) will follow.`,
+        { order_id: order.id, event: 'results_ready', test_ids: result.releasedTestIds.join(',') }
+      ).catch((err) => console.error('Error sending partial results notification:', err.message));
+    }
+
+    res.json({
+      message: `${result.releasedTestIds.length} test result(s) released.`,
+      test_ids: result.releasedTestIds,
+      released_count: result.released,
+      item_count: result.total,
+      all_released: result.allReleased,
+      status: result.statusChangedTo || order.status,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 const saveAiReview = async (req, res) => {
   try {
     const { id, testId } = req.params;
@@ -775,5 +967,7 @@ module.exports = {
   bulkUploadTestResult,
   separateResultPdfs,
   downloadTestResult,
+  markTestsLabComplete,
+  releaseTests,
   saveAiReview,
 };

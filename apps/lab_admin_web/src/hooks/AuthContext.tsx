@@ -22,8 +22,8 @@ type AuthContextValue = {
   initializing: boolean
   role: SessionRole | null
   account: StoredAccount | null
-  /** Signs in via `POST /api/auth/login/staff` (admin, lab technician, reception, manager). */
-  signInWithStaffCredentials: (email: string, password: string, remember: boolean) => Promise<void>
+  /** Signs in via `POST /api/auth/login/staff` with an email or staff code. */
+  signInWithStaffCredentials: (identifier: string, password: string, remember: boolean) => Promise<void>
   /** Re-fetches `/api/auth/me` and updates stored session (preserves remember-me storage). */
   refreshAccount: () => Promise<void>
   signOut: () => void
@@ -89,13 +89,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const signInWithStaffCredentials = useCallback(
-    async (email: string, password: string, remember: boolean) => {
-      const { token, staff } = await loginStaff(email.trim(), password, remember)
+    async (identifier: string, password: string, remember: boolean) => {
+      const { token, staff } = await loginStaff(identifier.trim(), password, remember)
       const acc: StoredAccount = {
         type: 'staff',
         id: staff.id,
         name: staff.name,
-        email: staff.email,
+        email: staff.email ?? '',
+        staff_code: staff.staff_code ?? '',
         role: staff.role,
       }
       setSession(token, acc, remember)

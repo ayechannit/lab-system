@@ -25,6 +25,10 @@ export type ApiOrderDetailItem = {
   result_pdf_display_solo?: boolean | number | null
   ai_verdict?: string | null
   ai_raw_response?: string | null
+  /** Set when this test is finished in the lab (tests can finish on different days). */
+  lab_completed_at?: string | null
+  /** Set when this test's result has been released (soft copy sent) to the patient. */
+  released_at?: string | null
 }
 
 export type ApiOrderListRow = {
@@ -51,6 +55,10 @@ export type ApiOrderListRow = {
   /** Present in GET /api/orders list (parsed from order_schedules join). */
   schedule?: ApiOrderSchedule | null
   items?: ApiOrderDetailItem[]
+  /** Per-test progress counts from GET /api/orders. */
+  item_count?: number
+  lab_completed_count?: number
+  released_count?: number
 }
 
 function normalizeOrderItems(raw: unknown): ApiOrderDetailItem[] {
@@ -80,6 +88,8 @@ function normalizeOrderItems(raw: unknown): ApiOrderDetailItem[] {
       result_pdf_display_solo: it.result_pdf_display_solo ?? null,
       ai_verdict: it.ai_verdict ?? null,
       ai_raw_response: it.ai_raw_response ?? null,
+      lab_completed_at: it.lab_completed_at ?? null,
+      released_at: it.released_at ?? null,
     }
   })
 }
@@ -388,6 +398,39 @@ export async function separateOrderTestResultPdfs(orderId: string, testIds: stri
       body: JSON.stringify({ test_ids: testIds }),
     },
   )
+  if (!res.ok) throw new Error(await readApiErrorBody(res))
+  return res.json()
+}
+
+export type TestProgressResponse = {
+  message: string
+  test_ids: string[]
+  item_count: number
+  status: ApiOrderStatus
+}
+
+/** Marks the given tests finished in the lab; the order becomes `completed` once every test is. */
+export async function markOrderTestsLabComplete(
+  orderId: string,
+  testIds: string[],
+): Promise<TestProgressResponse & { completed_count: number; all_complete: boolean }> {
+  const res = await apiFetch(`/api/orders/${encodeURIComponent(orderId)}/tests/lab-complete`, {
+    method: 'POST',
+    body: JSON.stringify({ test_ids: testIds }),
+  })
+  if (!res.ok) throw new Error(await readApiErrorBody(res))
+  return res.json()
+}
+
+/** Releases the given tests' results to the patient; the order becomes `delivered` once every test is. */
+export async function releaseOrderTests(
+  orderId: string,
+  testIds: string[],
+): Promise<TestProgressResponse & { released_count: number; all_released: boolean }> {
+  const res = await apiFetch(`/api/orders/${encodeURIComponent(orderId)}/tests/release`, {
+    method: 'POST',
+    body: JSON.stringify({ test_ids: testIds }),
+  })
   if (!res.ok) throw new Error(await readApiErrorBody(res))
   return res.json()
 }

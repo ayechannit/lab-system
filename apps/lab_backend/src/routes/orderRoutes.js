@@ -681,6 +681,69 @@ router.delete('/:id', orderController.deleteOrder);
 router.get('/:id/qrcode', orderController.generateQrCode);
 router.post('/:id/tests/bulk-upload-result', upload.single('file'), orderController.bulkUploadTestResult);
 router.post('/:id/tests/separate-result-pdfs', orderController.separateResultPdfs);
+/**
+ * @swagger
+ * /api/orders/{id}/tests/lab-complete:
+ *   post:
+ *     summary: Mark selected tests lab complete (order becomes "completed" once all tests are)
+ *     tags: [Orders]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               test_ids:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *     responses:
+ *       200:
+ *         description: Tests marked lab complete
+ */
+router.post('/:id/tests/lab-complete', orderController.markTestsLabComplete);
+
+/**
+ * @swagger
+ * /api/orders/{id}/tests/release:
+ *   post:
+ *     summary: Release selected test results (soft copy) to the patient (order becomes "delivered" once all are released)
+ *     tags: [Orders]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               test_ids:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *     responses:
+ *       200:
+ *         description: Results released
+ *       400:
+ *         description: A selected test is not lab complete, has no PDF, or has not passed AI review
+ */
+router.post('/:id/tests/release', orderController.releaseTests);
 router.post('/:id/tests/:testId/upload-result', upload.single('file'), orderController.uploadTestResult);
 router.post('/:id/tests/:testId/ai-review', orderController.saveAiReview);
 router.get('/:id/tests/:testId/result-file', orderController.downloadTestResult);

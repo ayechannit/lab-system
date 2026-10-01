@@ -8,6 +8,7 @@ function normalizeStaffRow(raw: Record<string, unknown>): StaffListRow {
     id: String(raw.id),
     name: String(raw.name ?? ''),
     email: String(raw.email ?? ''),
+    staff_code: String(raw.staff_code ?? ''),
     role: raw.role as StaffRole,
     is_active: Boolean(raw.is_active),
     is_deleted: Boolean(raw.is_deleted),
@@ -18,9 +19,15 @@ function normalizeStaffRow(raw: Record<string, unknown>): StaffListRow {
   }
 }
 
+/** What identifies a staff member in lists: email, else staff code. */
+export function staffLoginLabel(row: { email?: string | null; staff_code?: string | null }): string {
+  return row.email || row.staff_code || ''
+}
+
 export type StaffCreateBody = {
   name: string
   email: string
+  staff_code: string
   role: StaffRole
   is_active: boolean
   password_hash: string
@@ -29,6 +36,8 @@ export type StaffCreateBody = {
 export type StaffUpdateBody = {
   name: string
   email: string
+  /** Omit to keep the current code (only staff managers may change it). */
+  staff_code?: string
   role: StaffRole
   is_active: boolean
   password_hash?: string

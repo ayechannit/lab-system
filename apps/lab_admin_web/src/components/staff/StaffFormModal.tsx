@@ -15,6 +15,9 @@ import '../common/ui.css'
 
 const MIN_INITIAL_PASSWORD_LENGTH = 8
 
+/** Must match the backend check: no "@" so it can never be confused with an email at sign-in. */
+const STAFF_CODE_PATTERN = /^[A-Za-z0-9._-]{1,50}$/
+
 const STAFF_ROLES: StaffRole[] = ['admin', 'lab_technician', 'reception', 'manager', 'collector']
 
 type StaffFormModalProps = {
@@ -43,6 +46,7 @@ export function StaffFormModal({
   const isSelf = mode === 'edit' && !!initial && !!currentStaffId && initial.id === currentStaffId
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
+  const [staffCode, setStaffCode] = useState('')
   const [role, setRole] = useState<StaffRole>('admin')
   const [isActive, setIsActive] = useState(true)
   const [currentPassword, setCurrentPassword] = useState('')
@@ -65,12 +69,14 @@ export function StaffFormModal({
     if (mode === 'edit' && initial) {
       setName(initial.name)
       setEmail(initial.email)
+      setStaffCode(initial.staff_code)
       setRole(initial.role)
       setIsActive(initial.is_active)
       setSavedProfileImageUrl(initial.profile_image_url)
     } else {
       setName('')
       setEmail('')
+      setStaffCode('')
       setRole('admin')
       setIsActive(true)
       setSavedProfileImageUrl(null)
@@ -112,16 +118,28 @@ export function StaffFormModal({
       setFormError(t('staff.form.errorName'))
       return
     }
+    // Staff sign in with email or staff code — at least one is required.
     const em = email.trim().toLowerCase()
-    if (!em || !em.includes('@')) {
+    const code = staffCode.trim()
+    if (!em && !code) {
+      setFormError(t('staff.form.errorEmailOrStaffCode'))
+      return
+    }
+    if (em && !em.includes('@')) {
       setFormError(t('staff.form.errorEmail'))
       return
     }
-    const taken = existingRows.some(
-      (r) => r.email.toLowerCase() === em && (mode === 'create' || r.id !== initial?.id),
-    )
-    if (taken) {
+    if (code && !STAFF_CODE_PATTERN.test(code)) {
+      setFormError(t('staff.form.errorStaffCodeFormat'))
+      return
+    }
+    const otherRows = existingRows.filter((r) => mode === 'create' || r.id !== initial?.id)
+    if (em && otherRows.some((r) => r.email.toLowerCase() === em)) {
       setFormError(t('staff.form.errorEmailTaken'))
+      return
+    }
+    if (code && otherRows.some((r) => r.staff_code.toLowerCase() === code.toLowerCase())) {
+      setFormError(t('staff.form.errorStaffCodeTaken'))
       return
     }
 
@@ -155,6 +173,7 @@ export function StaffFormModal({
         const body: StaffCreateBody = {
           name: n,
           email: em,
+          staff_code: code,
           role,
           is_active: isActive,
           password_hash: password.trim(),
@@ -165,6 +184,7 @@ export function StaffFormModal({
         const body: StaffUpdateBody = {
           name: n,
           email: em,
+          staff_code: code,
           role,
           is_active: isActive,
         }
@@ -253,6 +273,23 @@ export function StaffFormModal({
               autoComplete="email"
               disabled={submitting}
             />
+          </div>
+          <div className="field">
+            <label htmlFor="sf-staff-code">{t('staff.form.staffCode')}</label>
+            <input
+              id="sf-staff-code"
+              value={staffCode}
+              onChange={(e) => setStaffCode(e.target.value)}
+              placeholder={t('staff.form.staffCodePlaceholder')}
+              autoComplete="off"
+              autoCapitalize="none"
+              spellCheck={false}
+              maxLength={50}
+              disabled={submitting}
+            />
+            <p className="field-hint" style={{ margin: '0.35rem 0 0', fontSize: '0.8rem', color: '#5c6678' }}>
+              {t('staff.form.loginIdHint')}
+            </p>
           </div>
           <div className="field">
             <label htmlFor="sf-role">{t('staff.form.role')}</label>

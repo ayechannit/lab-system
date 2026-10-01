@@ -501,7 +501,7 @@
     "placeholders": { "count": { "type": "int" } }
   },
   "labReportPdfNotUploadedCombined": "PDF not uploaded yet for this combined report.",
-  "labReportPdfNotUploadedTest": "PDF not uploaded yet for this test.",
+  "labReportPdfNotUploadedTest": "Result not ready yet. It will appear here as soon as the lab releases it.",
   "labReportDownloadCombinedPdf": "Download combined PDF",
   "labReportDownloadPdf": "Download PDF",
   "labReportDownloading": "Downloading…",

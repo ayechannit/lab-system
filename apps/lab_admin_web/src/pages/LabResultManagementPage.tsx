@@ -20,6 +20,8 @@ import { reviewLabResultBatchWithAi, reviewLabResultWithAi } from '../services/a
 import {
   fetchOrderById,
   fetchOrders,
+  markOrderTestsLabComplete,
+  releaseOrderTests,
   updateOrderStatus,
   uploadOrderTestResult,
   uploadOrderTestResultsBulk,
@@ -490,8 +492,49 @@ function sharedPdfStatusBadge(
   }
 }
 
-function canUploadResultPdfs(status: ApiOrderStatus): boolean {
-  return status === 'completed' || status === 'delivered'
+/** Tests finish on different days, so each one is marked lab-complete on its own. */
+function itemLabComplete(item: ApiOrderDetailItem): boolean {
+  return Boolean(item.lab_completed_at)
+}
+
+/** Released = this test's result has been sent to the patient. */
+function itemReleased(item: ApiOrderDetailItem): boolean {
+  return Boolean(item.released_at)
+}
+
+/** A result PDF can be uploaded once the test is lab-complete and until it is released. */
+function canUploadForItem(item: ApiOrderDetailItem): boolean {
+  return itemLabComplete(item) && !itemReleased(item)
+}
+
+/** Lab processing is underway, so individual tests can be marked complete. */
+function orderAcceptsLabComplete(status: ApiOrderStatus): boolean {
+  return status === 'running' || status === 'completed'
+}
+
+function itemReadyToRelease(
+  item: ApiOrderDetailItem,
+  aiReviewByTestId: Record<string, AiReviewEntry>,
+  aiReviewErrorByTestId: Record<string, string>,
+): boolean {
+  return (
+    itemLabComplete(item) &&
+    !itemReleased(item) &&
+    itemHasUploadedPdf(item) &&
+    !aiReviewErrorByTestId[item.test_id] &&
+    testAiReviewVerdict(item, aiReviewByTestId) === 'pass'
+  )
+}
+
+function orderProgressSummary(o: ApiOrderListRow): string | null {
+  const total = o.item_count ?? 0
+  if (total === 0 || o.status === 'delivered') return null
+  const done = o.lab_completed_count ?? 0
+  const released = o.released_count ?? 0
+  if (done === 0 && released === 0) return null
+  const parts = [`${done}/${total} lab complete`]
+  if (released > 0) parts.push(`${released} released`)
+  return parts.join(' · ')
 }
 
 export function LabResultManagementPage() {
@@ -531,8 +574,11 @@ export function LabResultManagementPage() {
   const [aiReviewLoadingTestIds, setAiReviewLoadingTestIds] = useState<string[]>([])
   const [aiReviewErrorByTestId, setAiReviewErrorByTestId] = useState<Record<string, string>>({})
   const [statusSubmitting, setStatusSubmitting] = useState(false)
+  const [labCompleteBusyIds, setLabCompleteBusyIds] = useState<string[]>([])
   const [releaseSubmitting, setReleaseSubmitting] = useState(false)
   const [releaseConfirmOpen, setReleaseConfirmOpen] = useState(false)
+  /** Tests the open release dialog will send; empty for the whole-order hard copy handover. */
+  const [releaseTargetIds, setReleaseTargetIds] = useState<string[]>([])
   const [deliveryHandoverLocal, setDeliveryHandoverLocal] = useState('')
   const [deliveryHandoverSaving, setDeliveryHandoverSaving] = useState(false)
   const [deliveryHandoverError, setDeliveryHandoverError] = useState<string | null>(null)
@@ -684,7 +730,14 @@ export function LabResultManagementPage() {
 
   const bulkSelectedReviewMeta = useMemo(() => {
     if (!detail) {
-      return { count: 0, allHavePdf: false, canRun: false }
+      return {
+        count: 0,
+        allHavePdf: false,
+        canRun: false,
+        pendingLabIds: [] as string[],
+        allUploadable: false,
+        allReady: false,
+      }
     }
     const items = bulkPdfSelectedIds
       .map((id) => detail.items.find((it) => it.test_id === id))
@@ -696,13 +749,27 @@ export function LabResultManagementPage() {
       aiReviewConfigured &&
       !uploadBusy &&
       aiReviewLoadingTestIds.length === 0
-    return { count: items.length, allHavePdf, canRun }
+    const pendingLab = items.filter((it) => !itemLabComplete(it))
+    const allUploadable = items.length > 0 && items.every((it) => canUploadForItem(it))
+    const allReady =
+      items.length > 0 &&
+      items.every((it) => itemReadyToRelease(it, aiReviewByTestId, aiReviewErrorByTestId))
+    return {
+      count: items.length,
+      allHavePdf,
+      canRun,
+      pendingLabIds: pendingLab.map((it) => it.test_id),
+      allUploadable,
+      allReady,
+    }
   }, [
     detail,
     bulkPdfSelectedIds,
     aiReviewConfigured,
     uploadBusy,
     aiReviewLoadingTestIds.length,
+    aiReviewByTestId,
+    aiReviewErrorByTestId,
   ])
 
   const uploadedItems = useMemo(
@@ -717,6 +784,24 @@ export function LabResultManagementPage() {
 
   const allTestsHavePdf = Boolean(
     detail && detail.items.length > 0 && testsMissingPdf.length === 0,
+  )
+
+  const labPendingItems = useMemo(
+    () => (detail?.items ?? []).filter((it) => !itemLabComplete(it)),
+    [detail],
+  )
+
+  const releasedItems = useMemo(
+    () => (detail?.items ?? []).filter((it) => itemReleased(it)),
+    [detail],
+  )
+
+  const readyToReleaseItems = useMemo(
+    () =>
+      (detail?.items ?? []).filter((it) =>
+        itemReadyToRelease(it, aiReviewByTestId, aiReviewErrorByTestId),
+      ),
+    [detail, aiReviewByTestId, aiReviewErrorByTestId],
   )
 
   const deliveryAllowsDigital = allowsDigitalResultDelivery(detail?.report_delivery_method)
@@ -774,18 +859,27 @@ export function LabResultManagementPage() {
     [detail?.items.length, aiReviewReleaseBlockers],
   )
 
-  const canReleaseToPatient = Boolean(
-    detail?.status === 'completed' &&
-      allTestsHavePdf &&
-      aiReviewConfigured &&
-      allTestsPassedAiReview &&
-      !releaseSubmitting &&
-      !uploadBusy &&
-      aiReviewLoadingTestIds.length === 0,
-  )
+  const releaseBusy = releaseSubmitting || uploadBusy || aiReviewLoadingTestIds.length > 0
+
+  // Hard copy is handed over once for the whole order; digital results go out test by test.
+  const canReleaseToPatient = isHardCopyOnly
+    ? Boolean(
+        detail?.status === 'completed' &&
+          allTestsHavePdf &&
+          aiReviewConfigured &&
+          allTestsPassedAiReview &&
+          !releaseBusy,
+      )
+    : Boolean(detail && detail.status !== 'delivered' && aiReviewConfigured && readyToReleaseItems.length > 0 && !releaseBusy)
 
   const releaseDisabledReason = useMemo(() => {
-    if (!detail || detail.status !== 'completed') return null
+    if (!detail || detail.status === 'delivered') return null
+    if (!isHardCopyOnly) {
+      if (!aiReviewConfigured) return 'Configure AI review before releasing results to patients.'
+      if (readyToReleaseItems.length > 0) return null
+      return 'No tests are ready yet — a test needs lab complete, a PDF and a passing AI review.'
+    }
+    if (detail.status !== 'completed') return 'Mark every test lab complete first.'
     if (testsMissingPdf.length > 0) {
       const names = testsMissingPdf.map((it) => testDisplayName(it)).join(', ')
       return `Upload a PDF for every test before releasing. Missing: ${names}.`
@@ -797,6 +891,8 @@ export function LabResultManagementPage() {
     return null
   }, [
     detail,
+    isHardCopyOnly,
+    readyToReleaseItems.length,
     testsMissingPdf,
     aiReviewReleaseBlockers,
     aiReviewConfigured,
@@ -811,8 +907,23 @@ export function LabResultManagementPage() {
       if (isBothDelivery) return 'Digital results released. Physical copy can be handed over separately.'
       return 'Results released to the patient.'
     }
+    if (!isHardCopyOnly) {
+      const total = detail.items.length
+      const parts: string[] = []
+      if (releasedItems.length > 0) parts.push(`${releasedItems.length} of ${total} results released.`)
+      if (readyToReleaseItems.length > 0) {
+        parts.push(`${readyToReleaseItems.length} ready to release: ${readyToReleaseItems.map(testDisplayName).join(', ')}.`)
+      }
+      if (labPendingItems.length > 0) {
+        parts.push(`Still in lab: ${labPendingItems.map(testDisplayName).join(', ')}.`)
+      }
+      if (parts.length === 0) parts.push('Upload PDFs and run AI review on lab-complete tests to release them.')
+      return parts.join(' ')
+    }
     if (detail.status !== 'completed') {
-      return 'Complete the lab run before uploading results.'
+      return labPendingItems.length > 0
+        ? `Still in lab: ${labPendingItems.map(testDisplayName).join(', ')}. Hard copy is handed over once every test is done.`
+        : 'Complete the lab run before uploading results.'
     }
     if (uploadedItems.length === 0) {
       return isHardCopyOnly
@@ -831,6 +942,9 @@ export function LabResultManagementPage() {
     detail,
     isHardCopyOnly,
     isBothDelivery,
+    releasedItems.length,
+    readyToReleaseItems,
+    labPendingItems,
     uploadedItems.length,
     allTestsHavePdf,
     aiReviewConfigured,
@@ -850,9 +964,12 @@ export function LabResultManagementPage() {
 
   const isReleased = detail?.status === 'delivered'
 
-  const canUploadPdfs = detail ? canUploadResultPdfs(detail.status) && !isReleased : false
+  const canMarkLabComplete = detail ? orderAcceptsLabComplete(detail.status) : false
 
-  const showBulkPdfUpload = Boolean(canUploadPdfs && detail && detail.items.length > 1 && !isReleased)
+  /** Selection + bulk actions while any test is still being worked on. */
+  const showBulkPdfUpload = Boolean(
+    detail && detail.items.length > 1 && !isReleased && canMarkLabComplete,
+  )
 
   const labResultTestRows = useMemo(
     () => buildLabResultTestRows(detail?.items ?? []),
@@ -982,6 +1099,26 @@ export function LabResultManagementPage() {
     }
   }
 
+  async function markTestsLabComplete(testIds: string[]) {
+    if (!detail || testIds.length === 0) return
+    setLabCompleteBusyIds(testIds)
+    try {
+      const res = await markOrderTestsLabComplete(detail.id, testIds)
+      await refreshOrderDetail(detail.id)
+      setBulkPdfSelectedIds((prev) => prev.filter((id) => !testIds.includes(id)))
+      const n = res.test_ids.length
+      showSuccess(
+        res.all_complete
+          ? 'All tests are lab complete. Upload result PDFs to continue.'
+          : `${n === 1 ? '1 test' : `${n} tests`} marked lab complete (${res.completed_count} of ${res.item_count}). Upload the PDF to release it early.`,
+      )
+    } catch (err) {
+      showError(messageFromError(err, 'Could not mark tests lab complete'))
+    } finally {
+      setLabCompleteBusyIds([])
+    }
+  }
+
   function selectOrderForResults(id: string) {
     setOrderId(id)
   }
@@ -1035,8 +1172,11 @@ export function LabResultManagementPage() {
     e.target.value = ''
     setUploadTargetTestIds([])
     if (!file || !detail || targets.length === 0) return
-    if (!canUploadResultPdfs(detail.status)) {
-      showError('Mark the order completed before uploading result PDFs.')
+    const notReady = targets
+      .map((id) => detail.items.find((it) => it.test_id === id))
+      .filter((it): it is ApiOrderDetailItem => Boolean(it) && !canUploadForItem(it!))
+    if (notReady.length > 0) {
+      showError(`Mark these tests lab complete before uploading: ${notReady.map(testDisplayName).join(', ')}.`)
       return
     }
     setUploadBusy(true)
@@ -1287,7 +1427,11 @@ export function LabResultManagementPage() {
     }
   }
 
-  async function releaseToPatient() {
+  /**
+   * Digital deliveries release test by test (`testIds`, default: every ready test).
+   * Hard-copy-only orders are marked delivered once for the whole order.
+   */
+  async function releaseToPatient(testIds?: string[]) {
     if (!detail) return
     const staffId = account?.id
     if (!staffId) {
@@ -1296,6 +1440,37 @@ export function LabResultManagementPage() {
     }
     if (detail.status === 'delivered') {
       showSuccess('Results already released.')
+      return
+    }
+    if (!isHardCopyOnly) {
+      if (!aiReviewConfigured) {
+        showError('Configure AI review before releasing results to patients.')
+        return
+      }
+      const targets = (testIds ?? readyToReleaseItems.map((it) => it.test_id))
+        .map((id) => detail.items.find((it) => it.test_id === id))
+        .filter((it): it is ApiOrderDetailItem => Boolean(it) && !itemReleased(it!))
+      if (targets.length === 0) {
+        showError('No tests are ready to release yet.')
+        return
+      }
+      const notReady = targets.filter(
+        (it) => !itemReadyToRelease(it, aiReviewByTestId, aiReviewErrorByTestId),
+      )
+      if (notReady.length > 0) {
+        showError(
+          `Not ready to release: ${notReady.map(testDisplayName).join(', ')}. Each test needs lab complete, a PDF and a passing AI review.`,
+        )
+        return
+      }
+      const releasesLast =
+        releasedItems.length + targets.length === detail.items.length
+      if (releasesLast && deliveryRequiresHardCopy && !detail.schedule?.report_out_time) {
+        showError('Set and save a handover time for the hard copy before releasing the last results.')
+        return
+      }
+      setReleaseTargetIds(targets.map((it) => it.test_id))
+      setReleaseConfirmOpen(true)
       return
     }
     if (detail.status !== 'completed') {
@@ -1344,18 +1519,83 @@ export function LabResultManagementPage() {
     setReleaseConfirmOpen(false)
     setReleaseSubmitting(true)
     try {
-      await updateOrderStatus(detail.id, {
-        status: 'delivered',
-        staff_id: staffId,
-        note: releaseStatusNote,
-      })
-      await refreshOrderDetail(detail.id)
-      showSuccess(releaseSuccessMessage)
+      if (releaseTargetIds.length > 0) {
+        const res = await releaseOrderTests(detail.id, releaseTargetIds)
+        setBulkPdfSelectedIds((prev) => prev.filter((id) => !releaseTargetIds.includes(id)))
+        await refreshOrderDetail(detail.id)
+        showSuccess(
+          res.all_released
+            ? releaseSuccessMessage
+            : `Released ${res.test_ids.length} result(s) — ${res.released_count} of ${res.item_count} sent to the patient.`,
+        )
+      } else {
+        await updateOrderStatus(detail.id, {
+          status: 'delivered',
+          staff_id: staffId,
+          note: releaseStatusNote,
+        })
+        await refreshOrderDetail(detail.id)
+        showSuccess(releaseSuccessMessage)
+      }
     } catch (err) {
       showError(messageFromError(err, 'Release failed'))
     } finally {
       setReleaseSubmitting(false)
+      setReleaseTargetIds([])
     }
+  }
+
+  function renderProgressBadge(items: ApiOrderDetailItem[]) {
+    if (items.every((it) => itemReleased(it))) {
+      return (
+        <span className="badge badge--success">{isHardCopyOnly ? 'Delivered' : 'Released'}</span>
+      )
+    }
+    if (items.some((it) => !itemLabComplete(it))) {
+      return <span className="badge badge--neutral">In lab</span>
+    }
+    return null
+  }
+
+  function renderMarkLabCompleteButton(testIds: string[]) {
+    const busy = testIds.some((id) => labCompleteBusyIds.includes(id))
+    return (
+      <button
+        type="button"
+        className="btn btn-primary btn-sm lab-result-test-card__action-btn"
+        disabled={!hasApi || !canMarkLabComplete || labCompleteBusyIds.length > 0}
+        title={canMarkLabComplete ? undefined : 'Start lab processing first'}
+        onClick={() => void markTestsLabComplete(testIds)}
+      >
+        <span className="material-symbols-outlined" aria-hidden>
+          task_alt
+        </span>
+        {busy ? 'Marking…' : 'Mark lab complete'}
+      </button>
+    )
+  }
+
+  /** Per-row release: sends just this test (or this combined PDF's tests) to the patient. */
+  function renderReleaseButton(items: ApiOrderDetailItem[]) {
+    if (!detail || isHardCopyOnly || isReleased) return null
+    if (!items.every((it) => itemReadyToRelease(it, aiReviewByTestId, aiReviewErrorByTestId))) return null
+    return (
+      <button
+        type="button"
+        className="btn btn-primary btn-sm lab-result-test-card__action-btn"
+        disabled={!hasApi || releaseBusy || !aiReviewConfigured}
+        onClick={() => void releaseToPatient(items.map((it) => it.test_id))}
+      >
+        <span className="material-symbols-outlined" aria-hidden>
+          send
+        </span>
+        {releaseSubmitting && items.every((it) => releaseTargetIds.includes(it.test_id))
+          ? 'Releasing…'
+          : items.length > 1
+            ? `Release ${items.length} tests`
+            : 'Release'}
+      </button>
+    )
   }
 
   function renderAiReviewBody(
@@ -1631,7 +1871,14 @@ export function LabResultManagementPage() {
                         <span className="lab-result-order-pick__name">{o.patient_name}</span>
                       </label>
                     </td>
-                    <td>{orderStatusLabel(o.status)}</td>
+                    <td>
+                      {orderStatusLabel(o.status)}
+                      {orderProgressSummary(o) ? (
+                        <div className="lab-result-page-hint" style={{ margin: 0, fontSize: '0.75rem' }}>
+                          {orderProgressSummary(o)}
+                        </div>
+                      ) : null}
+                    </td>
                     <td>
                       <span className={priorityBadgeClass(o.priority)}>
                         {orderPriorityLabel(o.priority)}
@@ -1807,15 +2054,19 @@ export function LabResultManagementPage() {
               ) : detail.status === 'running' ? (
                 <>
                   <p className="lab-result-entry__workflow-text">
-                    Lab processing is underway. Mark complete when tests are finished, then upload result PDFs.
+                    Tests finish on different days — mark each test lab complete when it is done (
+                    {detail.items.length - labPendingItems.length} of {detail.items.length} done).
+                    {isHardCopyOnly
+                      ? ' The hard copy is handed over once every test is complete.'
+                      : ' A finished test can be uploaded, AI-reviewed and released to the patient right away.'}
                   </p>
                   <button
                     type="button"
                     className="btn btn-primary btn-sm"
-                    disabled={statusSubmitting || !hasApi}
-                    onClick={() => void advanceOrderStatus('completed', 'Lab run finished — ready for result upload')}
+                    disabled={labCompleteBusyIds.length > 0 || !hasApi || labPendingItems.length === 0}
+                    onClick={() => void markTestsLabComplete(labPendingItems.map((it) => it.test_id))}
                   >
-                    {statusSubmitting ? 'Updating…' : 'Mark lab complete'}
+                    {labCompleteBusyIds.length > 0 ? 'Updating…' : 'Mark all lab complete'}
                   </button>
                 </>
               ) : detail.status === 'completed' ? (
@@ -1866,9 +2117,9 @@ export function LabResultManagementPage() {
             </div>
           </header>
 
-          {!canUploadPdfs && detail.status !== 'delivered' ? (
+          {detail.status !== 'delivered' && labPendingItems.length === detail.items.length && detail.items.length > 0 ? (
             <p className="lab-result-entry__warn" role="status">
-              Result PDF upload unlocks after you mark the order <strong>completed</strong>.
+              Result PDF upload unlocks for each test once it is marked <strong>lab complete</strong>.
             </p>
           ) : null}
 
@@ -1878,9 +2129,10 @@ export function LabResultManagementPage() {
                 Tests
               </h4>
               <span className="lab-result-entry__section-hint">
+                {`${detail.items.length - labPendingItems.length} of ${detail.items.length} lab complete · `}
                 {isHardCopyOnly
-                  ? `${uploadedItems.length} of ${detail.items.length} lab PDFs`
-                  : `${uploadedItems.length} of ${detail.items.length} with PDF`}
+                  ? `${uploadedItems.length} lab PDFs`
+                  : `${uploadedItems.length} with PDF · ${releasedItems.length} released`}
               </span>
             </div>
 
@@ -1899,7 +2151,8 @@ export function LabResultManagementPage() {
                           Bulk actions for selected tests
                         </p>
                         <p className="lab-result-bulk-pdf__hint">
-                          Select tests to upload one shared PDF, or run AI review on each selected test.
+                          Select tests to mark them lab complete, upload one shared PDF, run AI review
+                          {isHardCopyOnly ? '' : ', or release them to the patient'}.
                         </p>
                       </div>
                       <div className="lab-result-bulk-pdf__actions">
@@ -1917,11 +2170,32 @@ export function LabResultManagementPage() {
                         </button>
                         <button
                           type="button"
+                          className="btn btn-secondary btn-sm"
+                          disabled={
+                            !hasApi ||
+                            labCompleteBusyIds.length > 0 ||
+                            bulkSelectedReviewMeta.pendingLabIds.length === 0
+                          }
+                          onClick={() => void markTestsLabComplete(bulkSelectedReviewMeta.pendingLabIds)}
+                        >
+                          {labCompleteBusyIds.length > 0
+                            ? 'Marking…'
+                            : bulkSelectedReviewMeta.pendingLabIds.length === 0
+                              ? 'Mark lab complete'
+                              : `Mark ${bulkSelectedReviewMeta.pendingLabIds.length} lab complete`}
+                        </button>
+                        <button
+                          type="button"
                           className="btn btn-primary btn-sm"
                           disabled={
                             uploadBusy ||
-                            bulkPdfSelectedIds.length === 0 ||
+                            !bulkSelectedReviewMeta.allUploadable ||
                             aiReviewLoadingTestIds.length > 0
+                          }
+                          title={
+                            bulkSelectedReviewMeta.count > 0 && !bulkSelectedReviewMeta.allUploadable
+                              ? 'All selected tests must be lab complete and not yet released'
+                              : undefined
                           }
                           onClick={() => openPdfPicker(bulkPdfSelectedIds)}
                         >
@@ -1948,6 +2222,23 @@ export function LabResultManagementPage() {
                               ? 'AI review selected'
                               : `AI review ${bulkPdfSelectedIds.length} selected`}
                         </button>
+                        {!isHardCopyOnly ? (
+                          <button
+                            type="button"
+                            className="btn btn-primary btn-sm"
+                            disabled={!bulkSelectedReviewMeta.allReady || releaseBusy || !aiReviewConfigured}
+                            title={
+                              bulkSelectedReviewMeta.count > 0 && !bulkSelectedReviewMeta.allReady
+                                ? 'Each selected test needs lab complete, a PDF and a passing AI review'
+                                : undefined
+                            }
+                            onClick={() => void releaseToPatient(bulkPdfSelectedIds)}
+                          >
+                            {bulkPdfSelectedIds.length === 0
+                              ? 'Release selected'
+                              : `Release ${bulkPdfSelectedIds.length} selected`}
+                          </button>
+                        ) : null}
                       </div>
                     </div>
                   </div>
@@ -1969,7 +2260,10 @@ export function LabResultManagementPage() {
                     const bulkSelected = memberTestIds.every((id) => bulkPdfSelectedIds.includes(id))
                     const bulkPartial =
                       !bulkSelected && memberTestIds.some((id) => bulkPdfSelectedIds.includes(id))
-                    const showPdfControls = !isReleased && (canUploadPdfs || hasFile)
+                    const groupLabComplete = items.every((it) => itemLabComplete(it))
+                    const groupReleased = items.every((it) => itemReleased(it))
+                    const showPdfControls = groupLabComplete && !groupReleased && !isReleased
+                    const canUploadPdfs = items.every((it) => canUploadForItem(it))
                     const rowStatus = resolveSharedPdfRowStatus(
                       memberTestIds,
                       detailItemsById,
@@ -2019,7 +2313,7 @@ export function LabResultManagementPage() {
                       >
                         <div className="lab-result-test-card__bundle">
                           <div className="lab-result-test-card__bundle-main">
-                            {showBulkPdfUpload && showPdfControls ? (
+                            {showBulkPdfUpload && !groupReleased ? (
                               <label className="lab-result-test-card__pick">
                                 <input
                                   type="checkbox"
@@ -2046,11 +2340,12 @@ export function LabResultManagementPage() {
                                 {memberNames.length} tests share one PDF
                               </p>
                             </div>
-                            {showPdfControls ? (
-                              <div className="lab-result-test-card__status lab-result-test-card__status--bundle">
-                                <span className={statusBadge.className}>{statusBadge.label}</span>
-                              </div>
-                            ) : null}
+                            <div className="lab-result-test-card__status lab-result-test-card__status--bundle">
+                              {renderProgressBadge(items) ??
+                                (showPdfControls ? (
+                                  <span className={statusBadge.className}>{statusBadge.label}</span>
+                                ) : null)}
+                            </div>
                           </div>
                           <div className="lab-result-test-card__chip-list" aria-label="Tests in this report">
                             {items.map((it) => {
@@ -2123,6 +2418,22 @@ export function LabResultManagementPage() {
                               ) : null}
                             </div>
                           ) : null}
+                          {!groupLabComplete && !isReleased ? (
+                            <div className="lab-result-test-card__toolbar">
+                              <div className="lab-result-test-card__toolbar-actions">
+                                {renderMarkLabCompleteButton(
+                                  items.filter((it) => !itemLabComplete(it)).map((it) => it.test_id),
+                                )}
+                              </div>
+                            </div>
+                          ) : null}
+                          {renderReleaseButton(items) ? (
+                            <div className="lab-result-test-card__toolbar">
+                              <div className="lab-result-test-card__toolbar-actions">
+                                {renderReleaseButton(items)}
+                              </div>
+                            </div>
+                          ) : null}
                           {hasFile ? renderPdfAccessButtons(items[0].test_id, isReviewing) : null}
                         </div>
                         {showAiPanels ? (
@@ -2156,7 +2467,11 @@ export function LabResultManagementPage() {
                   ]
                     .filter(Boolean)
                     .join(' ')
-                  const showPdfControls = !isReleased && (canUploadPdfs || hasFile)
+                  const labComplete = itemLabComplete(it)
+                  const released = itemReleased(it)
+                  const showPdfControls = labComplete && !released && !isReleased
+                  const canUploadPdfs = canUploadForItem(it)
+                  const progressBadge = renderProgressBadge([it])
                   const bulkSelected = bulkPdfSelectedIds.includes(it.test_id)
                   const rowStatus: SharedPdfRowStatus = !hasFile
                     ? 'awaiting'
@@ -2184,7 +2499,7 @@ export function LabResultManagementPage() {
                     >
                       <div
                         className={`lab-result-test-card__body${
-                          showPdfControls
+                          showPdfControls || (!labComplete && !isReleased)
                             ? showBulkPdfUpload
                               ? ' lab-result-test-card__body--selectable'
                               : ''
@@ -2193,7 +2508,7 @@ export function LabResultManagementPage() {
                               : ' lab-result-test-card__body--info-only'
                         }`}
                       >
-                        {showBulkPdfUpload && showPdfControls ? (
+                        {showBulkPdfUpload && !released ? (
                           <label className="lab-result-test-card__pick">
                             <input
                               type="checkbox"
@@ -2216,12 +2531,18 @@ export function LabResultManagementPage() {
                             </span>
                           </div>
                         </div>
-                        {showPdfControls ? (
+                        {progressBadge || showPdfControls ? (
                           <div className="lab-result-test-card__status">
-                            <span className={statusBadge.className}>{statusBadge.label}</span>
+                            {progressBadge ?? (
+                              <span className={statusBadge.className}>{statusBadge.label}</span>
+                            )}
                           </div>
                         ) : null}
-                        {showPdfControls ? (
+                        {!labComplete && !isReleased ? (
+                          <div className="lab-result-test-card__actions">
+                            {renderMarkLabCompleteButton([it.test_id])}
+                          </div>
+                        ) : showPdfControls ? (
                           <div className="lab-result-test-card__actions">
                             <button
                               type="button"
@@ -2263,6 +2584,7 @@ export function LabResultManagementPage() {
                               </button>
                             ) : null}
                             {hasFile ? renderPdfActionButtons(it.test_id, isReviewing) : null}
+                            {renderReleaseButton([it])}
                           </div>
                         ) : hasFile ? (
                           renderPdfAccessButtons(it.test_id, isReviewing)
@@ -2299,7 +2621,7 @@ export function LabResultManagementPage() {
           <footer className="lab-result-entry__footer">
             <p className="lab-result-entry__footer-text">{resultFooterMessage}</p>
             <div className="lab-result-entry__footer-actions">
-              {detail.status === 'completed' ? (
+              {detail.status === 'completed' || (!isHardCopyOnly && detail.status === 'running') ? (
                 <button
                   type="button"
                   className="btn btn-primary"
@@ -2308,7 +2630,15 @@ export function LabResultManagementPage() {
                   title={releaseDisabledReason ?? undefined}
                   aria-disabled={!canReleaseToPatient}
                 >
-                  {releaseSubmitting ? (isHardCopyOnly ? 'Marking…' : 'Releasing…') : releaseActionLabel}
+                  {releaseSubmitting
+                    ? isHardCopyOnly
+                      ? 'Marking…'
+                      : 'Releasing…'
+                    : isHardCopyOnly
+                      ? releaseActionLabel
+                      : readyToReleaseItems.length > 0
+                        ? `Release ${readyToReleaseItems.length} ready`
+                        : 'Release ready results'}
                 </button>
               ) : detail.status === 'delivered' ? (
                 <span className="badge badge--success">{isHardCopyOnly ? 'Delivered' : 'Released'}</span>
@@ -2322,7 +2652,24 @@ export function LabResultManagementPage() {
         open={releaseConfirmOpen}
         title={releaseConfirmTitle}
         message={
-          detail
+          detail && releaseTargetIds.length > 0
+            ? (() => {
+                const names = releaseTargetIds
+                  .map((id) => detail.items.find((it) => it.test_id === id))
+                  .filter((it): it is ApiOrderDetailItem => Boolean(it))
+                  .map(testDisplayName)
+                const remaining = detail.items.length - releasedItems.length - releaseTargetIds.length
+                return `Release ${names.join(', ')} to ${detail.patient_name.trim() || 'this patient'}? The patient will be able to view and download ${
+                  names.length === 1 ? 'this result' : 'these results'
+                } in the app and will get a notification.${
+                  remaining > 0
+                    ? ` ${remaining} other test result(s) stay pending and can be released when ready.`
+                    : isBothDelivery
+                      ? ' This is the last result — the order will be marked delivered and the hard copy delivered.'
+                      : ' This is the last result — the order will be marked delivered.'
+                }`
+              })()
+            : detail
             ? isHardCopyOnly
               ? `Confirm the physical report for ${detail.patient_name.trim() || 'this patient'} has been handed over in person. Digital PDFs will not be available in the patient app.`
               : isBothDelivery
@@ -2341,7 +2688,11 @@ export function LabResultManagementPage() {
         confirmLabel={releaseSubmitting ? (isHardCopyOnly ? 'Marking…' : 'Releasing…') : releaseActionLabel}
         cancelLabel="Cancel"
         onConfirm={() => void confirmReleaseToPatient()}
-        onCancel={() => !releaseSubmitting && setReleaseConfirmOpen(false)}
+        onCancel={() => {
+          if (releaseSubmitting) return
+          setReleaseConfirmOpen(false)
+          setReleaseTargetIds([])
+        }}
       />
     </div>
   )

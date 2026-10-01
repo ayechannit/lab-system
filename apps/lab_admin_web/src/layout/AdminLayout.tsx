@@ -272,7 +272,7 @@ export function AdminLayout() {
                 <button
                   type="button"
                   className="admin-profile"
-                  title={`${account.name} · ${account.email}`}
+                  title={`${account.name} · ${account.email || account.staff_code || ''}`}
                   aria-label={t('common.accountMenuFor', { name: account.name })}
                   aria-haspopup="dialog"
                   aria-expanded={profileOpen}

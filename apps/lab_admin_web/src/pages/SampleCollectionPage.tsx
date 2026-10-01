@@ -22,7 +22,7 @@ import {
   type ApiOrderStatus,
   type FetchOrdersParams,
 } from '../services/orderService'
-import { fetchStaffList } from '../services/staffService'
+import { fetchStaffList, staffLoginLabel } from '../services/staffService'
 import { upsertSchedule } from '../services/scheduleService'
 import {
   planCollectionRouteWithAi,
@@ -2079,7 +2079,7 @@ export function SampleCollectionPage() {
                                 {selectedScheduledEditCollector.name}
                               </span>
                               <span className="route-collector-preview__email">
-                                {selectedScheduledEditCollector.email}
+                                {staffLoginLabel(selectedScheduledEditCollector)}
                               </span>
                             </div>
                           </div>

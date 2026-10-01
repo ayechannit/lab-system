@@ -1051,7 +1051,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get labReportPdfNotUploadedCombined => 'PDF not uploaded yet for this combined report.';
 
   @override
-  String get labReportPdfNotUploadedTest => 'PDF not uploaded yet for this test.';
+  String get labReportPdfNotUploadedTest => 'Result not ready yet. It will appear here as soon as the lab releases it.';
 
   @override
   String get labReportDownloadCombinedPdf => 'Download combined PDF';

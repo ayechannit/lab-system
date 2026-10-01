@@ -8,6 +8,7 @@ export type StoredAccount = {
   id: string
   name: string
   email: string
+  staff_code?: string
   role: string
 }
 
@@ -79,7 +80,7 @@ export function setSession(accessToken: string, account: StoredAccount, remember
   s.setItem(ACCOUNT_KEY, JSON.stringify(account))
   setRememberPreference(remember)
   if (remember) {
-    setSavedLoginEmail(account.email)
+    setSavedLoginEmail(account.email || account.staff_code || null)
   } else {
     setSavedLoginEmail(null)
   }

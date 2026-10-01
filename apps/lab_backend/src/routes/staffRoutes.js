@@ -14,7 +14,6 @@ router.use(authMiddleware);
  *       type: object
  *       required:
  *         - name
- *         - email
  *         - password_hash
  *         - role
  *       properties:
@@ -25,6 +24,10 @@ router.use(authMiddleware);
  *           type: string
  *         email:
  *           type: string
+ *           description: Optional when staff_code is set
+ *         staff_code:
+ *           type: string
+ *           description: Optional when email is set; can be used to sign in
  *         password_hash:
  *           type: string
  *         role:
@@ -88,7 +91,7 @@ router.use(authMiddleware);
  *         name: sortBy
  *         schema:
  *           type: string
- *           enum: [created_at, updated_at, name, email, role]
+ *           enum: [created_at, updated_at, name, email, staff_code, role]
  *         description: Sort field for staff
  *       - in: query
  *         name: sortOrder
@@ -145,13 +148,14 @@ router.use(authMiddleware);
  *             type: object
  *             required:
  *               - name
- *               - email
  *               - password_hash
  *               - role
  *             properties:
  *               name:
  *                 type: string
  *               email:
+ *                 type: string
+ *               staff_code:
  *                 type: string
  *               password_hash:
  *                 type: string

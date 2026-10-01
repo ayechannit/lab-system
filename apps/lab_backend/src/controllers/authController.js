@@ -37,15 +37,20 @@ const loginUser = async (req, res) => {
 };
 
 const loginStaff = async (req, res) => {
-  const { email, password, remember } = req.body;
+  // `identifier` is an email or a staff code; `email` / `staff_code` kept for older clients.
+  const { identifier, email, staff_code, password, remember } = req.body;
+  const loginId = identifier ?? email ?? staff_code;
   try {
-    const staff = await Staff.getByEmail(email);
+    if (!loginId || !password) {
+      return res.status(400).json({ message: 'Email or staff code and password are required' });
+    }
+    const staff = await Staff.getByLoginId(loginId);
     if (!staff || !staff.is_active || !(await bcrypt.compare(password, staff.password_hash))) {
-      return res.status(401).json({ message: 'Invalid email or password' });
+      return res.status(401).json({ message: 'Invalid email/staff code or password' });
     }
 
     const token = jwt.sign(
-      { id: staff.id, email: staff.email, role: staff.role, type: 'staff' },
+      { id: staff.id, email: staff.email, staff_code: staff.staff_code, role: staff.role, type: 'staff' },
       process.env.JWT_SECRET || 'your_default_secret',
       { expiresIn: jwtExpiresIn(remember) }
     );
@@ -56,6 +61,7 @@ const loginStaff = async (req, res) => {
         id: staff.id,
         name: staff.name,
         email: staff.email,
+        staff_code: staff.staff_code,
         role: staff.role
       }
     });

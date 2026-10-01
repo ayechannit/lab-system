@@ -238,6 +238,7 @@ export function StaffManagementPage() {
                 <th>{t('staff.table.id')}</th>
                 <th>{t('staff.table.name')}</th>
                 <th>{t('staff.table.email')}</th>
+                <th>{t('staff.table.staffCode')}</th>
                 <th>{t('staff.table.role')}</th>
                 <th>{t('staff.table.active')}</th>
                 <th className="action-col">{t('staff.table.actions')}</th>
@@ -246,13 +247,13 @@ export function StaffManagementPage() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="data-table__state data-table__state--loading">
+                  <td colSpan={7} className="data-table__state data-table__state--loading">
                     <LoadingSpinner label={t('staff.loading')} />
                   </td>
                 </tr>
               ) : sorted.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="data-table__state">
+                  <td colSpan={7} className="data-table__state">
                     {t('staff.empty')}
                   </td>
                 </tr>
@@ -272,7 +273,8 @@ export function StaffManagementPage() {
                         <span>{r.name}</span>
                       </span>
                     </td>
-                    <td>{r.email}</td>
+                    <td>{r.email || '—'}</td>
+                    <td>{r.staff_code || '—'}</td>
                     <td>{roleLabel(r.role)}</td>
                     <td>
                       {r.is_active ? (

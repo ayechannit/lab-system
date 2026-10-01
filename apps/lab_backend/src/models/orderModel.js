@@ -71,7 +71,12 @@ class Order {
                FROM lab_order_items oi
                LEFT JOIN test_referral_fees rf ON rf.test_id = oi.test_id AND rf.is_active = true AND rf.is_deleted = false
                WHERE oi.order_id = lab_orders.id
-             ) AS referral_fee_total_mmk
+             ) AS referral_fee_total_mmk,
+             (SELECT COUNT(*)::int FROM lab_order_items oi WHERE oi.order_id = lab_orders.id) AS item_count,
+             (SELECT COUNT(*)::int FROM lab_order_items oi
+               WHERE oi.order_id = lab_orders.id AND oi.lab_completed_at IS NOT NULL) AS lab_completed_count,
+             (SELECT COUNT(*)::int FROM lab_order_items oi
+               WHERE oi.order_id = lab_orders.id AND oi.released_at IS NOT NULL) AS released_count
       FROM lab_orders
       WHERE is_deleted = false
     `;
@@ -87,6 +92,10 @@ class Order {
     if (filters.user_id) {
       params.push(filters.user_id);
       query += ` AND user_id = $${params.length}`;
+    }
+    // Orders where at least one test result has been released (results can go out test by test).
+    if (filters.has_released_results === 'true' || filters.has_released_results === true) {
+      query += ` AND EXISTS (SELECT 1 FROM lab_order_items oi WHERE oi.order_id = lab_orders.id AND oi.released_at IS NOT NULL)`;
     }
     if (filters.priority) {
       params.push(filters.priority);
@@ -657,6 +666,44 @@ class Order {
     return result.rowCount > 0;
   }
 
+  /**
+   * Keeps per-test progress in line with an order-level status change, so a whole-order
+   * "completed" / "delivered" (bulk update, hard-copy handover, older clients) marks every test.
+   */
+  static async _syncItemsForStatus(client, orderId, newStatus, staffId) {
+    if (newStatus === 'completed' || newStatus === 'delivered') {
+      await client.query(
+        `UPDATE lab_order_items
+         SET lab_completed_at = now(), lab_completed_by = $2, updated_at = now()
+         WHERE order_id = $1 AND lab_completed_at IS NULL`,
+        [orderId, staffId || null]
+      );
+    }
+    if (newStatus === 'delivered') {
+      await client.query(
+        `UPDATE lab_order_items
+         SET released_at = now(), released_by = $2, updated_at = now()
+         WHERE order_id = $1 AND released_at IS NULL`,
+        [orderId, staffId || null]
+      );
+    }
+  }
+
+  static async _setStatusInTx(client, orderId, oldStatus, newStatus, staffId, note, updatedBy) {
+    const result = await client.query(
+      `UPDATE lab_orders SET status = $2, updated_user = $3, updated_at = now()
+       WHERE id = $1 AND is_deleted = false
+       RETURNING *`,
+      [orderId, newStatus, updatedBy || staffId]
+    );
+    await client.query(
+      `INSERT INTO order_status_logs (id, order_id, changed_by, old_status, new_status, note, created_user)
+       VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6)`,
+      [orderId, staffId, oldStatus, newStatus, note, updatedBy || staffId]
+    );
+    return result.rows[0];
+  }
+
   static async updateStatus(id, newStatus, staffId, note, updatedBy = null) {
     const pool = await poolPromise;
     const client = await pool.connect();
@@ -672,21 +719,11 @@ class Order {
       const oldStatus = oldStatusResult.rows[0]?.status;
       if (!oldStatus) throw new Error('Order not found or deleted');
 
-      const result = await client.query(
-        `UPDATE lab_orders SET status = $2, updated_user = $3, updated_at = now()
-         WHERE id = $1 AND is_deleted = false
-         RETURNING *`,
-        [id, newStatus, updatedBy || staffId]
-      );
-
-      await client.query(
-        `INSERT INTO order_status_logs (id, order_id, changed_by, old_status, new_status, note, created_user)
-         VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6)`,
-        [id, staffId, oldStatus, newStatus, note, updatedBy || staffId]
-      );
+      const order = await Order._setStatusInTx(client, id, oldStatus, newStatus, staffId, note, updatedBy);
+      await Order._syncItemsForStatus(client, id, newStatus, staffId);
 
       await client.query('COMMIT');
-      return result.rows[0];
+      return order;
     } catch (err) {
       await client.query('ROLLBACK');
       throw err;
@@ -724,6 +761,7 @@ class Order {
         const updatedOrder = result.rows[0];
         if (!updatedOrder) throw new Error(`Failed to update status for order ${id}`);
         updatedOrders.push(updatedOrder);
+        await Order._syncItemsForStatus(client, id, newStatus, staffId);
 
         // 3. Log change
         await client.query(
@@ -817,6 +855,140 @@ class Order {
       [id, updatedBy]
     );
     return result.rowCount > 0;
+  }
+
+  /**
+   * Marks the given tests lab-complete. When every test on the order is complete the order
+   * moves to "completed". Returns null if the order is missing.
+   */
+  static async markTestsLabComplete(orderId, testIds, staffId, updatedBy = null) {
+    const pool = await poolPromise;
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const orderRow = await client.query(
+        'SELECT status FROM lab_orders WHERE id = $1 AND is_deleted = false FOR UPDATE',
+        [orderId]
+      );
+      const oldStatus = orderRow.rows[0]?.status;
+      if (!oldStatus) {
+        await client.query('ROLLBACK');
+        return null;
+      }
+
+      const marked = await client.query(
+        `UPDATE lab_order_items
+         SET lab_completed_at = now(), lab_completed_by = $3, updated_user = $4, updated_at = now()
+         WHERE order_id = $1 AND test_id = ANY($2::uuid[]) AND lab_completed_at IS NULL
+         RETURNING test_id`,
+        [orderId, testIds, staffId || null, updatedBy || staffId || null]
+      );
+
+      const counts = await client.query(
+        `SELECT COUNT(*)::int AS total,
+                COUNT(lab_completed_at)::int AS completed
+         FROM lab_order_items WHERE order_id = $1`,
+        [orderId]
+      );
+      const { total, completed } = counts.rows[0];
+      const allComplete = total > 0 && completed === total;
+
+      let statusChangedTo = null;
+      if (allComplete && ['collecting', 'running'].includes(oldStatus)) {
+        await Order._setStatusInTx(
+          client,
+          orderId,
+          oldStatus,
+          'completed',
+          staffId,
+          'All tests lab complete — ready for result upload',
+          updatedBy
+        );
+        statusChangedTo = 'completed';
+      }
+
+      await client.query('COMMIT');
+      return {
+        markedTestIds: marked.rows.map((r) => r.test_id),
+        total,
+        completed,
+        allComplete,
+        statusChangedTo,
+      };
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
+   * Releases the given tests' results to the patient. Callers validate readiness first.
+   * When every test is released the order moves to "delivered".
+   */
+  static async releaseTests(orderId, testIds, staffId, note, updatedBy = null) {
+    const pool = await poolPromise;
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const orderRow = await client.query(
+        'SELECT status FROM lab_orders WHERE id = $1 AND is_deleted = false FOR UPDATE',
+        [orderId]
+      );
+      const oldStatus = orderRow.rows[0]?.status;
+      if (!oldStatus) {
+        await client.query('ROLLBACK');
+        return null;
+      }
+
+      const released = await client.query(
+        `UPDATE lab_order_items
+         SET released_at = now(), released_by = $3, updated_user = $4, updated_at = now()
+         WHERE order_id = $1 AND test_id = ANY($2::uuid[]) AND released_at IS NULL
+         RETURNING test_id`,
+        [orderId, testIds, staffId || null, updatedBy || staffId || null]
+      );
+
+      const counts = await client.query(
+        `SELECT COUNT(*)::int AS total,
+                COUNT(released_at)::int AS released
+         FROM lab_order_items WHERE order_id = $1`,
+        [orderId]
+      );
+      const { total, released: releasedTotal } = counts.rows[0];
+      const allReleased = total > 0 && releasedTotal === total;
+
+      let statusChangedTo = null;
+      if (allReleased && oldStatus !== 'delivered') {
+        await Order._setStatusInTx(client, orderId, oldStatus, 'delivered', staffId, note, updatedBy);
+        statusChangedTo = 'delivered';
+      }
+
+      await client.query('COMMIT');
+      return {
+        releasedTestIds: released.rows.map((r) => r.test_id),
+        total,
+        released: releasedTotal,
+        allReleased,
+        statusChangedTo,
+      };
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+  }
+
+  /** Raw stored result file keys per test (getById swaps them for signed links). */
+  static async getResultFileKeys(orderId) {
+    const pool = await poolPromise;
+    const result = await pool.query(
+      'SELECT test_id, result_file_url, released_at FROM lab_order_items WHERE order_id = $1',
+      [orderId]
+    );
+    return result.rows;
   }
 
   static async uploadResult(orderId, testId, fileUrl, updatedBy = null) {

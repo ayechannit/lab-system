@@ -16,7 +16,7 @@ export function LoginPage() {
   const { signInWithStaffCredentials, signedIn, initializing } = useAuth()
   const { showError } = useToast()
   const navigate = useNavigate()
-  const [email, setEmail] = useState(() => getSavedLoginEmail())
+  const [identifier, setIdentifier] = useState(() => getSavedLoginEmail())
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [remember, setRemember] = useState(() => getRememberPreference())
@@ -49,7 +49,7 @@ export function LoginPage() {
                 setSubmitting(true)
                 void (async () => {
                   try {
-                    await signInWithStaffCredentials(email, password, remember)
+                    await signInWithStaffCredentials(identifier, password, remember)
                     navigate('/')
                   } catch (err) {
                     showError(messageFromError(err, t('auth.signInFailed')))
@@ -61,19 +61,21 @@ export function LoginPage() {
             >
               <div className="auth-field">
                 <label className="auth-label" htmlFor="identity">
-                  {t('auth.email')}
+                  {t('auth.emailOrStaffCode')}
                 </label>
                 <div className="auth-input-wrap">
-                  <span className="material-symbols-outlined auth-input-icon">mail</span>
+                  <span className="material-symbols-outlined auth-input-icon">badge</span>
                   <input
                     id="identity"
                     name="identity"
                     className="auth-input"
-                    placeholder={t('auth.emailPlaceholder')}
-                    type="email"
+                    placeholder={t('auth.emailOrStaffCodePlaceholder')}
+                    type="text"
                     autoComplete="username"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    autoCapitalize="none"
+                    spellCheck={false}
+                    value={identifier}
+                    onChange={(e) => setIdentifier(e.target.value)}
                     disabled={submitting}
                     required
                   />

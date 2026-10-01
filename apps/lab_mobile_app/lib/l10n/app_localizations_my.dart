@@ -182,7 +182,7 @@ class AppLocalizationsMy extends AppLocalizations {
   String get orderTracking => 'မှာယူမှု ခြေရာခံ';
 
   @override
-  String get trackingEmptyState => 'လက်ရှိ မှာယူမှု မရှိသေးပါ။ ဓာတ်ခွဲခန်းမှ ကောက်ယူချိန်နှင့် အခြေအနေကို ကြည့်ရန် မှာယူမှု တစ်ခု ပြုလုပ်ပါ။';
+  String get trackingEmptyState => 'လက်ရှိ မှာယူမှု မရှိသေးပါ။ ဓာတ်ခွဲခန်းမှ သွေးဖောက်ချိန်နှင့် အခြေအနေကို ကြည့်ရန် မှာယူမှု တစ်ခု ပြုလုပ်ပါ။';
 
   @override
   String trackingOrderId(String id) {
@@ -218,12 +218,12 @@ class AppLocalizationsMy extends AppLocalizations {
 
   @override
   String trackingCollector(String name) {
-    return 'ကောက်ယူသူ: $name';
+    return 'သွေးဖောက်သူ: $name';
   }
 
   @override
   String trackingCollection(String when) {
-    return 'ကောက်ယူချိန်: $when';
+    return 'သွေးဖောက်ချိန်: $when';
   }
 
   @override
@@ -237,10 +237,10 @@ class AppLocalizationsMy extends AppLocalizations {
   }
 
   @override
-  String get trackingConfirmScheduleHint => 'ဓာတ်ခွဲခန်းက ကောက်ယူချိန် အချိန်ဇယား တင်ပြထားပါသည်။ ကောက်ယူသူ ဆက်လက်လုပ်ဆောင်နိုင်ရန် အတည်ပြုပါ။';
+  String get trackingConfirmScheduleHint => 'ဓာတ်ခွဲခန်းက သွေးဖောက်ချိန် အချိန်ဇယား တင်ပြထားပါသည်။ သွေးဖောက်သူ ဆက်လက်လုပ်ဆောင်နိုင်ရန် အတည်ပြုပါ။';
 
   @override
-  String get trackingConfirmScheduleButton => 'ကောက်ယူချိန် အချိန်ဇယား အတည်ပြုမည်';
+  String get trackingConfirmScheduleButton => 'သွေးဖောက်ချိန် အချိန်ဇယား အတည်ပြုမည်';
 
   @override
   String get trackingSaving => 'သိမ်းဆည်းနေသည်…';
@@ -249,7 +249,7 @@ class AppLocalizationsMy extends AppLocalizations {
   String get trackingScheduleConfirmedTitle => 'အချိန်ဇယား အတည်ပြုပြီး';
 
   @override
-  String get trackingScheduleConfirmedMessage => 'ကောက်ယူသူက သင့်နမူနာကို ဆက်လက် ကောက်ယူနိုင်ပါပြီ။';
+  String get trackingScheduleConfirmedMessage => 'သွေးဖောက်သူက ဆက်လက် လုပ်ဆောင်နိုင်ပါပြီ။';
 
   @override
   String get trackingStatusSection => 'အခြေအနေ';
@@ -261,16 +261,16 @@ class AppLocalizationsMy extends AppLocalizations {
   String get trackingStepSubmittedSub => 'ဓာတ်ခွဲခန်းသို့ ရောက်ရှိပြီး';
 
   @override
-  String get trackingStepCollection => 'ကောက်ယူချိန် သတ်မှတ်ပြီး';
+  String get trackingStepCollection => 'သွေးဖောက်ချိန်သတ်မှတ်ပြီး';
 
   @override
   String get trackingAwaitingSchedule => 'ဓာတ်ခွဲခန်း အချိန်ဇယား စောင့်ဆိုင်းနေသည်';
 
   @override
-  String get trackingStepRunning => 'နမူနာ လုပ်ဆောင်နေသည်';
+  String get trackingStepRunning => 'ဓာတ်ခွဲစစ်ဆေးနေသည်';
 
   @override
-  String get trackingStepReportOut => 'အစီရင်ခံစာ ထွက်ရှိ';
+  String get trackingStepReportOut => 'ဓာတ်ခွဲအဖြေ ထွက်ရှိသည်';
 
   @override
   String get trackingPatientSection => 'လူနာ အချက်အလက်';
@@ -355,10 +355,10 @@ class AppLocalizationsMy extends AppLocalizations {
   String get trackingLabelPriority => 'ဦးစားပေး';
 
   @override
-  String get trackingLabelDelivery => 'အစီရင်ခံစာ ပေးပို့ပုံ';
+  String get trackingLabelDelivery => 'ဓာတ်ခွဲအဖြေ ရယူခြင်း';
 
   @override
-  String get trackingLabelAddress => 'ကောက်ယူမည့် လိပ်စာ';
+  String get trackingLabelAddress => 'သွေးဖောက်မည့်လိပ်စာ';
 
   @override
   String get trackingLabelName => 'အမည်';
@@ -390,13 +390,13 @@ class AppLocalizationsMy extends AppLocalizations {
   String get collectorPending => 'ဆိုင်းငံ့';
 
   @override
-  String get preferredCollector => 'ဦးစားပေး ကောက်ယူသူ';
+  String get preferredCollector => 'ဦးစားပေး သွေးဖောက်သူ';
 
   @override
   String get noCollectorPreference => 'မရွေးချယ်ထားပါ — ဓာတ်ခွဲခန်းမှ သတ်မှတ်ပေးမည်';
 
   @override
-  String get collectorOptionalHint => 'ရွေးချယ်နိုင်သည် — သွားရောက်ကောက်ယူမည့်သူကို ရွေးချယ်နိုင်သည်';
+  String get collectorOptionalHint => 'ရွေးချယ်နိုင်သည် — သွေးဖောက်မည့်သူကို ရွေးချယ်နိုင်သည်';
 
   @override
   String get welcomeBack => 'ပြန်လည်ကြိုဆိုပါတယ်';
@@ -449,7 +449,7 @@ class AppLocalizationsMy extends AppLocalizations {
   String get homeActiveOrder => 'လက်ရှိ မှာယူမှု';
 
   @override
-  String get homeReportOut => 'အစီရင်ခံစာ ထွက်ရှိ';
+  String get homeReportOut => 'ဓာတ်ခွဲအဖြေ ထွက်ရှိသည်';
 
   @override
   String get homeDailySpend => 'နေ့စဉ် အသုံးပြုမှု';
@@ -538,7 +538,7 @@ class AppLocalizationsMy extends AppLocalizations {
   String get ordersOrderLabTest => 'ဓာတ်ခွဲစစ်ဆေးမှု မှာယူမည်';
 
   @override
-  String get ordersOrderLabTestHint => 'လူနာအချက်အလက် ထည့်သွင်းပါ၊ ဓာတ်ခွဲစစ်ဆေးမှု ရွေးချယ်ပါ၊ နမူနာကောက်ယူမည့်အချိန်ကို သတ်မှတ်ပါ';
+  String get ordersOrderLabTestHint => 'လူနာအချက်အလက် ထည့်သွင်းပါ၊ ဓာတ်ခွဲစစ်ဆေးမှု ရွေးချယ်ပါ၊ သွေးဖောက်မည့်အချိန်ကို သတ်မှတ်ပါ';
 
   @override
   String ordersPlaced(String date) {
@@ -560,7 +560,7 @@ class AppLocalizationsMy extends AppLocalizations {
   String get orderStatusScheduled => 'အချိန်ဇယားဆွဲပြီး';
 
   @override
-  String get orderStatusCollecting => 'နမူနာ ကောက်ယူနေသည်';
+  String get orderStatusCollecting => 'သွေးဖောက်နေသည်';
 
   @override
   String get orderStatusRunning => 'လုပ်ဆောင်နေသည်';
@@ -738,7 +738,7 @@ class AppLocalizationsMy extends AppLocalizations {
   String get orderCreateElective => 'ပုံမှန်';
 
   @override
-  String get orderCreateReportDelivery => 'အစီရင်ခံစာ ပေးပို့ပုံ';
+  String get orderCreateReportDelivery => 'ဓာတ်ခွဲအဖြေ ရယူခြင်း';
 
   @override
   String get orderCreateSoftCopy => 'ဆော့ဖ်ကော်ပီ (အက်ပ်/PDF)';
@@ -750,40 +750,40 @@ class AppLocalizationsMy extends AppLocalizations {
   String get orderCreateBoth => 'နှစ်မျိုးလုံး';
 
   @override
-  String get orderCreateFacilityNotesOptional => 'ကောက်ယူမှု / ဆေးခန်းမှတ်ချက် (ရွေးချယ်နိုင်သည်)';
+  String get orderCreateFacilityNotesOptional => 'အထူးမှာကြားချက်များ';
 
   @override
-  String get orderCreateFacilityNotesHint => 'ကောက်ယူသူ သို့မဟုတ် ဓာတ်ခွဲခန်းအတွက် မှတ်ချက်…';
+  String get orderCreateFacilityNotesHint => 'သွေးဖောက်သူ သို့မဟုတ် ဓာတ်ခွဲခန်းအတွက် မှာကြားချက်…';
 
   @override
-  String get orderCreatePreferredDate => 'နှစ်သက်သော ကောက်ယူမည့်ရက်';
+  String get orderCreatePreferredDate => 'သွေးဖောက်မည့်ရက်';
 
   @override
-  String get orderCreateTimeNoteOptional => 'အချိန်မှတ်ချက် (ရွေးချယ်နိုင်သည်)';
+  String get orderCreateTimeNoteOptional => 'အချိန်';
 
   @override
   String get orderCreateTimeNoteHint => 'ဥပမာ နံနက်၊ ညနေ ၂ နာရီနောက်';
 
   @override
-  String get orderCreatePreferredCollectorOptional => 'နှစ်သက်သော ကောက်ယူသူ (ရွေးချယ်နိုင်သည်)';
+  String get orderCreatePreferredCollectorOptional => 'သွေးဖောက်သူ ရွေးချယ်မည်';
 
   @override
-  String get orderCreateCollectorsAssignedByLab => 'ဓာတ်ခွဲခန်းမှ ကောက်ယူသူကို သတ်မှတ်ပေးပါမည်။';
+  String get orderCreateCollectorsAssignedByLab => 'ဓာတ်ခွဲခန်းမှ သွေးဖောက်သူကို သတ်မှတ်ပေးပါမည်။';
 
   @override
-  String get orderCreateCollectionAddress => 'ကောက်ယူမည့် လိပ်စာ';
+  String get orderCreateCollectionAddress => 'သွေးဖောက်မည့်လိပ်စာ';
 
   @override
-  String get orderCreateEnterCollectionAddress => 'ကောက်ယူမည့် လိပ်စာ ထည့်ပါ';
+  String get orderCreateEnterCollectionAddress => 'သွေးဖောက်မည့်လိပ်စာ ထည့်ပါ';
 
   @override
-  String get orderCreateFullCollectionAddress => 'နမူနာကောက်ယူရန် လိပ်စာ အပြည့်အစုံ';
+  String get orderCreateFullCollectionAddress => 'သွေးဖောက်မည့်လိပ်စာ အပြည့်အစုံ';
 
   @override
   String get orderCreateProcessOrderTitle => 'ဤမှာယူမှုကို မည်သို့ လုပ်ဆောင်မည်နည်း။';
 
   @override
-  String get orderCreateTestsFromList => 'စာရင်းမှ စစ်ဆေးမှုများ';
+  String get orderCreateTestsFromList => 'စာရင်းမှ ရွေးချယ်မည်';
 
   @override
   String get orderCreatePrescriptionFile => 'ဆေးညွှန်းဖိုင်';
@@ -818,7 +818,7 @@ class AppLocalizationsMy extends AppLocalizations {
   String get orderCreatePrescriptionReviewHint => 'ဓာတ်ခွဲခန်းမှ သင့်ဖိုင်ကို စစ်ဆေးပြီး စစ်ဆေးမှုများ သတ်မှတ်ပါမည်။ ကတ်တလောက်စာကြောင်းများ ထည့်သည့်အထိ အခြေအနေသည် ဆိုင်းငံ့အဖြစ် ရှိနေမည်။';
 
   @override
-  String get orderCreateSetCoordinates => 'ကောက်ယူမည့် တည်နေရာ သတ်မှတ်ပါ — လိပ်စာရိုက်ပါ သို့မဟုတ် မြေပုံပေါ်တွင် ရွေးပါ။';
+  String get orderCreateSetCoordinates => 'သွေးဖောက်မည့် တည်နေရာ သတ်မှတ်ပါ — လိပ်စာရိုက်ပါ သို့မဟုတ် မြေပုံပေါ်တွင် ရွေးပါ။';
 
   @override
   String get orderCreateStillCheckingCoverage => 'ဤလိပ်စာအတွက် ဝန်ဆောင်မှု ဧရိယာကို ဆက်လက် စစ်ဆေးနေသည်။';
@@ -910,19 +910,19 @@ class AppLocalizationsMy extends AppLocalizations {
   String get orderCreateNoTestsMatchSearch => 'ရှာဖွေမှုနှင့် ကိုက်ညီသော စစ်ဆေးမှု မရှိပါ။';
 
   @override
-  String get orderCreatePreferredCollector => 'နှစ်သက်သော ကောက်ယူသူ';
+  String get orderCreatePreferredCollector => 'သွေးဖောက်သူ ရွေးချယ်မည်';
 
   @override
   String get orderCreateNoPreference => 'ဦးစားပေး မရှိ';
 
   @override
-  String get orderCreateLabWillAssign => 'ဓာတ်ခွဲခန်းမှ ကောက်ယူသူ သတ်မှတ်ပေးမည်';
+  String get orderCreateLabWillAssign => 'ဓာတ်ခွဲခန်းမှ သွေးဖောက်သူ သတ်မှတ်ပေးမည်';
 
   @override
   String get orderCreateNoPreferenceLabel => 'ဦးစားပေး မရှိ — ဓာတ်ခွဲခန်းမှ သတ်မှတ်မည်';
 
   @override
-  String get orderCreateCollectorOptionalHint => 'ရွေးချယ်နိုင်သည် — လမ်းကြောင်းစီစဉ်သည့်အခါ တူညီသော ကောက်ယူသူ';
+  String get orderCreateCollectorOptionalHint => 'ရွေးချယ်နိုင်သည် — လမ်းကြောင်းစီစဉ်သည့်အခါ တူညီသော သွေးဖောက်သူ';
 
   @override
   String get resultsTitle => 'သင့်ရလဒ်များ';
@@ -1045,7 +1045,7 @@ class AppLocalizationsMy extends AppLocalizations {
   String get labReportPdfNotUploadedCombined => 'ဤပေါင်းစပ်အစီရင်ခံစာအတွက် PDF ဖိုင် မတင်ရသေးပါ။';
 
   @override
-  String get labReportPdfNotUploadedTest => 'ဤစစ်ဆေးမှုအတွက် PDF ဖိုင် မတင်ရသေးပါ။';
+  String get labReportPdfNotUploadedTest => 'ဤစစ်ဆေးမှု၏ ဓာတ်ခွဲအဖြေ မထွက်ရှိသေးပါ။ ထွက်ရှိသည်နှင့် ဤနေရာတွင် ပြပါမည်။';
 
   @override
   String get labReportDownloadCombinedPdf => 'ပေါင်းစပ် PDF ကို ရယူမည်';

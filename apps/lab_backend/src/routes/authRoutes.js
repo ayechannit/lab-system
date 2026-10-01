@@ -39,7 +39,7 @@ router.post('/login/user', authController.loginUser);
  * @swagger
  * /api/auth/login/staff:
  *   post:
- *     summary: Staff login
+ *     summary: Staff login (email or staff code)
  *     tags: [Auth]
  *     requestBody:
  *       required: true
@@ -48,8 +48,9 @@ router.post('/login/user', authController.loginUser);
  *           schema:
  *             type: object
  *             properties:
- *               email:
+ *               identifier:
  *                 type: string
+ *                 description: Staff email or staff code
  *               password:
  *                 type: string
  *     responses:

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { StaffListRow } from '../../model/types'
+import { staffLoginLabel } from '../../services/staffService'
 import { StaffAvatar } from './StaffAvatar'
 
 type RouteCollectorPickerProps = {
@@ -88,7 +89,7 @@ export function RouteCollectorPicker({
                 />
                 <span className="route-collector-picker__identity">
                   <span className="route-collector-picker__name">{selected.name}</span>
-                  <span className="route-collector-picker__email">{selected.email}</span>
+                  <span className="route-collector-picker__email">{staffLoginLabel(selected)}</span>
                 </span>
               </>
             ) : null}
@@ -116,7 +117,7 @@ export function RouteCollectorPicker({
               />
               <span className="route-collector-picker__identity">
                 <span className="route-collector-picker__name">{selected.name}</span>
-                <span className="route-collector-picker__email">{selected.email}</span>
+                <span className="route-collector-picker__email">{staffLoginLabel(selected)}</span>
               </span>
             </>
           ) : (
@@ -195,7 +196,7 @@ export function RouteCollectorPicker({
                   />
                   <span className="route-collector-picker__option-copy">
                     <span className="route-collector-picker__option-name">{collector.name}</span>
-                    <span className="route-collector-picker__option-email">{collector.email}</span>
+                    <span className="route-collector-picker__option-email">{staffLoginLabel(collector)}</span>
                   </span>
                   {active ? (
                     <span className="material-symbols-outlined route-collector-picker__check" aria-hidden>
