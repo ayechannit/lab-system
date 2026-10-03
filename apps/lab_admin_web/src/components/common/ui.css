@@ -8473,6 +8473,69 @@ a.btn {
   grid-column: 1 / -1;
 }
 
+.order-map-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  margin-top: 0.2rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--primary);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.order-map-link:hover {
+  text-decoration: underline;
+}
+
+.order-map-link__icon {
+  font-size: 1rem;
+}
+
+.modal-card--order-map {
+  max-width: 640px;
+}
+
+.modal-card--order-map .order-location-map__frame {
+  height: min(420px, 60vh);
+}
+
+.order-map-modal__address {
+  margin: 0 0 0.75rem;
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+.order-location-map {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.order-location-map__frame {
+  width: 100%;
+  height: 260px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+}
+
+.order-location-map__footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.order-location-map__hint {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
 .order-detail-item--notes .order-detail-value--notes {
   font-size: 0.875rem;
   font-weight: 500;

@@ -10,6 +10,8 @@ import { messageFromError, useErrorToast } from '../hooks/usePageNotify'
 import { TableActionMenu } from '../components/common/TableActionMenu'
 import { DEFAULT_TABLE_PAGE_SIZE, TablePagination } from '../components/common/TablePagination'
 import { formatCoordPair, hasUsableCoords, LocationMapPicker } from '../components/users/LocationMapPicker'
+import { OrderLocationGoogleMap } from '../components/orders/OrderLocationGoogleMap'
+import { OrderMapLink } from '../components/orders/OrderMapLink'
 import type { LabTestCatalogRow, StaffListRow, UserListRow } from '../model/types'
 import { getApiBaseUrl, isApiMode } from '../services/apiBase'
 import { fetchLabTestsList } from '../services/labTestCatalogService'
@@ -1634,7 +1636,17 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
               ) : (
                 sorted.map((o) => (
                   <tr key={o.id}>
-                    <td>{o.patient_name}</td>
+                    <td>
+                      <div>{o.patient_name}</div>
+                      {o.address?.trim() || o.latitude != null ? (
+                        <OrderMapLink
+                          patientName={o.patient_name}
+                          address={o.address}
+                          latitude={o.latitude}
+                          longitude={o.longitude}
+                        />
+                      ) : null}
+                    </td>
                     <td className="data-table__cell--phone" title={o.patient_phone?.trim() || undefined}>
                       {o.patient_phone?.trim() ? (
                         <a className="data-table__phone-link" href={`tel:${o.patient_phone.replace(/\s+/g, '')}`}>
@@ -2693,6 +2705,14 @@ function canEditOrderTests(status: ApiOrderStatus): boolean {
                     <div className="order-detail-item order-detail-item--span">
                       <span className="order-detail-label">{t('orders.detail.address')}</span>
                       <span className="order-detail-value">{detailOrder.address}</span>
+                    </div>
+                    <div className="order-detail-item order-detail-item--span">
+                      <span className="order-detail-label">{t('orders.detail.mapLocation')}</span>
+                      <OrderLocationGoogleMap
+                        latitude={detailOrder.latitude}
+                        longitude={detailOrder.longitude}
+                        address={detailOrder.address}
+                      />
                     </div>
                     {detailOrder.description ? (
                       <div className="order-detail-item order-detail-item--span order-detail-item--notes">

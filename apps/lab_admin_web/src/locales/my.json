@@ -592,7 +592,12 @@
       "test": "ဓာတ်ခွဲ",
       "qty": "အရေအတွက်",
       "unitPrice": "ယူနစ် (MMK)",
-      "subtotal": "ခွဲစုစုပေါင်း (MMK)"
+      "subtotal": "ခွဲစုစုပေါင်း (MMK)",
+      "mapLocation": "မြေပုံတည်နေရာ",
+      "openInGoogleMaps": "Google Maps တွင် ဖွင့်ရန်",
+      "mapFromAddress": "တည်နေရာ pin မရှိပါ — လိပ်စာဖြင့် ရှာပြထားသည်",
+      "noMapLocation": "ဤမှာယူမှုတွင် တည်နေရာ မရှိပါ",
+      "viewMap": "မြေပုံကြည့်ရန်"
     },
     "prescription": {
       "title": "ညွှန်းကြောင်း",

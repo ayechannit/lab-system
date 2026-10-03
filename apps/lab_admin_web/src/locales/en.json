@@ -592,7 +592,12 @@
       "test": "Test",
       "qty": "Qty",
       "unitPrice": "Unit (MMK)",
-      "subtotal": "Subtotal (MMK)"
+      "subtotal": "Subtotal (MMK)",
+      "mapLocation": "Map location",
+      "openInGoogleMaps": "Open in Google Maps",
+      "mapFromAddress": "No pinned coordinates — showing address search",
+      "noMapLocation": "No location on this order",
+      "viewMap": "View map"
     },
     "prescription": {
       "title": "Prescription",

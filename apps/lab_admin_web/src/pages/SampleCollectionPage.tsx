@@ -12,6 +12,7 @@ import { useErrorToast } from '../hooks/usePageNotify'
 import { LoadingSpinner } from '../components/common/LoadingSpinner'
 import { DEFAULT_TABLE_PAGE_SIZE, TablePagination } from '../components/common/TablePagination'
 import { formatCoordPair } from '../components/users/LocationMapPicker'
+import { OrderMapLink } from '../components/orders/OrderMapLink'
 import type { StaffListRow } from '../model/types'
 import { isApiMode } from '../services/apiBase'
 import {
@@ -1403,7 +1404,17 @@ export function SampleCollectionPage() {
                       <code style={{ fontSize: '0.72rem', wordBreak: 'break-all' }}>{o.id}</code>
                     </td>
                     <td>{o.patient_name}</td>
-                    <td>{o.address?.trim() || t('common.none')}</td>
+                    <td>
+                      <div>{o.address?.trim() || t('common.none')}</div>
+                      {o.address?.trim() || o.latitude != null ? (
+                        <OrderMapLink
+                          patientName={o.patient_name}
+                          address={o.address}
+                          latitude={o.latitude}
+                          longitude={o.longitude}
+                        />
+                      ) : null}
+                    </td>
                     <td>
                       <span className={priorityBadgeClass(o.priority)}>{orderPriorityLabel(o.priority)}</span>
                     </td>
