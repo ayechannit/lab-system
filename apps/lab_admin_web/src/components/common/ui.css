@@ -3902,9 +3902,12 @@ a.btn {
   z-index: 10000;
   background: rgba(25, 27, 35, 0.45);
   display: flex;
-  align-items: center;
+  /* `safe` keeps tall dialogs top-aligned so the backdrop can scroll to them. */
+  align-items: safe center;
   justify-content: center;
   padding: 1rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   backdrop-filter: blur(2px);
 }
 

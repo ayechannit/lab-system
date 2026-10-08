@@ -187,143 +187,153 @@ export function MyProfileModal({
       }}
     >
       <div
-        className="modal-card"
+        className="modal-card modal-card--discount-form"
         style={{ maxWidth: 480 }}
         onMouseDown={(e) => e.stopPropagation()}
       >
-        <div className="modal-head">
-          <h2 id={titleId} className="modal-title">
-            {t('profile.title')}
-          </h2>
-          <button
-            type="button"
-            className="btn btn-ghost modal-close"
-            onClick={() => !submitting && onClose()}
-            aria-label={t('common.close')}
-            disabled={submitting}
-          >
-            ×
-          </button>
+        <div className="discount-form-modal__head">
+          <div className="modal-head">
+            <h2 id={titleId} className="modal-title">
+              {t('profile.title')}
+            </h2>
+            <button
+              type="button"
+              className="btn btn-ghost modal-close"
+              onClick={() => !submitting && onClose()}
+              aria-label={t('common.close')}
+              disabled={submitting}
+            >
+              ×
+            </button>
+          </div>
         </div>
-        <form className="form-grid" onSubmit={(e) => void handleSubmit(e)} style={{ maxWidth: 'none' }}>
-          {loadError && !staffRow ? (
-            <div className="form-alert form-alert--error" role="alert">
-              {loadError}
+        <form className="discount-form-modal__form" onSubmit={(e) => void handleSubmit(e)}>
+          <div className="discount-form-modal__body">
+            <div className="discount-form-modal__stack">
+              {loadError && !staffRow ? (
+                <div className="form-alert form-alert--error" role="alert">
+                  {loadError}
+                </div>
+              ) : null}
+              <div className="field">
+                <label htmlFor="mp-name">{t('profile.name')}</label>
+                <input
+                  id="mp-name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder={t('profile.namePlaceholder')}
+                  autoComplete="name"
+                  autoFocus
+                  disabled={submitting || !staffRow}
+                />
+              </div>
+              <div className="field">
+                <label htmlFor="mp-email">{t('profile.email')}</label>
+                <input
+                  id="mp-email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder={t('profile.emailPlaceholder')}
+                  autoComplete="email"
+                  disabled={submitting || !staffRow}
+                />
+              </div>
+              {staffRow?.staff_code ? (
+                <div className="field">
+                  <label htmlFor="mp-staff-code">{t('profile.staffCode')}</label>
+                  <input id="mp-staff-code" value={staffRow.staff_code} readOnly disabled />
+                </div>
+              ) : null}
+              <div className="field">
+                <label htmlFor="mp-role">{t('profile.role')}</label>
+                <input
+                  id="mp-role"
+                  readOnly
+                  value={roleLabel(sessionRole)}
+                  tabIndex={-1}
+                  aria-readonly="true"
+                />
+              </div>
+              <StaffProfileImageField
+                id="mp-profile-image"
+                savedImageUrl={staffRow?.profile_image_url ?? null}
+                previewSrc={profilePreviewUrl}
+                pickedFileName={profileImageFile?.name ?? null}
+                onFileSelected={(file) => {
+                  if (profilePreviewUrl?.startsWith('blob:')) {
+                    URL.revokeObjectURL(profilePreviewUrl)
+                  }
+                  setProfileImageFile(file)
+                  setProfilePreviewUrl(URL.createObjectURL(file))
+                }}
+                onClear={() => {
+                  setProfileImageFile(null)
+                  if (profilePreviewUrl?.startsWith('blob:')) {
+                    URL.revokeObjectURL(profilePreviewUrl)
+                  }
+                  setProfilePreviewUrl(null)
+                }}
+                disabled={submitting || !staffRow}
+              />
+              <div className="field">
+                <label htmlFor="mp-current-pw">{t('profile.currentPassword')}</label>
+                <input
+                  id="mp-current-pw"
+                  type="password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  placeholder={t('profile.currentPasswordPlaceholder')}
+                  autoComplete="current-password"
+                  disabled={submitting || !staffRow}
+                />
+              </div>
+              <div className="field">
+                <label htmlFor="mp-pw">
+                  {t('profile.newPassword')} (optional, min. {MIN_PASSWORD_LENGTH} characters)
+                </label>
+                <input
+                  id="mp-pw"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  minLength={MIN_PASSWORD_LENGTH}
+                  placeholder={t('profile.passwordKeepHint')}
+                  autoComplete="new-password"
+                  disabled={submitting || !staffRow}
+                />
+              </div>
+              <div className="field">
+                <label htmlFor="mp-pw2">{t('profile.confirmPassword')}</label>
+                <input
+                  id="mp-pw2"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  minLength={MIN_PASSWORD_LENGTH}
+                  placeholder={t('profile.confirmPasswordPlaceholder')}
+                  autoComplete="new-password"
+                  disabled={submitting || !staffRow}
+                />
+              </div>
             </div>
-          ) : null}
-          <div className="field">
-            <label htmlFor="mp-name">{t('profile.name')}</label>
-            <input
-              id="mp-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder={t('profile.namePlaceholder')}
-              autoComplete="name"
-              autoFocus
-              disabled={submitting || !staffRow}
-            />
           </div>
-          <div className="field">
-            <label htmlFor="mp-email">{t('profile.email')}</label>
-            <input
-              id="mp-email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder={t('profile.emailPlaceholder')}
-              autoComplete="email"
-              disabled={submitting || !staffRow}
-            />
-          </div>
-          {staffRow?.staff_code ? (
-            <div className="field">
-              <label htmlFor="mp-staff-code">{t('profile.staffCode')}</label>
-              <input id="mp-staff-code" value={staffRow.staff_code} readOnly disabled />
+          <div className="discount-form-modal__footer">
+            {formError ? (
+              <div className="form-alert form-alert--error" role="alert">
+                {formError}
+              </div>
+            ) : null}
+            <div className="discount-form-modal__footer-actions">
+              <div className="row-actions">
+                <button type="button" className="btn btn-secondary" onClick={onClose} disabled={submitting}>
+                  {t('common.cancel')}
+                </button>
+                <button type="submit" className="btn btn-primary" disabled={submitting || !staffRow}>
+                  {submitting ? t('common.saving') : t('profile.saveChanges')}
+                </button>
+              </div>
             </div>
-          ) : null}
-          <div className="field">
-            <label htmlFor="mp-role">{t('profile.role')}</label>
-            <input
-              id="mp-role"
-              readOnly
-              value={roleLabel(sessionRole)}
-              tabIndex={-1}
-              aria-readonly="true"
-            />
-          </div>
-          <StaffProfileImageField
-            id="mp-profile-image"
-            savedImageUrl={staffRow?.profile_image_url ?? null}
-            previewSrc={profilePreviewUrl}
-            pickedFileName={profileImageFile?.name ?? null}
-            onFileSelected={(file) => {
-              if (profilePreviewUrl?.startsWith('blob:')) {
-                URL.revokeObjectURL(profilePreviewUrl)
-              }
-              setProfileImageFile(file)
-              setProfilePreviewUrl(URL.createObjectURL(file))
-            }}
-            onClear={() => {
-              setProfileImageFile(null)
-              if (profilePreviewUrl?.startsWith('blob:')) {
-                URL.revokeObjectURL(profilePreviewUrl)
-              }
-              setProfilePreviewUrl(null)
-            }}
-            disabled={submitting || !staffRow}
-          />
-          <div className="field">
-            <label htmlFor="mp-current-pw">{t('profile.currentPassword')}</label>
-            <input
-              id="mp-current-pw"
-              type="password"
-              value={currentPassword}
-              onChange={(e) => setCurrentPassword(e.target.value)}
-              placeholder={t('profile.currentPasswordPlaceholder')}
-              autoComplete="current-password"
-              disabled={submitting || !staffRow}
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="mp-pw">
-              {t('profile.newPassword')} (optional, min. {MIN_PASSWORD_LENGTH} characters)
-            </label>
-            <input
-              id="mp-pw"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              minLength={MIN_PASSWORD_LENGTH}
-              placeholder={t('profile.passwordKeepHint')}
-              autoComplete="new-password"
-              disabled={submitting || !staffRow}
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="mp-pw2">{t('profile.confirmPassword')}</label>
-            <input
-              id="mp-pw2"
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              minLength={MIN_PASSWORD_LENGTH}
-              placeholder={t('profile.confirmPasswordPlaceholder')}
-              autoComplete="new-password"
-              disabled={submitting || !staffRow}
-            />
-          </div>
-          {formError ? (
-            <div className="form-alert form-alert--error" role="alert">
-              {formError}
-            </div>
-          ) : null}
-          <div className="row-actions" style={{ marginTop: '0.25rem', justifyContent: 'flex-end' }}>
-            <button type="submit" className="btn btn-primary" disabled={submitting || !staffRow}>
-              {submitting ? t('common.saving') : t('profile.saveChanges')}
-            </button>
-            <button type="button" className="btn btn-secondary" onClick={onClose} disabled={submitting}>
-              {t('common.cancel')}
-            </button>
           </div>
         </form>
       </div>

@@ -231,187 +231,197 @@ export function StaffFormModal({
       }}
     >
       <div
-        className="modal-card"
+        className="modal-card modal-card--discount-form"
         style={{ maxWidth: 480 }}
         onMouseDown={(e) => e.stopPropagation()}
       >
-        <div className="modal-head">
-          <h2 id={titleId} className="modal-title">
-            {title}
-          </h2>
-          <button
-            type="button"
-            className="btn btn-ghost modal-close"
-            onClick={() => !submitting && onClose()}
-            aria-label={t('common.close')}
-            disabled={submitting}
-          >
-            ×
-          </button>
-        </div>
-        <form className="form-grid" onSubmit={(e) => void handleSubmit(e)} style={{ maxWidth: 'none' }}>
-          <div className="field">
-            <label htmlFor="sf-name">{t('staff.form.name')}</label>
-            <input
-              id="sf-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder={t('staff.form.namePlaceholder')}
-              autoComplete="name"
-              autoFocus
-              disabled={submitting}
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="sf-email">{t('staff.form.email')}</label>
-            <input
-              id="sf-email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder={t('staff.form.emailPlaceholder')}
-              autoComplete="email"
-              disabled={submitting}
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="sf-staff-code">{t('staff.form.staffCode')}</label>
-            <input
-              id="sf-staff-code"
-              value={staffCode}
-              onChange={(e) => setStaffCode(e.target.value)}
-              placeholder={t('staff.form.staffCodePlaceholder')}
-              autoComplete="off"
-              autoCapitalize="none"
-              spellCheck={false}
-              maxLength={50}
-              disabled={submitting}
-            />
-            <p className="field-hint" style={{ margin: '0.35rem 0 0', fontSize: '0.8rem', color: '#5c6678' }}>
-              {t('staff.form.loginIdHint')}
-            </p>
-          </div>
-          <div className="field">
-            <label htmlFor="sf-role">{t('staff.form.role')}</label>
-            <select
-              id="sf-role"
-              className="select-chevron-left"
-              value={role}
-              onChange={(e) => setRole(e.target.value as StaffRole)}
+        <div className="discount-form-modal__head">
+          <div className="modal-head">
+            <h2 id={titleId} className="modal-title">
+              {title}
+            </h2>
+            <button
+              type="button"
+              className="btn btn-ghost modal-close"
+              onClick={() => !submitting && onClose()}
+              aria-label={t('common.close')}
               disabled={submitting}
             >
-              {STAFF_ROLES.map((r) => (
-                <option key={r} value={r}>
-                  {roleLabel(r)}
-                </option>
-              ))}
-            </select>
+              ×
+            </button>
           </div>
-          <StaffProfileImageField
-            id="sf-profile-image"
-            savedImageUrl={savedProfileImageUrl}
-            previewSrc={profilePreviewUrl}
-            pickedFileName={profileImageFile?.name ?? null}
-            onFileSelected={(file) => {
-              if (profilePreviewUrl?.startsWith('blob:')) {
-                URL.revokeObjectURL(profilePreviewUrl)
-              }
-              setProfileImageFile(file)
-              setProfilePreviewUrl(URL.createObjectURL(file))
-            }}
-            onClear={() => {
-              setProfileImageFile(null)
-              if (profilePreviewUrl?.startsWith('blob:')) {
-                URL.revokeObjectURL(profilePreviewUrl)
-              }
-              setProfilePreviewUrl(null)
-            }}
-            disabled={submitting}
-          />
-          <label htmlFor={staffActiveId} className="form-switch">
-            <span className="form-switch__control">
-              <input
-                id={staffActiveId}
-                type="checkbox"
-                className="form-switch__input"
-                checked={isActive}
-                onChange={(e) => setIsActive(e.target.checked)}
-                disabled={submitting}
-              />
-              <span className="form-switch__track" aria-hidden="true" />
-            </span>
-            <span className="form-switch__text">
-              <span className="form-switch__title">
-                {isActive ? t('staff.form.activeTitle') : t('staff.form.inactiveTitle')}
-              </span>
-              <span className="form-switch__desc">{t('staff.form.activeDesc')}</span>
-            </span>
-          </label>
-          {mode === 'create' ? (
-            <div className="field">
-              <label htmlFor="sf-pw">
-                {t('staff.form.initialPassword', { count: MIN_INITIAL_PASSWORD_LENGTH })}
-              </label>
-              <input
-                id="sf-pw"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                minLength={MIN_INITIAL_PASSWORD_LENGTH}
-                placeholder={t('staff.form.passwordPlaceholder', { count: MIN_INITIAL_PASSWORD_LENGTH })}
-                autoComplete="new-password"
-                disabled={submitting}
-              />
-            </div>
-          ) : (
-            <>
-              {isSelf ? (
-                <div className="field">
-                  <label htmlFor="sf-current-pw">{t('staff.form.currentPassword')}</label>
-                  <input
-                    id="sf-current-pw"
-                    type="password"
-                    value={currentPassword}
-                    onChange={(e) => setCurrentPassword(e.target.value)}
-                    placeholder={t('staff.form.currentPasswordPlaceholder')}
-                    autoComplete="current-password"
-                    disabled={submitting}
-                  />
-                </div>
-              ) : null}
+        </div>
+        <form className="discount-form-modal__form" onSubmit={(e) => void handleSubmit(e)}>
+          <div className="discount-form-modal__body">
+            <div className="discount-form-modal__stack">
               <div className="field">
-                <label htmlFor="sf-pw">
-                  {t('staff.form.newPassword', { count: MIN_INITIAL_PASSWORD_LENGTH })}
-                </label>
+                <label htmlFor="sf-name">{t('staff.form.name')}</label>
                 <input
-                  id="sf-pw"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  minLength={MIN_INITIAL_PASSWORD_LENGTH}
-                  placeholder={t('staff.form.passwordKeepPlaceholder')}
-                  autoComplete="new-password"
+                  id="sf-name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder={t('staff.form.namePlaceholder')}
+                  autoComplete="name"
+                  autoFocus
                   disabled={submitting}
                 />
               </div>
-            </>
-          )}
-          {formError ? (
-            <div className="form-alert form-alert--error" role="alert">
-              {formError}
+              <div className="field">
+                <label htmlFor="sf-email">{t('staff.form.email')}</label>
+                <input
+                  id="sf-email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder={t('staff.form.emailPlaceholder')}
+                  autoComplete="email"
+                  disabled={submitting}
+                />
+              </div>
+              <div className="field">
+                <label htmlFor="sf-staff-code">{t('staff.form.staffCode')}</label>
+                <input
+                  id="sf-staff-code"
+                  value={staffCode}
+                  onChange={(e) => setStaffCode(e.target.value)}
+                  placeholder={t('staff.form.staffCodePlaceholder')}
+                  autoComplete="off"
+                  autoCapitalize="none"
+                  spellCheck={false}
+                  maxLength={50}
+                  disabled={submitting}
+                />
+                <p className="field-hint" style={{ margin: '0.35rem 0 0', fontSize: '0.8rem', color: '#5c6678' }}>
+                  {t('staff.form.loginIdHint')}
+                </p>
+              </div>
+              <div className="field">
+                <label htmlFor="sf-role">{t('staff.form.role')}</label>
+                <select
+                  id="sf-role"
+                  className="select-chevron-left"
+                  value={role}
+                  onChange={(e) => setRole(e.target.value as StaffRole)}
+                  disabled={submitting}
+                >
+                  {STAFF_ROLES.map((r) => (
+                    <option key={r} value={r}>
+                      {roleLabel(r)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <StaffProfileImageField
+                id="sf-profile-image"
+                savedImageUrl={savedProfileImageUrl}
+                previewSrc={profilePreviewUrl}
+                pickedFileName={profileImageFile?.name ?? null}
+                onFileSelected={(file) => {
+                  if (profilePreviewUrl?.startsWith('blob:')) {
+                    URL.revokeObjectURL(profilePreviewUrl)
+                  }
+                  setProfileImageFile(file)
+                  setProfilePreviewUrl(URL.createObjectURL(file))
+                }}
+                onClear={() => {
+                  setProfileImageFile(null)
+                  if (profilePreviewUrl?.startsWith('blob:')) {
+                    URL.revokeObjectURL(profilePreviewUrl)
+                  }
+                  setProfilePreviewUrl(null)
+                }}
+                disabled={submitting}
+              />
+              <label htmlFor={staffActiveId} className="form-switch">
+                <span className="form-switch__control">
+                  <input
+                    id={staffActiveId}
+                    type="checkbox"
+                    className="form-switch__input"
+                    checked={isActive}
+                    onChange={(e) => setIsActive(e.target.checked)}
+                    disabled={submitting}
+                  />
+                  <span className="form-switch__track" aria-hidden="true" />
+                </span>
+                <span className="form-switch__text">
+                  <span className="form-switch__title">
+                    {isActive ? t('staff.form.activeTitle') : t('staff.form.inactiveTitle')}
+                  </span>
+                  <span className="form-switch__desc">{t('staff.form.activeDesc')}</span>
+                </span>
+              </label>
+              {mode === 'create' ? (
+                <div className="field">
+                  <label htmlFor="sf-pw">
+                    {t('staff.form.initialPassword', { count: MIN_INITIAL_PASSWORD_LENGTH })}
+                  </label>
+                  <input
+                    id="sf-pw"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    minLength={MIN_INITIAL_PASSWORD_LENGTH}
+                    placeholder={t('staff.form.passwordPlaceholder', { count: MIN_INITIAL_PASSWORD_LENGTH })}
+                    autoComplete="new-password"
+                    disabled={submitting}
+                  />
+                </div>
+              ) : (
+                <>
+                  {isSelf ? (
+                    <div className="field">
+                      <label htmlFor="sf-current-pw">{t('staff.form.currentPassword')}</label>
+                      <input
+                        id="sf-current-pw"
+                        type="password"
+                        value={currentPassword}
+                        onChange={(e) => setCurrentPassword(e.target.value)}
+                        placeholder={t('staff.form.currentPasswordPlaceholder')}
+                        autoComplete="current-password"
+                        disabled={submitting}
+                      />
+                    </div>
+                  ) : null}
+                  <div className="field">
+                    <label htmlFor="sf-pw">
+                      {t('staff.form.newPassword', { count: MIN_INITIAL_PASSWORD_LENGTH })}
+                    </label>
+                    <input
+                      id="sf-pw"
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      minLength={MIN_INITIAL_PASSWORD_LENGTH}
+                      placeholder={t('staff.form.passwordKeepPlaceholder')}
+                      autoComplete="new-password"
+                      disabled={submitting}
+                    />
+                  </div>
+                </>
+              )}
             </div>
-          ) : null}
-          <div className="row-actions" style={{ marginTop: '0.25rem', justifyContent: 'flex-end' }}>
-            <button type="submit" className="btn btn-primary" disabled={submitting}>
-              {submitting
-                ? t('common.saving')
-                : mode === 'create'
-                  ? t('staff.form.createSubmit')
-                  : t('staff.form.saveChanges')}
-            </button>
-            <button type="button" className="btn btn-secondary" onClick={onClose} disabled={submitting}>
-              {t('common.cancel')}
-            </button>
+          </div>
+          <div className="discount-form-modal__footer">
+            {formError ? (
+              <div className="form-alert form-alert--error" role="alert">
+                {formError}
+              </div>
+            ) : null}
+            <div className="discount-form-modal__footer-actions">
+              <div className="row-actions">
+                <button type="button" className="btn btn-secondary" onClick={onClose} disabled={submitting}>
+                  {t('common.cancel')}
+                </button>
+                <button type="submit" className="btn btn-primary" disabled={submitting}>
+                  {submitting
+                    ? t('common.saving')
+                    : mode === 'create'
+                      ? t('staff.form.createSubmit')
+                      : t('staff.form.saveChanges')}
+                </button>
+              </div>
+            </div>
           </div>
         </form>
       </div>
